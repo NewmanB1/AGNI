@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/NewmanB1/AGNI/schema/ols.schema.json",
+  "title": "Open Lesson Standard (OLS) v1.0",
+  "description": "Schema for offline, sensor-rich educational modules.",
+  "type": "object",
+  "required": ["version", "meta", "steps"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "enum": ["1.0"],
+      "description": "The OLS spec version."
+    },
+    "meta": {
+      "type": "object",
+      "required": ["id", "title", "license"],
+      "properties": {
+        "id": { "type": "string", "description": "Unique UUID or slug." },
+        "title": { "type": "string" },
+        "language": { "type": "string", "default": "en" },
+        "license": { "type": "string", "default": "AGPL-3.0" },
+        "target_profile": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["visual", "haptic_seeker", "kinetic"] }
+        }
+      }
+    },
+    "ontology": {
+      "type": "object",
+      "properties": {
+        "requires": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "skill": { "type": "string" }
+            }
+          }
+        },
+        "provides": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "skill": { "type": "string" },
+              "level": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    "signatures": {
+      "type": "array",
+      "description": "Web of Trust cryptographic proofs.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "role": { "type": "string", "enum": ["author", "approver", "translator"] },
+          "entity": { "type": "string" },
+          "key_id": { "type": "string" },
+          "signature": { "type": "string" }
+        },
+        "required": ["role", "entity", "signature"]
+      }
+    },
+    "gate": {
+      "type": "object",
+      "description": "Zero-trust prerequisite check.",
+      "properties": {
+        "type": { "type": "string", "enum": ["quiz", "manual_verification"] },
+        "question": { "type": "string" },
+        "expected_answer": { "type": "string" },
+        "on_fail": { "type": "string" }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "enum": ["instruction", "hardware_trigger", "quiz"] },
+          "content": { "type": "string", "description": "Markdown text" },
+          "sensor": { "type": "string", "enum": ["accelerometer", "gyroscope", "microphone", "light"] },
+          "threshold": { "type": "string", "description": "Logic for sensor activation (e.g. > 2.0g)" },
+          "feedback": { "type": "string", "description": "Haptic pattern name" }
+        },
+        "required": ["type"]
+      }
+    }
+  }
+}
