@@ -33,7 +33,7 @@ jobs:
           mkdir -p tmp_json
           for lesson in lessons/*.yaml; do
             echo "Validating $lesson ..."
-            js-yaml "$lesson" > tmp_json/$(basename "$lesson" .yaml).json
+            npx js-yaml "$lesson" > tmp_json/$(basename "$lesson" .yaml).json
             ajv validate --spec=draft7 -s schemas/ols.schema.json -d tmp_json/$(basename "$lesson" .yaml).json
             if [ $? -ne 0 ]; then
               echo "Validation FAILED for $lesson"
