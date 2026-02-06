@@ -1,26 +1,29 @@
-name: OLS Validator
+name: OLS Validator (debug)
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
 
 jobs:
   validate_lessons:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Install Validator Tools
-        run: npm install -g ajv-cli js-yaml-cli
-
-      - name: Validate 'Gravity' Lesson
+      - name: Show working directory
         run: |
-          # 1. Convert YAML to JSON (because schemas read JSON)
-          # 2. Pipe it into the AJV Validator
-          # 3. Check it against ols.schema.json
-          js-yaml lessons/gravity.yaml --json | ajv validate --spec=draft7 -s schemas/ols.schema.json -d -
+          echo "PWD:"
+          pwd
+          echo ""
+          echo "ROOT CONTENTS:"
+          ls -la
 
+      - name: Show repo tree (up to 3 levels)
+        run: |
+          echo "DIRECTORIES:"
+          find . -maxdepth 3 -type d
+          echo ""
+          echo "FILES:"
+          find . -maxdepth 3 -type f
