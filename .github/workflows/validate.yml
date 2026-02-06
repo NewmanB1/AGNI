@@ -22,6 +22,6 @@ jobs:
 
       - name: Validate Gravity lesson
         run: |
-          js-yaml lessons/gravity.yaml --json \
+          js-yaml-cli lessons/gravity.yaml \
           | ajv validate --spec=draft7 -s schemas/ols.schema.json -d -
 
