@@ -9,22 +9,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      # Step 3: Install validator tools
       - name: Install validator tools
         run: |
-          npm install -g ajv-cli yaml
+          npm install -g ajv-cli js-yaml-cli
 
-      # Step 4: List schemas and lessons for debug
       - name: List schemas and lessons
         run: |
           echo "Schemas:"
@@ -32,22 +28,13 @@ jobs:
           echo "Lessons:"
           ls -la lessons
 
-      # Step 5: Validate all lessons
       - name: Validate all lessons
         run: |
-          # Create temporary folder for JSON conversions
           mkdir -p tmp_json
-          
           for lesson in lessons/*.yaml; do
             echo "Validating $lesson ..."
-            
-            # Convert YAML lesson to JSON file
-            yaml --json "$lesson" > tmp_json/$(basename "$lesson" .yaml).json
-            
-            # Validate JSON file with AJV
+            js-yaml "$lesson" > tmp_json/$(basename "$lesson" .yaml).json
             ajv validate --spec=draft7 -s schemas/ols.schema.json -d tmp_json/$(basename "$lesson" .yaml).json
-            
-            # Exit immediately if validation fails
             if [ $? -ne 0 ]; then
               echo "Validation FAILED for $lesson"
               exit 1
