@@ -1,7 +1,6 @@
 # AGNI
 Ed Tech
 
-Here is the comprehensive, rewritten README.md. It integrates every architectural decision and philosophical pillar we have discussed.
 
 The Open Lesson Standard (OLS)
 The "MP3" for Offline, Sensor-Rich Education
