@@ -19,21 +19,17 @@ jobs:
         with:
           node-version: 18
 
-      # Step 3: Create package.json (so npm can install dev dependencies)
-      - name: Initialize Node project
-        run: |
-          npm init -y
-
-      # Step 4: Install local dependencies
+      # Step 3: Install validator tools
       - name: Install validator tools
         run: |
-          npm install js-yaml-cli ajv-cli --save-dev
+          npm install -g ajv-cli yaml
 
-      # Step 5: Validate Gravity lesson
+      # Step 4: Validate Gravity lesson
       - name: Validate Gravity lesson
         run: |
-          npx js-yaml-cli lessons/gravity.yaml \
-          | npx ajv validate --spec=draft7 -s schemas/ols.schema.json -d -
+          yaml lessons/gravity.yaml -j \
+          | ajv validate --spec=draft7 -s schemas/ols.schema.json -d -
+
 
 
 
