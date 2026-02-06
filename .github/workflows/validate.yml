@@ -1,5 +1,5 @@
 name: OLS Validator
- 
+
 on:
   push:
   pull_request:
@@ -37,5 +37,9 @@ jobs:
         run: |
           for lesson in lessons/*.yaml; do
             echo "Validating $lesson ..."
-            cat "$lesson" | yaml --json | ajv validate --spec=draft7 -s schemas/ols.schema.json -d -
+            cat "$lesson" | yaml --json | ajv validate --spec=draft7 -s schemas/ols.schema.json --data -
+            if [ $? -ne 0 ]; then
+              echo "Validation FAILED for $lesson"
+              exit 1
+            fi
           done
