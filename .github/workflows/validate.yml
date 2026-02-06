@@ -1,4 +1,4 @@
-name: OLS Validator
+-name: OLS Validator
 
 on:
   push:
@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repo
+      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -24,13 +24,18 @@ jobs:
         run: |
           npm install -g ajv-cli yaml
 
-      # Step 4: Validate Gravity lesson
-      - name: Validate Gravity lesson
+      # Step 4: List schemas and lessons for debug
+      - name: List schemas and lessons
         run: |
-          cat lessons/gravity.yaml | yaml --json \
-          | ajv validate --spec=draft7 -s schemas/ols.schema.json -d -
+          echo "Schemas:"
+          ls -la schemas
+          echo "Lessons:"
+          ls -la lessons
 
-
-
-
-
+      # Step 5: Validate all lessons
+      - name: Validate all lessons
+        run: |
+          for lesson in lessons/*.yaml; do
+            echo "Validating $lesson ..."
+            cat "$lesson" | yaml --json | ajv validate --spec=draft7 -s schemas/ols.schema.json -d -
+          done
