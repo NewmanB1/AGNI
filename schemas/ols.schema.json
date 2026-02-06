@@ -82,7 +82,9 @@
           "content": { "type": "string", "description": "Markdown text" },
           "sensor": { "type": "string", "enum": ["accelerometer", "gyroscope", "microphone", "light"] },
           "threshold": { "type": "string", "description": "Logic for sensor activation (e.g. > 2.0g)" },
-          "feedback": { "type": "string", "description": "Haptic pattern name" }
+          "feedback": { "type": "string", "description": "Haptic pattern name" },
+          "answer_options": { "type": "array", "items": { "type": "string" } },
+          "correct_index": { "type": "integer" }
         },
         "required": ["type"]
       }
