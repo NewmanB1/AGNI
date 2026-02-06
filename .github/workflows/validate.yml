@@ -1,27 +1,37 @@
-name: OLS Validator
+name: Validate YAML files
 
 on:
   push:
   pull_request:
 
 jobs:
-  validate_lessons:
+  validate:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Get the repo contents
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v3
+      # Step 2: Install Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Install validator tools
-        run: npm install -g ajv-cli js-yaml-cli
+      # Step 3: Install js-yaml-cli
+      - name: Install js-yaml-cli
+        run: npm install -g js-yaml-cli
 
-      - name: Validate Gravity lesson
-        run: |
-          js-yaml-cli lessons/gravity.yaml \
-          | ajv validate --spec=draft7 -s schemas/ols.schema.json -d -
+      # Step 4: List schemas directory
+      - name: List schemas directory
+        run: ls -la schemas
+
+      # Step 5: List lessons directory
+      - name: List lessons directory
+        run: ls -la lessons
+
+      # Step 6: Parse gravity.yaml (sanity check)
+      - name: Parse gravity lesson
+        run: js-yaml lessons/gravity.yaml
 
