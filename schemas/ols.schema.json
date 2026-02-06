@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/NewmanB1/AGNI/schema/ols.schema.json", 
+  "$id": "https://github.com/NewmanB1/AGNI/schema/ols.schema.json",
   "title": "Open Lesson Standard (OLS) v1.0",
   "description": "Schema for offline, sensor-rich educational modules.",
   "type": "object",
