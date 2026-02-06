@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repository
+      # Step 1: Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -19,11 +19,21 @@ jobs:
         with:
           node-version: 18
 
-      # Step 3: Validate Gravity lesson
+      # Step 3: Create package.json (so npm can install dev dependencies)
+      - name: Initialize Node project
+        run: |
+          npm init -y
+
+      # Step 4: Install local dependencies
+      - name: Install validator tools
+        run: |
+          npm install js-yaml-cli ajv-cli --save-dev
+
+      # Step 5: Validate Gravity lesson
       - name: Validate Gravity lesson
         run: |
-          # Use npx to run js-yaml-cli and pipe to ajv
           npx js-yaml-cli lessons/gravity.yaml \
           | npx ajv validate --spec=draft7 -s schemas/ols.schema.json -d -
+
 
 
