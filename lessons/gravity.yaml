@@ -1,0 +1,52 @@
+version: "1.0"
+meta:
+  id: "math-gravity-01"
+  title: "Understanding Gravity: Freefall"
+  language: "en"
+  license: "CC-BY-4.0"
+  target_profile: ["kinetic", "haptic_seeker"]
+
+ontology:
+  requires:
+    - skill: "ols.physics:observation_basics"
+  provides:
+    - skill: "ols.physics:gravity_concept"
+      level: 1
+
+# The "Gate" ensures the student isn't just clicking through
+gate:
+  type: "quiz"
+  question: "If you drop a feather and a hammer on the moon, which hits the ground first?"
+  expected_answer: "Same time"
+  on_fail: "redirect:ols.physics:intro"
+
+steps:
+  - type: "instruction"
+    content: |
+      # The Force of Gravity
+      
+      Gravity is the force that pulls objects toward the center of the Earth. 
+      
+      In the next step, you will feel this force. **Hold your phone flat in your hand.**
+      
+  - type: "hardware_trigger"
+    sensor: "accelerometer"
+    # The phone must detect 0g (freefall) for 0.2 seconds to pass
+    threshold: "freefall > 0.2s"
+    feedback: "vibration:heavy_thud"
+    
+  - type: "instruction"
+    content: |
+      ## Did you feel that?
+      
+      When the phone fell, the internal accelerometer read **Zero-G**.
+      
+      This is because gravity was pulling the phone down at the exact same speed it was pulling the internal sensors.
+      
+  - type: "quiz"
+    content: "What is the acceleration of gravity on Earth?"
+    answer_options:
+      - "9.8 m/s²"
+      - "5.2 m/s²"
+      - "0 m/s²"
+    correct_index: 0
