@@ -27,8 +27,9 @@ jobs:
       # Step 4: Validate Gravity lesson
       - name: Validate Gravity lesson
         run: |
-          yaml lessons/gravity.yaml -j \
+          cat lessons/gravity.yaml | yaml --json \
           | ajv validate --spec=draft7 -s schemas/ols.schema.json -d -
+
 
 
 
