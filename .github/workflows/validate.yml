@@ -22,5 +22,5 @@ jobs:
           # 1. Convert YAML to JSON (because schemas read JSON)
           # 2. Pipe it into the AJV Validator
           # 3. Check it against ols.schema.json
-          js-yaml lessons/gravity.yaml --json | ajv validate --spec=draft7 -s schema/ols.schema.json -d -
+          js-yaml lessons/gravity.yaml --json | ajv validate --spec=draft7 -s schemas/ols.schema.json -d -
 
