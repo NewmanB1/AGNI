@@ -1,4 +1,4 @@
--name: OLS Validator
+name: OLS Validator
  
 on:
   push:
