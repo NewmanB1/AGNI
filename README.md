@@ -36,6 +36,8 @@ We treat the phone not as a miniature laptop, but as a **physical game controlle
 3.  **Sovereign Governance (Web of Trust):** Communities verify content using cryptographic signatures (Ed25519).
 4.  **Portable Sovereignty (Sneakernet):** Data travels with the human via QR codes (Base45/Gzip).
 5.  **Zero-Trust Continuity:** No identities, just competency gates.
+6.  Epistemic Pluralism (The Graph):**
+We do not force a single "correct" order of learning. The system observes how a local community learns (e.g., "Weaving makes Math easier here") and dynamically reorders the lesson path to minimize friction for that specific group. We adapt to the learner's mental model, not the other way around.
 
 ## 🤝 Contributing
 We are looking for:
