@@ -1,43 +1,174 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/NewmanB1/AGNI/schemas/graph_weights.schema.json",
-  "title": "OLS Graph Weights (Cohort Cognition Map)",
+  "title": "OLS Graph Weights (Discovered Cohort Cognition Map)",
+  "description": "Aggregated transfer difficulty discounts between skills for a discovered cohort. Lower weight = easier transfer (strong collapse). Weight semantics: 0.0 = complete transfer (almost no additional effort needed), 1.0 = no transfer benefit (full difficulty remains). Self-loops (from == to) are invalid and must be rejected by application logic. Edges must be unique by (from, to) pair — duplicates should be rejected or merged during insertion.",
   "type": "object",
-  "required": ["version", "cohort_id", "edges"],
+  "required": [
+    "version",
+    "discovered_cohort",
+    "level",
+    "sample_size",
+    "created_date",
+    "last_updated",
+    "weight_estimation_method",
+    "clustering_method",
+    "edges"
+  ],
   "properties": {
-    "version": { "type": "string" },
-    "cohort_id": { 
+    "$schema": {
       "type": "string",
-      "description": "Identifier for the specific learner group (e.g., 'village_k_weavers')." 
+      "format": "uri",
+      "description": "Optional reference to this schema"
     },
-    "default_weight": { 
-      "type": "number", 
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(\\.(0|[1-9]\\d*))?$",
+      "description": "Semver-compatible version (e.g. 1.0, 1.0.0, 1.1, 2.3.4)",
+      "examples": ["1.0", "1.0.0", "1.1", "1.1.0"]
+    },
+    "discovered_cohort": {
+      "type": "string",
+      "pattern": "^c_[0-9a-f]{6,}$",
+      "description": "Opaque identifier for a discovered (clustered) cohort. Never human-readable or containing PII."
+    },
+    "level": {
+      "type": "string",
+      "enum": ["village", "regional", "global"]
+    },
+    "sample_size": {
+      "type": "integer",
+      "minimum": 20,
+      "description": "Number of distinct learners in this discovered cohort"
+    },
+    "created_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this graph was first created/computed"
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of the most recent update or recomputation"
+    },
+    "default_weight": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
       "default": 1.0,
-      "description": "The standard difficulty cost if no edges exist." 
+      "description": "Default transfer difficulty when no edge exists (1.0 = no discount / full difficulty)"
+    },
+    "weight_estimation_method": {
+      "type": "string",
+      "enum": ["ols_regression", "bayesian", "collaborative_filtering", "correlation_based", "other", "unknown"],
+      "description": "Method used to compute the transfer weights (required for reproducibility)"
+    },
+    "clustering_method": {
+      "type": "string",
+      "description": "Clustering algorithm or technique used to discover this cohort (required for reproducibility). Use 'unknown' for legacy or early data."
     },
     "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to", "weight", "confidence", "sample_size"],
+        "properties": {
+          "from": {
+            "type": "string",
+            "pattern": "^[a-z0-9_-]{1,64}:[a-z0-9_-]{1,64}$",
+            "description": "Skill identifier (namespace:skill). Hyphens allowed, max 64 chars per part."
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^[a-z0-9_-]{1,64}:[a-z0-9_-]{1,64}$",
+            "description": "Skill identifier (namespace:skill). Hyphens allowed, max 64 chars per part."
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Transfer difficulty discount: 0.0 = complete transfer, 1.0 = no benefit"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Reliability of this edge (0.8+ = high confidence, 0.5–0.8 = medium, <0.5 = weak/low confidence)"
+          },
+          "sample_size": {
+            "type": "integer",
+            "minimum": 20,
+            "description": "Number of distinct learners who exhibited this transfer pattern at least once (should be ≤ cohort sample_size)"
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "metadata": {
       "type": "object",
-      "patternProperties": {
-        "^.* -> .*$": {
-          "oneOf": [
-            { 
-              "type": "number",
-              "description": "Simple Mode: Just the Theta value (0.0 - 1.0)" 
-            },
-            {
-              "type": "object",
-              "description": "Advanced Mode: Theta with statistical confidence.",
-              "required": ["weight"],
-              "properties": {
-                "weight": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
-                "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.5 },
-                "sample_size": { "type": "integer", "minimum": 1 }
+      "additionalProperties": true,
+      "properties": {
+        "noise_added": {
+          "type": "object",
+          "properties": {
+            "mechanism": { "type": "string", "enum": ["laplace", "gaussian", "none", "other"] },
+            "epsilon": { "type": "number" },
+            "delta": { "type": "number" },
+            "noise_scale": { "type": "number" }
+          }
+        },
+        "aggregation_sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["discovered_cohort"],
+            "properties": {
+              "discovered_cohort": { "type": "string" },
+              "level": { "type": "string" },
+              "contribution_weight": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
               }
             }
-          ]
-        }
+          }
+        },
+        "aggregation_method": {
+          "type": "string",
+          "enum": ["weighted_average", "max_confidence", "median", "bayesian_update", "other"]
+        },
+        "computation_date": { "type": "string", "format": "date-time" },
+        "software_version": { "type": "string" }
       }
     }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "$schema": "https://github.com/NewmanB1/AGNI/schemas/graph_weights.schema.json",
+      "version": "1.1",
+      "discovered_cohort": "c_47f9a2",
+      "level": "regional",
+      "sample_size": 342,
+      "created_date": "2026-01-15T09:30:00Z",
+      "last_updated": "2026-02-07T11:16:00Z",
+      "weight_estimation_method": "correlation_based",
+      "clustering_method": "correlation-threshold",
+      "default_weight": 1.0,
+      "edges": [
+        {
+          "from": "ols.math:fractions",
+          "to": "ols.math:ratios",
+          "weight": 0.35,
+          "confidence": 0.82,
+          "sample_size": 210
+        }
+      ],
+      "metadata": {
+        "aggregation_method": "weighted_average",
+        "software_version": "sentry-agent v0.4.2"
+      }
     }
-  }
+  ]
 }
