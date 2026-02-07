@@ -1,24 +1,41 @@
-version: "1.0"
+version: "1.5.1"
 meta:
-  id: "math-gravity-01"
+  identifier: "math-gravity-01"
   title: "Understanding Gravity: Freefall"
+  description: "A sensor-based introduction to Newtonian physics using the phone's accelerometer."
   language: "en"
-  license: "CC-BY-4.0"
+  rights: "CC-BY-4.0"
+  coverage: "Universal"
+  
+  # Set Theory Tags (The Graph Nodes)
+  subject: 
+    - "Physics"
+    - "Classical Mechanics"
+    - "Newtonian Laws"
+
   target_profile: ["kinetic", "haptic_seeker"]
 
 ontology:
   requires:
     - skill: "ols.physics:observation_basics"
+      verifiable: true
   provides:
     - skill: "ols.physics:gravity_concept"
       level: 1
 
-# The "Gate" ensures the student isn't just clicking through
+signatures:
+  - role: "author"
+    entity: "Jane Doe"
+    key_id: "ed25519:pub_key_A123"
+    signature: "sig_string_placeholder"
+
+# The Gate (Zero-Trust Prerequisite)
 gate:
   type: "quiz"
+  skill_target: "ols.physics:observation_basics"
   question: "If you drop a feather and a hammer on the moon, which hits the ground first?"
   expected_answer: "Same time"
-  on_fail: "redirect:ols.physics:intro"
+  on_fail: "redirect:ols.physics:observation_basics/review"
 
 steps:
   - type: "instruction"
@@ -29,11 +46,13 @@ steps:
       
       In the next step, you will feel this force. **Hold your phone flat in your hand.**
       
+  # The Hardware Interaction (The Magic)
   - type: "hardware_trigger"
     sensor: "accelerometer"
-    # The phone must detect 0g (freefall) for 0.2 seconds to pass
-    threshold: "freefall > 0.2s"
+    # Strict Threshold Syntax (v1.5.1 compliant)
+    threshold: "freefall > 0.15s"
     feedback: "vibration:heavy_thud"
+    content: "Drop the phone onto a soft surface (like a pillow or bed) to detect Zero-G."
     
   - type: "instruction"
     content: |
@@ -43,10 +62,11 @@ steps:
       
       This is because gravity was pulling the phone down at the exact same speed it was pulling the internal sensors.
       
+  # The Verification
   - type: "quiz"
-    content: "What is the acceleration of gravity on Earth?"
+    content: "What is the approximate acceleration of gravity on Earth?"
     answer_options:
-      - "9.8 m/s²"
-      - "5.2 m/s²"
-      - "0 m/s²"
+      - "9.8 m/s2"
+      - "5.2 m/s2"
+      - "0 m/s2"
     correct_index: 0
