@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/NewmanB1/AGNI/schemas/graph_weights.schema.json",
+  "title": "OLS Graph Weights (Cohort Cognition Map)",
+  "type": "object",
+  "required": ["version", "cohort_id", "edges"],
+  "properties": {
+    "version": { "type": "string" },
+    "cohort_id": { 
+      "type": "string",
+      "description": "Identifier for the specific learner group (e.g., 'village_k_weavers')." 
+    },
+    "default_weight": { 
+      "type": "number", 
+      "default": 1.0,
+      "description": "The standard difficulty cost if no edges exist." 
+    },
+    "edges": {
+      "type": "object",
+      "description": "Map of Source Skill to Target Skill weight reductions.",
+      "patternProperties": {
+        "^.* -> .*$": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "The Cost (Theta). 0.1 = Trivial/Collapsed. 1.0 = Full Difficulty."
+        }
+      }
+    }
+  }
+}
