@@ -1,27 +1,49 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/NewmanB1/AGNI/schema/ols.schema.json",
-  "title": "Open Lesson Standard (OLS) v1.0",
-  "description": "Schema for offline, sensor-rich educational modules.",
+  "$id": "https://github.com/NewmanB1/AGNI/schemas/ols.schema.json",
+  "title": "Open Lesson Standard (OLS) v1.5",
+  "description": "Harmonized schema with Dublin Core metadata and Strict Threshold Syntax.",
   "type": "object",
   "required": ["version", "meta", "steps"],
   "properties": {
-    "version": {
-      "type": "string",
-      "enum": ["1.0"],
-      "description": "The OLS spec version."
+    "version": { 
+      "type": "string", 
+      "enum": ["1.5"],
+      "description": "Strict version pinning." 
     },
     "meta": {
       "type": "object",
-      "required": ["id", "title", "license"],
+      "required": ["identifier", "title", "rights", "subject"],
       "properties": {
-        "id": { "type": "string", "description": "Unique UUID or slug." },
+        "identifier": { 
+          "type": "string", 
+          "description": "dc:identifier (UUID or Slug)" 
+        },
         "title": { "type": "string" },
-        "language": { "type": "string", "default": "en" },
-        "license": { "type": "string", "default": "AGPL-3.0" },
-        "target_profile": {
+        "description": { "type": "string" },
+        "language": { 
+          "type": "string", 
+          "default": "en", 
+          "pattern": "^[a-z]{2}(-[A-Z]{2})?$" 
+        },
+        "rights": { 
+          "type": "string", 
+          "default": "AGPL-3.0", 
+          "description": "dc:rights (formerly 'license')" 
+        },
+        "subject": {
           "type": "array",
-          "items": { "type": "string", "enum": ["visual", "haptic_seeker", "kinetic"] }
+          "description": "dc:subject (Set Theory Tags).",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "coverage": { 
+          "type": "string", 
+          "description": "dc:coverage (Spatial/Temporal)" 
+        },
+        "target_profile": { 
+          "type": "array", 
+          "items": { "type": "string" } 
         }
       }
     },
@@ -32,8 +54,10 @@
           "type": "array",
           "items": {
             "type": "object",
+            "required": ["skill"],
             "properties": {
-              "skill": { "type": "string" }
+              "skill": { "type": "string" },
+              "verifiable": { "type": "boolean", "default": true }
             }
           }
         },
@@ -41,6 +65,7 @@
           "type": "array",
           "items": {
             "type": "object",
+            "required": ["skill", "level"],
             "properties": {
               "skill": { "type": "string" },
               "level": { "type": "integer" }
@@ -49,44 +74,54 @@
         }
       }
     },
-    "signatures": {
-      "type": "array",
-      "description": "Web of Trust cryptographic proofs.",
-      "items": {
-        "type": "object",
-        "properties": {
-          "role": { "type": "string", "enum": ["author", "approver", "translator"] },
-          "entity": { "type": "string" },
-          "key_id": { "type": "string" },
-          "signature": { "type": "string" }
-        },
-        "required": ["role", "entity", "signature"]
-      }
-    },
     "gate": {
       "type": "object",
-      "description": "Zero-trust prerequisite check.",
+      "description": "Prerequisite Logic",
+      "required": ["type", "on_fail"],
       "properties": {
         "type": { "type": "string", "enum": ["quiz", "manual_verification"] },
+        "skill_target": { "type": "string" },
         "question": { "type": "string" },
         "expected_answer": { "type": "string" },
-        "on_fail": { "type": "string" }
-      }
+        "on_fail": { "type": "string", "pattern": "^redirect:.*" }
+      },
+      "if": { "properties": { "type": { "const": "quiz" } } },
+      "then": { "required": ["question", "expected_answer"] }
     },
     "steps": {
       "type": "array",
       "items": {
         "type": "object",
+        "required": ["type"],
         "properties": {
           "type": { "type": "string", "enum": ["instruction", "hardware_trigger", "quiz"] },
-          "content": { "type": "string", "description": "Markdown text" },
-          "sensor": { "type": "string", "enum": ["accelerometer", "gyroscope", "microphone", "light"] },
-          "threshold": { "type": "string", "description": "Logic for sensor activation (e.g. > 2.0g)" },
-          "feedback": { "type": "string", "description": "Haptic pattern name" },
+          "content": { "type": "string" },
+          "sensor": { 
+            "type": "string", 
+            "enum": ["accelerometer", "gyroscope", "microphone", "light"] 
+          },
+          "threshold": { 
+            "type": "string",
+            "description": "Formal Syntax: Subject Operator Value[Unit]",
+            "pattern": "^([a-z\\.]+)\\s*(>|<|>=|<=|==)\\s*([0-9\\.]+)(g|ms|s|deg|db|lux|m\\/s2)?$"
+          },
+          "feedback": { "type": "string" },
           "answer_options": { "type": "array", "items": { "type": "string" } },
           "correct_index": { "type": "integer" }
-        },
-        "required": ["type"]
+        }
+      }
+    },
+    "signatures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["role", "entity", "signature"],
+        "properties": {
+          "role": { "type": "string" },
+          "entity": { "type": "string" },
+          "key_id": { "type": "string" },
+          "signature": { "type": "string" }
+        }
       }
     }
   }
