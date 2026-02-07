@@ -27,18 +27,18 @@ An OLS file is composed of five strictly defined blocks:
 
 ### 2.2 Example Schema (`lesson.yaml`)
 ```yaml
-version: "1.4"
+version: "1.5"
 meta:
-  identifier: "math-gravity-01"
+  identifier: "math-gravity-01"   # FIXED: Matches Schema
   title: "Introduction to Gravity"
-  rights: "AGPL-3.0"
-  subject: ["Physics", "Classical Mechanics"] # Set Theory Tags
+  rights: "AGPL-3.0"              # FIXED: Matches Schema
+  subject: ["Physics", "Classical Mechanics"]
   target_profile: ["haptic_seeker"] 
 
 ontology:
   requires:
     - skill: "ols.physics:observation_basics"
-      verifiable: true
+      verifiable: true            # FIXED: Now allowed in Schema
   provides:
     - skill: "ols.physics:gravity_concept"
       level: 1
@@ -46,11 +46,15 @@ ontology:
 signatures:
   - role: "author"
     entity: "Jane Doe"
+    key_id: "ed25519:pub_key_A..." # FIXED: Added for completeness
     signature: "sig_string..."
 
 gate:
   type: "quiz"
   skill_target: "ols.physics:observation_basics"
+  # Quiz types now MUST include question/answer
+  question: "What is the unit of gravity?"
+  expected_answer: "m/s2"
   on_fail: "redirect:ols.physics:observation_basics/review"
 
 steps:
@@ -58,7 +62,7 @@ steps:
     content: "Hold the device flat in your palm."
   - type: "hardware_trigger"
     sensor: "accelerometer"
-    threshold: "freefall > 0.1s" # Formal Syntax
+    threshold: "freefall > 0.1s" # Matches Regex Pattern
     feedback: "vibration:success_pattern"
 ```
 
