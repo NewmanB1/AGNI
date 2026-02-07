@@ -1,72 +1,57 @@
-version: "1.5.1"
-meta:
-  identifier: "math-gravity-01"
-  title: "Understanding Gravity: Freefall"
-  description: "A sensor-based introduction to Newtonian physics using the phone's accelerometer."
-  language: "en"
-  rights: "CC-BY-4.0"
-  coverage: "Universal"
-  
-  # Set Theory Tags (The Graph Nodes)
-  subject: 
-    - "Physics"
-    - "Classical Mechanics"
-    - "Newtonian Laws"
-
-  target_profile: ["kinetic", "haptic_seeker"]
-
-ontology:
-  requires:
-    - skill: "ols.physics:observation_basics"
-      verifiable: true
-  provides:
-    - skill: "ols.physics:gravity_concept"
-      level: 1
-
-signatures:
-  - role: "author"
-    entity: "Jane Doe"
-    key_id: "ed25519:pub_key_A123"
-    signature: "sig_string_placeholder"
-
-# The Gate (Zero-Trust Prerequisite)
-gate:
-  type: "quiz"
-  skill_target: "ols.physics:observation_basics"
-  question: "If you drop a feather and a hammer on the moon, which hits the ground first?"
-  expected_answer: "Same time"
-  on_fail: "redirect:ols.physics:observation_basics/review"
-
-steps:
-  - type: "instruction"
-    content: |
-      # The Force of Gravity
-      
-      Gravity is the force that pulls objects toward the center of the Earth. 
-      
-      In the next step, you will feel this force. **Hold your phone flat in your hand.**
-      
-  # The Hardware Interaction (The Magic)
-  - type: "hardware_trigger"
-    sensor: "accelerometer"
-    # Strict Threshold Syntax (v1.5.1 compliant)
-    threshold: "freefall > 0.15s"
-    feedback: "vibration:heavy_thud"
-    content: "Drop the phone onto a soft surface (like a pillow or bed) to detect Zero-G."
-    
-  - type: "instruction"
-    content: |
-      ## Did you feel that?
-      
-      When the phone fell, the internal accelerometer read **Zero-G**.
-      
-      This is because gravity was pulling the phone down at the exact same speed it was pulling the internal sensors.
-      
-  # The Verification
-  - type: "quiz"
-    content: "What is the approximate acceleration of gravity on Earth?"
-    answer_options:
-      - "9.8 m/s2"
-      - "5.2 m/s2"
-      - "0 m/s2"
-    correct_index: 0
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/NewmanB1/AGNI/schemas/ols.schema.json",
+  "title": "Open Lesson Standard (OLS) v1.5.1",
+  "type": "object",
+  "required": ["version", "meta", "steps"],
+  "properties": {
+    "version": { "type": "string", "enum": ["1.5.1"] },
+    "meta": {
+      "type": "object",
+      "required": ["identifier", "title", "rights", "subject"],
+      "properties": {
+        "identifier": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "language": { "type": "string", "default": "en" },
+        "rights": { "type": "string", "default": "AGPL-3.0" },
+        "subject": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "coverage": { "type": "string" },
+        "target_profile": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "required": ["type", "on_fail"],
+      "properties": {
+        "type": { "type": "string", "enum": ["quiz", "manual_verification"] },
+        "skill_target": { "type": "string" },
+        "question": { "type": "string" },
+        "expected_answer": { "type": "string" },
+        "on_fail": { "type": "string", "pattern": "^redirect:.*" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "quiz" } } },
+          "then": { "required": ["question", "expected_answer"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "manual_verification" } } },
+          "then": { "required": ["skill_target"] }
+        }
+      ]
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": { "type": "string", "enum": ["instruction", "hardware_trigger", "quiz"] },
+          "content": { "type": "string" },
+          "sensor": { "type": "string", "enum": ["accelerometer", "gyroscope", "microphone", "light"] },
+          "threshold": { 
+            "type": "string",
+            "pattern": "^([a-z\\.]+)\\s*(>|<|>=|<=|==)\\s*(-?[0-9\\.]+)(g|ms|s|deg|db|lux|m\\/s2)?$"
+          },
+          "feedback": { "type": "string" },
