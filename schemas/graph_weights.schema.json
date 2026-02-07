@@ -23,7 +23,7 @@
           "type": "number",
           "minimum": 0.0,
           "maximum": 1.0,
-          "description": "The Cost (Theta). 0.1 = Trivial/Collapsed. 1.0 = Full Difficulty."
+          "description": "The Final Cost (Theta). LOWER IS BETTER. 0.1 = Trivial/Collapsed. 1.0 = Full Difficulty."
         }
       }
     }
