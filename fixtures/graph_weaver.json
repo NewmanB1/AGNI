@@ -1,0 +1,37 @@
+{
+  "version": "1.0",
+  "discovered_cohort": "c_weaver_01",
+  "level": "village",
+  "sample_size": 42,
+  "created_date": "2024-03-10T08:00:00Z",
+  "last_updated": "2024-03-15T08:00:00Z",
+  "weight_estimation_method": "correlation_based",
+  "clustering_method": "manual_tagging",
+  "default_weight": 1.0,
+  "edges": [
+    {
+      "from": "ols.weaving:patterns",
+      "to": "ols.coding:loops",
+      "weight": 0.15,
+      "confidence": 0.92,
+      "sample_size": 40
+    },
+    {
+      "from": "ols.farming:seasons",
+      "to": "ols.math:modulo",
+      "weight": 0.3,
+      "confidence": 0.75,
+      "sample_size": 25
+    }
+  ],
+  "metadata": {
+    "noise_added": {
+        "mechanism": "none",
+        "epsilon": 0,
+        "delta": 0,
+        "noise_scale": 0
+    },
+    "aggregation_method": "weighted_average",
+    "software_version": "manual-fixture-v1"
+  }
+}
