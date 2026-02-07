@@ -50,6 +50,12 @@ jobs:
             if [ $? -ne 0 ]; then
               echo "⚠️ Validation FAILED for $lesson"
               exit 1
+
+       # Step 6: Validate Graph Weights Fixtures
+      - name: Validate Graph Fixtures
+        run: |
+          echo "Validating Fixtures..."
+          npx ajv validate -s schemas/graph_weights.schema.json -d fixtures/graph_weaver.json
             fi
           done
 
