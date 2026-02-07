@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
-const { unified } = require('unified');
+// FIXED: Removed brackets to support CommonJS import
+const unified = require('unified');
 const remarkParse = require('remark-parse');
 const remarkHtml = require('remark-html');
 
@@ -15,18 +16,22 @@ if (!lessonFile) {
 // 2. Read and Parse YAML
 const fileContents = fs.readFileSync(lessonFile, 'utf8');
 const data = yaml.load(fileContents);
+// Clean up output name
 const outputName = path.basename(lessonFile, '.yaml') + '.html';
 
 console.log(`🏭 Compiling Lesson: ${data.meta.title}`);
 
-// 3. Helper: Convert Markdown to HTML
+// 3. Helper: Convert Markdown to HTML (Using v9 syntax)
 async function markdownToHtml(md) {
     if (!md) return "";
-    const result = await unified()
+    
+    // FIXED: Using the older synchronous process for stability
+    const file = await unified()
         .use(remarkParse)
         .use(remarkHtml)
         .process(md);
-    return result.toString();
+        
+    return String(file);
 }
 
 // 4. The Runtime Template (The "Player" that runs on the phone)
@@ -40,10 +45,11 @@ const generateRuntime = (lessonJson) => `
     <style>
         body { font-family: system-ui, sans-serif; padding: 20px; background: #f4f4f4; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        button { background: #007bff; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 8px; width: 100%; margin-top: 20px; }
+        button { background: #007bff; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 8px; width: 100%; margin-top: 20px; cursor: pointer; }
         button:disabled { background: #ccc; }
-        .hidden { display: none; }
-        .sensor-status { margin-top: 10px; font-weight: bold; color: #666; }
+        .step-content { line-height: 1.6; font-size: 18px; }
+        .sensor-status { margin-top: 20px; padding: 10px; background: #eef; border-radius: 5px; font-weight: bold; color: #333; text-align: center; }
+        h1 { color: #333; }
     </style>
 </head>
 <body>
@@ -59,7 +65,6 @@ const generateRuntime = (lessonJson) => `
         // --- HARDWARE ABSTRACTION LAYER (HAL) ---
         function triggerHaptic(pattern) {
             if (navigator.vibrate) {
-                // Parse pattern: "heavy_thud" -> [50, 50, 200]
                 const patterns = {
                     "heavy_thud": [50, 50, 200],
                     "success": [100, 50, 100]
@@ -80,10 +85,11 @@ const generateRuntime = (lessonJson) => `
             
             // Logic: freefall (accel.total < 0.2)
             if (subject === 'freefall') {
-                // "freefall" logic is inverted: reading must be LESS than 0.2g
-                // But the Lesson says "freefall > 0.15s" (Duration)
-                // For this V1 compiler, we simply check if reading < 0.2
                 return reading < 0.2; 
+            }
+            // Logic: accel.total > 2.0g
+            if (subject === 'accelerometer') {
+                 if (operator === '>') return reading > numValue;
             }
             return false;
         }
@@ -93,18 +99,19 @@ const generateRuntime = (lessonJson) => `
             const step = lesson.steps[currentStepIndex];
             const app = document.getElementById('app');
             
+            // Render HTML content (compiled from Markdown)
             let html = '<div class="step-content">' + (step.htmlContent || step.content) + '</div>';
             
             if (step.type === 'instruction') {
-                html += '<button onclick="nextStep()">Next</button>';
+                html += '<button onclick="nextStep()">Next Step</button>';
             } 
             else if (step.type === 'hardware_trigger') {
-                html += '<div class="sensor-status" id="sensor-debug">Waiting for action...</div>';
+                html += '<div class="sensor-status" id="sensor-debug">Waiting for sensor...<br>(Drop phone gently)</div>';
                 startSensorListener(step);
             }
             else if (step.type === 'quiz') {
                  step.answer_options.forEach((opt, idx) => {
-                    html += '<button onclick="checkAnswer(' + idx + ')">' + opt + '</button>';
+                    html += '<button onclick="checkAnswer(' + idx + ')" style="margin-top:10px;">' + opt + '</button>';
                  });
             }
 
@@ -116,7 +123,7 @@ const generateRuntime = (lessonJson) => `
                 currentStepIndex++;
                 renderStep();
             } else {
-                document.getElementById('app').innerHTML = "<h1>Lesson Complete! 🎉</h1>";
+                document.getElementById('app').innerHTML = "<h1>Lesson Complete! 🎉</h1><p>You have mastered Gravity.</p>";
                 triggerHaptic("success");
             }
         }
@@ -125,9 +132,10 @@ const generateRuntime = (lessonJson) => `
             const step = lesson.steps[currentStepIndex];
             if (idx === step.correct_index) {
                 triggerHaptic("success");
+                alert("Correct!");
                 nextStep();
             } else {
-                navigator.vibrate(500); // Error buzz
+                navigator.vibrate(500); 
                 alert("Try again!");
             }
         }
@@ -137,20 +145,31 @@ const generateRuntime = (lessonJson) => `
             sensorActive = true;
             
             // Listen for Accelerometer
-            window.addEventListener('devicemotion', (event) => {
-                if (currentStepIndex !== lesson.steps.indexOf(step)) return;
+            if (window.DeviceMotionEvent) {
+                window.addEventListener('devicemotion', (event) => {
+                    // Only process if we are still on the sensor step
+                    if (currentStepIndex !== lesson.steps.indexOf(step)) return;
 
-                const acc = event.accelerationIncludingGravity;
-                const totalG = Math.sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z) / 9.8;
-                
-                document.getElementById('sensor-debug').innerText = "G-Force: " + totalG.toFixed(2);
+                    const acc = event.accelerationIncludingGravity;
+                    if (!acc) return;
 
-                if (checkThreshold(totalG, step.threshold)) {
-                    triggerHaptic(step.feedback);
-                    sensorActive = false;
-                    nextStep();
-                }
-            });
+                    // Calculate Total G-Force
+                    const totalG = Math.sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z) / 9.8;
+                    
+                    const debugEl = document.getElementById('sensor-debug');
+                    if (debugEl) debugEl.innerText = "G-Force: " + totalG.toFixed(2);
+
+                    // Check if threshold met
+                    if (checkThreshold(totalG, step.threshold)) {
+                        triggerHaptic(step.feedback);
+                        sensorActive = false;
+                        nextStep();
+                    }
+                });
+            } else {
+                alert("No Sensor API detected. Skipping step (Debug Mode).");
+                nextStep();
+            }
         }
 
         // --- INIT ---
