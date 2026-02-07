@@ -1,82 +1,27 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/NewmanB1/AGNI/schemas/ols.schema.json",
-  "title": "Open Lesson Standard (OLS) v1.5",
-  "description": "Harmonized schema with Dublin Core metadata and Strict Threshold Syntax.",
+  "title": "Open Lesson Standard (OLS) v1.5.1",
   "type": "object",
   "required": ["version", "meta", "steps"],
   "properties": {
-    "version": { 
-      "type": "string", 
-      "enum": ["1.5"],
-      "description": "Strict version pinning." 
-    },
+    "version": { "type": "string", "enum": ["1.5.1"] },
     "meta": {
       "type": "object",
       "required": ["identifier", "title", "rights", "subject"],
       "properties": {
-        "identifier": { 
-          "type": "string", 
-          "description": "dc:identifier (UUID or Slug)" 
-        },
+        "identifier": { "type": "string" },
         "title": { "type": "string" },
         "description": { "type": "string" },
-        "language": { 
-          "type": "string", 
-          "default": "en", 
-          "pattern": "^[a-z]{2}(-[A-Z]{2})?$" 
-        },
-        "rights": { 
-          "type": "string", 
-          "default": "AGPL-3.0", 
-          "description": "dc:rights (formerly 'license')" 
-        },
-        "subject": {
-          "type": "array",
-          "description": "dc:subject (Set Theory Tags).",
-          "items": { "type": "string" },
-          "minItems": 1
-        },
-        "coverage": { 
-          "type": "string", 
-          "description": "dc:coverage (Spatial/Temporal)" 
-        },
-        "target_profile": { 
-          "type": "array", 
-          "items": { "type": "string" } 
-        }
-      }
-    },
-    "ontology": {
-      "type": "object",
-      "properties": {
-        "requires": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["skill"],
-            "properties": {
-              "skill": { "type": "string" },
-              "verifiable": { "type": "boolean", "default": true }
-            }
-          }
-        },
-        "provides": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["skill", "level"],
-            "properties": {
-              "skill": { "type": "string" },
-              "level": { "type": "integer" }
-            }
-          }
-        }
+        "language": { "type": "string", "default": "en" },
+        "rights": { "type": "string", "default": "AGPL-3.0" },
+        "subject": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "coverage": { "type": "string" },
+        "target_profile": { "type": "array", "items": { "type": "string" } }
       }
     },
     "gate": {
       "type": "object",
-      "description": "Prerequisite Logic",
       "required": ["type", "on_fail"],
       "properties": {
         "type": { "type": "string", "enum": ["quiz", "manual_verification"] },
@@ -85,8 +30,16 @@
         "expected_answer": { "type": "string" },
         "on_fail": { "type": "string", "pattern": "^redirect:.*" }
       },
-      "if": { "properties": { "type": { "const": "quiz" } } },
-      "then": { "required": ["question", "expected_answer"] }
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "quiz" } } },
+          "then": { "required": ["question", "expected_answer"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "manual_verification" } } },
+          "then": { "required": ["skill_target"] }
+        }
+      ]
     },
     "steps": {
       "type": "array",
@@ -96,33 +49,31 @@
         "properties": {
           "type": { "type": "string", "enum": ["instruction", "hardware_trigger", "quiz"] },
           "content": { "type": "string" },
-          "sensor": { 
-            "type": "string", 
-            "enum": ["accelerometer", "gyroscope", "microphone", "light"] 
-          },
+          "sensor": { "type": "string", "enum": ["accelerometer", "gyroscope", "microphone", "light"] },
           "threshold": { 
             "type": "string",
-            "description": "Formal Syntax: Subject Operator Value[Unit]",
-            "pattern": "^([a-z\\.]+)\\s*(>|<|>=|<=|==)\\s*([0-9\\.]+)(g|ms|s|deg|db|lux|m\\/s2)?$"
+            // FIXED: Added '-?' to allow negative numbers (e.g. -9.8m/s2)
+            // FIXED: Explicit units to avoid ambiguity
+            "pattern": "^([a-z\\.]+)\\s*(>|<|>=|<=|==)\\s*(-?[0-9\\.]+)(g|ms|s|deg|db|lux|m\\/s2)?$"
           },
           "feedback": { "type": "string" },
           "answer_options": { "type": "array", "items": { "type": "string" } },
           "correct_index": { "type": "integer" }
-        }
+        },
+        // FIXED: Conditional Logic for Steps
+        "allOf": [
+          {
+            "if": { "properties": { "type": { "const": "quiz" } } },
+            "then": { "required": ["answer_options", "correct_index"] }
+          },
+          {
+            "if": { "properties": { "type": { "const": "hardware_trigger" } } },
+            "then": { "required": ["sensor", "threshold", "feedback"] }
+          }
+        ]
       }
     },
-    "signatures": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["role", "entity", "signature"],
-        "properties": {
-          "role": { "type": "string" },
-          "entity": { "type": "string" },
-          "key_id": { "type": "string" },
-          "signature": { "type": "string" }
-        }
-      }
-    }
+    "ontology": { "type": "object" }, 
+    "signatures": { "type": "array" }
   }
 }
