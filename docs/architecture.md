@@ -115,20 +115,31 @@ When a student opens the lesson menu, the Player performs this sorting operation
 
 ## 5. Governance & Trust Architecture
 
-### 5.1 The Web of Trust (WoT)
+### 5.1 The Trust Enforcement Layers
+We distinguish between preventing malicious content (The Firewall) and managing context (The Context Engine).
+
+**A. The Village Sentry (The Firewall)**
+*   **Role:** The authoritative gatekeeper for the local network.
+*   **Data:** Holds the master `trust_policy.json` (e.g., "Trust Red Cross keys, Block unknown keys").
+*   **Action:** It strictly refuses to download, host, or serve any `.ols` file that is not signed by a trusted key.
+    *   *Result:* Malicious or unverified lesson files never physically reach the student's device via the local Wi-Fi.
+
+**B. The Player (The Context Engine)**
+*   **Role:** The logic handler on the student's device.
+*   **Data:** Holds a cached copy of the `trust_policy.json` and the Student's "Skill Wallet."
+*   **Action (The Shadow Record):**
+    *   When a student imports a history via QR code (Sneakernet) from a different region, the Player parses the log.
+    *   *Scenario:* The log contains `completed: math-gravity` signed by `UnknownKey_X`.
+    *   **Behavior:** The Player **does not delete** this record (it belongs to the student). Instead, it marks it as a **"Shadow Record."**
+    *   **Effect:** The skill is ignored during "Prerequisite Checks" for new lessons in the current village.
+    *   **Reactivation:** If the student later moves to a village that *trusts* `UnknownKey_X`, the Shadow Record automatically un-hides and counts towards progress.
+
+### 5.2 The Web of Trust (WoT) Implementation
 We use **Ed25519** signatures.
-*   **The Keyring:** Each "Village Sentry" (Raspberry Pi Hub) holds a JSON file of trusted Public Keys (`trust_policy.json`).
-*   **The Check:** When a lesson is requested:
-    1.  Sentry extracts signatures from `lesson.yaml`.
-    2.  Sentry checks if any signature matches a key in `trust_policy.json`.
-    3.  *Match:* Serve file. *No Match:* Block file or flag "Unverified".
-
-### 5.2 Context-Aware Rendering
-When a student moves between regions (e.g., Refugee Camp A -> Camp B):
-1.  Student imports "Skill Wallet" via QR Code.
-2.  Player checks the Skill Wallet against Camp B's `trust_policy`.
-3.  **Result:** Skills earned from "Untrusted Sources" are hidden in the UI but preserved in the database (Shadow Record).
-
+*   **The Keyring:** A JSON list of public keys and their roles (Author, Reviewer, Translator).
+*   **The Verification:**
+    *   **Step 1 (Sentry):** Validate file signature against `trust_policy.json` before caching.
+    *   **Step 2 (Player):** Validate history signatures against `trust_policy.json` before rendering the Skill Tree.
 ---
 
 ## 6. Network Topology (Offline Sync)
