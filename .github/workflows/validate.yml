@@ -1,65 +1,64 @@
-name: OLS Validator
+name: Validate OLS Files
 
 on:
   push:
+    branches: [main]
     paths:
       - 'lessons/**'
       - 'schemas/**'
       - 'fixtures/**'
-      - '.github/workflows/**'
+      - 'package.json'
   pull_request:
+    paths:
+      - 'lessons/**'
+      - 'schemas/**'
+      - 'fixtures/**'
+      - 'package.json'
+  workflow_dispatch:
 
 jobs:
-  validate_all:
+  validate:
+    name: Validate YAML & Graph Weights
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
+          cache: 'npm'
 
       - name: Install dependencies
-        # We install the library 'js-yaml' and the tool 'ajv-cli'
-        run: npm install js-yaml ajv-cli
+        run: npm ci
 
-      # --- PART 1: VALIDATE LESSONS (.yaml) ---
-      - name: Validate Lessons (OLS Schema)
+      - name: Validate all OLS lesson files
         run: |
-          echo "🔍 Starting Lesson Validation..."
-          
-          for lesson in lessons/*.yaml; do
-            echo "Checking $lesson..."
-            
-            # 1. Convert YAML to JSON using a one-line Node script
-            # This is safer than relying on external CLI tools
-            node -e 'const fs=require("fs"); const yaml=require("js-yaml"); console.log(JSON.stringify(yaml.load(fs.readFileSync(process.argv[1], "utf8"))))' "$lesson" > temp.json
-            
-            # 2. Validate using npx (executes the local ajv-cli)
-            npx ajv validate -s schemas/ols.schema.json -d temp.json
-            
-            if [ $? -ne 0 ]; then
-              echo "❌ Validation FAILED for $lesson"
-              exit 1
+          echo "🔍 Validating all .yaml lessons..."
+          for file in lessons/*.yaml lessons/*.yml; do
+            if [ -f "$file" ]; then
+              echo "→ Checking $file"
+              node -e "
+                const fs = require('fs');
+                const yaml = require('js-yaml');
+                const data = yaml.load(fs.readFileSync('$file', 'utf8'));
+                console.log(JSON.stringify(data));
+              " > temp.json
+              npx ajv validate -s schemas/ols.schema.json -d temp.json || exit 1
+              rm temp.json
+              echo "   ✓ Valid"
             fi
-            echo "✅ $lesson is Valid"
           done
-          
-          rm temp.json
 
-      # --- PART 2: VALIDATE GRAPH WEIGHTS (.json) ---
-      - name: Validate Graph Fixtures
+      - name: Validate graph weights fixtures
         run: |
-          echo "🔍 Checking Graph Weights..."
-          
-          # No conversion needed, it's already JSON
-          npx ajv validate -s schemas/graph_weights.schema.json -d fixtures/graph_weaver.json
-          
-          if [ $? -ne 0 ]; then
-             echo "❌ Graph Fixture Invalid"
-             exit 1
-          fi
-          echo "✅ Graph Fixture is Valid"
+          echo "🔍 Validating graph weights examples..."
+          for file in fixtures/*.json; do
+            if [ -f "$file" ]; then
+              echo "→ Checking $file"
+              npx ajv validate -s schemas/graph_weights.schema.json -d "$file" || exit 1
+              echo "   ✓ Valid"
+            fi
+          done
