@@ -17,15 +17,27 @@
     },
     "edges": {
       "type": "object",
-      "description": "Map of Source Skill to Target Skill weight reductions.",
       "patternProperties": {
         "^.* -> .*$": {
-          "type": "number",
-          "minimum": 0.0,
-          "maximum": 1.0,
-          "description": "The Final Cost (Theta). LOWER IS BETTER. 0.1 = Trivial/Collapsed. 1.0 = Full Difficulty."
+          "oneOf": [
+            { 
+              "type": "number",
+              "description": "Simple Mode: Just the Theta value (0.0 - 1.0)" 
+            },
+            {
+              "type": "object",
+              "description": "Advanced Mode: Theta with statistical confidence.",
+              "required": ["weight"],
+              "properties": {
+                "weight": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+                "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.5 },
+                "sample_size": { "type": "integer", "minimum": 1 }
+              }
+            }
+          ]
         }
       }
+    }
     }
   }
 }
