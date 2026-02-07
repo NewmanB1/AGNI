@@ -22,25 +22,25 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install validator tools
-        run: npm install -g ajv-cli js-yaml-cli
+      - name: Install dependencies
+        # We install the library 'js-yaml' and the tool 'ajv-cli'
+        run: npm install js-yaml ajv-cli
 
       # --- PART 1: VALIDATE LESSONS (.yaml) ---
       - name: Validate Lessons (OLS Schema)
         run: |
-          mkdir -p tmp_json
+          echo "🔍 Starting Lesson Validation..."
           
-          # Loop through all YAML files in lessons/
           for lesson in lessons/*.yaml; do
-            echo "🔍 Checking $lesson ..."
+            echo "Checking $lesson..."
             
-            # Convert YAML -> JSON
-            js-yaml "$lesson" > tmp_json/temp.json
+            # 1. Convert YAML to JSON using a one-line Node script
+            # This is safer than relying on external CLI tools
+            node -e 'const fs=require("fs"); const yaml=require("js-yaml"); console.log(JSON.stringify(yaml.load(fs.readFileSync(process.argv[1], "utf8"))))' "$lesson" > temp.json
             
-            # Validate against ols.schema.json
-            ajv validate -s schemas/ols.schema.json -d tmp_json/temp.json
+            # 2. Validate using npx (executes the local ajv-cli)
+            npx ajv validate -s schemas/ols.schema.json -d temp.json
             
-            # Check for failure
             if [ $? -ne 0 ]; then
               echo "❌ Validation FAILED for $lesson"
               exit 1
@@ -48,16 +48,15 @@ jobs:
             echo "✅ $lesson is Valid"
           done
           
-          rm -rf tmp_json
+          rm temp.json
 
       # --- PART 2: VALIDATE GRAPH WEIGHTS (.json) ---
       - name: Validate Graph Fixtures
         run: |
           echo "🔍 Checking Graph Weights..."
           
-          # Validate the fixture against the graph schema
-          # Note: No conversion needed since it is already JSON
-          ajv validate -s schemas/graph_weights.schema.json -d fixtures/graph_weaver.json
+          # No conversion needed, it's already JSON
+          npx ajv validate -s schemas/graph_weights.schema.json -d fixtures/graph_weaver.json
           
           if [ $? -ne 0 ]; then
              echo "❌ Graph Fixture Invalid"
