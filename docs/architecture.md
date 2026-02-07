@@ -1,3 +1,11 @@
+Here is the complete, updated `docs/architecture.md`.
+
+I have rewritten **Section 4** entirely to replace the old "Inverted Evaluation" model with the new **"Adaptive Graph Engine"** (Skill Collapse/Theta logic). I also added a note on "Epistemic Pluralism" in the overview.
+
+You can copy-paste this entire block to replace your current file.
+
+***
+
 # 🏗️ Open Lesson Standard (OLS): System Architecture
 
 ## 1. High-Level Overview
@@ -10,6 +18,7 @@ The system is designed around the "Pipeline, not Platform" philosophy. We do not
 *   **Network:** 100% Offline capability. Intermittent "Village Sentry" updates.
 *   **Input:** Haptic/Sensor-first (Accelerometer, Vibration) + Touch.
 *   **Trust:** Decentralized (Web of Trust), no central authority.
+*   **Epistemic Pluralism:** The system does not enforce a single "correct" learning order. It adapts to local "Generative Metaphors" (e.g., if Weaving makes Math easier for a specific village, the system prioritizes that path).
 
 ---
 
@@ -18,7 +27,7 @@ The core of the architecture is the Lesson File. It is a YAML document designed 
 
 ### 2.1 Schema Definition
 An OLS file is composed of five strictly defined blocks:
-1.  **meta:** Dublin Core metadata, localization tags, and target learner profiles.
+1.  **meta:** Dublin Core metadata (`subject`, `rights`, `coverage`).
 2.  **ontology:** The "Skill Contract." What this lesson requires (`requires`) and what it teaches (`provides`).
 3.  **signatures:** Cryptographic proofs of authorship and approval (Web of Trust).
 4.  **gate:** The logic block that enforces the "Zero-Trust" prerequisite check.
@@ -26,12 +35,12 @@ An OLS file is composed of five strictly defined blocks:
 
 ### 2.2 Example Schema (`lesson.yaml`)
 ```yaml
-version: "1.0"
+version: "1.4"
 meta:
-  id: "math-gravity-01"
+  identifier: "math-gravity-01"
   title: "Introduction to Gravity"
-  language: "en-KE" # English (Kenya)
-  license: "AGPL-3.0"
+  rights: "AGPL-3.0"
+  subject: ["Physics", "Classical Mechanics"] # Set Theory Tags
   target_profile: ["haptic_seeker"] 
 
 ontology:
@@ -45,11 +54,6 @@ ontology:
 signatures:
   - role: "author"
     entity: "Jane Doe"
-    key_id: "ed25519:pub_key_A..."
-    signature: "sig_string..."
-  - role: "approver"
-    entity: "Kenya District 4 Education"
-    key_id: "ed25519:pub_key_B..."
     signature: "sig_string..."
 
 gate:
@@ -62,5 +66,86 @@ steps:
     content: "Hold the device flat in your palm."
   - type: "hardware_trigger"
     sensor: "accelerometer"
-    threshold: "freefall > 0.1s"
+    threshold: "freefall > 0.1s" # Formal Syntax
     feedback: "vibration:success_pattern"
+```
+
+---
+
+## 3. The Runtime Architecture (The Player)
+The "Player" is a lightweight Progressive Web App (PWA) built with Preact. It acts as the bridge between the static YAML and the physical hardware.
+
+### 3.1 The "Universal Export" Pipeline
+To ensure performance on low-end devices, we do not parse YAML on the phone at runtime. We use a Build Step.
+
+`Author (YAML) -> Compiler (Node.js/Unified) -> Static HTML Bundle (<500KB) -> Phone`
+
+*   **Compiler:** Embeds the lesson logic, assets, and a minimal Preact runtime into a single `index.html` file.
+*   **Asset Strategy:** Images are Base64 encoded or referenced relative to the bundle to ensure zero external requests.
+
+### 3.2 The Hardware Abstraction Layer (HAL)
+The Player includes a JavaScript abstraction layer to handle hardware fragmentation safely.
+*   **Feature Detection:** Checks if `('vibrate' in navigator)`.
+*   **Graceful Degradation:** 
+    *   *Device A (Has Motor):* Vibrate on success.
+    *   *Device B (No Motor):* Flash screen on success.
+*   **Sensor Noise Filter:** Implements a low-pass filter on `DeviceMotion` events to distinguish "intent" from "shaky hands."
+
+---
+
+## 4. The Adaptive Graph Engine (Navigation)
+Instead of a static list or a linear curriculum, OLS uses a probabilistic graph to order lessons based on **Marginal Learning Cost ($\theta$)**.
+
+### 4.1 The Core Concept: Skill Collapse
+We assume that for certain cohorts, mastering Skill A makes Skill B trivial (a "Skill Collapse" or "Generative Metaphor").
+*   **$\theta$ (Theta):** A distance metric representing the estimated effort for a specific student to master a specific lesson.
+*   **Formula:** $\theta = \text{BaseCost} (1.0) - \text{CohortDiscount}$
+
+### 4.2 The Artifact: `graph_weights.json`
+The "Village Sentry" analyzes local learning logs to detect these collapses. It generates a lightweight JSON file that the Player downloads during sync.
+*   **Nodes:** Skill IDs (e.g., `ols.math:ratios`).
+*   **Edges:** Observed probability that Skill A facilitates Skill B.
+    *   *Example:* If a cohort of weavers easily understands coding loops, the edge `weaving -> loops` has a low weight (e.g., 0.1).
+
+### 4.3 The Player Logic (Runtime)
+When a student opens the lesson menu, the Player performs this sorting operation:
+1.  **Filter (Governance):** Select all lessons where `prerequisites` are met **AND** the lesson signature is `authorized` by the local Trust Policy.
+2.  **Calculate Cost (Theta):** For each candidate lesson, calculate $\theta$ based on the student's existing skills and the local `graph_weights.json`.
+3.  **Sort:** Present lessons with the lowest $\theta$ (lowest cognitive load) at the top of the list.
+
+**Result:** A student with a background in weaving sees "Loops" at the top; a student with a background in farming might see "Modulo Arithmetic" at the top. The software adapts to the culture.
+
+---
+
+## 5. Governance & Trust Architecture
+
+### 5.1 The Web of Trust (WoT)
+We use **Ed25519** signatures.
+*   **The Keyring:** Each "Village Sentry" (Raspberry Pi Hub) holds a JSON file of trusted Public Keys (`trust_policy.json`).
+*   **The Check:** When a lesson is requested:
+    1.  Sentry extracts signatures from `lesson.yaml`.
+    2.  Sentry checks if any signature matches a key in `trust_policy.json`.
+    3.  *Match:* Serve file. *No Match:* Block file or flag "Unverified".
+
+### 5.2 Context-Aware Rendering
+When a student moves between regions (e.g., Refugee Camp A -> Camp B):
+1.  Student imports "Skill Wallet" via QR Code.
+2.  Player checks the Skill Wallet against Camp B's `trust_policy`.
+3.  **Result:** Skills earned from "Untrusted Sources" are hidden in the UI but preserved in the database (Shadow Record).
+
+---
+
+## 6. Network Topology (Offline Sync)
+
+### 6.1 The Village Sentry (Hub)
+*   **Hardware:** Raspberry Pi 4 + Starlink + High-Gain Wi-Fi.
+*   **Role:**
+    *   **CDN:** Caches the static HTML bundles.
+    *   **Gatekeeper:** Enforces the `trust_policy.json`.
+    *   **Aggregator:** Collects anonymous telemetry logs from phones to calculate `graph_weights.json`.
+
+### 6.2 The Sneakernet Protocol (P2P)
+For moving data between devices without a Sentry:
+*   **Export:** Profile is compressed using **Gzip + Base45**.
+*   **Transport:** Rendered as a sequence of QR Codes.
+*   **Import:** Camera scans QR, validates checksum, decrypts, and merges into local IndexedDB.
