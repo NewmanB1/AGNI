@@ -1,0 +1,34 @@
+name: Build Lessons
+
+on:
+  push:
+    paths:
+      - 'lessons/**'
+      - 'src/**'
+      - 'package.json'
+  workflow_dispatch: # Allows manual button click
+
+jobs:
+  compile_gravity:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install Factory Tools
+        run: npm install
+
+      - name: 🏭 Run Compiler
+        run: node src/compiler.js lessons/gravity.yaml
+
+      - name: 📦 Upload HTML Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: gravity-lesson-v1
+          path: gravity.html
