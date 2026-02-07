@@ -1,0 +1,20 @@
+{
+  "name": "ols-compiler",
+  "version": "0.1.0",
+  "description": "The pipeline that turns OLS YAML into interactive HTML.",
+  "main": "src/compiler.js",
+  "scripts": {
+    "test": "echo \"Use GitHub Actions to test\" && exit 1"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "unified": "^11.0.0",
+    "remark-parse": "^11.0.0",
+    "remark-html": "^16.0.0",
+    "preact": "^10.19.0",
+    "preact-render-to-string": "^6.3.0",
+    "htm": "^3.1.1"
+  },
+  "author": "OLS Team",
+  "license": "AGPL-3.0"
+}
