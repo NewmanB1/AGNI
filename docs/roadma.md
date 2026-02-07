@@ -1,11 +1,3 @@
-Here is the complete, updated `docs/roadmap.md`.
-
-I have updated **Phase 2** to prioritize the **Graph Engine ($\theta$)** over simple telemetry, and **Phase 3** to include the generation of `graph_weights.json`.
-
-Copy and paste this entire block into `docs/roadmap.md`.
-
-***
-
 # 🗺️ The Open Lesson Standard (OLS) Roadmap: First 100 Days
 
 This document outlines the strategic plan to launch the Open Lesson Standard (OLS)—a file format and runtime for offline, sensor-rich, and culturally adaptive education.
