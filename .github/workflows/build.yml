@@ -1,34 +1,48 @@
-name: Build Lessons
+name: Build OLS Reference Bundles
 
 on:
   push:
+    branches: [main]
     paths:
       - 'lessons/**'
       - 'src/**'
       - 'package.json'
-  workflow_dispatch: # Allows manual button click
+  workflow_dispatch:
 
 jobs:
-  compile_gravity:
+  build:
+    name: Build HTML & Native Outputs
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '16'
+          node-version: 20
+          cache: 'npm'
 
-      - name: Install Factory Tools
-        run: npm install
+      - name: Install dependencies
+        run: npm ci
 
-      - name: 🏭 Run Compiler
-        run: node src/compiler.js lessons/gravity.yaml
+      - name: Build HTML format (browser/PWA)
+        run: node src/compiler.js lessons/gravity.yaml --format=html --output=dist/gravity.html
 
-      - name: 📦 Upload HTML Bundle
+      - name: Build Native format (Markdown + JSON)
+        run: node src/compiler.js lessons/gravity.yaml --format=native --output-dir=dist/gravity-native
+
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: gravity-lesson-v1
-          path: gravity.html
+          name: ols-reference-bundles
+          path: |
+            dist/gravity.html
+            dist/gravity-native/
+          if-no-files-found: error
+
+      - name: Show build summary
+        run: |
+          echo "Build artifacts created:"
+          ls -lh dist/
