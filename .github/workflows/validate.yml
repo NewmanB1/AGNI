@@ -2,62 +2,65 @@ name: OLS Validator
 
 on:
   push:
+    paths:
+      - 'lessons/**'
+      - 'schemas/**'
+      - 'fixtures/**'
+      - '.github/workflows/**'
   pull_request:
 
 jobs:
-  validate_lessons:
+  validate_all:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      # Step 3: Install validator tools locally (avoids global PATH issues)
       - name: Install validator tools
-        run: |
-          npm install ajv-cli js-yaml-cli
+        run: npm install -g ajv-cli js-yaml-cli
 
-      # Step 4: List schemas and lessons for debug
-      - name: List schemas and lessons
-        run: |
-          echo "Schemas:"
-          ls -la schemas
-          echo "Lessons:"
-          ls -la lessons
-
-      # Step 5: Validate all lessons
-      - name: Validate all lessons
+      # --- PART 1: VALIDATE LESSONS (.yaml) ---
+      - name: Validate Lessons (OLS Schema)
         run: |
           mkdir -p tmp_json
-
+          
+          # Loop through all YAML files in lessons/
           for lesson in lessons/*.yaml; do
-            echo "Validating $lesson ..."
-
-            # Convert YAML to JSON using npx
-            npx js-yaml "$lesson" > tmp_json/$(basename "$lesson" .yaml).json
-
-            # Validate JSON using npx ajv
-            npx ajv validate --spec=draft7 -s schemas/ols.schema.json -d tmp_json/$(basename "$lesson" .yaml).json
-
-            # Capture AJV failure
+            echo "🔍 Checking $lesson ..."
+            
+            # Convert YAML -> JSON
+            js-yaml "$lesson" > tmp_json/temp.json
+            
+            # Validate against ols.schema.json
+            ajv validate -s schemas/ols.schema.json -d tmp_json/temp.json
+            
+            # Check for failure
             if [ $? -ne 0 ]; then
-              echo "⚠️ Validation FAILED for $lesson"
+              echo "❌ Validation FAILED for $lesson"
               exit 1
+            fi
+            echo "✅ $lesson is Valid"
+          done
+          
+          rm -rf tmp_json
 
-       # Step 6: Validate Graph Weights Fixtures
+      # --- PART 2: VALIDATE GRAPH WEIGHTS (.json) ---
       - name: Validate Graph Fixtures
         run: |
-          echo "Validating Fixtures..."
-          npx ajv validate -s schemas/graph_weights.schema.json -d fixtures/graph_weaver.json
-            fi
-          done
-
-          # Cleanup temporary JSON files
-          rm -rf tmp_json
+          echo "🔍 Checking Graph Weights..."
+          
+          # Validate the fixture against the graph schema
+          # Note: No conversion needed since it is already JSON
+          ajv validate -s schemas/graph_weights.schema.json -d fixtures/graph_weaver.json
+          
+          if [ $? -ne 0 ]; then
+             echo "❌ Graph Fixture Invalid"
+             exit 1
+          fi
+          echo "✅ Graph Fixture is Valid"
