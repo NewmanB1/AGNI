@@ -1,11 +1,3 @@
-Here is the complete, updated `docs/architecture.md`.
-
-I have rewritten **Section 4** entirely to replace the old "Inverted Evaluation" model with the new **"Adaptive Graph Engine"** (Skill Collapse/Theta logic). I also added a note on "Epistemic Pluralism" in the overview.
-
-You can copy-paste this entire block to replace your current file.
-
-***
-
 # 🏗️ Open Lesson Standard (OLS): System Architecture
 
 ## 1. High-Level Overview
