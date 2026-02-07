@@ -52,15 +52,12 @@
           "sensor": { "type": "string", "enum": ["accelerometer", "gyroscope", "microphone", "light"] },
           "threshold": { 
             "type": "string",
-            // FIXED: Added '-?' to allow negative numbers (e.g. -9.8m/s2)
-            // FIXED: Explicit units to avoid ambiguity
             "pattern": "^([a-z\\.]+)\\s*(>|<|>=|<=|==)\\s*(-?[0-9\\.]+)(g|ms|s|deg|db|lux|m\\/s2)?$"
           },
           "feedback": { "type": "string" },
           "answer_options": { "type": "array", "items": { "type": "string" } },
           "correct_index": { "type": "integer" }
         },
-        // FIXED: Conditional Logic for Steps
         "allOf": [
           {
             "if": { "properties": { "type": { "const": "quiz" } } },
