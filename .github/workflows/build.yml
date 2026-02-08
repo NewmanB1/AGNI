@@ -25,7 +25,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build HTML format (browser/PWA)
         run: node src/compiler.js lessons/gravity.yaml --format=html --output=dist/gravity.html
