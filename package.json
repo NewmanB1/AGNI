@@ -1,16 +1,22 @@
 {
-  "name": "ols-compiler",
+  "name": "agni-core",
   "version": "0.1.0",
-  "description": "The pipeline that turns OLS YAML into interactive HTML.",
-  "main": "src/compiler.js",
+  "description": "AGNI: The compiler and runtime for the Open Lesson Standard (OLS).",
+  "bin": {
+    "agni": "./src/compiler.js"
+  },
   "keywords": [
+    "agni",
+    "ols",
+    "offline-education",
+    "sensor-learning"
     "education",
     "compiler",
     "yaml",
     "lesson-builder",
     "interactive-learning"
   ],
-  "author": "OLS Team",
+  "author": "AGNI Maintainers",
   "license": "AGPL-3.0",
   "repository": {
     "type": "git",
