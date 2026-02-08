@@ -4,30 +4,30 @@ const unified = require('unified');
 const markdown = require('remark-parse');
 const html = require('remark-html');
 const path = require('path');
+const { Buffer } = require('buffer');
 
 // 1. Read the Lesson
 const lessonPath = process.argv[2] || 'lessons/gravity.yaml';
 const lesson = yaml.load(fs.readFileSync(lessonPath, 'utf8'));
 
 // ── Output handling ──
-// Default output path
 let outputPath = 'dist/gravity.html';
 
-// Parse --output flag if provided
 const args = process.argv;
 const outputIndex = args.indexOf('--output');
 if (outputIndex !== -1 && args[outputIndex + 1]) {
   outputPath = args[outputIndex + 1];
 }
 
-// Create the output directory if it doesn't exist
 const outputDir = path.dirname(outputPath);
 if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
   console.log(`Created output directory: ${outputDir}`);
 }
 
-// 2. The Runtime Template (The "Player" Engine)
+console.log(`Writing to: ${outputPath}`);
+
+// 2. The Runtime Template
 const template = (json) => `
 <!DOCTYPE html>
 <html lang="${json.meta?.language || 'en'}">
@@ -36,54 +36,16 @@ const template = (json) => `
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${json.meta?.title || 'OLS Lesson'}</title>
   <style>
-    body { 
-      font-family: system-ui, sans-serif; 
-      padding: 20px; 
-      max-width: 700px; 
-      margin: 0 auto; 
-      line-height: 1.6; 
-      background: #f9f9f9; 
-    }
+    body { font-family: system-ui, sans-serif; padding: 20px; max-width: 700px; margin: 0 auto; line-height: 1.6; background: #f9f9f9; }
     h1, h2, h3 { color: #1a3c5e; }
-    button { 
-      padding: 14px 28px; 
-      font-size: 1.1em; 
-      background: #0066cc; 
-      color: white; 
-      border: none; 
-      border-radius: 8px; 
-      cursor: pointer; 
-      margin: 16px 8px 8px 0; 
-    }
+    button { padding: 14px 28px; font-size: 1.1em; background: #0066cc; color: white; border: none; border-radius: 8px; cursor: pointer; margin: 16px 8px 8px 0; }
     button:hover { background: #0052a3; }
-    .progress { 
-      font-size: 0.95em; 
-      color: #555; 
-      margin: 12px 0; 
-    }
-    .quiz-options label { 
-      display: block; 
-      margin: 12px 0; 
-      padding: 10px; 
-      background: #fff; 
-      border: 1px solid #ddd; 
-      border-radius: 6px; 
-      cursor: pointer; 
-    }
+    .progress { font-size: 0.95em; color: #555; margin: 12px 0; }
+    .quiz-options label { display: block; margin: 12px 0; padding: 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; }
     .quiz-options input:checked + span { font-weight: bold; color: #0066cc; }
-    #debug { 
-      font-size: 0.85em; 
-      color: #777; 
-      margin-top: 20px; 
-      font-family: monospace; 
-    }
-    .flash { 
-      animation: flash 0.6s; 
-    }
-    @keyframes flash { 
-      0% { background: #ffff99; } 
-      100% { background: transparent; } 
-    }
+    #debug { font-size: 0.85em; color: #777; margin-top: 20px; font-family: monospace; }
+    .flash { animation: flash 0.6s; }
+    @keyframes flash { 0% { background: #ffff99; } 100% { background: transparent; } }
   </style>
 </head>
 <body>
@@ -91,11 +53,10 @@ const template = (json) => `
   <div id="debug">Waiting for sensor permissions...</div>
 
   <script>
-    const lesson = ${JSON.stringify(json, null, 2)};
+    const lesson = JSON.parse(atob('${Buffer.from(JSON.stringify(json)).toString('base64')}'));
     let stepIndex = 0;
     let freefallStart = null;
 
-    // Vibration patterns
     const vibrationPatterns = {
       short: 200,
       success: [100, 50, 100, 50, 200],
@@ -103,13 +64,11 @@ const template = (json) => `
       long: 800
     };
 
-    // Screen flash fallback
     function flashScreen() {
       document.body.classList.add('flash');
       setTimeout(() => document.body.classList.remove('flash'), 600);
     }
 
-    // Trigger feedback
     function triggerFeedback(feedback = '') {
       const pattern = vibrationPatterns[feedback.replace('vibration:', '')] || 300;
       if (navigator.vibrate) {
@@ -119,7 +78,6 @@ const template = (json) => `
       }
     }
 
-    // Improved sensor logic
     function startSensor(threshold, onTrigger) {
       const debugEl = document.getElementById('debug');
 
@@ -130,7 +88,6 @@ const template = (json) => `
         const total = Math.hypot(acc.x || 0, acc.y || 0, acc.z || 0);
         let triggered = false;
 
-        // Parse threshold string
         if (threshold.includes('accel.z >')) {
           const val = parseFloat(threshold.split('>')[1].trim());
           if (Math.abs(acc.z) > val) triggered = true;
@@ -143,7 +100,7 @@ const template = (json) => `
           const match = threshold.match(/freefall\\s*>\\s*([\\d.]+)s?/);
           const durationMs = match ? parseFloat(match[1]) * 1000 : 300;
 
-          if (total < 1.5) {  // near freefall
+          if (total < 1.5) {
             if (!freefallStart) freefallStart = Date.now();
             if (Date.now() - freefallStart >= durationMs) {
               triggered = true;
@@ -179,7 +136,6 @@ const template = (json) => `
       }
     }
 
-    // Render current step
     async function render() {
       const app = document.getElementById('app');
       const step = lesson.steps[stepIndex];
@@ -188,7 +144,6 @@ const template = (json) => `
         return;
       }
 
-      // Convert markdown to HTML
       let contentHtml = '';
       if (step.content) {
         const { value } = await unified()
@@ -260,11 +215,11 @@ const template = (json) => `
       render();
     }
 
-    // Start
     render();
   </script>
 </body>
-</html>`;
+</html>
+`;
 
 // 3. Write the Output
 fs.writeFileSync(outputPath, template(lesson));
