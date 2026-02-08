@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://agni-project.org/schemas/ols.schema.json,
+  "$id": "https://agni-project.org/schemas/ols.schema.json",
   "title": "AGNI / Open Lesson Standard v1.6",
   "description": "A standard for offline, sensor-rich interactive lessons. Metadata complies with Dublin Core (DC) and LRMI/Schema.org.",
   "type": "object",
@@ -16,42 +16,15 @@
       "description": "Bibliographic and Educational Metadata (DC & LRMI compliant)",
       "required": ["identifier", "title", "language", "license", "created"],
       "properties": {
-        "identifier": {
-          "type": "string",
-          "description": "Unique URI/UUID (DC:identifier)"
-        },
-        "title": {
-          "type": "string",
-          "description": "Human-readable name (DC:title)"
-        },
-        "description": {
-          "type": "string",
-          "description": "Brief summary (DC:description)"
-        },
-        "language": {
-          "type": "string",
-          "pattern": "^[a-z]{2,3}(-[A-Z]{2,3})?$",
-          "description": "IETF BCP 47 Language Code (DC:language)",
-          "examples": ["en", "es-MX", "sw"]
-        },
-        "license": {
-          "type": "string",
-          "description": "Legal usage rights (DC:rights)",
-          "examples": ["AGPL-3.0", "CC-BY-4.0"]
-        },
-        "created": {
-          "type": "string",
-          "format": "date-time",
-          "description": "ISO 8601 Creation Date (DC:date / dcterms:created)"
-        },
-        "updated": {
-          "type": "string",
-          "format": "date-time",
-          "description": "ISO 8601 Modification Date (dcterms:modified)"
-        },
+        "identifier": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "language": { "type": "string", "pattern": "^[a-z]{2,3}(-[A-Z]{2,3})?$" },
+        "license": { "type": "string" },
+        "created": { "type": "string", "format": "date-time" },
+        "updated": { "type": "string", "format": "date-time" },
         "authors": {
           "type": "array",
-          "description": "List of creators (DC:creator)",
           "items": {
             "type": "object",
             "properties": {
@@ -62,56 +35,29 @@
             "required": ["name"]
           }
         },
-        "subject": {
-          "type": "array",
-          "description": "Keywords/Topics (DC:subject)",
-          "items": { "type": "string" }
-        },
+        "subject": { "type": "array", "items": { "type": "string" } },
         "audience": {
           "type": "object",
-          "description": "LRMI Educational Audience",
           "properties": {
-            "educational_role": {
-              "type": "string",
-              "enum": ["student", "teacher", "parent"],
-              "default": "student"
-            },
-            "typical_age_range": {
-              "type": "string",
-              "description": "LRMI typicalAgeRange (e.g. '7-9', '18+')"
-            }
+            "educational_role": { "type": "string", "enum": ["student", "teacher", "parent"] },
+            "typical_age_range": { "type": "string" }
           }
         },
         "time_required": {
           "type": "string",
-          "pattern": "^P(?!$)(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$",
-          "description": "ISO 8601 Duration (LRMI:timeRequired). Example: PT10M (10 mins)"
+          "pattern": "^P(?!$)(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$"
         }
       }
     },
     "ontology": {
       "type": "object",
-      "description": "Competency Alignment (Maps to LRMI educationalAlignment)",
       "properties": {
-        "requires": {
-          "type": "array",
-          "description": "Prerequisites (LRMI alignmentType: prerequisite)",
-          "items": { "$ref": "#/definitions/skillNode" }
-        },
-        "provides": {
-          "type": "array",
-          "description": "Skills taught (LRMI alignmentType: teaches)",
-          "items": { "$ref": "#/definitions/skillNode" }
-        }
+        "requires": { "type": "array", "items": { "$ref": "#/definitions/skillNode" } },
+        "provides": { "type": "array", "items": { "$ref": "#/definitions/skillNode" } }
       }
     },
-    "gate": {
-      "$ref": "#/definitions/gateLogic"
-    },
-    "steps": {
-      "type": "array",
-      "items": { "$ref": "#/definitions/step" }
-    },
+    "gate": { "$ref": "#/definitions/gateLogic" },
+    "steps": { "type": "array", "items": { "$ref": "#/definitions/step" } },
     "signatures": {
       "type": "array",
       "items": {
@@ -129,7 +75,7 @@
       "type": "object",
       "required": ["skill"],
       "properties": {
-        "skill": { "type": "string", "description": "URI of the competency" },
+        "skill": { "type": "string" },
         "level": { "type": "integer", "default": 1 }
       }
     },
@@ -148,10 +94,7 @@
       "type": "object",
       "required": ["type"],
       "properties": {
-        "type": {
-          "type": "string",
-          "enum": ["instruction", "hardware_trigger", "quiz"]
-        },
+        "type": { "type": "string", "enum": ["instruction", "hardware_trigger", "quiz"] },
         "content": { "type": "string" },
         "sensor": { "type": "string" },
         "threshold": { "type": "string" },
