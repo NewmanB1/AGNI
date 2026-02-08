@@ -1,76 +1,164 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/NewmanB1/AGNI/schemas/ols.schema.json",
-  "title": "Open Lesson Standard (OLS) v1.5.1",
+  "$id": "https://openlesson.org/schemas/ols.schema.json",
+  "title": "Open Lesson Standard (OLS) v1.6",
+  "description": "A standard for offline, sensor-rich interactive lessons. Metadata complies with Dublin Core (DC) and LRMI/Schema.org.",
   "type": "object",
   "required": ["version", "meta", "steps"],
   "properties": {
-    "version": { "type": "string", "enum": ["1.5.1"] },
+    "version": {
+      "type": "string",
+      "enum": ["1.6.0"],
+      "description": "Semver version of the OLS spec."
+    },
     "meta": {
       "type": "object",
-      "required": ["identifier", "title", "rights", "subject"],
+      "description": "Bibliographic and Educational Metadata (DC & LRMI compliant)",
+      "required": ["identifier", "title", "language", "license", "created"],
       "properties": {
-        "identifier": { "type": "string" },
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "language": { "type": "string", "default": "en" },
-        "rights": { "type": "string", "default": "AGPL-3.0" },
-        "subject": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-        "coverage": { "type": "string" },
-        "target_profile": { "type": "array", "items": { "type": "string" } }
+        "identifier": {
+          "type": "string",
+          "description": "Unique URI/UUID (DC:identifier)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Human-readable name (DC:title)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Brief summary (DC:description)"
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Z]{2,3})?$",
+          "description": "IETF BCP 47 Language Code (DC:language)",
+          "examples": ["en", "es-MX", "sw"]
+        },
+        "license": {
+          "type": "string",
+          "description": "Legal usage rights (DC:rights)",
+          "examples": ["AGPL-3.0", "CC-BY-4.0"]
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 Creation Date (DC:date / dcterms:created)"
+        },
+        "updated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 Modification Date (dcterms:modified)"
+        },
+        "authors": {
+          "type": "array",
+          "description": "List of creators (DC:creator)",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "email": { "type": "string", "format": "email" },
+              "url": { "type": "string", "format": "uri" }
+            },
+            "required": ["name"]
+          }
+        },
+        "subject": {
+          "type": "array",
+          "description": "Keywords/Topics (DC:subject)",
+          "items": { "type": "string" }
+        },
+        "audience": {
+          "type": "object",
+          "description": "LRMI Educational Audience",
+          "properties": {
+            "educational_role": {
+              "type": "string",
+              "enum": ["student", "teacher", "parent"],
+              "default": "student"
+            },
+            "typical_age_range": {
+              "type": "string",
+              "description": "LRMI typicalAgeRange (e.g. '7-9', '18+')"
+            }
+          }
+        },
+        "time_required": {
+          "type": "string",
+          "pattern": "^P(?!$)(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$",
+          "description": "ISO 8601 Duration (LRMI:timeRequired). Example: PT10M (10 mins)"
+        }
+      }
+    },
+    "ontology": {
+      "type": "object",
+      "description": "Competency Alignment (Maps to LRMI educationalAlignment)",
+      "properties": {
+        "requires": {
+          "type": "array",
+          "description": "Prerequisites (LRMI alignmentType: prerequisite)",
+          "items": { "$ref": "#/definitions/skillNode" }
+        },
+        "provides": {
+          "type": "array",
+          "description": "Skills taught (LRMI alignmentType: teaches)",
+          "items": { "$ref": "#/definitions/skillNode" }
+        }
       }
     },
     "gate": {
+      "$ref": "#/definitions/gateLogic"
+    },
+    "steps": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/step" }
+    },
+    "signatures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "role": { "type": "string" },
+          "entity": { "type": "string" },
+          "signature": { "type": "string" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "skillNode": {
       "type": "object",
-      "required": ["type", "on_fail"],
+      "required": ["skill"],
+      "properties": {
+        "skill": { "type": "string", "description": "URI of the competency" },
+        "level": { "type": "integer", "default": 1 }
+      }
+    },
+    "gateLogic": {
+      "type": "object",
+      "required": ["type"],
       "properties": {
         "type": { "type": "string", "enum": ["quiz", "manual_verification"] },
         "skill_target": { "type": "string" },
         "question": { "type": "string" },
         "expected_answer": { "type": "string" },
-        "on_fail": { "type": "string", "pattern": "^redirect:.*" }
-      },
-      "allOf": [
-        {
-          "if": { "properties": { "type": { "const": "quiz" } } },
-          "then": { "required": ["question", "expected_answer"] }
-        },
-        {
-          "if": { "properties": { "type": { "const": "manual_verification" } } },
-          "then": { "required": ["skill_target"] }
-        }
-      ]
-    },
-    "steps": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["type"],
-        "properties": {
-          "type": { "type": "string", "enum": ["instruction", "hardware_trigger", "quiz"] },
-          "content": { "type": "string" },
-          "sensor": { "type": "string", "enum": ["accelerometer", "gyroscope", "microphone", "light"] },
-          "threshold": { 
-            "type": "string",
-            "pattern": "^([a-z\\.]+)\\s*(>|<|>=|<=|==)\\s*(-?[0-9\\.]+)(g|ms|s|deg|db|lux|m\\/s2)?$"
-          },
-          "feedback": { "type": "string" },
-          "answer_options": { "type": "array", "items": { "type": "string" } },
-          "correct_index": { "type": "integer" }
-        },
-        "allOf": [
-          {
-            "if": { "properties": { "type": { "const": "quiz" } } },
-            "then": { "required": ["answer_options", "correct_index"] }
-          },
-          {
-            "if": { "properties": { "type": { "const": "hardware_trigger" } } },
-            "then": { "required": ["sensor", "threshold", "feedback"] }
-          }
-        ]
+        "on_fail": { "type": "string" }
       }
     },
-    "ontology": { "type": "object" }, 
-    "signatures": { "type": "array" }
+    "step": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["instruction", "hardware_trigger", "quiz"]
+        },
+        "content": { "type": "string" },
+        "sensor": { "type": "string" },
+        "threshold": { "type": "string" },
+        "feedback": { "type": "string" },
+        "answer_options": { "type": "array", "items": { "type": "string" } },
+        "correct_index": { "type": "integer" }
+      }
+    }
   }
 }
