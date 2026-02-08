@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://openlesson.org/schemas/ols.schema.json",
-  "title": "Open Lesson Standard (OLS) v1.6",
+  "$id": "https://agni-project.org/schemas/ols.schema.json,
+  "title": "AGNI / Open Lesson Standard v1.6",
   "description": "A standard for offline, sensor-rich interactive lessons. Metadata complies with Dublin Core (DC) and LRMI/Schema.org.",
   "type": "object",
   "required": ["version", "meta", "steps"],
