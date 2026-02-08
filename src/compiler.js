@@ -2,39 +2,63 @@ const fs = require('fs');
 const yaml = require('js-yaml');
 const unified = require('unified');
 const markdown = require('remark-parse');
+const remarkMath = require('remark-math');
 const html = require('remark-html');
+const rehypeKatex = require('rehype-katex');
+const rehypeStringify = require('rehype-stringify');
 const path = require('path');
 const { Buffer } = require('buffer');
 
-// 1. Read the Lesson
-const lessonPath = process.argv[2] || 'lessons/gravity.yaml';
-const lesson = yaml.load(fs.readFileSync(lessonPath, 'utf8'));
-
-// ── Output handling ──
+// 1. Parse command line args
+const args = process.argv.slice(2);
+const lessonPath = args[0] || 'lessons/gravity.yaml';
+const formatIndex = args.indexOf('--format');
+const format = formatIndex !== -1 ? args[formatIndex + 1] : 'html';
 let outputPath = 'dist/gravity.html';
-
-const args = process.argv;
 const outputIndex = args.indexOf('--output');
 if (outputIndex !== -1 && args[outputIndex + 1]) {
   outputPath = args[outputIndex + 1];
 }
+let outputDir = path.dirname(outputPath);
+if (format === 'native') {
+  outputDir = args.find(arg => arg.startsWith('--output-dir=')) ? args.find(arg => arg.startsWith('--output-dir=')).split('=')[1] : 'dist/native-gravity';
+}
 
-const outputDir = path.dirname(outputPath);
+// Create output dir
 if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
   console.log(`Created output directory: ${outputDir}`);
 }
 
-console.log(`Writing to: ${outputPath}`);
+// 2. Read and process the lesson
+const lesson = yaml.load(fs.readFileSync(lessonPath, 'utf8'));
 
-// 2. The Runtime Template
-const template = (json) => `
+// Pre-render markdown content to HTML (with math support)
+const processor = unified()
+  .use(markdown)
+  .use(remarkMath)
+  .use(html)
+  .use(rehypeKatex)
+  .use(rehypeStringify);
+
+lesson.steps.forEach(step => {
+  if (step.content) {
+    const rendered = processor.processSync(step.content).toString();
+    step.renderedContent = rendered;
+  }
+});
+
+// 3. Handle different formats
+if (format === 'html') {
+  // HTML template
+  const template = (json) => `
 <!DOCTYPE html>
 <html lang="${json.meta?.language || 'en'}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${json.meta?.title || 'OLS Lesson'}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css" integrity="sha384-vKruj+a13U8yHIkOyAwoyg9i14pEsNza92LBzEVi1g=" crossorigin="anonymous">
   <style>
     body { font-family: system-ui, sans-serif; padding: 20px; max-width: 700px; margin: 0 auto; line-height: 1.6; background: #f9f9f9; }
     h1, h2, h3 { color: #1a3c5e; }
@@ -136,7 +160,7 @@ const template = (json) => `
       }
     }
 
-    async function render() {
+    function render() {
       const app = document.getElementById('app');
       const step = lesson.steps[stepIndex];
       if (!step) {
@@ -144,49 +168,38 @@ const template = (json) => `
         return;
       }
 
-      let contentHtml = '';
-      if (step.content) {
-        const { value } = await unified()
-          .use(markdown)
-          .use(html, { sanitize: true })
-          .process(step.content);
-        contentHtml = value;
-      }
-
-      let html = \`
-        <h1>\${lesson.meta?.title || 'Lesson'}</h1>
-        <div class="progress">Step \${stepIndex + 1} of \${lesson.steps.length}</div>
-        \${contentHtml}
-      \`;
+      let html = `
+        <h1>${lesson.meta?.title || 'Lesson'}</h1>
+        <div class="progress">Step ${stepIndex + 1} of ${lesson.steps.length}</div>
+        ${step.renderedContent || ''}
+      `;
 
       if (step.type === 'instruction') {
-        html += \`<button onclick="nextStep()">Next</button>\`;
-      }
-      else if (step.type === 'hardware_trigger') {
-        html += \`
+        html += `<button onclick="nextStep()">Next</button>`;
+      } else if (step.type === 'hardware_trigger') {
+        html += `
           <button id="startBtn">Start Sensor</button>
           <script>
             document.getElementById('startBtn').onclick = function() {
               this.style.display = 'none';
-              startSensor('\${step.threshold}', () => {
-                triggerFeedback('\${step.feedback || ''}');
+              startSensor('${step.threshold}', () => {
+                triggerFeedback('${step.feedback || ''}');
                 nextStep();
               });
             };
           </script>
-        \`;
-      }
-      else if (step.type === 'quiz') {
+        `;
+      } else if (step.type === 'quiz') {
         html += '<div class="quiz-options">';
         step.answer_options?.forEach((opt, i) => {
-          html += \`
+          html += `
             <label>
-              <input type="radio" name="quiz" value="\${i}">
-              <span>\${opt}</span>
+              <input type="radio" name="quiz" value="${i}">
+              <span>${opt}</span>
             </label>
-          \`;
+          `;
         });
-        html += \`
+        html += `
           <button onclick="checkQuiz()">Submit</button>
           <div id="quizFeedback"></div>
         </div>
@@ -195,7 +208,7 @@ const template = (json) => `
             const selected = document.querySelector('input[name="quiz"]:checked');
             if (!selected) return;
             const idx = parseInt(selected.value);
-            const correct = \${step.correct_index ?? -1};
+            const correct = ${step.correct_index ?? -1};
             const fb = document.getElementById('quizFeedback');
             if (idx === correct) {
               fb.innerHTML = '<p style="color:green">Correct!</p>';
@@ -204,7 +217,7 @@ const template = (json) => `
               fb.innerHTML = '<p style="color:red">Try again</p>';
             }
           }
-        </script>\`;
+        </script>`;
       }
 
       app.innerHTML = html;
@@ -221,6 +234,21 @@ const template = (json) => `
 </html>
 `;
 
-// 3. Write the Output
-fs.writeFileSync(outputPath, template(lesson));
-console.log(`Successfully wrote: ${outputPath}`);
+  // Write HTML
+  fs.writeFileSync(outputPath, template(lesson));
+  console.log(`Successfully wrote HTML: ${outputPath}`);
+} else if (format === 'native') {
+  // Native output: JSON + Markdown
+  const jsonPath = path.join(outputDir, 'lesson.json');
+  const mdPath = path.join(outputDir, 'lesson.md');
+
+  fs.writeFileSync(jsonPath, JSON.stringify(lesson, null, 2));
+  let mdContent = `# ${lesson.meta.title}\n\n`;
+  lesson.steps.forEach((step, i) => {
+    mdContent += `## Step ${i+1} (${step.type})\n${step.content || ''}\n\n`;
+  });
+  fs.writeFileSync(mdPath, mdContent);
+  console.log(`Successfully wrote native JSON: ${jsonPath} and MD: ${mdPath}`);
+} else {
+  console.error(`Unknown format: ${format}`);
+}
