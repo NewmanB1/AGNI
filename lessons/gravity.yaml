@@ -1,24 +1,28 @@
 version: "1.6.0"
+
 meta:
   identifier: "ols:physics:gravity_intro_v1"
   title: "Feeling Gravity"
   description: "A sensor-based introduction to acceleration and freefall."
   language: "en"
   license: "AGPL-3.0"
-  created: "2024-03-10T14:00:00Z" # Strict ISO-8601
-  updated: "2024-03-10T14:00:00Z"
-  
+  created: "2024-03-10T14:00:00Z"
+  updated:  "2025-02-08T17:00:00Z"
+
   authors:
     - name: "Jane Doe"
       email: "jane@openlesson.org"
-      
-  subject: ["Physics", "Classical Mechanics", "Gravity"]
-  
+
+  subject:
+    - "Physics"
+    - "Classical Mechanics"
+    - "Gravity"
+
   audience:
     educational_role: "student"
     typical_age_range: "10-14"
-    
-  time_required: "PT15M" # ISO Duration: 15 Minutes
+
+  time_required: "PT12M"        # ~12 minutes
 
 ontology:
   requires:
@@ -27,23 +31,72 @@ ontology:
     - skill: "ols:physics:gravity_concept"
       level: 1
 
+signatures:
+  - role: author
+    entity: "Jane Doe"
+    signature: "ed25519:example-signature-placeholder-for-prototype"
+
 gate:
   type: "quiz"
   skill_target: "ols:physics:observation_basics"
-  question: "What comes up must come...?"
-  expected_answer: "down"
-  on_fail: "redirect:review/observation"
+  question: "What force pulls objects toward the center of the Earth?"
+  expected_answer: "gravity"
+  on_fail: "redirect:ols:physics:observation_basics/review"
 
 steps:
   - type: "instruction"
     content: |
       # The Invisible Force
-      Gravity is pulling you down right now.
-      
+
+      Right now, gravity is pulling you — and everything around you — downward.
+
+      Your phone can actually **feel** this force.
+
   - type: "hardware_trigger"
     sensor: "accelerometer"
     threshold: "accel.z > 9.0"
-    feedback: "vibration:success"
+    feedback: "vibration:short"
     content: |
-      ### Calibration
-      Hold the phone flat.
+      ### Step 1 – Calibration
+
+      Hold the phone perfectly flat  
+      (screen facing straight up, resting on your open palm or a table).
+
+      Wait until you feel a **short vibration**.
+
+  - type: "hardware_trigger"
+    sensor: "accelerometer"
+    threshold: "freefall > 0.3s"
+    feedback: "vibration:success_pattern"
+    content: |
+      ### Step 2 – Freefall
+
+      Now **gently drop** the phone from about 30–50 cm  
+      onto a soft surface (pillow, cushion, bed, etc.).
+
+      When it feels **weightless** for a moment,  
+      you should feel a longer, rhythmic vibration.
+
+  - type: "instruction"
+    content: |
+      ### What just happened?
+
+      - Flat on your hand → the phone felt **~9.8 m/s²** downward acceleration  
+        (normal gravity)
+
+      - During the drop → the phone felt **almost 0 m/s²**  
+        → this is **freefall** (falling together with gravity)
+
+      That feeling of weightlessness is exactly what astronauts experience!
+
+  - type: "quiz"
+    content: |
+      ### Quick check
+
+      Why did the phone feel weightless when you dropped it?
+    answer_options:
+      - "The phone became lighter"
+      - "Gravity suddenly stopped working"
+      - "The phone was falling at the same speed as gravity pulls → no felt force"
+      - "The battery ran out of power"
+    correct_index: 2
