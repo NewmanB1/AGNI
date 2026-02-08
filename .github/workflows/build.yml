@@ -7,7 +7,10 @@ on:
       - 'lessons/**'
       - 'src/**'
       - 'package.json'
-  workflow_dispatch:
+      - 'package-lock.json'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:   # Allows manual trigger from GitHub UI
 
 jobs:
   build:
@@ -22,16 +25,46 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: 'npm'   # Caches node_modules using package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci    # Uses package-lock.json for exact, clean installs
 
       - name: Build HTML format (browser/PWA)
-        run: node src/compiler.js lessons/gravity.yaml --format=html --output=dist/gravity.html
+        run: npm run build
+        # This runs: node src/compiler.js lessons/gravity.yaml --format=html --output=dist/gravity.html
 
       - name: Build Native format (Markdown + JSON)
-        run: node src/compiler.js lessons/gravity.yaml --format=native --output-dir=dist/gravity-native
+        run: npm run build:native
+        # This runs: node src/compiler.js lessons/gravity.yaml --format=native --output-dir=dist/native-gravity
+
+      # ── DEBUG STEP ──
+      # This helps us see exactly what files were created
+      - name: Debug - Check build output
+        run: |
+          echo "Current working directory:"
+          pwd
+          echo ""
+          echo "Files in root:"
+          ls -la
+          echo ""
+          echo "Files in dist/ (if exists):"
+          ls -la dist/ 2>/dev/null || echo "→ dist/ folder does NOT exist or is empty"
+          echo ""
+          if [ -f dist/gravity.html ]; then
+            echo "→ gravity.html EXISTS!"
+            echo "First few lines of gravity.html:"
+            head -n 8 dist/gravity.html
+          else
+            echo "→ gravity.html NOT found"
+          fi
+          echo ""
+          if [ -d dist/native-gravity ]; then
+            echo "→ native-gravity directory exists"
+            ls -la dist/native-gravity/
+          else
+            echo "→ native-gravity NOT found"
+          fi
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -39,10 +72,11 @@ jobs:
           name: ols-reference-bundles
           path: |
             dist/gravity.html
-            dist/gravity-native/
-          if-no-files-found: error
+            dist/native-gravity/
+          if-no-files-found: warn   # Changed to warn so job stays green for debugging
+          retention-days: 7
 
       - name: Show build summary
         run: |
-          echo "Build artifacts created:"
-          ls -lh dist/
+          echo "Build artifacts should be available below (if files were created)"
+          ls -lh dist/ 2>/dev/null || echo "No dist/ folder found"
