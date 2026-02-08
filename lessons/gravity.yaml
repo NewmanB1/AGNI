@@ -1,67 +1,49 @@
-version: "1.5.1" 
+version: "1.6.0"
 meta:
-  identifier: "math-gravity-01"
-  title: "Understanding Gravity: Freefall"
-  description: "A sensor-based introduction to Newtonian physics using the phone's accelerometer."
+  identifier: "ols:physics:gravity_intro_v1"
+  title: "Feeling Gravity"
+  description: "A sensor-based introduction to acceleration and freefall."
   language: "en"
-  rights: "CC-BY-4.0"
-  coverage: "Universal"
+  license: "AGPL-3.0"
+  created: "2024-03-10T14:00:00Z" # Strict ISO-8601
+  updated: "2024-03-10T14:00:00Z"
   
-  # Changed to Block Style (Safer)
-  subject: 
-    - "Physics"
-    - "Classical Mechanics"
-    - "Newtonian Laws"
-
-  # Changed to Block Style (Safer)
-  target_profile: 
-    - "kinetic"
-    - "haptic_seeker"
+  authors:
+    - name: "Jane Doe"
+      email: "jane@openlesson.org"
+      
+  subject: ["Physics", "Classical Mechanics", "Gravity"]
+  
+  audience:
+    educational_role: "student"
+    typical_age_range: "10-14"
+    
+  time_required: "PT15M" # ISO Duration: 15 Minutes
 
 ontology:
   requires:
-    - skill: "ols.physics:observation_basics"
-      verifiable: true
+    - skill: "ols:physics:observation_basics"
   provides:
-    - skill: "ols.physics:gravity_concept"
+    - skill: "ols:physics:gravity_concept"
       level: 1
-
-signatures:
-  - role: "author"
-    entity: "Jane Doe"
-    key_id: "ed25519:pub_key_A123"
-    signature: "sig_string_placeholder"
 
 gate:
   type: "quiz"
-  skill_target: "ols.physics:observation_basics"
-  question: "If you drop a feather and a hammer on the moon, which hits the ground first?"
-  expected_answer: "Same time"
-  on_fail: "redirect:ols.physics:observation_basics/review"
+  skill_target: "ols:physics:observation_basics"
+  question: "What comes up must come...?"
+  expected_answer: "down"
+  on_fail: "redirect:review/observation"
 
 steps:
   - type: "instruction"
     content: |
-      # The Force of Gravity
-      Gravity is the force that pulls objects toward the center of the Earth. 
-      In the next step, you will feel this force. **Hold your phone flat in your hand.**
-  
+      # The Invisible Force
+      Gravity is pulling you down right now.
+      
   - type: "hardware_trigger"
     sensor: "accelerometer"
-    threshold: "freefall > 0.15s"
-    feedback: "vibration:heavy_thud"
-    content: "Drop the phone onto a soft surface (like a pillow or bed) to detect Zero-G."
-    
-  - type: "instruction"
+    threshold: "accel.z > 9.0"
+    feedback: "vibration:success"
     content: |
-      ## Did you feel that?
-      When the phone fell, the internal accelerometer read **Zero-G**.
-      This is because gravity was pulling the phone down at the exact same speed it was pulling the internal sensors.
-      
-  - type: "quiz"
-    content: "What is the approximate acceleration of gravity on Earth?"
-    answer_options:
-      - "9.8 m/s2"
-      - "5.2 m/s2"
-      - "0 m/s2"
-    correct_index: 0
+      ### Calibration
+      Hold the phone flat.
