@@ -3,10 +3,29 @@ const yaml = require('js-yaml');
 const unified = require('unified');
 const markdown = require('remark-parse');
 const html = require('remark-html');
+const path = require('path');
 
 // 1. Read the Lesson
 const lessonPath = process.argv[2] || 'lessons/gravity.yaml';
 const lesson = yaml.load(fs.readFileSync(lessonPath, 'utf8'));
+
+// ── Output handling ──
+// Default output path
+let outputPath = 'dist/gravity.html';
+
+// Parse --output flag if provided
+const args = process.argv;
+const outputIndex = args.indexOf('--output');
+if (outputIndex !== -1 && args[outputIndex + 1]) {
+  outputPath = args[outputIndex + 1];
+}
+
+// Create the output directory if it doesn't exist
+const outputDir = path.dirname(outputPath);
+if (!fs.existsSync(outputDir)) {
+  fs.mkdirSync(outputDir, { recursive: true });
+  console.log(`Created output directory: ${outputDir}`);
+}
 
 // 2. The Runtime Template (The "Player" Engine)
 const template = (json) => `
@@ -121,7 +140,7 @@ const template = (json) => `
           if (total < val) triggered = true;
         }
         else if (threshold.includes('freefall')) {
-          const match = threshold.match(/freefall\s*>\s*([\d.]+)s?/);
+          const match = threshold.match(/freefall\\s*>\\s*([\\d.]+)s?/);
           const durationMs = match ? parseFloat(match[1]) * 1000 : 300;
 
           if (total < 1.5) {  // near freefall
@@ -248,26 +267,5 @@ const template = (json) => `
 </html>`;
 
 // 3. Write the Output
-const outputPath = 'dist/gravity.html';
-
-const path = require('path');
-
-// Parse --output from command line (fallback to default)
-let outputPath = 'dist/gravity.html';
-const args = process.argv;
-const outputIndex = args.indexOf('--output');
-if (outputIndex !== -1 && args[outputIndex + 1]) {
-  outputPath = args[outputIndex + 1];
-}
-
-// Create the output directory if it doesn't exist
-const outputDir = path.dirname(outputPath);
-if (!fs.existsSync(outputDir)) {
-  fs.mkdirSync(outputDir, { recursive: true });
-  console.log(`Created output directory: ${outputDir}`);
-}
-
 fs.writeFileSync(outputPath, template(lesson));
-console.log(`✅ Build complete: ${outputPath} created!`);
-console.log(`Lesson title: ${lesson.meta?.title}`);
-console.log(`Steps: ${lesson.steps.length}`);
+console.log(`Successfully wrote: ${outputPath}`);
