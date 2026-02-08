@@ -249,6 +249,24 @@ const template = (json) => `
 
 // 3. Write the Output
 const outputPath = 'dist/gravity.html';
+
+const path = require('path');
+
+// Parse --output from command line (fallback to default)
+let outputPath = 'dist/gravity.html';
+const args = process.argv;
+const outputIndex = args.indexOf('--output');
+if (outputIndex !== -1 && args[outputIndex + 1]) {
+  outputPath = args[outputIndex + 1];
+}
+
+// Create the output directory if it doesn't exist
+const outputDir = path.dirname(outputPath);
+if (!fs.existsSync(outputDir)) {
+  fs.mkdirSync(outputDir, { recursive: true });
+  console.log(`Created output directory: ${outputDir}`);
+}
+
 fs.writeFileSync(outputPath, template(lesson));
 console.log(`✅ Build complete: ${outputPath} created!`);
 console.log(`Lesson title: ${lesson.meta?.title}`);
