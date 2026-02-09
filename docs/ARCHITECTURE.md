@@ -1,7 +1,3 @@
-Here is the fully integrated **System Architecture v2.0**. This document merges the original core philosophy with the new **Just-in-Time (JIT) Compilation**, **Device Binding**, and **Hub-and-Spoke** security model.
-
-***
-
 # 🏗️ Open Lesson Standard (OLS): System Architecture v2.0
 
 ## 1. High-Level Overview
