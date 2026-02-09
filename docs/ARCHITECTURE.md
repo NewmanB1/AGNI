@@ -1,158 +1,105 @@
-# 🏗️ Open Lesson Standard (OLS): System Architecture
-
-## 1. High-Level Overview
+🏗️ Open Lesson Standard (OLS): System Architecture v2.0
+1. High-Level Overview
 The Open Lesson Standard (OLS) is a decentralized, offline-first protocol for interactive education on resource-constrained hardware.
-
-The system is designed around the "Pipeline, not Platform" philosophy. We do not build a walled garden; we define a file format (`.ols`) and a reference runtime that transforms static text into sensor-rich, interactive experiences.
-
-### Core Design Constraints
-*   **Hardware:** Android 6.0+, <2GB RAM, intermittent power.
-*   **Network:** 100% Offline capability. Intermittent "Village Sentry" updates.
-*   **Input:** Haptic/Sensor-first (Accelerometer, Vibration) + Touch.
-*   **Trust:** Decentralized (Web of Trust), no central authority.
-*   **Epistemic Pluralism:** The system does not enforce a single "correct" learning order. It adapts to local "Generative Metaphors" (e.g., if Weaving makes Math easier for a specific village, the system prioritizes that path).
-
----
-
-## 2. The Data Structure (The Standard)
+The system follows a "Source-to-Artifact" philosophy. We do not distribute heavy binaries; we distribute lightweight source code (.yaml). The artifacts (HTML or Native Bundles) are generated Just-in-Time (JIT) at the edge—the Village Hub.
+Core Design Constraints
+Hardware: Android 6.0+, <2GB RAM, intermittent power.
+Network: 100% Offline capability. Intermittent "Village Sentry" updates via Satellite/LoRa.
+Input: Haptic/Sensor-first (Accelerometer, Vibration) + Touch.
+Trust: Hub-and-Spoke Distribution for content (security), Mesh for signaling (interaction).
+Epistemic Pluralism: The system adapts learning paths based on local "Generative Metaphors" (e.g., prioritizing Weaving logic before Math if that aids the specific cohort).
+2. The Data Structure (The Source)
 The core of the architecture is the Lesson File. It is a YAML document designed to be human-readable, git-forkable, and machine-executable.
+2.1 Schema Definition
+An OLS file is composed of strictly defined blocks:
+meta: Dublin Core metadata (subject, rights, coverage).
+ontology: The "Skill Contract." What this lesson requires (requires) and what it teaches (provides).
+gate: The logic block that enforces the "Zero-Trust" prerequisite check.
+steps: The content payload (Text + Hardware Instructions).
+2.2 Asset Hydration Strategy
+To minimize backhaul data usage, OLS files do not embed binary assets. They reference them.
+Source: image: "assets/physics/earth_diagram.png"
+The Hub: Maintains a shared common_assets/ library.
+JIT Compilation: The Hub "hydrates" the lesson by injecting the actual image data (Base64 for HTML, file copy for Native) only when the student requests the lesson.
+3. The Compiler Architecture (agni-core)
+The compiler is a modular Node.js application running on the Village Hub (Sentry). It transforms the YAML source into executable artifacts based on the requesting device's capabilities.
+3.1 Modular Structure
+code
+Text
+agni-core/
+├── src/
+│   ├── cli.js              # Orchestration & Argument Parsing
+│   ├── config.js           # Markdown/Unified Processor Logic
+│   ├── utils/
+│   │   ├── crypto.js       # Ed25519 Signing & Device Binding Logic
+│   │   └── io.js           # File System & Asset Hydration
+│   ├── builders/
+│   │   ├── html.js         # Strategy A: The "Universal" SPA
+│   │   └── native.js       # Strategy B: The "Efficient" Native Bundle
+│   └── runtime/            # The Player Engine
+│       ├── player.js       # Core Logic (State Machine, Sensors)
+│       └── style.css       # High-contrast UI
+3.2 Output Strategies
+The compiler supports dual-mode distribution:
+Feature	Strategy A: HTML SPA	Strategy B: Native Bundle
+Target	Browsers (Chrome, WebView, KaiOS)	OLS Android Player (Kotlin/Flutter)
+Format	Single .html file (<500KB)	lesson.json + content/*.md
+Battery	Moderate (DOM rendering)	Excellent (Screen-off capability)
+Sensors	Standard Web APIs (Throttled)	HAL Access (High Fidelity)
+Use Case	Zero-install entry point	Long-term retention, pocket learning
+4. Network Topology: The "Smart Edge"
+4.1 Bandwidth Optimization (The 99% Saving)
+By transmitting Source YAML instead of pre-built HTML, we save expensive Satellite bandwidth.
+HTML Strategy: 100 lessons = ~50MB.
+YAML Strategy: 100 lessons = ~500KB.
+Result: The Hub uses its local CPU to "inflate" the content for the village.
+4.2 Content Negotiation
+When a device connects to the Village Hub (Captive Portal):
+Device: Requests GET /lessons/gravity.
+Hub: Detects User-Agent.
+If Browser: Triggers src/builders/html.js.
+If Native App: Triggers src/builders/native.js.
+Hub: Serves the appropriate artifact.
+5. Security & Governance: "Device Binding"
+We enforce a "Digital Chain of Custody" to prevent the spread of corrupted, unverified, or unauthorized lessons via P2P file sharing.
+5.1 The "Signed Lease" Model
+We move from a "Public Flyer" model to a "Personalized Ticket" model.
+Request: Student device sends its UUID (e.g., A-123) to the Hub.
+Binding: The Hub compiles the lesson and calculates: Hash(Content + UUID).
+Signing: The Hub signs the hash with its Private Authority Key.
+Injection: The Signature and the Intended UUID are hardcoded into the compiled artifact.
+5.2 Runtime Verification
+When the lesson runs (in Browser or App):
+Check 1 (Identity): Does the UUID embedded in the code match the UUID of the physical device?
+Mismatch: "Unauthorized Copy." (Stops P2P file cloning).
+Check 2 (Integrity): Does the Signature match the Content?
+Mismatch: "Corrupted File." (Stops malicious editing).
+6. The Signaling Mesh (Allowed P2P)
+While Lesson Files (Data Plane) are restricted to a Hub-and-Spoke model to ensure authority, Interaction (Control Plane) remains Peer-to-Peer.
+Scenario: Multiplayer Quiz.
+Device A: Broadcasts SESSION:START via Bluetooth LE or WebRTC.
+Device B: Receives signal.
+Security Check: Device B verifies it has its own valid, signed copy of the lesson logic. It does not accept code from Device A.
+Action: If valid, it joins the session.
+Result: Students can interact and learn together (Mesh), but they cannot bypass the Authority node to distribute content (Star).
+7. The Adaptive Graph Engine (Navigation)
+Instead of a static list, OLS uses a probabilistic graph to order lessons based on Marginal Learning Cost (
+θ
+θ
+).
+7.1 The Core Concept: Skill Collapse
+We assume that for certain cohorts, mastering Skill A makes Skill B trivial (a "Skill Collapse").
+7.2 The Artifact: graph_weights.json
+The Village Sentry analyzes anonymized local learning logs to detect these collapses.
+Nodes: Skill IDs (e.g., ols.math:ratios).
+Edges: Observed probability that Skill A facilitates Skill B.
+7.3 The Player Logic
+When a student opens the lesson menu, the Player sorts available lessons:
+θ
+=
+BaseCost
+−
+CohortDiscount
+θ=BaseCost−CohortDiscount
 
-### 2.1 Schema Definition
-An OLS file is composed of five strictly defined blocks:
-1.  **meta:** Dublin Core metadata (`subject`, `rights`, `coverage`).
-2.  **ontology:** The "Skill Contract." What this lesson requires (`requires`) and what it teaches (`provides`).
-3.  **signatures:** Cryptographic proofs of authorship and approval (Web of Trust).
-4.  **gate:** The logic block that enforces the "Zero-Trust" prerequisite check.
-5.  **steps:** The content payload (Text + Hardware Instructions).
-
-### 2.2 Example Schema (`lesson.yaml`)
-```yaml
-version: "1.5"
-meta:
-  identifier: "math-gravity-01"   # FIXED: Matches Schema
-  title: "Introduction to Gravity"
-  rights: "AGPL-3.0"              # FIXED: Matches Schema
-  subject: ["Physics", "Classical Mechanics"]
-  target_profile: ["haptic_seeker"] 
-
-ontology:
-  requires:
-    - skill: "ols.physics:observation_basics"
-      verifiable: true            # FIXED: Now allowed in Schema
-  provides:
-    - skill: "ols.physics:gravity_concept"
-      level: 1
-
-signatures:
-  - role: "author"
-    entity: "Jane Doe"
-    key_id: "ed25519:pub_key_A..." # FIXED: Added for completeness
-    signature: "sig_string..."
-
-gate:
-  type: "quiz"
-  skill_target: "ols.physics:observation_basics"
-  # Quiz types now MUST include question/answer
-  question: "What is the unit of gravity?"
-  expected_answer: "m/s2"
-  on_fail: "redirect:ols.physics:observation_basics/review"
-
-steps:
-  - type: "instruction"
-    content: "Hold the device flat in your palm."
-  - type: "hardware_trigger"
-    sensor: "accelerometer"
-    threshold: "freefall > 0.1s" # Matches Regex Pattern
-    feedback: "vibration:success_pattern"
-```
-
----
-
-## 3. The Runtime Architecture (The Player)
-The "Player" is a lightweight Progressive Web App (PWA) built with Preact. It acts as the bridge between the static YAML and the physical hardware.
-
-### 3.1 The "Universal Export" Pipeline
-To ensure performance on low-end devices, we do not parse YAML on the phone at runtime. We use a Build Step.
-
-`Author (YAML) -> Compiler (Node.js/Unified) -> Static HTML Bundle (<500KB) -> Phone`
-
-*   **Compiler:** Embeds the lesson logic, assets, and a minimal Preact runtime into a single `index.html` file.
-*   **Asset Strategy:** Images are Base64 encoded or referenced relative to the bundle to ensure zero external requests.
-
-### 3.2 The Hardware Abstraction Layer (HAL)
-The Player includes a JavaScript abstraction layer to handle hardware fragmentation safely.
-*   **Feature Detection:** Checks if `('vibrate' in navigator)`.
-*   **Graceful Degradation:** 
-    *   *Device A (Has Motor):* Vibrate on success.
-    *   *Device B (No Motor):* Flash screen on success.
-*   **Sensor Noise Filter:** Implements a low-pass filter on `DeviceMotion` events to distinguish "intent" from "shaky hands."
-
----
-
-## 4. The Adaptive Graph Engine (Navigation)
-Instead of a static list or a linear curriculum, OLS uses a probabilistic graph to order lessons based on **Marginal Learning Cost ($\theta$)**.
-
-### 4.1 The Core Concept: Skill Collapse
-We assume that for certain cohorts, mastering Skill A makes Skill B trivial (a "Skill Collapse" or "Generative Metaphor").
-*   **$\theta$ (Theta):** A distance metric representing the estimated effort for a specific student to master a specific lesson.
-*   **Formula:** $\theta = \text{BaseCost} (1.0) - \text{CohortDiscount}$
-
-### 4.2 The Artifact: `graph_weights.json`
-The "Village Sentry" analyzes local learning logs to detect these collapses. It generates a lightweight JSON file that the Player downloads during sync.
-*   **Nodes:** Skill IDs (e.g., `ols.math:ratios`).
-*   **Edges:** Observed probability that Skill A facilitates Skill B.
-    *   *Example:* If a cohort of weavers easily understands coding loops, the edge `weaving -> loops` has a low weight (e.g., 0.1).
-
-### 4.3 The Player Logic (Runtime)
-When a student opens the lesson menu, the Player performs this sorting operation:
-1.  **Filter (Governance):** Select all lessons where `prerequisites` are met **AND** the lesson signature is `authorized` by the local Trust Policy.
-2.  **Calculate Cost (Theta):** For each candidate lesson, calculate $\theta$ based on the student's existing skills and the local `graph_weights.json`.
-3.  **Sort:** Present lessons with the lowest $\theta$ (lowest cognitive load) at the top of the list.
-
-**Result:** A student with a background in weaving sees "Loops" at the top; a student with a background in farming might see "Modulo Arithmetic" at the top. The software adapts to the culture.
-
----
-
-## 5. Governance & Trust Architecture
-
-### 5.1 The Trust Enforcement Layers
-We distinguish between preventing malicious content (The Firewall) and managing context (The Context Engine).
-
-**A. The Village Sentry (The Firewall)**
-*   **Role:** The authoritative gatekeeper for the local network.
-*   **Data:** Holds the master `trust_policy.json` (e.g., "Trust Red Cross keys, Block unknown keys").
-*   **Action:** It strictly refuses to download, host, or serve any `.ols` file that is not signed by a trusted key.
-    *   *Result:* Malicious or unverified lesson files never physically reach the student's device via the local Wi-Fi.
-
-**B. The Player (The Context Engine)**
-*   **Role:** The logic handler on the student's device.
-*   **Data:** Holds a cached copy of the `trust_policy.json` and the Student's "Skill Wallet."
-*   **Action (The Shadow Record):**
-    *   When a student imports a history via QR code (Sneakernet) from a different region, the Player parses the log.
-    *   *Scenario:* The log contains `completed: math-gravity` signed by `UnknownKey_X`.
-    *   **Behavior:** The Player **does not delete** this record (it belongs to the student). Instead, it marks it as a **"Shadow Record."**
-    *   **Effect:** The skill is ignored during "Prerequisite Checks" for new lessons in the current village.
-    *   **Reactivation:** If the student later moves to a village that *trusts* `UnknownKey_X`, the Shadow Record automatically un-hides and counts towards progress.
-
-### 5.2 The Web of Trust (WoT) Implementation
-We use **Ed25519** signatures.
-*   **The Keyring:** A JSON list of public keys and their roles (Author, Reviewer, Translator).
-*   **The Verification:**
-    *   **Step 1 (Sentry):** Validate file signature against `trust_policy.json` before caching.
-    *   **Step 2 (Player):** Validate history signatures against `trust_policy.json` before rendering the Skill Tree.
----
-
-## 6. Network Topology (Offline Sync)
-
-### 6.1 The Village Sentry (Hub)
-*   **Hardware:** Raspberry Pi 4 + Starlink + High-Gain Wi-Fi.
-*   **Role:**
-    *   **CDN:** Caches the static HTML bundles.
-    *   **Gatekeeper:** Enforces the `trust_policy.json`.
-    *   **Aggregator:** Collects anonymous telemetry logs from phones to calculate `graph_weights.json`.
-
-### 6.2 The Sneakernet Protocol (P2P)
-For moving data between devices without a Sentry:
-*   **Export:** Profile is compressed using **Gzip + Base45**.
-*   **Transport:** Rendered as a sequence of QR Codes.
-*   **Import:** Camera scans QR, validates checksum, decrypts, and merges into local IndexedDB.
+Result: A student with a background in weaving sees "Loops" at the top; a student with a background in farming might see "Modulo Arithmetic" at the top. The software adapts to the culture.
