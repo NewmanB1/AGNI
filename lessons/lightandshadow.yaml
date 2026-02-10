@@ -1,0 +1,41 @@
+version: "1.6.0"
+meta:
+  identifier: "ols:biology:light_sensor_v1"
+  title: "Light and Shadow – Photosynthesis Basics"
+  description: "Use the light sensor to understand how plants need light."
+  language: "en"
+  license: "AGPL-3.0"
+  created: "2025-02-10T00:00:00Z"
+ontology:
+  requires:
+    - skill: "ols:biology:plant_needs"
+  provides:
+    - skill: "ols:biology:photosynthesis_intuition"
+      level: 1
+steps:
+  - type: "instruction"
+    content: |
+      ## Plants Need Light
+      Plants use light to make food — a process called photosynthesis.
+      Your phone can measure light levels.
+  - type: "hardware_trigger"
+    sensor: "ambient_light"
+    threshold: "light > 300lux"
+    feedback: "vibration:short"
+    content: |
+      ## Step 1 – Bright Light
+      Point your phone toward a lamp or window.
+      Wait for the vibration when the light level is high.
+  - type: "hardware_trigger"
+    sensor: "ambient_light"
+    threshold: "light < 50lux"
+    feedback: "vibration:long"
+    content: |
+      ## Step 2 – Dark / Shadow
+      Cover the sensor with your hand or go into a dark room.
+      You should feel a longer vibration when it gets very dark.
+  - type: "instruction"
+    content: |
+      ## Plants in the Dark
+      Plants grow best in bright light and struggle in the dark.
+      That’s why they need sunlight — just like your phone noticed the difference!
