@@ -1,21 +1,31 @@
 // src/utils/featureInference.js
+// Reusable module to infer features from an OLS lesson object (parsed YAML)
 
 const unified = require('unified');
 const remarkParse = require('remark-parse');
-const remarkMath = require('remark-math'); // For detecting KaTeX blocks
+const remarkMath = require('remark-math');
 
-// Helper to parse markdown content and traverse the AST
+/**
+ * Parses markdown content into an AST using unified + remark-math
+ * @param {string} content - Markdown string
+ * @returns {object} MDAST
+ */
 function parseMarkdown(content) {
+  if (!content) return { type: 'root', children: [] };
   const processor = unified()
     .use(remarkParse)
-    .use(remarkMath); // Enables math node detection
+    .use(remarkMath);
   return processor.parse(content);
 }
 
-// Main inference function
-// Takes a parsed lesson object (from js-yaml.load) and returns inferred features
+/**
+ * Infers features from a full lesson object
+ * @param {object} lesson - Parsed YAML lesson (with version, meta, steps, etc.)
+ * @returns {object} Inferred features
+ */
 function inferFeatures(lesson) {
   const features = {
+    title: lesson.meta?.title || 'Untitled',
     has_graphs: false,
     sensor_count: 0,
     sensors_used: new Set(),
@@ -23,9 +33,9 @@ function inferFeatures(lesson) {
     interactive_elements_count: 0,
   };
 
-  // Traverse all steps
-  lesson.steps.forEach((step) => {
-    // Sensor detection
+  // Process each step
+  (lesson.steps || []).forEach((step) => {
+    // 1. Sensor detection
     if (step.type === 'hardware_trigger') {
       features.sensor_count++;
       if (step.sensor) {
@@ -33,42 +43,42 @@ function inferFeatures(lesson) {
       }
     }
 
-    // Haptic feedback
+    // 2. Haptic feedback detection
     if (step.feedback && /vibration:/i.test(step.feedback)) {
       features.has_haptic_feedback = true;
     }
 
-    // Interactive elements (quizzes + branching)
+    // 3. Interactive elements (quizzes for now; branching can be added later)
     if (step.type === 'quiz') {
       features.interactive_elements_count++;
     }
-    // Basic branching detection (e.g., on_fail in gate or steps)
-    if (step.on_fail || (lesson.gate && lesson.gate.on_fail)) {
+    // Optional: detect basic branching (gate or step-level on_fail)
+    if (step.on_fail) {
       features.interactive_elements_count++;
     }
 
-    // Graphs/Visuals detection in content (if present)
-    if (step.content) {
-      // Image refs with keywords
-      const imageRegex = /!\[.*?(graph|chart|diagram).*?\]\(.*?\)/i;
-      if (imageRegex.test(step.content)) {
+    // 4. Graphs/visuals detection in content
+    const content = step.content || '';
+    if (content) {
+      // a. Image references with keywords
+      const imageRegex = /!\[.*?(graph|chart|diagram).*?\]\(.*?\)/gi;
+      if (imageRegex.test(content)) {
         features.has_graphs = true;
       }
 
-      // Markdown tables: look for | --- | or multiple |
-      const tableRegex = /^\|.*\|$\n^\|[-:\s]+\|$/m;
-      if (tableRegex.test(step.content)) {
+      // b. Markdown tables (simple pipe-table detection)
+      const tableRegex = /^\s*\|.*\|\s*$\n^\s*\|[-:\s|]+\|\s*$/m;
+      if (tableRegex.test(content)) {
         features.has_graphs = true;
       }
 
-      // KaTeX blocks with variables on both sides (e.g., y = mx + b)
-      // Parse AST for math nodes
-      const ast = parseMarkdown(step.content);
+      // c. KaTeX/math blocks that look like equations (variables on both sides of =)
+      const ast = parseMarkdown(content);
       ast.children.forEach((node) => {
         if (node.type === 'math' || node.type === 'inlineMath') {
-          const mathContent = node.value;
-          // Naive check for equation-like: has = with vars/expr on both sides
-          if (/[a-z0-9].*?\s*=\s*.*?[a-z0-9]/i.test(mathContent)) {
+          const mathText = node.value || '';
+          // Heuristic: contains = with non-empty content on both sides
+          if (/[a-zA-Z0-9]\s*=\s*[a-zA-Z0-9]/.test(mathText)) {
             features.has_graphs = true;
           }
         }
@@ -76,10 +86,14 @@ function inferFeatures(lesson) {
     }
   });
 
-  // Convert set to array for JSON-friendly output
+  // Convert Set to Array for clean JSON output
   features.sensors_used = Array.from(features.sensors_used);
 
   return features;
 }
 
-module.exports = { inferFeatures };
+module.exports = {
+  inferFeatures,
+  // Export parseMarkdown if needed elsewhere
+  parseMarkdown,
+};
