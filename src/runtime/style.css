@@ -1,0 +1,27 @@
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:18px;line-height:1.6;background:#1a1a2e;color:#e0e0e0;min-height:100vh;padding:1rem}
+#app{max-width:600px;margin:0 auto}
+h1,h2,h3{color:#fff;margin:1rem 0 .5rem}
+h1{font-size:1.6rem}h2{font-size:1.3rem}
+p{margin-bottom:1rem}
+strong{color:#fff}
+code{background:#16213e;padding:.15em .4em;border-radius:4px;font-size:.9em}
+.step-container{background:#16213e;border-radius:12px;padding:1.5rem;margin:1rem 0}
+.step-counter{font-size:.85rem;color:#888;margin-bottom:.5rem}
+.btn{display:block;width:100%;padding:14px 20px;margin:.5rem 0;border:none;border-radius:8px;font-size:1rem;cursor:pointer;transition:background .2s,transform .1s;-webkit-tap-highlight-color:transparent;min-height:48px}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:#00e676;color:#1a1a2e;font-weight:600}
+.btn-option{background:#16213e;color:#e0e0e0;border:2px solid #2a2a4a;text-align:left}
+.btn-option:hover{border-color:#00e676}
+.btn-option.correct{background:#004d25;border-color:#00e676;color:#00e676}
+.btn-option.incorrect{background:#4d0000;border-color:#ff5252;color:#ff5252}
+.sensor-waiting{text-align:center;padding:2rem 0}
+.sensor-waiting .pulse{display:inline-block;width:60px;height:60px;border-radius:50%;background:#00e676;opacity:.3;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(.8);opacity:.3}50%{transform:scale(1.2);opacity:.6}}
+.sensor-fallback{margin-top:1rem;font-size:.85rem;color:#888}
+.completion-screen{text-align:center;padding:3rem 1rem}
+.completion-screen h1{font-size:2rem;margin-bottom:1rem}
+.gate-screen{text-align:center;padding:2rem 1rem}
+.gate-input{width:100%;padding:12px;font-size:1rem;background:#16213e;color:#e0e0e0;border:2px solid #2a2a4a;border-radius:8px;margin:1rem 0}
+.gate-input:focus{outline:none;border-color:#00e676}
+.error-msg{color:#ff5252;margin:.5rem 0}
