@@ -39,3 +39,5 @@ function buildNative(lessonData, options) {
 
   console.log(`✅ Native build complete: ${outputDir}`);
 }
+
+module.exports = buildNative;
