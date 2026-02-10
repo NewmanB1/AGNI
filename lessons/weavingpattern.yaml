@@ -1,0 +1,45 @@
+version: "1.6.0"
+meta:
+  identifier: "ols:coding:weaving_to_loops_v1"
+  title: "Weaving Patterns → Loops"
+  description: "See how weaving repeats patterns — just like computer loops."
+  language: "en"
+  license: "AGPL-3.0"
+  created: "2025-02-10T00:00:00Z"
+ontology:
+  requires:
+    - skill: "ols:craft:weaving_basics"
+  provides:
+    - skill: "ols:coding:loop_concept"
+      level: 1
+steps:
+  - type: "instruction"
+    content: |
+      ## Repeating Patterns
+      When you weave cloth, you repeat the same over-under pattern many times.
+      Computers do the same thing with **loops**.
+  - type: "hardware_trigger"
+    sensor: "accelerometer"
+    threshold: "shake > 4 AND steady > 2s"
+    feedback: "vibration:short"
+    content: |
+      ## Step 1 – Make a Pattern
+      Shake the phone 4 times quickly, then hold still for 2 seconds.
+      Each shake is like one “repeat” in a weaving row.
+  - type: "instruction"
+    content: |
+      ## From Weaving to Code
+      If you shake 4 times → that’s like:  
+      **repeat 4 times:** weave one row  
+      In code that would be a **loop** that runs 4 times.
+      Loops let computers do boring, repeating work very fast.
+  - type: "quiz"
+    content: |
+      ## Quick check
+      What does a loop do in computer programming?
+    answer_options:
+      - "Makes the program stop"
+      - "Repeats a set of instructions multiple times"
+      - "Draws a picture"
+      - "Plays music"
+    correct_index: 1
