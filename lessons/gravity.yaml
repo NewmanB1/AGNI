@@ -7,22 +7,18 @@ meta:
   language: "en"
   license: "AGPL-3.0"
   created: "2024-03-10T14:00:00Z"
-  updated:  "2025-02-08T17:00:00Z"
-
+  updated: "2025-02-08T17:00:00Z"
   authors:
     - name: "Jane Doe"
       email: "jane@openlesson.org"
-
   subject:
     - "Physics"
     - "Classical Mechanics"
     - "Gravity"
-
   audience:
     educational_role: "student"
     typical_age_range: "10-14"
-
-  time_required: "PT12M"        # ~12 minutes
+    time_required: "PT12M"
 
 ontology:
   requires:
@@ -46,10 +42,9 @@ gate:
 steps:
   - type: "instruction"
     content: |
-      # The Invisible Force
+      ## The Invisible Force
 
       Right now, gravity is pulling you — and everything around you — downward.
-
       Your phone can actually **feel** this force.
 
   - type: "hardware_trigger"
@@ -57,41 +52,41 @@ steps:
     threshold: "accel.z > 9.0"
     feedback: "vibration:short"
     content: |
-      ### Step 1 – Calibration
+      ## Step 1 – Calibration
 
-      Hold the phone perfectly flat  
-      (screen facing straight up, resting on your open palm or a table).
+      Hold the phone perfectly flat (screen facing straight up, resting on
+      your open palm or a table).
 
-      Wait until you feel a **short vibration**.
+      Wait until you feel a short vibration.
 
   - type: "hardware_trigger"
     sensor: "accelerometer"
     threshold: "freefall > 0.3s"
     feedback: "vibration:success_pattern"
     content: |
-      ### Step 2 – Freefall
+      ## Step 2 – Freefall
 
-      Now **gently drop** the phone from about 30–50 cm  
-      onto a soft surface (pillow, cushion, bed, etc.).
+      Now gently drop the phone from about 30–50 cm onto a soft surface
+      (pillow, cushion, bed, etc.).
 
-      When it feels **weightless** for a moment,  
-      you should feel a longer, rhythmic vibration.
+      When it feels weightless for a moment, you should feel a longer,
+      rhythmic vibration.
 
   - type: "instruction"
     content: |
-      ### What just happened?
+      ## What just happened?
 
-      - Flat on your hand → the phone felt **~9.8 m/s²** downward acceleration  
-        (normal gravity)
+      **Flat on your hand** → the phone felt ~9.8 m/s² downward
+      acceleration (normal gravity)
 
-      - During the drop → the phone felt **almost 0 m/s²**  
-        → this is **freefall** (falling together with gravity)
+      **During the drop** → the phone felt almost 0 m/s² → this is
+      **freefall** (falling together with gravity)
 
       That feeling of weightlessness is exactly what astronauts experience!
 
   - type: "quiz"
     content: |
-      ### Quick check
+      ## Quick check
 
       Why did the phone feel weightless when you dropped it?
     answer_options:
