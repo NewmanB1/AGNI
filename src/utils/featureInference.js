@@ -1,28 +1,16 @@
 // src/utils/featureInference.js
-// Reusable module to infer features from an OLS lesson object (parsed YAML)
-
 const unified = require('unified');
 const remarkParse = require('remark-parse');
 const remarkMath = require('remark-math');
 
-/**
- * Parses markdown content into an AST using unified + remark-math
- * @param {string} content - Markdown string
- * @returns {object} MDAST
- */
 function parseMarkdown(content) {
   if (!content) return { type: 'root', children: [] };
-  const processor = unified()
+  return unified()
     .use(remarkParse)
-    .use(remarkMath);
-  return processor.parse(content);
+    .use(remarkMath)
+    .parse(content);
 }
 
-/**
- * Infers features from a full lesson object
- * @param {object} lesson - Parsed YAML lesson (with version, meta, steps, etc.)
- * @returns {object} Inferred features
- */
 function inferFeatures(lesson) {
   const features = {
     title: lesson.meta?.title || 'Untitled',
@@ -44,12 +32,12 @@ function inferFeatures(lesson) {
       if (step.sensor) features.sensors_used.add(step.sensor.toLowerCase());
     }
 
-    // Haptic
+    // Haptic feedback
     if (step.feedback && /vibration:/i.test(step.feedback)) {
       features.has_haptic_feedback = true;
     }
 
-    // Quizzes
+    // Interactive (quizzes)
     if (step.type === 'quiz') {
       features.interactive_elements_count++;
     }
@@ -60,19 +48,19 @@ function inferFeatures(lesson) {
       features.interactive_elements_count++;
     }
 
-    // Audio references
-    const content = (step.content || '') + (step.title || '');
+    // Audio detection
+    const text = (step.content || '') + (step.title || '');
     if (
-      /audio:/i.test(content) ||
-      /\.(mp3|wav|ogg|m4a|aac)/i.test(content) ||
-      /\[sound\b/i.test(content) ||
-      /<audio/i.test(content) ||
-      /sound effect/i.test(content)
+      /audio:/i.test(text) ||
+      /\.(mp3|wav|ogg|m4a|aac)/i.test(text) ||
+      /\[sound\b/i.test(text) ||
+      /<audio/i.test(text) ||
+      /sound effect|voice|spoken/i.test(text)
     ) {
       features.has_audio = true;
     }
 
-    // Metaphor / cultural reference keywords
+    // Metaphor / cultural reference detection
     const metaphorPatterns = {
       weaving: /weav|thread|loom|fabric|stitch|pattern|warp|weft/i,
       farming: /farm|seed|harvest|season|crop|soil|plant|grow/i,
@@ -82,14 +70,14 @@ function inferFeatures(lesson) {
     };
 
     Object.entries(metaphorPatterns).forEach(([type, regex]) => {
-      if (regex.test(content)) {
+      if (regex.test(text)) {
         features.has_metaphor = true;
         features.metaphor_types.add(type);
       }
     });
   });
 
-  // Also check gate-level branching
+  // Gate-level branching
   if (lesson.gate?.on_fail || lesson.gate?.on_success) {
     features.has_branching = true;
   }
@@ -100,8 +88,4 @@ function inferFeatures(lesson) {
   return features;
 }
 
-module.exports = {
-  inferFeatures,
-  // Export parseMarkdown if needed elsewhere
-  parseMarkdown,
-};
+module.exports = { inferFeatures };
