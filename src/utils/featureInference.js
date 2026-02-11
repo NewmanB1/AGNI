@@ -31,63 +31,71 @@ function inferFeatures(lesson) {
     sensors_used: new Set(),
     has_haptic_feedback: false,
     interactive_elements_count: 0,
+    has_branching: false,
+    has_audio: false,
+    has_metaphor: false,
+    metaphor_types: new Set(),
   };
 
-  // Process each step
-  (lesson.steps || []).forEach((step) => {
-    // 1. Sensor detection
+  (lesson.steps || []).forEach(step => {
+    // Sensors
     if (step.type === 'hardware_trigger') {
       features.sensor_count++;
-      if (step.sensor) {
-        features.sensors_used.add(step.sensor.toLowerCase());
-      }
+      if (step.sensor) features.sensors_used.add(step.sensor.toLowerCase());
     }
 
-    // 2. Haptic feedback detection
+    // Haptic
     if (step.feedback && /vibration:/i.test(step.feedback)) {
       features.has_haptic_feedback = true;
     }
 
-    // 3. Interactive elements (quizzes for now; branching can be added later)
+    // Quizzes
     if (step.type === 'quiz') {
       features.interactive_elements_count++;
     }
-    // Optional: detect basic branching (gate or step-level on_fail)
-    if (step.on_fail) {
+
+    // Branching / conditional logic
+    if (step.on_fail || step.on_success || step.condition || step.next_if) {
+      features.has_branching = true;
       features.interactive_elements_count++;
     }
 
-    // 4. Graphs/visuals detection in content
-    const content = step.content || '';
-    if (content) {
-      // a. Image references with keywords
-      const imageRegex = /!\[.*?(graph|chart|diagram).*?\]\(.*?\)/gi;
-      if (imageRegex.test(content)) {
-        features.has_graphs = true;
-      }
-
-      // b. Markdown tables (simple pipe-table detection)
-      const tableRegex = /^\s*\|.*\|\s*$\n^\s*\|[-:\s|]+\|\s*$/m;
-      if (tableRegex.test(content)) {
-        features.has_graphs = true;
-      }
-
-      // c. KaTeX/math blocks that look like equations (variables on both sides of =)
-      const ast = parseMarkdown(content);
-      ast.children.forEach((node) => {
-        if (node.type === 'math' || node.type === 'inlineMath') {
-          const mathText = node.value || '';
-          // Heuristic: contains = with non-empty content on both sides
-          if (/[a-zA-Z0-9]\s*=\s*[a-zA-Z0-9]/.test(mathText)) {
-            features.has_graphs = true;
-          }
-        }
-      });
+    // Audio references
+    const content = (step.content || '') + (step.title || '');
+    if (
+      /audio:/i.test(content) ||
+      /\.(mp3|wav|ogg|m4a|aac)/i.test(content) ||
+      /\[sound\b/i.test(content) ||
+      /<audio/i.test(content) ||
+      /sound effect/i.test(content)
+    ) {
+      features.has_audio = true;
     }
+
+    // Metaphor / cultural reference keywords
+    const metaphorPatterns = {
+      weaving: /weav|thread|loom|fabric|stitch|pattern|warp|weft/i,
+      farming: /farm|seed|harvest|season|crop|soil|plant|grow/i,
+      building: /build|construct|foundation|brick|frame|scaffold/i,
+      cooking: /cook|recipe|mix|stir|bake|ingredient|flavor/i,
+      music: /rhythm|beat|melody|tune|drum|song/i,
+    };
+
+    Object.entries(metaphorPatterns).forEach(([type, regex]) => {
+      if (regex.test(content)) {
+        features.has_metaphor = true;
+        features.metaphor_types.add(type);
+      }
+    });
   });
 
-  // Convert Set to Array for clean JSON output
+  // Also check gate-level branching
+  if (lesson.gate?.on_fail || lesson.gate?.on_success) {
+    features.has_branching = true;
+  }
+
   features.sensors_used = Array.from(features.sensors_used);
+  features.metaphor_types = Array.from(features.metaphor_types);
 
   return features;
 }
