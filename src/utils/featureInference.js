@@ -1,17 +1,23 @@
 // src/utils/featureInference.js
 const unified = require('unified');
 const remarkParse = require('remark-parse');
-const remarkMath = require('remark-math');
 
-function parseMarkdown(content) {
+
+// We'll load remark-math dynamically inside the function
+async function parseMarkdown(content) {
   if (!content) return { type: 'root', children: [] };
-  return unified()
+
+  // Dynamic import only when needed
+  const remarkMath = (await import('remark-math')).default;
+
+  const processor = unified()
     .use(remarkParse)
-    .use(remarkMath)
-    .parse(content);
+    .use(remarkMath);
+
+  return processor.parse(content);
 }
 
-function inferFeatures(lesson) {
+async function inferFeatures(lesson) {
   const features = {
     title: lesson.meta?.title || 'Untitled',
     has_graphs: false,
@@ -88,4 +94,4 @@ function inferFeatures(lesson) {
   return features;
 }
 
-module.exports = { inferFeatures };
+module.exports = { inferFeatures, parseMarkdown };
