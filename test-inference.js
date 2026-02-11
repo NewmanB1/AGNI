@@ -1,6 +1,6 @@
 const fs = require('fs');
 const yaml = require('js-yaml');
-const { inferFeatures } = require('./utils/featureInference');
+const { inferFeatures } = require('./src/utils/featureInference');
 
 // Change this path to point to one of your YAML files
 const lessonPath = './lessons/gravity.yaml'; // ← update this
