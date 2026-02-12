@@ -1,4 +1,3 @@
-
 const fs = require('fs');
 const yaml = require('js-yaml');
 const buildHtml = require('./builders/html');
@@ -11,17 +10,14 @@ function run() {
   if (args.includes('--help') || args.includes('-h') || args.length === 0) {
     console.log(`
   🔥 AGNI — Open Lesson Standard Compiler
-
   Usage:
     agni <input.yaml> [options]
-
   Options:
-    --format=html|native   Output format (default: html)
-    --output=<path>        Output file path (required for html)
-    --output-dir=<path>    Output directory (required for native)
-    --device-id=<uuid>     Bind output to a specific device
-    --private-key=<path>   Path to Ed25519 private key for signing
-
+    --format=html|native Output format (default: html)
+    --output=<path> Output file path (required for html)
+    --output-dir=<path> Output directory (required for native)
+    --device-id=<uuid> Bind output to a specific device
+    --private-key=<path> Path to Ed25519 private key for signing
   Examples:
     agni lessons/gravity.yaml --format=html --output=dist/gravity.html
     agni lessons/gravity.yaml --format=native --output-dir=dist/native-gravity
@@ -68,12 +64,27 @@ function run() {
     process.exit(1);
   }
 
+  // ── FEATURE INFERENCE ──
+  // Runs automatically on every build after YAML is loaded
+  try {
+    const { inferFeatures } = require('./utils/featureInference');
+    const inferred = inferFeatures(data);
+
+    console.log(`\n[FEATURE INFERENCE] ${data.meta?.title || 'Unnamed lesson'} (${params.inputFile})`);
+    console.log(JSON.stringify(inferred, null, 2));
+
+    // Optional: attach to the data object (can be used in builders if needed)
+    data.inferredFeatures = inferred;
+  } catch (err) {
+    console.warn(`[Warning] Feature inference failed: ${err.message}`);
+    // Continue anyway — inference is optional
+  }
+
   // Validate minimal structure
   if (!data || !data.meta || !data.steps) {
     console.error('Error: Invalid OLS file. Must contain "meta" and "steps" fields.');
     process.exit(1);
   }
-
   if (!Array.isArray(data.steps)) {
     console.error('Error: "steps" must be a YAML array (each item prefixed with "-").');
     process.exit(1);
