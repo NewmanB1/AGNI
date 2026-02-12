@@ -1,21 +1,4 @@
-// src/utils/featureInference.js - good enough v1 with dynamic import for remark-math
-
-const unified = require('unified');
-const remarkParse = require('remark-parse');
-
-// Dynamic import for ESM-only remark-math
-async function parseMarkdown(content) {
-  if (!content) return { type: 'root', children: [] };
-
-  // Load remark-math only when needed
-  const remarkMath = (await import('remark-math')).default;
-
-  const processor = unified()
-    .use(remarkParse)
-    .use(remarkMath);
-
-  return processor.parse(content);
-}
+// src/utils/featureInference.js - good enough v1 (sync, no remark-math dependency)
 
 /**
  * Infers features from a parsed OLS lesson object
@@ -103,16 +86,21 @@ function inferFeatures(lesson) {
         features.has_graphs = true;
       }
 
-      // Math/KaTeX equations
-      const ast = parseMarkdown(content);  // this is async, but we call it sync for now
-      ast.children.forEach(node => {
-        if (node.type === 'math' || node.type === 'inlineMath') {
-          const math = node.value || '';
+      // Math/KaTeX equations (regex-based, no async parsing needed)
+      // Matches block math $$...$$ and inline math $...$
+      if (/\$\$.+?\$\$/s.test(content) || /\$[^$\n]+?\$/g.test(content)) {
+        // Check if the math content looks like an equation (has = ~ → : and alphanumeric)
+        const mathBlocks = content.match(/\$\$(.+?)\$\$/gs) || [];
+        const inlineMath = content.match(/\$([^$\n]+?)\$/g) || [];
+        const allMath = [...mathBlocks, ...inlineMath];
+
+        allMath.forEach(block => {
+          const math = block.replace(/\$/g, '');
           if (/[=~→:]/.test(math) && /[a-zA-Z0-9]/.test(math)) {
             features.has_graphs = true;
           }
-        }
-      });
+        });
+      }
     }
   });
 
