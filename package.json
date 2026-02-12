@@ -1,5 +1,8 @@
-  {               
-  "name": "agni-core", 
+
+Copy
+
+{
+  "name": "agni-core",
   "version": "0.1.0",
   "description": "AGNI: The compiler and runtime for the Open Lesson Standard (OLS).",
   "bin": {
