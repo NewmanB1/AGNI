@@ -1,5 +1,4 @@
 name: Validate OLS Files
-
 on:
   push:
     branches: [main]
@@ -15,25 +14,20 @@ on:
       - 'fixtures/**'
       - 'package.json'
   workflow_dispatch:
-
 jobs:
   validate:
     name: Validate YAML & Graph Weights
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
-
       - name: Install dependencies
         run: npm ci
-
       - name: Validate all OLS lesson files
         run: |
           echo "🔍 Validating all .yaml lessons..."
@@ -46,19 +40,18 @@ jobs:
                 const data = yaml.load(fs.readFileSync('$file', 'utf8'));
                 console.log(JSON.stringify(data));
               " > temp.json
-              npx ajv validate -s schemas/ols.schema.json -d temp.json || exit 1
+              npx ajv validate -s schemas/ols.schema.json -d temp.json -c ajv-formats || exit 1
               rm temp.json
               echo "   ✓ Valid"
             fi
           done
-
       - name: Validate graph weights fixtures
         run: |
           echo "🔍 Validating graph weights examples..."
           for file in fixtures/*.json; do
             if [ -f "$file" ]; then
               echo "→ Checking $file"
-              npx ajv validate -s schemas/graph_weights.schema.json -d "$file" || exit 1
+              npx ajv validate -s schemas/graph_weights.schema.json -d "$file" -c ajv-formats || exit 1
               echo "   ✓ Valid"
             fi
           done
