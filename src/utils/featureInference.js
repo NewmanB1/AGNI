@@ -1,23 +1,17 @@
-// src/utils/featureInference.js
+// src/utils/featureInference.js - good enough v1
 const unified = require('unified');
 const remarkParse = require('remark-parse');
+const remarkMath = require('remark-math');
 
-
-// We'll load remark-math dynamically inside the function
-async function parseMarkdown(content) {
+function parseMarkdown(content) {
   if (!content) return { type: 'root', children: [] };
-
-  // Dynamic import only when needed
-  const remarkMath = (await import('remark-math')).default;
-
-  const processor = unified()
+  return unified()
     .use(remarkParse)
-    .use(remarkMath);
-
-  return processor.parse(content);
+    .use(remarkMath)
+    .parse(content);
 }
 
-async function inferFeatures(lesson) {
+function inferFeatures(lesson) {
   const features = {
     title: lesson.meta?.title || 'Untitled',
     has_graphs: false,
@@ -38,55 +32,60 @@ async function inferFeatures(lesson) {
       if (step.sensor) features.sensors_used.add(step.sensor.toLowerCase());
     }
 
-    // Haptic feedback
+    // Haptic
     if (step.feedback && /vibration:/i.test(step.feedback)) {
       features.has_haptic_feedback = true;
     }
 
-    // Interactive (quizzes)
+    // Quiz/interactive
     if (step.type === 'quiz') {
       features.interactive_elements_count++;
     }
 
-    // Branching / conditional logic
-    if (step.on_fail || step.on_success || step.condition || step.next_if) {
+    // Branching
+    if (step.on_fail || step.on_success || step.condition) {
       features.has_branching = true;
       features.interactive_elements_count++;
     }
 
-    // Audio detection
+    // Audio (basic)
     const text = (step.content || '') + (step.title || '');
-    if (
-      /audio:/i.test(text) ||
-      /\.(mp3|wav|ogg|m4a|aac)/i.test(text) ||
-      /\[sound\b/i.test(text) ||
-      /<audio/i.test(text) ||
-      /sound effect|voice|spoken/i.test(text)
-    ) {
+    if (/\.(mp3|wav|ogg)/i.test(text) || /audio:/i.test(text)) {
       features.has_audio = true;
     }
 
-    // Metaphor / cultural reference detection
-    const metaphorPatterns = {
-      weaving: /weav|thread|loom|fabric|stitch|pattern|warp|weft/i,
-      farming: /farm|seed|harvest|season|crop|soil|plant|grow/i,
-      building: /build|construct|foundation|brick|frame|scaffold/i,
-      cooking: /cook|recipe|mix|stir|bake|ingredient|flavor/i,
-      music: /rhythm|beat|melody|tune|drum|song/i,
+    // Metaphor (simple keywords)
+    const metaphorKeywords = {
+      weaving: /weav|thread|loom|fabric|stitch/i,
+      farming: /farm|seed|harvest|season|crop/i,
+      music: /rhythm|beat|melody|tune/i,
+      building: /build|construct|foundation/i,
     };
-
-    Object.entries(metaphorPatterns).forEach(([type, regex]) => {
+    Object.entries(metaphorKeywords).forEach(([type, regex]) => {
       if (regex.test(text)) {
         features.has_metaphor = true;
         features.metaphor_types.add(type);
       }
     });
+
+    // Graphs (current working version)
+    if (text) {
+      if (/!\[.*?(graph|chart|diagram).*?\]/gi.test(text) ||
+          /\|.*\|.*\|/m.test(text)) {
+        features.has_graphs = true;
+      }
+      const ast = parseMarkdown(text);
+      ast.children.forEach(node => {
+        if (node.type === 'math' || node.type === 'inlineMath') {
+          if (/[=~]/.test(node.value || '')) {
+            features.has_graphs = true;
+          }
+        }
+      });
+    }
   });
 
-  // Gate-level branching
-  if (lesson.gate?.on_fail || lesson.gate?.on_success) {
-    features.has_branching = true;
-  }
+  if (lesson.gate?.on_fail) features.has_branching = true;
 
   features.sensors_used = Array.from(features.sensors_used);
   features.metaphor_types = Array.from(features.metaphor_types);
@@ -94,4 +93,4 @@ async function inferFeatures(lesson) {
   return features;
 }
 
-module.exports = { inferFeatures, parseMarkdown };
+module.exports = { inferFeatures };
