@@ -67,7 +67,7 @@ function run() {
   // ── FEATURE INFERENCE ──
   // Runs automatically on every build after YAML is loaded
   try {
-    const { inferFeatures } = require('./utils/featureInference');
+    const { inferFeatures } = require('./src/utils/featureInference');
     const inferred = inferFeatures(data);
 
     console.log(`\n[FEATURE INFERENCE] ${data.meta?.title || 'Unnamed lesson'} (${params.inputFile})`);
