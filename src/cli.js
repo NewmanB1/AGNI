@@ -56,6 +56,8 @@ function run() {
 
   // Load and parse YAML
   let data;
+// Load and parse YAML
+  let data;
   try {
     const raw = fs.readFileSync(params.inputFile, 'utf8');
     data = yaml.load(raw);
@@ -65,7 +67,7 @@ function run() {
   }
 
   // ── FEATURE INFERENCE ──
-  // Runs automatically on every build after YAML is loaded
+  // Automatically runs on every build
   try {
     const { inferFeatures } = require('./utils/featureInference');
     const inferred = inferFeatures(data);
@@ -73,11 +75,11 @@ function run() {
     console.log(`\n[FEATURE INFERENCE] ${data.meta?.title || 'Unnamed lesson'} (${params.inputFile})`);
     console.log(JSON.stringify(inferred, null, 2));
 
-    // Optional: attach to the data object (can be used in builders if needed)
+    // Optional: attach to data for use in builders
     data.inferredFeatures = inferred;
   } catch (err) {
     console.warn(`[Warning] Feature inference failed: ${err.message}`);
-    // Continue anyway — inference is optional
+    // Continue build even if inference fails
   }
 
   // Validate minimal structure
@@ -85,6 +87,10 @@ function run() {
     console.error('Error: Invalid OLS file. Must contain "meta" and "steps" fields.');
     process.exit(1);
   }
+
+  // ── FEATURE INFERENCE ──
+  // Runs automatically on every build after YAML is loaded
+
   if (!Array.isArray(data.steps)) {
     console.error('Error: "steps" must be a YAML array (each item prefixed with "-").');
     process.exit(1);
