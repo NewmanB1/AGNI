@@ -1,25 +1,38 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://agni-project.org/schemas/ols.schema.json",
-  "title": "AGNI / Open Lesson Standard v1.6",
-  "description": "A standard for offline, sensor-rich interactive lessons. Metadata complies with Dublin Core (DC) and LRMI/Schema.org.",
+  "title": "AGNI / Open Lesson Standard v1.7",
+  "description": "A standard for offline, sensor-rich interactive lessons. Supports forking, adaptive reordering (θ), and learner pacing metrics. Metadata complies with Dublin Core (DC) and LRMI/Schema.org.",
   "type": "object",
   "required": ["version", "meta", "steps"],
+  "additionalProperties": false,
   "properties": {
     "version": {
       "type": "string",
-      "enum": ["1.6.0"],
+      "enum": ["1.6.0", "1.7.0"],
       "description": "Semver version of the OLS spec."
     },
     "meta": {
       "type": "object",
-      "description": "Bibliographic and Educational Metadata (DC & LRMI compliant)",
+      "description": "Bibliographic, educational, and performance metadata.",
       "required": ["identifier", "title", "language", "license", "created"],
+      "additionalProperties": false,
       "properties": {
-        "identifier": { "type": "string" },
+        "identifier": {
+          "type": "string",
+          "description": "Unique namespaced ID. Convention: ols:<domain>:<topic>_<variant>_v<N>"
+        },
         "title": { "type": "string" },
         "description": { "type": "string" },
-        "language": { "type": "string", "pattern": "^[a-z]{2,3}(-[A-Z]{2,3})?$" },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Z]{2,3})?$",
+          "description": "BCP-47 language tag (e.g., 'en', 'sw', 'es-MX')."
+        },
+        "locale": {
+          "type": "string",
+          "description": "Cultural/regional adaptation target (e.g., 'KE', 'US', 'IN-TN'). Two lessons can share a language but differ in locale."
+        },
         "license": { "type": "string" },
         "created": { "type": "string", "format": "date-time" },
         "updated": { "type": "string", "format": "date-time" },
@@ -32,32 +45,90 @@
               "email": { "type": "string", "format": "email" },
               "url": { "type": "string", "format": "uri" }
             },
-            "required": ["name"]
+            "required": ["name"],
+            "additionalProperties": false
           }
         },
-        "subject": { "type": "array", "items": { "type": "string" } },
+        "subject": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Structured subject categories (e.g., 'Physics', 'Classical Mechanics')."
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Free-form tags for discovery (e.g., 'beginner', 'indoor', 'no-drop')."
+        },
         "audience": {
           "type": "object",
           "properties": {
             "educational_role": { "type": "string", "enum": ["student", "teacher", "parent"] },
             "typical_age_range": { "type": "string" }
-          }
+          },
+          "additionalProperties": false
         },
         "time_required": {
           "type": "string",
-          "pattern": "^P(?!$)(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$"
+          "pattern": "^P(?!$)(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$",
+          "description": "Expected total lesson duration in ISO 8601 duration format (e.g., 'PT12M' for 12 minutes)."
+        },
+        "difficulty": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "Difficulty rating from 1 (easiest) to 5 (hardest). Used by θ for adaptive ordering."
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "description": "SHA-256 hash of the steps array (JSON-serialized, sorted keys). Allows integrity verification without full signature infrastructure."
+        }
+      }
+    },
+    "fork": {
+      "type": "object",
+      "description": "Provenance tracking for forked lessons.",
+      "required": ["source_identifier", "source_version"],
+      "additionalProperties": false,
+      "properties": {
+        "source_identifier": {
+          "type": "string",
+          "description": "Identifier of the original lesson this was forked from."
+        },
+        "source_version": {
+          "type": "string",
+          "description": "Version of the OLS spec the source lesson used."
+        },
+        "source_hash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "description": "Content hash of the source lesson at time of fork."
+        },
+        "fork_type": {
+          "type": "string",
+          "enum": ["translation", "adaptation", "remix", "correction"],
+          "description": "What kind of fork this is. 'translation' = same content, new language. 'adaptation' = same topic, different cultural context. 'remix' = structural changes. 'correction' = bug/error fix."
+        },
+        "changes": {
+          "type": "string",
+          "description": "Human-readable summary of what changed from the source."
         }
       }
     },
     "ontology": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "requires": { "type": "array", "items": { "$ref": "#/definitions/skillNode" } },
         "provides": { "type": "array", "items": { "$ref": "#/definitions/skillNode" } }
       }
     },
     "gate": { "$ref": "#/definitions/gateLogic" },
-    "steps": { "type": "array", "items": { "$ref": "#/definitions/step" } },
+    "steps": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/step" },
+      "minItems": 1
+    },
     "signatures": {
       "type": "array",
       "items": {
@@ -66,7 +137,8 @@
           "role": { "type": "string" },
           "entity": { "type": "string" },
           "signature": { "type": "string" }
-        }
+        },
+        "additionalProperties": false
       }
     }
   },
@@ -74,6 +146,7 @@
     "skillNode": {
       "type": "object",
       "required": ["skill"],
+      "additionalProperties": false,
       "properties": {
         "skill": { "type": "string" },
         "level": { "type": "integer", "default": 1 }
@@ -82,25 +155,78 @@
     "gateLogic": {
       "type": "object",
       "required": ["type"],
+      "additionalProperties": false,
       "properties": {
         "type": { "type": "string", "enum": ["quiz", "manual_verification"] },
         "skill_target": { "type": "string" },
         "question": { "type": "string" },
         "expected_answer": { "type": "string" },
-        "on_fail": { "type": "string" }
+        "on_fail": { "type": "string" },
+        "passing_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Minimum score (0.0–1.0) to pass this gate. Default: 1.0 (must answer correctly)."
+        },
+        "retry_delay": {
+          "type": "string",
+          "pattern": "^P(?!$)(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$",
+          "description": "Minimum wait time before retrying this gate (ISO 8601 duration). Prevents brute-forcing."
+        }
       }
     },
     "step": {
       "type": "object",
-      "required": ["type"],
+      "required": ["id", "type"],
+      "additionalProperties": false,
       "properties": {
-        "type": { "type": "string", "enum": ["instruction", "hardware_trigger", "quiz"] },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_-]+$",
+          "description": "Unique step identifier within this lesson. Used by θ for reordering and by forks for change tracking."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["instruction", "hardware_trigger", "quiz"]
+        },
         "content": { "type": "string" },
         "sensor": { "type": "string" },
         "threshold": { "type": "string" },
         "feedback": { "type": "string" },
         "answer_options": { "type": "array", "items": { "type": "string" } },
-        "correct_index": { "type": "integer" }
+        "correct_index": { "type": "integer" },
+        "expected_duration": {
+          "type": "string",
+          "pattern": "^P(?!$)(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$",
+          "description": "How long this step should take for an on-pace learner (ISO 8601 duration). θ compares actual vs. expected to detect struggling or excelling."
+        },
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum attempts for quiz or hardware_trigger steps before marking as failed. Default: 3."
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Importance of this step to the lesson's learning objective (0.0–1.0). A core concept quiz might be 0.9; a calibration step might be 0.2."
+        },
+        "on_fail": {
+          "type": "string",
+          "description": "Action when max_attempts is exhausted. Can be a redirect (e.g., 'redirect:step_id'), a hint, or 'skip'."
+        },
+        "on_success": {
+          "type": "string",
+          "description": "Action on successful completion. Can skip ahead (e.g., 'skip_to:step_id') for excelling learners."
+        },
+        "condition": {
+          "type": "string",
+          "description": "Conditional expression for whether this step should be shown. Used for adaptive paths."
+        },
+        "next_if": {
+          "type": "string",
+          "description": "Conditional next step override. Format: 'condition -> step_id'."
+        }
       }
     }
   }
