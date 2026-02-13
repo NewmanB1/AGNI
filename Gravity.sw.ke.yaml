@@ -1,0 +1,113 @@
+version: "1.7.0"
+meta:
+  identifier: "ols:physics:gravity_intro_sw_ke_v1"
+  title: "Kuhisi Mvuto"
+  description: "Utangulizi wa kuongeza kasi na kuanguka kwa huria kwa kutumia sensori za simu."
+  language: "sw"
+  locale: "KE"
+  license: "AGPL-3.0"
+  created: "2025-02-12T22:00:00Z"
+  authors:
+    - name: "Amina Ochieng"
+  subject:
+    - "Fizikia"
+    - "Mekanika ya Kawaida"
+    - "Mvuto"
+  tags:
+    - "mwanzo"
+    - "ndani"
+    - "uso-laini-inahitajika"
+  audience:
+    educational_role: "student"
+    typical_age_range: "10-14"
+  time_required: "PT14M"
+  difficulty: 2
+
+fork:
+  source_identifier: "ols:physics:gravity_intro_v1"
+  source_version: "1.7.0"
+  fork_type: "translation"
+  changes: "Translated to Swahili. Adapted examples for Kenyan context (replaced pillow/cushion with folded kanga/blanket). Added extra time for reading in second language."
+
+ontology:
+  requires:
+    - skill: "ols:physics:observation_basics"
+  provides:
+    - skill: "ols:physics:gravity_concept"
+      level: 1
+
+gate:
+  type: "quiz"
+  skill_target: "ols:physics:observation_basics"
+  question: "Ni nguvu gani inayovuta vitu kuelekea katikati ya Dunia?"
+  expected_answer: "mvuto"
+  on_fail: "redirect:ols:physics:observation_basics/review"
+  passing_score: 1.0
+  retry_delay: "PT2M"
+
+steps:
+  - id: "intro"
+    type: "instruction"
+    content: |
+      ## Nguvu Isiyoonekana
+      Sasa hivi, mvuto unakuvuta wewe — na kila kitu kinachokuzunguka — chini.
+      Simu yako inaweza **kuhisi** nguvu hii.
+    expected_duration: "PT1M30S"
+    weight: 0.1
+
+  - id: "calibration"
+    type: "hardware_trigger"
+    sensor: "accelerometer"
+    threshold: "accel.z > 9.0"
+    feedback: "vibration:short"
+    content: |
+      ## Hatua ya 1 – Urekebishaji
+      Shika simu gorofa kabisa (skrini inaelekea juu moja kwa moja,
+      imekaa kwenye kiganja chako wazi au meza).
+      Subiri hadi uhisi mtetemo mfupi.
+    expected_duration: "PT45S"
+    max_attempts: 5
+    weight: 0.2
+    on_fail: "skip_to:freefall"
+
+  - id: "freefall"
+    type: "hardware_trigger"
+    sensor: "accelerometer"
+    threshold: "freefall > 0.3s"
+    feedback: "vibration:success_pattern"
+    content: |
+      ## Hatua ya 2 – Kuanguka Huria
+      Sasa idondoshe simu polepole kutoka sm 30-50 kwenye uso laini
+      (kanga iliyokunjwa, blanketi, au mto).
+      Itakapohisi kutokuwa na uzito kwa muda, utahisi mtetemo
+      mrefu wa mdundo.
+    expected_duration: "PT2M30S"
+    max_attempts: 3
+    weight: 0.8
+    on_fail: "skip_to:explanation"
+
+  - id: "explanation"
+    type: "instruction"
+    content: |
+      ## Nini kimetokea?
+      **Gorofa mkononi mwako** → simu ilihisi kuongeza kasi ~9.8 m/s² chini (mvuto wa kawaida)
+      **Wakati wa kudondoka** → simu ilihisi karibu 0 m/s² → hii ni **kuanguka huria**
+      Hisia hiyo ya kutokuwa na uzito ni hasa ile wanaanga wanapata!
+    expected_duration: "PT2M"
+    weight: 0.6
+
+  - id: "quiz-gravity"
+    type: "quiz"
+    content: |
+      ## Ukaguzi wa haraka
+      Kwa nini simu ilihisi kutokuwa na uzito ulipoidondosha?
+    answer_options:
+      - "Simu ikawa nyepesi"
+      - "Mvuto uliacha kufanya kazi ghafla"
+      - "Simu ilikuwa ikianguka kwa kasi sawa na mvuto unavyovuta → hakuna nguvu inayohisiwa"
+      - "Betri ilimaliza nguvu"
+    correct_index: 2
+    expected_duration: "PT1M"
+    max_attempts: 2
+    weight: 0.9
+    on_fail: "redirect:explanation"
