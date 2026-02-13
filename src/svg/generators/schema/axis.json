@@ -1,0 +1,194 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agni-project.org/schemas/svg-axisgraph-params.json",
+  "title": "AxisGraphGenerator Parameters",
+  "description": "Configuration for generating axis-based graphs: line graphs, scatter plots, function plots, step graphs, and physics motion graphs. Japanese-inspired defaults favor thin axes, minimal grid, precise tick labels, high readability on small screens, and subtle color coding for multiple series or regions.",
+  "type": "object",
+  "required": ["xMin", "xMax", "yMin", "yMax"],
+  "additionalProperties": false,
+  "properties": {
+    "xMin": { "type": "number", "description": "Minimum x-axis value" },
+    "xMax": { "type": "number", "description": "Maximum x-axis value" },
+    "yMin": { "type": "number", "description": "Minimum y-axis value" },
+    "yMax": { "type": "number", "description": "Maximum y-axis value" },
+    "style": {
+      "type": "string",
+      "enum": ["line", "scatter", "function", "step", "motion", "bestFit"],
+      "default": "line",
+      "description": "Graph type preset that influences line style, markers, and labeling."
+    },
+    "dimensions": {
+      "type": "object",
+      "properties": {
+        "width": { "type": "number", "minimum": 200, "default": 360 },
+        "height": { "type": "number", "minimum": 160, "default": 240 },
+        "padding": { "type": "object", "properties": {
+          "top": { "type": "number", "default": 20 },
+          "right": { "type": "number", "default": 20 },
+          "bottom": { "type": "number", "default": 40 },
+          "left": { "type": "number", "default": 50 }
+        }}
+      }
+    },
+    "axes": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "object",
+          "properties": {
+            "label": { "type": "string", "default": "x" },
+            "ticks": { "type": "integer", "default": 6 },
+            "step": { "type": "number", "description": "Override tick spacing" },
+            "grid": { "type": "boolean", "default": true },
+            "color": { "type": "string", "default": "#000" },
+            "thickness": { "type": "number", "default": 1.5 }
+          }
+        },
+        "y": {
+          "type": "object",
+          "properties": {
+            "label": { "type": "string", "default": "y" },
+            "ticks": { "type": "integer", "default": 6 },
+            "step": { "type": "number" },
+            "grid": { "type": "boolean", "default": true },
+            "color": { "type": "string", "default": "#000" },
+            "thickness": { "type": "number", "default": 1.5 }
+          }
+        },
+        "origin": {
+          "type": "object",
+          "properties": {
+            "show": { "type": "boolean", "default": true },
+            "color": { "type": "string", "default": "#666" }
+          }
+        }
+      },
+      "description": "Axis and grid styling. Japanese minimalism: thin axes, faint grid, no heavy borders."
+    },
+    "series": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "oneOf": [
+              { "type": "array", "items": { "type": "number" }, "description": "y-values only (x = 0,1,2,…)" },
+              { "type": "array", "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }, "description": "[x,y] pairs" },
+              { "type": "object", "properties": {
+                "function": { "type": "string", "description": "Math expression, e.g., 'x^2 + 3x - 2'" },
+                "samples": { "type": "integer", "default": 100 }
+              }}
+            ]
+          },
+          "label": { "type": "string" },
+          "color": { "type": "string", "default": "#1976d2" },
+          "lineWidth": { "type": "number", "default": 2 },
+          "lineStyle": { "enum": ["solid", "dashed", "dotted"], "default": "solid" },
+          "marker": {
+            "type": "object",
+            "properties": {
+              "shape": { "enum": ["circle", "square", "triangle", "none"], "default": "circle" },
+              "size": { "type": "number", "default": 4 },
+              "fill": { "type": "string" }
+            }
+          },
+          "smooth": { "type": "boolean", "default": false, "description": "Curve fitting (bezier or spline)" }
+        }
+      },
+      "description": "One or more data series (multiple lines/scatters)."
+    },
+    "bestFit": {
+      "type": "object",
+      "description": "Only relevant if style='bestFit' or showBestFit=true.",
+      "properties": {
+        "type": { "enum": ["linear", "quadratic", "exponential", "none"], "default": "linear" },
+        "color": { "type": "string", "default": "#d32f2f" },
+        "lineWidth": { "type": "number", "default": 1.5 },
+        "equation": { "type": "boolean", "default": true, "description": "Show y = mx + b etc." }
+      }
+    },
+    "highlights": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "xFrom": { "type": "number" },
+          "xTo": { "type": "number" },
+          "color": { "type": "string", "default": "#fff9c4" },
+          "opacity": { "type": "number", "default": 0.3 },
+          "label": { "type": "string" }
+        }
+      },
+      "description": "Shaded vertical regions (e.g., time intervals, domains)."
+    },
+    "labels": {
+      "type": "object",
+      "properties": {
+        "showDataLabels": { "type": "boolean", "default": false },
+        "font": {
+          "type": "object",
+          "properties": {
+            "size": { "type": "number", "default": 11 },
+            "family": { "type": "string", "default": "sans-serif" },
+            "color": { "type": "string", "default": "#000" }
+          }
+        },
+        "equationPosition": { "enum": ["topRight", "bottomLeft", "auto"], "default": "topRight" }
+      }
+    },
+    "interactions": {
+      "type": "object",
+      "properties": {
+        "tapPoint": { "type": "boolean", "default": true, "description": "Highlight data point + show coordinates" },
+        "draggablePoint": {
+          "type": "object",
+          "properties": {
+            "seriesIndex": { "type": "integer", "default": 0 },
+            "pointIndex": { "type": "integer" },
+            "snapToGrid": { "type": "boolean", "default": false }
+          },
+          "description": "Student drags a point; runtime can read updated value."
+        },
+        "sensorLink": {
+          "type": "object",
+          "properties": {
+            "sensor": { "enum": ["accelerometer", "gyro", "light", "none"] },
+            "effect": { "enum": ["addPoint", "shiftSeries", "scaleY", "rotateAxes"] },
+            "mapping": { "type": "string", "description": "e.g., 'accel.total * 10'" }
+          },
+          "description": "Example: tilt phone → adds live data point or shifts entire graph"
+        },
+        "hapticFeedback": {
+          "onTapPoint": { "enum": ["short", "medium", "none"] },
+          "onTrendChange": { "enum": ["pulse", "none"] }
+        },
+        "animation": {
+          "type": "object",
+          "properties": {
+            "type": { "enum": ["drawLine", "growPoints", "fadeInSeries"] },
+            "duration": { "type": "number", "default": 1.5 }
+          }
+        }
+      }
+    },
+    "accessibility": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "desc": { "type": "string", "description": "Verbal summary of axes, series, trends" },
+        "ariaChart": { "type": "boolean", "default": true },
+        "highContrastLines": { "type": "boolean", "default": false }
+      }
+    },
+    "cultural": {
+      "type": "object",
+      "properties": {
+        "motif": { "enum": ["minimalJapanese", "physicsMotion", "estimationTrend", "default"] },
+        "colorScheme": { "enum": ["coolTrends", "monochrome", "seriesCoding", "auto"] },
+        "gridStyle": { "enum": ["cleanThin", "faintDotted", "boldAxes"] }
+      }
+    }
+  }
+}
