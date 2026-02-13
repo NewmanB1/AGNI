@@ -1,0 +1,140 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agni-project.org/schemas/svg-treediagram-params.json",
+  "title": "TreeDiagramGenerator Parameters",
+  "description": "Configuration for generating tree diagrams: probability trees, factor trees, family trees, decision trees, and branching narratives. Japanese-inspired defaults favor thin connecting lines, minimal labels, high-contrast nodes, clean vertical/horizontal layouts, and subtle color coding for levels or probabilities.",
+  "type": "object",
+  "required": ["nodes"],
+  "additionalProperties": false,
+  "properties": {
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["label"],
+        "properties": {
+          "label": { "type": "string", "description": "Text displayed in the node" },
+          "id": { "type": "string", "description": "Unique identifier (auto-generated if omitted)" },
+          "parentId": { "type": "string", "description": "ID of parent node (null for root)" },
+          "color": { "type": "string", "default": "#auto-cycle" },
+          "shape": { "enum": ["circle", "rect", "diamond", "ellipse"], "default": "circle" },
+          "size": { "type": "number", "default": 40 },
+          "probability": { "type": "number", "minimum": 0, "maximum": 1, "description": "For probability trees" },
+          "value": { "type": "string", "description": "For factor trees (e.g., prime factor)" }
+        }
+      },
+      "description": "Array of all nodes. Root node should have parentId: null. Order doesn't matter; connections are built from parentId."
+    },
+    "style": {
+      "type": "string",
+      "enum": ["probability", "factor", "family", "decision", "narrative", "hierarchy"],
+      "default": "probability",
+      "description": "Preset that influences layout, line style, and labeling."
+    },
+    "layout": {
+      "type": "object",
+      "properties": {
+        "orientation": { "enum": ["vertical", "horizontal", "radial"], "default": "vertical" },
+        "levelSpacing": { "type": "number", "default": 80 },
+        "siblingSpacing": { "type": "number", "default": 60 },
+        "rootPosition": { "enum": ["top", "left", "center"], "default": "top" }
+      }
+    },
+    "dimensions": {
+      "type": "object",
+      "properties": {
+        "width": { "type": "number", "minimum": 200, "default": 400 },
+        "height": { "type": "number", "minimum": 200, "default": 500 },
+        "padding": { "type": "number", "default": 40 }
+      }
+    },
+    "lines": {
+      "type": "object",
+      "properties": {
+        "color": { "type": "string", "default": "#555" },
+        "thickness": { "type": "number", "default": 1.5 },
+        "style": { "enum": ["solid", "dashed", "curved"], "default": "solid" },
+        "arrowheads": { "type": "boolean", "default": false, "description": "Show direction arrows (decision trees)" }
+      }
+    },
+    "labels": {
+      "type": "object",
+      "properties": {
+        "showNodeLabels": { "type": "boolean", "default": true },
+        "showEdgeLabels": { "type": "boolean", "default": false, "description": "Labels on connecting lines (e.g., 'Heads', '0.5')" },
+        "probabilityFormat": { "enum": ["decimal", "fraction", "percent"], "default": "decimal" },
+        "font": {
+          "type": "object",
+          "properties": {
+            "size": { "type": "number", "default": 12 },
+            "family": { "type": "string", "default": "sans-serif" },
+            "color": { "type": "string", "default": "#000" }
+          }
+        },
+        "edgeLabelPosition": { "enum": ["mid", "nearParent", "nearChild"], "default": "mid" }
+      }
+    },
+    "probability": {
+      "type": "object",
+      "description": "Only relevant if style='probability'.",
+      "properties": {
+        "showProbabilities": { "type": "boolean", "default": true },
+        "normalize": { "type": "boolean", "default": true, "description": "Force siblings to sum to 1" },
+        "highlightPath": { "type": "array", "items": { "type": "string" }, "description": "Highlight a specific outcome path by node IDs" }
+      }
+    },
+    "factor": {
+      "type": "object",
+      "description": "Only relevant if style='factor'.",
+      "properties": {
+        "number": { "type": "integer", "description": "Number to factorize (auto-builds tree if provided)" },
+        "showPrimeFactors": { "type": "boolean", "default": true }
+      }
+    },
+    "interactions": {
+      "type": "object",
+      "properties": {
+        "tapNode": { "type": "boolean", "default": true, "description": "Highlight node + show details (probability, factors, etc.)" },
+        "expandCollapse": { "type": "boolean", "default": false, "description": "Tap to show/hide sub-branches" },
+        "sensorLink": {
+          "type": "object",
+          "properties": {
+            "sensor": { "enum": ["accelerometer", "gyro", "light", "none"] },
+            "effect": { "enum": ["highlightPath", "rotateTree", "scaleBranch", "randomWalk"] },
+            "mapping": { "type": "string", "description": "e.g., 'gyro.beta > 30 ? highlight:branch1'" }
+          },
+          "description": "Example: tilt phone → highlights a random path or rotates radial layout"
+        },
+        "hapticFeedback": {
+          "onTapNode": { "enum": ["short", "medium", "none"] },
+          "onPathComplete": { "enum": ["pattern:success", "none"] }
+        },
+        "animation": {
+          "type": "object",
+          "properties": {
+            "type": { "enum": ["growFromRoot", "fadeBranches", "pulsePath"] },
+            "duration": { "type": "number", "default": 1 }
+          }
+        }
+      }
+    },
+    "accessibility": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "desc": { "type": "string", "description": "Verbal description of tree structure, levels, outcomes" },
+        "ariaTree": { "type": "boolean", "default": true },
+        "highContrastNodes": { "type": "boolean", "default": false }
+      }
+    },
+    "cultural": {
+      "type": "object",
+      "properties": {
+        "motif": { "enum": ["minimalJapanese", "branchingWeave", "familyTreeScroll", "default"] },
+        "colorScheme": { "enum": ["probabilityGradient", "monochrome", "levelCoding", "auto"] },
+        "lineStyle": { "enum": ["cleanThin", "curvedOrganic", "straightBold"] }
+      }
+    }
+  }
+}
