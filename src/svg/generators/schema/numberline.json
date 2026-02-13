@@ -1,0 +1,210 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agni-project.org/schemas/svg-numberline-params.json",
+  "title": "NumberLineGenerator Parameters",
+  "description": "Configuration for generating number lines. Supports basic counting lines, fractions, signed numbers, inequalities, coordinate axes, estimation activities, and interactive/sensor-linked variants. Japanese-inspired defaults favor thin lines, precise ticks, minimal labels, high readability, and subtle color coding for positive/negative or intervals.",
+  "type": "object",
+  "required": ["min", "max"],
+  "additionalProperties": false,
+  "properties": {
+    "min": {
+      "type": "number",
+      "description": "Leftmost (smallest) value on the line."
+    },
+    "max": {
+      "type": "number",
+      "description": "Rightmost (largest) value on the line."
+    },
+    "step": {
+      "type": "number",
+      "minimum": 0.01,
+      "default": 1,
+      "description": "Spacing between major ticks. Auto-adjusts for fractions if step is fractional."
+    },
+    "orientation": {
+      "type": "string",
+      "enum": ["horizontal", "vertical"],
+      "default": "horizontal",
+      "description": "Direction of the number line. Vertical useful for y-axis or thermometer-style visuals."
+    },
+    "dimensions": {
+      "type": "object",
+      "properties": {
+        "width": { "type": "number", "minimum": 150, "default": 400 },
+        "height": { "type": "number", "minimum": 60, "default": 100 },
+        "padding": { "type": "number", "default": 40, "description": "Space around ends and labels" }
+      },
+      "description": "SVG canvas size. Height is usually small unless vertical or many labels."
+    },
+    "style": {
+      "type": "string",
+      "enum": ["basic", "signed", "fraction", "inequality", "coordinate", "estimation"],
+      "default": "basic",
+      "description": "Variant presets that influence tick/label behavior and coloring."
+    },
+    "ticks": {
+      "type": "object",
+      "properties": {
+        "major": {
+          "type": "object",
+          "properties": {
+            "every": { "type": "number", "default": 1, "description": "Show major tick every N steps" },
+            "length": { "type": "number", "default": 12 },
+            "color": { "type": "string", "default": "#000" },
+            "thickness": { "type": "number", "default": 2 }
+          }
+        },
+        "minor": {
+          "type": "object",
+          "properties": {
+            "every": { "type": "number", "default": 0.5, "description": "0 = none" },
+            "length": { "type": "number", "default": 6 },
+            "color": { "type": "string", "default": "#666" },
+            "thickness": { "type": "number", "default": 1 }
+          }
+        },
+        "zero": {
+          "type": "object",
+          "properties": {
+            "highlight": { "type": "boolean", "default": true },
+            "color": { "type": "string", "default": "#c00" },
+            "length": { "type": "number", "default": 16 }
+          }
+        }
+      },
+      "description": "Tick mark control. Japanese style: thin major ticks, very faint or no minor ticks."
+    },
+    "labels": {
+      "type": "object",
+      "properties": {
+        "show": { "type": "boolean", "default": true },
+        "every": { "type": "number", "default": 1, "description": "Label every N major ticks" },
+        "decimals": { "type": "integer", "minimum": 0, "maximum": 3, "default": 1 },
+        "font": {
+          "type": "object",
+          "properties": {
+            "size": { "type": "number", "default": 14 },
+            "family": { "type": "string", "default": "sans-serif" },
+            "color": { "type": "string", "default": "#000" }
+          }
+        },
+        "position": { "type": "string", "enum": ["below", "above", "both"], "default": "below" },
+        "customLabels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "at": { "type": "number" },
+              "text": { "type": "string" },
+              "color": { "type": "string" }
+            }
+          },
+          "description": "Override specific tick labels (e.g., fractions as ½ instead of 0.5)"
+        }
+      }
+    },
+    "highlights": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from": { "type": "number" },
+          "to": { "type": "number" },
+          "color": { "type": "string", "default": "#ffeb3b33" },
+          "label": { "type": "string" },
+          "style": { "enum": ["solid", "striped", "gradient"] }
+        }
+      },
+      "description": "Shaded intervals (e.g., for inequalities, ranges, estimation zones)."
+    },
+    "points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "at": { "type": "number" },
+          "label": { "type": "string" },
+          "color": { "type": "string", "default": "#f00" },
+          "size": { "type": "number", "default": 8 },
+          "shape": { "enum": ["circle", "triangle", "square", "diamond"] }
+        }
+      },
+      "description": "Marked points (e.g., plot 3.2, show √2 ≈ 1.41)."
+    },
+    "inequality": {
+      "type": "object",
+      "description": "Only relevant if style='inequality'.",
+      "properties": {
+        "symbol": { "enum": ["<", "≤", ">", "≥", "≠"] },
+        "boundary": { "type": "number" },
+        "shadedSide": { "enum": ["left", "right"] },
+        "openCircle": { "type": "boolean", "default": false }
+      }
+    },
+    "fractionMode": {
+      "type": "object",
+      "description": "Enhances display when step is fractional (style='fraction').",
+      "properties": {
+        "showDenominators": { "type": "boolean", "default": true },
+        "equivalentDecimals": { "type": "boolean", "default": false },
+        "highlightUnitFractions": { "type": "boolean", "default": true }
+      }
+    },
+    "interactions": {
+      "type": "object",
+      "description": "Active behaviors the runtime can hook into.",
+      "properties": {
+        "draggableMarker": {
+          "type": "object",
+          "properties": {
+            "initialValue": { "type": "number" },
+            "snapTo": { "type": "number", "description": "Snap interval" },
+            "label": { "type": "string", "default": "x" },
+            "color": { "type": "string" }
+          },
+          "description": "Student drags a point along the line; runtime can read final value."
+        },
+        "sensorLink": {
+          "type": "object",
+          "properties": {
+            "sensor": { "enum": ["accelerometer", "gyro", "light", "none"] },
+            "prop": { "enum": ["markerPosition", "highlightRange", "zoom"] },
+            "mapping": { "type": "string", "description": "e.g., 'value * 10 + min'" }
+          },
+          "description": "Example: tilt phone → moves marker live (estimation game)."
+        },
+        "hapticFeedback": {
+          "type": "object",
+          "properties": {
+            "onSnap": { "enum": ["short", "medium", "none"] },
+            "onRangeEnter": { "enum": ["short", "pattern:success"] }
+          }
+        },
+        "animation": {
+          "type": "object",
+          "properties": {
+            "type": { "enum": ["growFromZero", "pulsePoint", "sweepHighlight"] },
+            "duration": { "type": "number", "default": 1 }
+          }
+        }
+      }
+    },
+    "accessibility": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "desc": { "type": "string", "description": "Verbal description of range, points, shading" },
+        "ariaLive": { "type": "boolean", "default": true, "description": "Announce marker moves" },
+        "highContrastTicks": { "type": "boolean", "default": false }
+      }
+    },
+    "cultural": {
+      "type": "object",
+      "properties": {
+        "motif": { "enum": ["minimalJapanese", "numberPathWeave", "default"] },
+        "colorScheme": { "enum": ["positiveNegative", "pastelIntervals", "monochrome", "auto"] },
+        "tickStyle": { "enum": ["cleanThin", "boldEstimation", "traditional"] }
+      }
+    }
+  }
+}
