@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agni-project.org/schemas/svg-fractioncircle-params.json",
+  "title": "FractionCircleGenerator Parameters",
+  "description": "Configuration for circle-based fraction, decimal, percent, and angle models (pizza slices, pie charts, protractors). Japanese-inspired defaults: clean black outlines, light pastel fills, minimal labels, high readability, subtle equivalence indicators.",
+  "type": "object",
+  "required": ["divisions"],
+  "additionalProperties": false,
+  "properties": {
+    "divisions": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 36,
+      "description": "Total equal slices in the circle (denominator)."
+    },
+    "style": {
+      "type": "string",
+      "enum": ["fraction", "equivalentFractions", "decimal", "percent", "angle", "probability"],
+      "default": "fraction",
+      "description": "Preset that controls labeling, coloring, and emphasis."
+    },
+    "highlighted": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 0, "maximum": 35 },
+      "description": "Indices of slices to highlight (numerator parts)."
+    },
+    "dimensions": {
+      "type": "object",
+      "properties": {
+        "diameter": { "type": "number", "minimum": 80, "default": 180 },
+        "centerX": { "type": "number", "default": 100 },
+        "centerY": { "type": "number", "default": 100 }
+      }
+    },
+    "appearance": {
+      "type": "object",
+      "properties": {
+        "wholeCircle": { "type": "object", "properties": {
+          "stroke": { "type": "string", "default": "#000" },
+          "strokeWidth": { "type": "number", "default": 2 },
+          "fill": { "type": "string", "default": "none" }
+        }},
+        "sliceFill": { "type": "string", "default": "#bbdefb" },
+        "sliceOpacity": { "type": "number", "default": 0.6 },
+        "highlightFill": { "type": "string", "default": "#1976d2" },
+        "highlightOpacity": { "type": "number", "default": 0.85 }
+      }
+    },
+    "labels": {
+      "type": "object",
+      "properties": {
+        "showNumerator": { "type": "boolean", "default": true },
+        "showDenominator": { "type": "boolean", "default": true },
+        "showDecimal": { "type": "boolean", "default": false },
+        "showPercent": { "type": "boolean", "default": false },
+        "showAngleDegrees": { "type": "boolean", "default": false },
+        "font": {
+          "type": "object",
+          "properties": {
+            "size": { "type": "number", "default": 12 },
+            "family": { "type": "string", "default": "sans-serif" },
+            "color": { "type": "string", "default": "#000" }
+          }
+        },
+        "position": { "enum": ["inside", "outside", "auto"], "default": "inside" }
+      }
+    },
+    "equivalence": {
+      "type": "object",
+      "description": "Only relevant if style='equivalentFractions'.",
+      "properties": {
+        "showEquivalent": { "type": "boolean", "default": true },
+        "equivalentDenominator": { "type": "integer" },
+        "lineStyle": { "enum": ["arc", "straight", "none"], "default": "arc" }
+      }
+    },
+    "interactions": {
+      "type": "object",
+      "properties": {
+        "tapSlice": { "type": "boolean", "default": true, "description": "Highlight slice + show fraction/decimal/percent" },
+        "sensorLink": {
+          "type": "object",
+          "properties": {
+            "sensor": { "enum": ["gyro", "accelerometer", "none"] },
+            "effect": { "enum": ["rotateCircle", "highlightSlice", "growNumerator"] },
+            "mapping": { "type": "string" }
+          },
+          "description": "Example: tilt phone → rotates circle or grows highlighted sectors"
+        },
+        "hapticFeedback": {
+          "onTapSlice": { "enum": ["short", "medium", "none"] }
+        },
+        "animation": {
+          "type": "object",
+          "properties": {
+            "type": { "enum": ["fillSlices", "pulseHighlight", "spinCircle"] },
+            "duration": { "type": "number", "default": 0.8 }
+          }
+        }
+      }
+    },
+    "accessibility": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "desc": { "type": "string", "description": "Verbalize fraction, highlighted parts, equivalence" },
+        "ariaChart": { "type": "boolean", "default": true }
+      }
+    },
+    "cultural": {
+      "type": "object",
+      "properties": {
+        "motif": { "enum": ["minimalJapanese", "pizzaStyle", "origamiCircle", "default"] },
+        "colorScheme": { "enum": ["pastelFractions", "monochrome", "equivalenceCoding", "auto"] }
+      }
+    }
+  }
+}
