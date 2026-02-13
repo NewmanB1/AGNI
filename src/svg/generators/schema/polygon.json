@@ -1,0 +1,175 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agni-project.org/schemas/svg-polygon-params.json",
+  "title": "PolygonGenerator Parameters",
+  "description": "Configuration for generating polygons and related geometric shapes. Supports regular/irregular polygons, stars, nets, pattern blocks, transformations, and interactive variants. Japanese-inspired defaults emphasize clean outlines, thin strokes, precise symmetry, minimal clutter, and subtle color coding for properties (sides, angles, congruence).",
+  "type": "object",
+  "required": ["sides"],
+  "additionalProperties": false,
+  "properties": {
+    "sides": {
+      "type": "integer",
+      "minimum": 3,
+      "maximum": 100,
+      "description": "Number of sides for regular polygons. For stars/compound polygons use 'n/m' notation (e.g., '5/2' for pentagram)."
+    },
+    "style": {
+      "type": "string",
+      "enum": ["regular", "star", "irregular", "net", "patternBlock", "transformation", "geoboard"],
+      "default": "regular",
+      "description": "Preset variant that influences shape generation, labeling, and coloring."
+    },
+    "dimensions": {
+      "type": "object",
+      "properties": {
+        "width": { "type": "number", "minimum": 100, "default": 280 },
+        "height": { "type": "number", "minimum": 100, "default": 280 },
+        "radius": { "type": "number", "minimum": 20, "default": 100, "description": "Distance from center to vertex (overrides size if present)" },
+        "padding": { "type": "number", "default": 30 }
+      }
+    },
+    "appearance": {
+      "type": "object",
+      "properties": {
+        "fill": { "type": "string", "default": "none" },
+        "fillOpacity": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.15 },
+        "stroke": { "type": "string", "default": "#000" },
+        "strokeWidth": { "type": "number", "default": 2 },
+        "roundedCorners": { "type": "number", "default": 0, "description": "Corner radius for softer look" },
+        "rotation": { "type": "number", "default": 0, "description": "Initial rotation in degrees" }
+      },
+      "description": "Visual styling. Japanese textbooks often use thin black outlines with light pastel fills."
+    },
+    "labels": {
+      "type": "object",
+      "properties": {
+        "showVertices": { "type": "boolean", "default": true },
+        "vertexLabels": {
+          "oneOf": [
+            { "type": "array", "items": { "type": "string" } },
+            { "enum": ["numbers", "letters", "angles"] }
+          ],
+          "default": "letters",
+          "description": "Label vertices A,B,C… or 1,2,3… or interior angles"
+        },
+        "showSideLengths": { "type": "boolean", "default": false },
+        "showAngles": { "type": "boolean", "default": false },
+        "font": {
+          "type": "object",
+          "properties": {
+            "size": { "type": "number", "default": 12 },
+            "family": { "type": "string", "default": "sans-serif" },
+            "color": { "type": "string", "default": "#000" }
+          }
+        },
+        "position": { "enum": ["inside", "outside", "auto"], "default": "auto" }
+      }
+    },
+    "properties": {
+      "type": "object",
+      "properties": {
+        "showDiagonals": { "type": "boolean", "default": false },
+        "diagonalColor": { "type": "string", "default": "#888" },
+        "highlightSymmetry": {
+          "type": "object",
+          "properties": {
+            "axes": { "type": "integer", "description": "Number of symmetry lines to draw" },
+            "color": { "type": "string", "default": "#ff9800" }
+          }
+        },
+        "showCongruence": { "type": "boolean", "default": false, "description": "Mark equal sides/angles with ticks" }
+      }
+    },
+    "star": {
+      "type": "object",
+      "description": "Only relevant if style='star'.",
+      "properties": {
+        "density": { "type": "number", "minimum": 1, "maximum": 5, "default": 2, "description": "Schläfli {n/m} — m is density" },
+        "pointyTips": { "type": "boolean", "default": true }
+      }
+    },
+    "net": {
+      "type": "object",
+      "description": "Only relevant if style='net'.",
+      "properties": {
+        "polyhedron": { "enum": ["tetrahedron", "cube", "octahedron", "dodecahedron", "icosahedron", "prism", "pyramid"] },
+        "faceLabels": { "type": "boolean", "default": true },
+        "foldLines": { "type": "boolean", "default": true, "description": "Dashed lines for folding" },
+        "unfoldAnimation": { "type": "boolean", "default": false }
+      }
+    },
+    "patternBlock": {
+      "type": "object",
+      "description": "For tangram/pattern block style pieces (style='patternBlock').",
+      "properties": {
+        "shape": { "enum": ["triangle", "square", "rhombus", "trapezoid", "hexagon", "thinRhombus"] },
+        "color": { "type": "string" },
+        "grid": { "type": "boolean", "default": false, "description": "Show underlying dot grid" }
+      }
+    },
+    "transformation": {
+      "type": "object",
+      "description": "Before/after transformation view (style='transformation').",
+      "properties": {
+        "transform": { "enum": ["translate", "rotate", "reflectX", "reflectY", "scale", "shear"] },
+        "amount": { "type": "number", "description": "Degrees, factor, or vector [x,y]" },
+        "beforeColor": { "type": "string", "default": "#aaa" },
+        "afterColor": { "type": "string", "default": "#0066cc" },
+        "showVectors": { "type": "boolean", "default": true }
+      }
+    },
+    "geoboard": {
+      "type": "object",
+      "description": "Dot grid with connected polygon (style='geoboard').",
+      "properties": {
+        "dots": { "type": "integer", "default": 5, "description": "Dots per side (n×n grid)" },
+        "connectPoints": { "type": "array", "items": { "type": "array", "items": { "type": "integer" } } },
+        "rubberBandColor": { "type": "string", "default": "#f44336" }
+      }
+    },
+    "interactions": {
+      "type": "object",
+      "properties": {
+        "tapVertex": { "type": "boolean", "default": true, "description": "Highlight vertex + show angle/side length" },
+        "draggableVertices": { "type": "boolean", "default": false, "description": "Student can move vertices (irregular mode)" },
+        "sensorLink": {
+          "type": "object",
+          "properties": {
+            "sensor": { "enum": ["gyro", "accelerometer", "none"] },
+            "effect": { "enum": ["rotate", "scale", "shear", "tiltFaces"] },
+            "mapping": { "type": "string" }
+          },
+          "description": "Example: phone tilt → rotates entire shape or tilts net into 3D illusion"
+        },
+        "hapticFeedback": {
+          "onTapVertex": { "enum": ["short", "medium", "none"] },
+          "onSymmetryLine": { "enum": ["pulse", "none"] }
+        },
+        "animation": {
+          "type": "object",
+          "properties": {
+            "type": { "enum": ["drawOutline", "growFromCenter", "rotateSlow", "foldNet"] },
+            "duration": { "type": "number", "default": 1.2 }
+          }
+        }
+      }
+    },
+    "accessibility": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "desc": { "type": "string", "description": "Describe shape, sides, angles, symmetry" },
+        "ariaLabels": { "type": "boolean", "default": true },
+        "highContrastOutline": { "type": "boolean", "default": false }
+      }
+    },
+    "cultural": {
+      "type": "object",
+      "properties": {
+        "motif": { "enum": ["minimalJapanese", "weavingEdges", "origamiFolds", "default"] },
+        "colorPalette": { "enum": ["pastelGeometry", "monochrome", "congruenceCoding", "auto"] },
+        "lineStyle": { "enum": ["cleanThin", "boldProperties", "dashedDiagonals"] }
+      }
+    }
+  }
+}
