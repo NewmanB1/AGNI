@@ -1,23 +1,47 @@
-version: "1.6.0"
+version: "1.7.0"
 meta:
   identifier: "ols:music:rhythm_shake_v1"
   title: "Shake for Rhythm"
   description: "Create a simple rhythm by shaking the phone."
   language: "en"
+  locale: "US"
   license: "AGPL-3.0"
   created: "2025-02-10T00:00:00Z"
+  updated: "2025-02-12T22:00:00Z"
+  authors:
+    - name: "AGNI Contributors"
+  subject:
+    - "Music"
+    - "Rhythm"
+  tags:
+    - "beginner"
+    - "indoor"
+    - "no-drop"
+    - "kinesthetic"
+  audience:
+    educational_role: "student"
+    typical_age_range: "8-14"
+  time_required: "PT6M"
+  difficulty: 1
+
 ontology:
   requires:
     - skill: "ols:music:basic_beat"
   provides:
     - skill: "ols:music:rhythm_pattern"
       level: 1
+
 steps:
-  - type: "instruction"
+  - id: "intro"
+    type: "instruction"
     content: |
       ## Your Phone Is a Maraca
       Shake the phone gently to make a beat.
-  - type: "hardware_trigger"
+    expected_duration: "PT30S"
+    weight: 0.1
+
+  - id: "single-shake"
+    type: "hardware_trigger"
     sensor: "accelerometer"
     threshold: "accel.total > 2.5g"
     feedback: "vibration:short"
@@ -25,7 +49,13 @@ steps:
       ## Step 1 – Single Shake
       Give one strong shake.
       You should feel a short vibration each time you shake hard enough.
-  - type: "hardware_trigger"
+    expected_duration: "PT1M"
+    max_attempts: 5
+    weight: 0.5
+    on_fail: "skip_to:steady-beat"
+
+  - id: "steady-beat"
+    type: "hardware_trigger"
     sensor: "accelerometer"
     threshold: "accel.total > 2.5g AND steady > 1.5s"
     feedback: "vibration:success_pattern"
@@ -33,9 +63,17 @@ steps:
       ## Step 2 – Steady Beat
       Shake once, wait about 1–2 seconds, shake again.
       Keep a steady rhythm for at least 5 seconds.
-      When you succeed, you’ll feel a happy vibration pattern.
-  - type: "instruction"
+      When you succeed, you'll feel a happy vibration pattern.
+    expected_duration: "PT3M"
+    max_attempts: 5
+    weight: 0.9
+    on_fail: "skip_to:outro"
+
+  - id: "outro"
+    type: "instruction"
     content: |
       ## Rhythm is everywhere
       Music, heartbeats, walking, dancing — all follow patterns of strong and weak moments.
       You just created your first rhythm with your phone!
+    expected_duration: "PT30S"
+    weight: 0.2
