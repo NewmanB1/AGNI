@@ -1,9 +1,40 @@
-version: "1.6.0"
+version: "1.7.0"
 meta:
+  identifier: "ols:physics:graph_accel_test_v1"
   title: "Graph Test – Acceleration Over Time"
-  description: "Test lesson with multiple visual/graph elements"
+  description: "Test lesson with multiple visual/graph elements for verifying graph detection and rendering."
+  language: "en"
+  locale: "US"
+  license: "AGPL-3.0"
+  created: "2025-02-12T00:00:00Z"
+  updated: "2025-02-12T22:00:00Z"
+  authors:
+    - name: "AGNI Contributors"
+  subject:
+    - "Physics"
+    - "Data Visualization"
+  tags:
+    - "test"
+    - "graphs"
+    - "intermediate"
+    - "indoor"
+    - "drop-safe"
+  audience:
+    educational_role: "student"
+    typical_age_range: "12-16"
+  time_required: "PT5M"
+  difficulty: 3
+
+ontology:
+  requires:
+    - skill: "ols:physics:gravity_concept"
+  provides:
+    - skill: "ols:physics:graph_reading"
+      level: 1
+
 steps:
-  - type: "instruction"
+  - id: "accel-graph"
+    type: "instruction"
     content: |
       ## Acceleration During Freefall
 
@@ -21,8 +52,18 @@ steps:
       The relationship can be modeled as:
 
       $$     a(t) = g - k \cdot t     $$
-  - type: "hardware_trigger"
+    expected_duration: "PT2M"
+    weight: 0.6
+
+  - id: "freefall-trigger"
+    type: "hardware_trigger"
     sensor: "accelerometer"
     threshold: "freefall > 0.5s"
     feedback: "vibration:success"
-    content: "Drop the phone and watch the acceleration drop to near zero."
+    content: |
+      ## Try It Yourself
+      Drop the phone and watch the acceleration drop to near zero.
+    expected_duration: "PT2M"
+    max_attempts: 3
+    weight: 0.8
+    on_fail: "skip"
