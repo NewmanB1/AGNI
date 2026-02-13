@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agni-project.org/schemas/svg-flowmap-params.json",
+  "title": "FlowMapGenerator Parameters",
+  "description": "Configuration for arrow-based flow maps, process diagrams, sequences, and cause-effect chains. Japanese-inspired defaults: thin arrows, minimal boxes, clean vertical/horizontal flow, subtle color progression, high readability.",
+  "type": "object",
+  "required": ["steps"],
+  "additionalProperties": false,
+  "properties": {
+    "steps": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["label"],
+        "properties": {
+          "label": { "type": "string" },
+          "id": { "type": "string" },
+          "shape": { "enum": ["rect", "roundedRect", "circle", "diamond"], "default": "roundedRect" },
+          "color": { "type": "string", "default": "#e3f2fd" },
+          "textColor": { "type": "string", "default": "#000" },
+          "width": { "type": "number", "default": 100 },
+          "height": { "type": "number", "default": 60 }
+        }
+      }
+    },
+    "connections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to"],
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "label": { "type": "string" },
+          "arrowhead": { "type": "boolean", "default": true },
+          "color": { "type": "string", "default": "#555" },
+          "thickness": { "type": "number", "default": 1.5 },
+          "style": { "enum": ["solid", "dashed", "curved"], "default": "solid" }
+        }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "properties": {
+        "type": { "enum": ["vertical", "horizontal", "processFlow", "cycle"], "default": "vertical" },
+        "spacing": { "type": "number", "default": 80 },
+        "alignment": { "enum": ["center", "left", "justify"], "default": "center" }
+      }
+    },
+    "dimensions": {
+      "type": "object",
+      "properties": {
+        "width": { "type": "number", "minimum": 300, "default": 500 },
+        "height": { "type": "number", "minimum": 300, "default": 600 },
+        "padding": { "type": "number", "default": 40 }
+      }
+    },
+    "labels": {
+      "type": "object",
+      "properties": {
+        "font": {
+          "type": "object",
+          "properties": {
+            "size": { "type": "number", "default": 12 },
+            "family": { "type": "string", "default": "sans-serif" }
+          }
+        }
+      }
+    },
+    "interactions": {
+      "type": "object",
+      "properties": {
+        "tapStep": { "type": "boolean", "default": true, "description": "Highlight step + show details" },
+        "sensorLink": {
+          "type": "object",
+          "properties": {
+            "sensor": { "enum": ["accelerometer", "gyro", "none"] },
+            "effect": { "enum": ["highlightPath", "progressFlow", "rotateCycle"] },
+            "mapping": { "type": "string" }
+          }
+        },
+        "hapticFeedback": {
+          "onTapStep": { "enum": ["short", "medium", "none"] }
+        },
+        "animation": {
+          "type": "object",
+          "properties": {
+            "type": { "enum": ["flowArrows", "pulseSteps", "revealSequence"] },
+            "duration": { "type": "number", "default": 1.5 }
+          }
+        }
+      }
+    },
+    "accessibility": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "desc": { "type": "string", "description": "Describe sequence, steps, flow" },
+        "ariaFlow": { "type": "boolean", "default": true }
+      }
+    },
+    "cultural": {
+      "type": "object",
+      "properties": {
+        "motif": { "enum": ["minimalJapanese", "processScroll", "cycleHarmony", "default"] },
+        "colorScheme": { "enum": ["stepProgression", "monochrome", "auto"] }
+      }
+    }
+  }
+}
