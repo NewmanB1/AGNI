@@ -21,23 +21,42 @@ function buildHtml(lessonData, options) {
   const styles = fs.readFileSync(path.join(__dirname, '../runtime/style.css'), 'utf8');
 
   // 3. Serialize & Sign
-  //    Use JSON.stringify for safe embedding — prevents template literal injection
   const dataString = JSON.stringify(runtimeData);
   const signature = signContent(dataString, options.deviceId, options.privateKey);
 
   // 4. Safe data injection
-  //    Escape </script> to prevent premature tag closure
   const safeDataString = dataString.replace(/<\/script>/gi, '<\\/script>');
 
+  // Inline svgGenerators (from svgLibrary.js) to avoid import/404
+  const svgGeneratorsInline = `
+    const svgGenerators = {
+      circle: (props) => \`<circle cx="\${props.cx}" cy="\${props.cy}" r="\${props.r}" fill="\${props.fill}" />\`,
+      rect: (props) => \`<rect x="\${props.x}" y="\${props.y}" width="\${props.width}" height="\${props.height}" fill="\${props.fill}" />\`,
+      line: (props) => \`<line x1="\${props.x1}" y1="\${props.y1}" x2="\${props.x2}" y2="\${props.y2}" stroke="\${props.stroke}" stroke-width="\${props.width}" />\`,
+      // Add any other generators you have in svgLibrary.js here
+      // e.g. path, polygon, text, etc.
+    };
+  `;
+
+  // 5. Final embedded script
   const finalScript = `
+    ${svgGeneratorsInline}
     window.LESSON_DATA = ${safeDataString};
     window.OLS_SIGNATURE = ${JSON.stringify(signature || '')};
     window.OLS_INTENDED_OWNER = ${JSON.stringify(options.deviceId || '')};
 
     ${runtimeJs}
+
+    // Safety net: hide loading if init fails
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const loading = document.getElementById('loading');
+        if (loading) loading.style.display = 'none';
+      }, 5000); // 5 second timeout fallback
+    });
   `;
 
-  // 5. Assembly
+  // 6. Assembly
   const html = `<!DOCTYPE html>
 <html lang="${lessonData.meta.language || 'en'}">
 <head>
@@ -48,8 +67,11 @@ function buildHtml(lessonData, options) {
   <style>${styles}</style>
 </head>
 <body>
-  <div id="app">Loading lesson...</div>
-  <script>${finalScript}</script>
+  <div id="loading">Loading lesson...</div>
+  <div id="app"></div>
+  <script type="module">
+    ${finalScript}
+  </script>
 </body>
 </html>`;
 
@@ -58,9 +80,8 @@ function buildHtml(lessonData, options) {
 
   const sizeKB = (Buffer.byteLength(html) / 1024).toFixed(1);
   console.log(`✅ HTML Generated: ${options.output} (${sizeKB} KB)`);
-
   if (sizeKB > 500) {
-    console.warn(`⚠️  Warning: Output exceeds 500KB target (${sizeKB} KB). Consider reducing embedded assets.`);
+    console.warn(`⚠️ Warning: Output exceeds 500KB target (${sizeKB} KB). Consider reducing embedded assets.`);
   }
 }
 
@@ -71,7 +92,8 @@ function escapeHtml(str) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 module.exports = buildHtml;
