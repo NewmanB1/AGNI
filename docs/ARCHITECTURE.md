@@ -7,7 +7,7 @@ The system follows a **"Source-to-Artifact"** philosophy. We do not distribute h
 
 ### Core Design Constraints
 *   **Hardware:** Android 6.0+, <2GB RAM, intermittent power.
-*   **Network:** 100% Offline capability. Intermittent "Village Sentry" updates via Satellite/LoRa.
+*   **Network:** 100% Offline capability. Intermittent "Village Hub" updates via Satellite/LoRa/USB/SD.
 *   **Input:** Haptic/Sensor-first (Accelerometer, Vibration) + Touch.
 *   **Trust:** **Hub-and-Spoke Distribution** for content (security), **Mesh** for signaling (interaction).
 *   **Epistemic Pluralism:** The system adapts learning paths based on local "Generative Metaphors" (e.g., prioritizing Weaving logic before Math if that aids the specific cohort).
@@ -23,18 +23,34 @@ An OLS file is composed of strictly defined blocks:
 1.  **meta:** Dublin Core metadata (subject, rights, coverage).
 2.  **ontology:** The "Skill Contract." What this lesson requires (`requires`) and what it teaches (`provides`).
 3.  **gate:** The logic block that enforces the "Zero-Trust" prerequisite check.
-4.  **steps:** The content payload (Text + Hardware Instructions).
+4.  **steps:** The content payload (Text + Hardware Instructions + SVG parameters).
 
 ### 2.2 Asset Hydration Strategy
-To minimize backhaul data usage, OLS files do not embed binary assets. They reference them.
-*   **Source:** `image: "assets/physics/earth_diagram.png"`
-*   **The Hub:** Maintains a shared `common_assets/` library.
-*   **JIT Compilation:** The Hub "hydrates" the lesson by injecting the actual image data (Base64 for HTML, file copy for Native) only when the student requests the lesson.
+To minimize backhaul data usage, OLS files do not embed binary assets or full SVG code. They reference them or use parameters.
+- Images: `image: "assets/physics/earth_diagram.png"`
+- SVGs: Parameter-based factory calls
 
+**SVG Factory Pattern (v2.1)**
+
+- The **hub** maintains a shared `svgGenerators` factory library (code that turns parameters → SVG string).
+- The **edge device** caches this factory once (via Service Worker).
+- Lessons only send **parameters** — e.g.:
+
+  ```yaml
+  - type: "svg"
+    svg_type: "circle"
+    params:
+      cx: 50
+      cy: 50
+      r: 20
+      fill: "blue"
+  
+  At render time, the cached factory on the phone generates the SVG locally.
+Result: After first lesson, new lessons are tiny (no duplicated code), and bandwidth is saved.
 ---
 
-## 3. The Compiler Architecture (`agni-core`)
-The compiler is a modular Node.js application running on the Village Hub (Sentry). It transforms the YAML source into executable artifacts based on the requesting device's capabilities.
+## 3. The Compiler & Hub Architecture (agni-core + Village Hub)
+The compiler is a modular Node.js application running on the Village Hub (e.g. Raspberry Pi). It transforms the YAML source into executable artifacts based on the requesting device's capabilities.
 
 ### 3.1 Modular Structure
 ```text
@@ -51,6 +67,13 @@ agni-core/
 │   └── runtime/            # The Player Engine
 │       ├── player.js       # Core Logic (State Machine, Sensors)
 │       └── style.css       # High-contrast UI
+|       |__ shared.js       # Cached SVG factories + common utilities
+|
+|__ server/
+     |__ hub-transform.js    # YAML → PWA/JSON transformation
+     |__ pwa-shell.html      # PWA entry point template
+     |__ sw.js               # Service Worker for caching
+     |__ manifest.json       # PWA manifest
 ```
 
 ### 3.2 Output Strategies
@@ -59,28 +82,37 @@ The compiler supports dual-mode distribution:
 | Feature | Strategy A: HTML SPA | Strategy B: Native Bundle |
 | :--- | :--- | :--- |
 | **Target** | Browsers (Chrome, WebView, KaiOS) | OLS Android Player (Kotlin/Flutter) |
-| **Format** | Single `.html` file (<500KB) | `lesson.json` + `content/*.md` |
-| **Battery** | Moderate (DOM rendering) | Excellent (Screen-off capability) |
-| **Sensors** | Standard Web APIs (Throttled) | HAL Access (High Fidelity) |
-| **Use Case** | Zero-install entry point | Long-term retention, pocket learning |
+| **Format** | Single PWA shell + lesson JSON + Markdown + cached shared.js | lesson.json + content/*.md + shared libraries` |
+| **Battery** | Moderate (browser overhead) | Excellent (Screen-off capability) |
+| **Sensors** | Standard Web APIs (DeviceMotion, AmbientLight) | HAL Access (High Fidelity) |
+| **Caching** | Service Worker caches shared.js + lesson data | Native caching |
+| **Packet Size** | ~5 KB per new lesson | ~10–20 KB per new lesson |
+| **Use Case** | Zero-install entry point, sneakernet/Starlink | Long-term retention, pocket learning |
 
 ---
 
 ## 4. Network Topology: The "Smart Edge"
 
 ### 4.1 Bandwidth Optimization (The 99% Saving)
-By transmitting Source YAML instead of pre-built HTML, we save expensive Satellite bandwidth.
-*   **HTML Strategy:** 100 lessons = ~50MB.
-*   **YAML Strategy:** 100 lessons = ~500KB.
+By transmitting Source YAML instead of pre-built HTML:
+*   **HTML Strategy:** 100 lessons = ~500 KB (with caching).
+*   **YAML Strategy:** 100 lessons = ~50KB.
 *   **Result:** The Hub uses its local CPU to "inflate" the content for the village.
 
-### 4.2 Content Negotiation
-When a device connects to the Village Hub (Captive Portal):
+### 4.2 Content Negotiation & Delivery
+When an edge device connects to the Village Hub:
 1.  **Device:** Requests `GET /lessons/gravity`.
-2.  **Hub:** Detects User-Agent.
-    *   If Browser: Triggers `src/builders/html.js`.
-    *   If Native App: Triggers `src/builders/native.js`.
-3.  **Hub:** Serves the appropriate artifact.
+2.  **Hub:** Detects User-Agent or capabilities.
+3.  Hub runs hub-transform.js
+     * Loads YAML
+     * Runs inference
+     * Transforms to JSON + Markdown
+     * Wraps in PWA shell (index.html + sw.js + manifest.json)
+     * Injects lesson data
+
+4. Hub serves the PWA bundle
+5. Edge device loads in Chrome → Service Worker caches shared.js + lesson data
+6. Subsequent lessons only need new JSON/Markdown (shared code already cached)
 
 ---
 
