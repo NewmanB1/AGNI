@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AGNI Lesson</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1a1a2e">
+  <style>
+    body { margin: 0; font-family: sans-serif; background: #f0f0f0; }
+    #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #fff; }
+    #app { padding: 16px; }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading lesson...</div>
+  <div id="app" style="display:none"></div>
+
+  <script>
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('SW registered'))
+          .catch(err => console.log('SW failed:', err));
+      });
+    }
+
+    // Load shared code (cached by SW)
+    async function loadShared() {
+      const resp = await fetch('/shared.js');
+      const text = await resp.text();
+      eval(text);  // Executes shared.js in global scope
+      window.AGNI_SHARED_LOADED = true;
+      console.log('Shared code loaded');
+    }
+
+    // Fetch and render lesson data
+    async function loadLesson() {
+      try {
+        const resp = await fetch('/lesson-data.json');
+        const lesson = await resp.json();
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+
+        // Render title
+        const title = document.createElement('h1');
+        title.textContent = lesson.meta.title;
+        document.getElementById('app').appendChild(title);
+
+        // Render steps (placeholder - expand later)
+        lesson.steps.forEach(step => {
+          const div = document.createElement('div');
+          div.innerHTML = step.htmlContent || step.content;  // Markdown already processed to HTML
+          document.getElementById('app').appendChild(div);
+
+          // SVG example (using cached factory)
+          if (step.type === 'svg') {
+            const svgContainer = document.createElement('div');
+            const factory = window.svgGenerators[step.svg_type];
+            if (factory) {
+              svgContainer.innerHTML = factory(step.params);
+              document.getElementById('app').appendChild(svgContainer);
+            }
+          }
+        });
+      } catch (err) {
+        document.getElementById('loading').textContent = 'Error loading lesson';
+        console.error(err);
+      }
+    }
+
+    // Start loading
+    loadShared().then(loadLesson);
+  </script>
+</body>
+</html>
