@@ -1,14 +1,13 @@
 // src/runtime/player.js
-// Complete version — February 2025 — dynamic thresholds + freefall + CONFIG
+// Complete version – February 2025 – dynamic thresholds + freefall + CONFIG
 
-// ── CONFIG ── (all tunable values in one place)
+// ── CONFIG ── All tunable values in one place
 const CONFIG = {
   isDevMode: true,
   skipIntegrityCheck: true,
   fakeDeviceUUID: "emulator-test-uuid-1234-5678",
   hubPublicKeyBase64: "",               // ← real key goes here later
   freefallThresholdG: 0.5,
-  calibrationZThreshold: 9.0,
   vibrationPatterns: {
     short: 50,
     success: [50, 30, 50, 30, 100],
@@ -90,7 +89,6 @@ function isInFreefall() {
 function evaluateThreshold(expression, getValueFn) {
   if (!expression || typeof expression !== 'string') return false;
 
-  // Tokenize
   const tokens = [];
   let i = 0;
   const len = expression.length;
@@ -130,7 +128,6 @@ function evaluateThreshold(expression, getValueFn) {
     return false;
   }
 
-  // Shunting-yard → RPN
   const output = [];
   const opStack = [];
   for (const t of tokens) {
@@ -149,7 +146,6 @@ function evaluateThreshold(expression, getValueFn) {
   }
   while (opStack.length) output.push({ type: 'op', value: opStack.pop() });
 
-  // Evaluate RPN
   const stack = [];
   for (const t of output) {
     if (t.type === 'num') stack.push(t.value);
