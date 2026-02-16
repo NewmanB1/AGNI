@@ -1,18 +1,15 @@
 // src/runtime/player.js
-// Updated with dynamic threshold evaluation for hardware_trigger steps
-
-// ── Imports ── (these will be bundled/inlined by build process)
-// import { svgGenerators } from './svgLibrary.js'; // All generator functions live here
-// import { SUPPORTED_SENSORS } from './sensorTypes.js'; // Uncomment when ready
+// Updated: February 2025 — full dynamic threshold evaluation + freefall duration support
 
 // ── Global State ──
 let currentStepIndex = 0;
 let lesson = null; // Populated from LESSON_DATA
 let sensorSubscriptions = new Map(); // sensorId → Set<callback>
 let lastSensorValues = new Map(); // sensorId → latest reading object
+let freefallStartTime = null; // for tracking freefall duration
 
 // ── Constants ──
-const G = 9.80665;  // m/s² per g
+const G = 9.80665; // m/s² per 1g
 
 // ── Utility: Safe haptic feedback ──
 function vibrate(pattern = 'short') {
@@ -51,17 +48,13 @@ function publishSensorReading(reading) {
   }
 }
 
-// ── Normalize sensor values (handle g vs m/s²) ──
+// ── Normalize sensor values ──
 function normalizeSensorValue(reading) {
   let value = reading.value;
-
-  // Heuristic: most DeviceMotionEvent.accelerationIncludingGravity is in m/s²
-  // but some old/cheap devices report in g → detect and convert
+  // Heuristic: if magnitude looks like g-scale (< ~20), convert to m/s²
   if (typeof value === 'number' && Math.abs(value) < 20) {
     value *= G;
   }
-
-  // For vectors we could compute magnitude here if needed, but we do it per-sensor
   return value;
 }
 
@@ -71,13 +64,32 @@ function getSensorNumericValue(sensorId) {
   return normalizeSensorValue(reading);
 }
 
+// ── Freefall duration tracker ──
+function isInFreefall() {
+  const mag = getSensorNumericValue('accel.magnitude');
+  if (mag === null) return 0;
+
+  const FREEFALL_THRESHOLD_G = 0.5; // < 0.5g ≈ freefall
+
+  if (mag < FREEFALL_THRESHOLD_G * G) {
+    if (!freefallStartTime) {
+      freefallStartTime = performance.now();
+    }
+    const durationMs = performance.now() - freefallStartTime;
+    return durationMs / 1000; // seconds in freefall
+  } else {
+    freefallStartTime = null;
+    return 0;
+  }
+}
+
 // ── Safe Threshold Expression Evaluator ──
-// Supports: variables (accel.total, orientation.beta, etc.), numbers, > < >= <= == != && || ()
-// No functions, no unsafe eval()
+// Supports: variables, numbers, > < >= <= == != && || ()
+// Also understands 'freefall' as seconds-in-freefall
 function evaluateThreshold(expression, getValueFn) {
   if (!expression || typeof expression !== 'string') return false;
 
-  // 1. Tokenize
+  // Tokenize
   const tokens = [];
   let i = 0;
   const len = expression.length;
@@ -85,9 +97,9 @@ function evaluateThreshold(expression, getValueFn) {
   while (i < len) {
     const c = expression[i];
 
-    if (/\s/.test(c)) { i++; continue; } // skip whitespace
+    if (/\s/.test(c)) { i++; continue; }
 
-    // Variable names: accel.total, orientation.beta, etc.
+    // Variable or 'freefall'
     if (/[a-zA-Z.]/.test(c)) {
       let varName = '';
       while (i < len && /[a-zA-Z0-9._]/.test(expression[i])) {
@@ -97,21 +109,20 @@ function evaluateThreshold(expression, getValueFn) {
       continue;
     }
 
-    // Number (with optional - and decimal, no unit yet — we strip later)
-    if (/[0-9.]/.test(c) || (c === '-' && /[0-9.]/.test(expression[i + 1 || len]))) {
+    // Number
+    if (/[0-9.]/.test(c) || (c === '-' && /[0-9.]/.test(expression[i + 1] || ''))) {
       let numStr = '';
       while (i < len && /[-0-9.eE]/.test(expression[i])) {
         numStr += expression[i++];
       }
-      // Remove unit suffix if present (g, deg, etc.)
-      numStr = numStr.replace(/[a-zA-Z]+$/, '').trim();
+      numStr = numStr.replace(/[a-zA-Z]+$/, '').trim(); // strip units like g, s
       const num = parseFloat(numStr);
       if (isNaN(num)) return false;
       tokens.push({ type: 'num', value: num });
       continue;
     }
 
-    // Operators and parentheses
+    // Operators & parens
     if ('><=!&|()'.includes(c)) {
       let op = c;
       i++;
@@ -125,11 +136,11 @@ function evaluateThreshold(expression, getValueFn) {
       continue;
     }
 
-    console.warn(`Unknown character in threshold: ${c} at position ${i}`);
+    console.warn(`Unknown char in threshold: ${c} at ${i}`);
     return false;
   }
 
-  // 2. Shunting-yard algorithm → Reverse Polish Notation (RPN)
+  // Shunting-yard → RPN
   const output = [];
   const opStack = [];
 
@@ -151,7 +162,7 @@ function evaluateThreshold(expression, getValueFn) {
       while (opStack.length && opStack[opStack.length - 1] !== '(') {
         output.push({ type: 'op', value: opStack.pop() });
       }
-      if (opStack.length) opStack.pop(); // discard '('
+      if (opStack.length) opStack.pop();
     }
   }
 
@@ -159,7 +170,7 @@ function evaluateThreshold(expression, getValueFn) {
     output.push({ type: 'op', value: opStack.pop() });
   }
 
-  // 3. Evaluate RPN
+  // Evaluate RPN
   const stack = [];
 
   for (const token of output) {
@@ -179,7 +190,7 @@ function evaluateThreshold(expression, getValueFn) {
         case '>=':  stack.push(a >= b);  break;
         case '<':   stack.push(a < b);   break;
         case '<=':  stack.push(a <= b);  break;
-        case '==':  stack.push(Math.abs(a - b) < 0.0001); break; // approx equal
+        case '==':  stack.push(Math.abs(a - b) < 0.0001); break;
         case '!=':  stack.push(Math.abs(a - b) >= 0.0001); break;
         case '&&':  stack.push(!!a && !!b); break;
         case '||':  stack.push(!!a || !!b); break;
@@ -221,9 +232,15 @@ function startSensorListeners() {
   }
 }
 
-// ── Device UUID & Integrity (existing code kept brief) ──
-async function getDeviceUUID() { /* ... existing implementation ... */ }
-async function verifyIntegrity() { /* ... existing implementation ... */ }
+// ── Temporary dev stubs (replace with real impl later) ──
+async function getDeviceUUID() {
+  return "emulator-test-uuid-1234-5678";
+}
+
+async function verifyIntegrity() {
+  console.log("Dev mode: skipping integrity check");
+  return true;
+}
 
 // ── Render a single step ──
 function renderStep(step) {
@@ -234,20 +251,19 @@ function renderStep(step) {
   const stepDiv = document.createElement('div');
   stepDiv.className = 'step';
 
-  // Text content
+  // Instruction / content
   if (step.content) {
     const contentDiv = document.createElement('div');
     contentDiv.innerHTML = step.htmlContent || step.content;
     stepDiv.appendChild(contentDiv);
   }
 
-  // Hardware trigger with dynamic threshold checking
+  // Hardware trigger logic
   if (step.type === 'hardware_trigger') {
     const instr = document.createElement('p');
     instr.textContent = step.content || 'Perform the required action...';
     stepDiv.appendChild(instr);
 
-    // Create check function for this specific trigger
     const checkThreshold = () => {
       const satisfied = evaluateThreshold(step.threshold, (varName) => {
         const sensorMap = {
@@ -257,7 +273,7 @@ function renderStep(step) {
           'accel.y':          getSensorNumericValue('accel.y'),
           'accel.z':          getSensorNumericValue('accel.z'),
           'orientation.beta': getSensorNumericValue('orientation.beta'),
-          // Add more sensor aliases as needed
+          'freefall':         isInFreefall(), // returns seconds or 0
         };
         return sensorMap[varName] ?? null;
       });
@@ -266,33 +282,33 @@ function renderStep(step) {
         const pattern = step.feedback?.split(':')[1] || 'short';
         vibrate(pattern);
 
-        // Advance to next step
+        // Advance
         if (currentStepIndex < lesson.steps.length - 1) {
           currentStepIndex++;
           renderStep(lesson.steps[currentStepIndex]);
         }
 
-        // Clean up this listener
+        // Cleanup
         unsubscribeFromSensor('accel.magnitude', checkThreshold);
-        // You can unsubscribe others if you track which sensors the expression used
+        if (step.threshold.includes('orientation')) {
+          unsubscribeFromSensor('orientation.beta', checkThreshold);
+        }
       }
     };
 
-    // Subscribe to the main accel sensor (you can make this smarter later)
+    // Subscribe to relevant sensors
     subscribeToSensor('accel.magnitude', checkThreshold);
-    // If expression uses orientation, also subscribe:
-    if (step.threshold.includes('orientation')) {
-      subscribeToSensor('orientation.beta', checkThreshold);
+    if (step.threshold.includes('orientation') || step.threshold.includes('freefall')) {
+      subscribeToSensor('accel.magnitude', checkThreshold); // freefall uses magnitude
     }
   }
 
-  // TODO: SVG / visual rendering placeholder
-  // if (step.type === 'svg' || step.type === 'visual') { ... }
+  // TODO: Add SVG/visual rendering here later
 
   app.appendChild(stepDiv);
 }
 
-// ── Main player initialization ──
+// ── Main player init ──
 async function initPlayer() {
   lesson = LESSON_DATA;
   if (!lesson || !Array.isArray(lesson.steps) || lesson.steps.length === 0) {
@@ -302,8 +318,17 @@ async function initPlayer() {
 
   startSensorListeners();
 
-  // Start with first step
+  // Show first step
   renderStep(lesson.steps[currentStepIndex]);
+
+  // Visual feedback while waiting for sensors
+  const waiting = document.createElement('div');
+  waiting.className = 'sensor-waiting';
+  waiting.innerHTML = `
+    <div class="pulse"></div>
+    <p>Waiting for motion sensors...<br><small>Move or tilt the phone slightly</small></p>
+  `;
+  document.getElementById('app').appendChild(waiting);
 }
 
 // ── Entry point ──
@@ -312,22 +337,40 @@ window.addEventListener('load', async () => {
     initPlayer();
   }
 
-  // Debug helpers (remove in production)
+  // Debug helpers — safe to leave during development
   window.debugEval = (expr) => {
     console.log(`Eval "${expr}":`, evaluateThreshold(expr, (v) => {
-      // Mock values for browser console testing
       if (v === 'accel.total') return 3.1;
       if (v === 'accel.z') return -8.5;
+      if (v === 'freefall') return 0.45; // simulate 0.45s freefall
       if (v === 'orientation.beta') return 45;
       return null;
     }));
   };
 
-  window.setMockAccel = (mag) => {
+  window.setMockAccel = (magInG) => {
     publishSensorReading({
       sensorId: 'accel.magnitude',
-      value: mag * G,
+      value: magInG * G,
       timestamp: Date.now()
     });
   };
+
+  window.setMockFreefall = (seconds) => {
+    // Simulate being in freefall for X seconds
+    freefallStartTime = performance.now() - (seconds * 1000);
+    publishSensorReading({
+      sensorId: 'accel.magnitude',
+      value: 0.1 * G, // very low acceleration
+      timestamp: Date.now()
+    });
+  };
+});
+
+// Safety net: hide loading
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'none';
+  }, 5000);
 });
