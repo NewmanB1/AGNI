@@ -1,33 +1,28 @@
 // src/runtime/player.js
-// Complete version – February 2025 – dynamic thresholds + freefall + CONFIG
+// Final consolidated version – should work with current gravity.yaml build
 
-// ── CONFIG ── All tunable values in one place
 const CONFIG = {
   isDevMode: true,
   skipIntegrityCheck: true,
   fakeDeviceUUID: "emulator-test-uuid-1234-5678",
-  hubPublicKeyBase64: "",               // ← real key goes here later
   freefallThresholdG: 0.5,
   vibrationPatterns: {
     short: 50,
     success: [50, 30, 50, 30, 100],
   },
-  debugLevel: 2,                        // 0=off, 1=important, 2=verbose
+  debugLevel: 2,
 };
 
-// ── Logging ──
 function log(...args) {
   if (CONFIG.debugLevel >= 1) console.log(...args);
 }
 
-// ── State ──
 let currentStepIndex = 0;
 let lesson = null;
 let sensorSubscriptions = new Map();
 let lastSensorValues = new Map();
 let freefallStartTime = null;
 
-// ── Vibration ──
 function vibrate(patternName = 'short') {
   if (!('vibrate' in navigator)) return;
   const pattern = CONFIG.vibrationPatterns[patternName] || 100;
@@ -35,20 +30,15 @@ function vibrate(patternName = 'short') {
   log(`Vibration: ${patternName}`);
 }
 
-// ── Sensor pub/sub ──
 function subscribeToSensor(sensorId, callback) {
-  if (!sensorSubscriptions.has(sensorId)) {
-    sensorSubscriptions.set(sensorId, new Set());
-  }
+  if (!sensorSubscriptions.has(sensorId)) sensorSubscriptions.set(sensorId, new Set());
   sensorSubscriptions.get(sensorId).add(callback);
 }
 
 function unsubscribeFromSensor(sensorId, callback) {
   if (sensorSubscriptions.has(sensorId)) {
     sensorSubscriptions.get(sensorId).delete(callback);
-    if (sensorSubscriptions.get(sensorId).size === 0) {
-      sensorSubscriptions.delete(sensorId);
-    }
+    if (sensorSubscriptions.get(sensorId).size === 0) sensorSubscriptions.delete(sensorId);
   }
 }
 
@@ -58,12 +48,9 @@ function publishSensorReading(reading) {
   if (subs) subs.forEach(cb => cb(reading));
 }
 
-// ── Normalize values ──
 function normalizeSensorValue(reading) {
   let value = reading.value;
-  if (typeof value === 'number' && Math.abs(value) < 20) {
-    value *= 9.80665;
-  }
+  if (typeof value === 'number' && Math.abs(value) < 20) value *= 9.80665;
   return value;
 }
 
@@ -72,11 +59,9 @@ function getSensorNumericValue(sensorId) {
   return reading ? normalizeSensorValue(reading) : null;
 }
 
-// ── Freefall duration ──
 function isInFreefall() {
   const mag = getSensorNumericValue('accel.magnitude');
   if (mag === null) return 0;
-
   if (mag < CONFIG.freefallThresholdG * 9.80665) {
     if (!freefallStartTime) freefallStartTime = performance.now();
     return (performance.now() - freefallStartTime) / 1000;
@@ -85,7 +70,6 @@ function isInFreefall() {
   return 0;
 }
 
-// ── Expression parser + evaluator ──
 function evaluateThreshold(expression, getValueFn) {
   if (!expression || typeof expression !== 'string') return false;
 
@@ -158,14 +142,14 @@ function evaluateThreshold(expression, getValueFn) {
       const b = stack.pop();
       const a = stack.pop();
       switch (t.value) {
-        case '>':   stack.push(a > b);   break;
-        case '>=':  stack.push(a >= b);  break;
-        case '<':   stack.push(a < b);   break;
-        case '<=':  stack.push(a <= b);  break;
-        case '==':  stack.push(Math.abs(a - b) < 0.0001); break;
-        case '!=':  stack.push(Math.abs(a - b) >= 0.0001); break;
-        case '&&':  stack.push(!!a && !!b); break;
-        case '||':  stack.push(!!a || !!b); break;
+        case '>': stack.push(a > b); break;
+        case '>=': stack.push(a >= b); break;
+        case '<': stack.push(a < b); break;
+        case '<=': stack.push(a <= b); break;
+        case '==': stack.push(Math.abs(a - b) < 0.0001); break;
+        case '!=': stack.push(Math.abs(a - b) >= 0.0001); break;
+        case '&&': stack.push(!!a && !!b); break;
+        case '||': stack.push(!!a || !!b); break;
         default: return false;
       }
     }
@@ -179,7 +163,6 @@ function precedence(op) {
   return 0;
 }
 
-// ── Sensor listeners ──
 function startSensorListeners() {
   if (window.DeviceMotionEvent) {
     window.addEventListener('devicemotion', e => {
@@ -202,7 +185,6 @@ function startSensorListeners() {
   }
 }
 
-// ── UUID & Integrity ──
 async function getDeviceUUID() {
   if (CONFIG.isDevMode) return CONFIG.fakeDeviceUUID;
   throw new Error("Real UUID not implemented");
@@ -217,7 +199,6 @@ async function verifyIntegrity() {
   return true;
 }
 
-// ── Render step ──
 function renderStep(step) {
   const app = document.getElementById('app');
   if (!app) return;
@@ -266,7 +247,6 @@ function renderStep(step) {
   app.appendChild(stepDiv);
 }
 
-// ── Init ──
 async function initPlayer() {
   lesson = LESSON_DATA;
   if (!lesson || !Array.isArray(lesson.steps)) {
@@ -283,11 +263,9 @@ async function initPlayer() {
   document.getElementById('app').appendChild(w);
 }
 
-// ── Start ──
 window.addEventListener('load', async () => {
   if (await verifyIntegrity()) initPlayer();
 
-  // Debug tools
   window.debugEval = expr => console.log(`Eval "${expr}":`, evaluateThreshold(expr, v => {
     if (v === 'accel.z') return -9.8;
     if (v === 'freefall') return 0.45;
