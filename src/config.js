@@ -1,4 +1,4 @@
-// src/config.js – fixed destructuring + version check
+// src/config.js – using default export for unified + safer handling
 
 let processorPromise = null;
 
@@ -11,25 +11,29 @@ async function getProcessor() {
     try {
       console.log("[config] → importing unified");
       const unifiedModule = await import('unified');
-      console.log("[config] unified module:", Object.keys(unifiedModule));
-      const { unified } = unifiedModule;
+      console.log("[config] unified module keys:", Object.keys(unifiedModule));
+
+      // Use default export (most reliable for unified v10+)
+      const unified = unifiedModule.default || unifiedModule.unified;
       console.log("[config] unified type:", typeof unified);
 
+      if (typeof unified !== 'function') {
+        throw new Error(`unified is not callable (got: ${typeof unified})`);
+      }
+
       console.log("[config] → importing remark-parse");
-      const { default: remarkParse } = await import('remark-parse');
+      const remarkParseModule = await import('remark-parse');
+      const remarkParse = remarkParseModule.default || remarkParseModule;
 
       console.log("[config] → importing remark-math");
-      const { default: remarkMath } = await import('remark-math');
+      const remarkMathModule = await import('remark-math');
+      const remarkMath = remarkMathModule.default || remarkMathModule;
 
       console.log("[config] → importing remark-html");
-      const { default: remarkHtml } = await import('remark-html');
+      const remarkHtmlModule = await import('remark-html');
+      const remarkHtml = remarkHtmlModule.default || remarkHtmlModule;
 
       console.log("[config] All imports successful – building processor");
-
-      // Critical: unified should be a function here
-      if (typeof unified !== 'function') {
-        throw new Error(`unified is not a function (got: ${typeof unified})`);
-      }
 
       const processor = unified()
         .use(remarkParse)
@@ -64,7 +68,12 @@ module.exports = {
     } catch (err) {
       console.error("[config] processMarkdown failed:");
       console.error(err.message);
-      return text.replace(/\n/g, '<br>'); // fallback
+      // Basic fallback
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
     }
   }
 };
