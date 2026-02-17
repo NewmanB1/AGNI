@@ -1,4 +1,4 @@
-// src/config.js – singleton loading + explicit await + more logging
+// src/config.js – fixed destructuring + version check
 
 let processorPromise = null;
 
@@ -10,7 +10,10 @@ async function getProcessor() {
 
     try {
       console.log("[config] → importing unified");
-      const { unified } = await import('unified');
+      const unifiedModule = await import('unified');
+      console.log("[config] unified module:", Object.keys(unifiedModule));
+      const { unified } = unifiedModule;
+      console.log("[config] unified type:", typeof unified);
 
       console.log("[config] → importing remark-parse");
       const { default: remarkParse } = await import('remark-parse');
@@ -23,6 +26,11 @@ async function getProcessor() {
 
       console.log("[config] All imports successful – building processor");
 
+      // Critical: unified should be a function here
+      if (typeof unified !== 'function') {
+        throw new Error(`unified is not a function (got: ${typeof unified})`);
+      }
+
       const processor = unified()
         .use(remarkParse)
         .use(remarkMath)
@@ -32,7 +40,7 @@ async function getProcessor() {
       return processor;
     } catch (err) {
       console.error("[config] Failed to initialize remark processor:");
-      console.error(err.stack || err);
+      console.error(err.stack || err.message);
       throw err;
     }
   })();
@@ -56,12 +64,7 @@ module.exports = {
     } catch (err) {
       console.error("[config] processMarkdown failed:");
       console.error(err.message);
-      // Fallback to basic HTML
-      return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\n/g, '<br>');
+      return text.replace(/\n/g, '<br>'); // fallback
     }
   }
 };
