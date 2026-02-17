@@ -1,110 +1,136 @@
 version: "1.7.0"
+
 meta:
-  identifier: "ols:physics:gravity_intro_v1"
-  title: "Feeling Gravity"
-  description: "A sensor-based introduction to acceleration and freefall."
-  language: "en"
-  locale: "US"
-  license: "AGPL-3.0"
+  identifier: ols:physics:gravity_intro_v1
+  title: Feeling Gravity
+  description: Use your phone to feel gravity and freefall – safe drop activity
+  language: en
+  locale: US
+  license: AGPL-3.0
   created: "2024-03-10T14:00:00Z"
-  updated: "2025-02-12T22:00:00Z"
+  updated: "2026-02-17T13:00:00Z"
   authors:
-    - name: "Jane Doe"
-      email: "jane@openlesson.org"
-  subject:
-    - "Physics"
-    - "Classical Mechanics"
-    - "Gravity"
-  tags:
-    - "beginner"
-    - "indoor"
-    - "soft-surface-required"
-    - "drop-safe"
+    - name: Jane Doe
+      email: jane@openlesson.org
+  subject: [Physics, Classical Mechanics, Gravity]
+  tags: [beginner, indoor, drop-safe, sensor, 10-14]
   audience:
-    educational_role: "student"
-    typical_age_range: "10-14"
-  time_required: "PT12M"
+    educational_role: student
+    typical_age_range: 10-14
+  time_required: PT10M
   difficulty: 2
 
 ontology:
-  requires:
-    - skill: "ols:physics:observation_basics"
-  provides:
-    - skill: "ols:physics:gravity_concept"
-      level: 1
+  requires: [{skill: ols:physics:observation_basics}]
+  provides: [{skill: ols:physics:gravity_concept, level: 1}]
 
 gate:
-  type: "quiz"
-  skill_target: "ols:physics:observation_basics"
-  question: "What force pulls objects toward the center of the Earth?"
-  expected_answer: "gravity"
-  on_fail: "redirect:ols:physics:observation_basics/review"
-  passing_score: 1.0
-  retry_delay: "PT2M"
+  type: quiz
+  skill_target: ols:physics:observation_basics
+  question: What force pulls objects toward the center of the Earth?
+  expected_answer: gravity
+  on_fail: redirect:ols:physics:observation_basics/review
+  passing_score: 1
+  retry_delay: PT2M
 
 steps:
-  - id: "intro"
-    type: "instruction"
+  - id: intro
+    type: instruction
     content: |
       ## The Invisible Force
-      Right now, gravity is pulling you — and everything around you — downward.
-      Your phone can actually **feel** this force.
-    expected_duration: "PT1M"
+      Gravity is pulling **everything** downward all the time — even right now!
+      
+      Your phone can actually **feel** this force using its built-in sensor.
+    expected_duration: PT45S
     weight: 0.1
 
-  - id: "calibration"
-    type: "hardware_trigger"
-    sensor: "accelerometer"
-    threshold: "accel.z > 9.0"
-    feedback: "vibration:short"
+  - id: safety
+    type: instruction
     content: |
-      ## Step 1 – Calibration
-      Hold the phone perfectly flat (screen facing straight up, resting on
-      your open palm or a table).
-      Wait until you feel a short vibration.
-    expected_duration: "PT30S"
-    max_attempts: 5
+      ## Important – Stay Safe!
+      - Use a **soft landing** (pillow, bed, thick blanket, cushion)
+      - Drop from **only 30–50 cm** (about knee height)
+      - Hold the phone firmly before letting go
+      - Do **not** drop on hard floors, concrete or outside
+    expected_duration: PT30S
+    weight: 0.15
+
+  - id: calibration
+    type: hardware_trigger
+    sensor: accelerometer
+    threshold: accel.z > 7.5   # relaxed from 9.0 – old phones drift
+    feedback: vibration:short
+    content: |
+      ## Step 1 – Hold Still (Calibration)
+      Place the phone flat on your open palm or a table  
+      (screen facing straight **up**)
+      
+      Keep it very still until you feel a short buzz.
+      
+      If nothing happens after 20 seconds → tap “I’m ready anyway”
+    expected_duration: PT45S
+    max_attempts: 999   # effectively unlimited with fallback
     weight: 0.2
-    on_fail: "skip_to:freefall"
+    on_fail: skip_to:freefall   # don't block learning
 
-  - id: "freefall"
-    type: "hardware_trigger"
-    sensor: "accelerometer"
-    threshold: "freefall > 0.3s"
-    feedback: "vibration:success_pattern"
+  - id: freefall
+    type: hardware_trigger
+    sensor: accelerometer
+    threshold: freefall > 0.35s   # slightly longer → fewer false triggers
+    feedback: vibration:success_pattern
     content: |
-      ## Step 2 – Freefall
-      Now gently drop the phone from about 30–50 cm onto a soft surface
-      (pillow, cushion, bed, etc.).
-      When it feels weightless for a moment, you should feel a longer,
-      rhythmic vibration.
-    expected_duration: "PT2M"
-    max_attempts: 3
+      ## Step 2 – Gentle Drop (Freefall)
+      Hold phone ~30–50 cm above soft surface.
+      
+      Let go gently → phone should feel “weightless” for a moment.
+      
+      You will feel a longer, rhythmic buzz when it works.
+      
+      If nothing happens after a few tries → tap “I’m ready anyway”
+    expected_duration: PT2M
+    max_attempts: 5
     weight: 0.8
-    on_fail: "skip_to:explanation"
+    on_fail: skip_to:explanation
 
-  - id: "explanation"
-    type: "instruction"
+  - id: explanation
+    type: instruction
     content: |
       ## What just happened?
-      **Flat on your hand** → the phone felt ~9.8 m/s² downward acceleration (normal gravity)
-      **During the drop** → the phone felt almost 0 m/s² → this is **freefall**
-      That feeling of weightlessness is exactly what astronauts experience!
-    expected_duration: "PT1M30S"
+      
+      - Flat on your hand → phone felt ~9.8 m/s² downward (normal gravity)
+      - During the drop → phone felt almost 0 m/s² → this is **freefall**
+      
+      Astronauts feel exactly the same weightlessness in orbit!
+    expected_duration: PT1M30S
     weight: 0.6
 
-  - id: "quiz-gravity"
-    type: "quiz"
+  - id: quiz-gravity
+    type: quiz
     content: |
-      ## Quick check
-      Why did the phone feel weightless when you dropped it?
+      ## Quick Check
+      Why did the phone feel weightless during the drop?
     answer_options:
-      - "The phone became lighter"
-      - "Gravity suddenly stopped working"
-      - "The phone was falling at the same speed as gravity pulls → no felt force"
-      - "The battery ran out of power"
+      - The phone became lighter
+      - Gravity suddenly stopped working
+      - The phone was falling at the same speed gravity pulls → no felt force
+      - The battery ran out of power
     correct_index: 2
-    expected_duration: "PT45S"
+    expected_duration: PT50S
     max_attempts: 2
     weight: 0.9
-    on_fail: "redirect:explanation"
+    on_fail: redirect:explanation
+
+  - id: completion
+    type: instruction
+    content: |
+      ## Well done! 🎉
+      
+      You just felt what freefall really is.
+      
+      Gravity didn't disappear — you and the phone were both falling together.
+      
+      Try the drop a few more times if you want!
+    expected_duration: PT30S
+    weight: 0.05
+
+# Optional: add a simple fallback branch later if needed
