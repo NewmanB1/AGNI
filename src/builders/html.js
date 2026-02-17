@@ -3,7 +3,7 @@ const path = require('path');
 const { signContent } = require('../utils/crypto');
 const { ensureDir } = require('../utils/io');
 
-// Import config async methods
+// Async Markdown processor
 const config = require('../config');
 
 async function buildHtml(lessonData, options) {
@@ -20,7 +20,7 @@ async function buildHtml(lessonData, options) {
           try {
             htmlContent = await config.processMarkdown(step.content);
           } catch (err) {
-            console.error(`Markdown processing failed for step ${step.id}:`, err.message);
+            console.error(`Markdown failed for step ${step.id}:`, err.message);
             htmlContent = step.content.replace(/\n/g, '<br>'); // fallback
           }
         }
@@ -32,47 +32,49 @@ async function buildHtml(lessonData, options) {
     )
   };
 
-  // 2. Read source templates
-  const runtimeJs = fs.readFileSync(path.join(__dirname, '../runtime/player.js'), 'utf8');
+  // 2. Read lesson-specific runtime (player.js)
+  const playerJs = fs.readFileSync(path.join(__dirname, '../runtime/player.js'), 'utf8');
   const styles = fs.readFileSync(path.join(__dirname, '../runtime/style.css'), 'utf8');
 
-  // 3. Read shared svgLibrary.js (no longer hardcoded inlining)
-  const svgLibraryPath = path.join(__dirname, '../runtime/svgLibrary.js');
-  let svgLibraryCode = '';
-  if (fs.existsSync(svgLibraryPath)) {
-    svgLibraryCode = fs.readFileSync(svgLibraryPath, 'utf8');
-    console.log(`Injected shared svgLibrary.js from ${svgLibraryPath}`);
+  // 3. Generate shared-runtime.js (once per build directory)
+  const outputDir = path.dirname(options.output);
+  const sharedOutput = path.join(outputDir, 'shared-runtime.js');
+
+  // Check if shared already exists (to avoid overwriting unnecessarily)
+  const sharedSource = path.join(__dirname, '../runtime/shared-runtime.js');
+  if (!fs.existsSync(sharedOutput) || fs.readFileSync(sharedSource, 'utf8') !== fs.readFileSync(sharedOutput, 'utf8')) {
+    const sharedCode = fs.readFileSync(sharedSource, 'utf8');
+    ensureDir(outputDir);
+    fs.writeFileSync(sharedOutput, sharedCode);
+    console.log(`Shared runtime generated/updated: ${sharedOutput}`);
   } else {
-    console.warn("svgLibrary.js not found – SVG generation may not work in runtime");
+    console.log(`Shared runtime already exists: ${sharedOutput}`);
   }
 
-  // 4. Serialize & Sign
+  // 4. Serialize & sign lesson-specific data only
   const dataString = JSON.stringify(runtimeData);
   const signature = signContent(dataString, options.deviceId, options.privateKey);
-
-  // 5. Safe data injection (escape </script>)
   const safeDataString = dataString.replace(/<\/script>/gi, '<\\/script>');
 
-  // 6. Final embedded script – now includes svgLibrary + player
-  const finalScript = `
-    ${svgLibraryCode}  // shared svgGenerators
-
+  // 5. Lesson-specific script (minimal – relies on shared-runtime.js)
+  const lessonScript = `
     window.LESSON_DATA = ${safeDataString};
     window.OLS_SIGNATURE = ${JSON.stringify(signature || '')};
     window.OLS_INTENDED_OWNER = ${JSON.stringify(options.deviceId || '')};
 
-    ${runtimeJs}
+    // Lesson-specific runtime code
+    ${playerJs}
 
     // Safety net: hide loading if init fails
     window.addEventListener('load', () => {
       setTimeout(() => {
         const loading = document.getElementById('loading');
         if (loading) loading.style.display = 'none';
-      }, 5000); // 5 second timeout fallback
+      }, 5000);
     });
   `;
 
-  // 7. Assembly
+  // 6. Lesson HTML – loads shared-runtime.js from same directory
   const html = `<!DOCTYPE html>
 <html lang="${lessonData.meta.language || 'en'}">
 <head>
@@ -85,25 +87,26 @@ async function buildHtml(lessonData, options) {
 <body>
   <div id="loading">Loading lesson...</div>
   <div id="app"></div>
-  <script type="module">
-    ${finalScript}
+  <script src="./shared-runtime.js"></script>
+  <script>
+    ${lessonScript}
   </script>
 </body>
 </html>`;
 
-  // Write output
-  ensureDir(path.dirname(options.output));
+  // 7. Write lesson HTML
+  ensureDir(outputDir);
   fs.writeFileSync(options.output, html);
 
   const sizeKB = (Buffer.byteLength(html) / 1024).toFixed(1);
-  console.log(`✅ HTML Generated: ${options.output} (${sizeKB} KB)`);
+  console.log(`✅ Lesson HTML generated: ${options.output} (${sizeKB} KB)`);
 
   if (parseFloat(sizeKB) > 500) {
-    console.warn(`⚠️ Warning: Output exceeds 500KB target (${sizeKB} KB). Consider optimizing content.`);
+    console.warn(`⚠️ Lesson HTML exceeds 500KB target (${sizeKB} KB)`);
   }
 }
 
-/** Escape HTML special characters for safe attribute/text embedding */
+/** Escape HTML special characters */
 function escapeHtml(str) {
   if (!str) return '';
   return str
