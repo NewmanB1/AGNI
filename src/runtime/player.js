@@ -1,63 +1,59 @@
 // src/runtime/player.js
-// AGNI / OLS Runtime Layer – Android 6.0 Marshmallow compatible + emulator support
+// AGNI / OLS Runtime – lesson-specific logic, depends on shared-runtime.js
 
-import { svgGenerators } from './svgLibrary.js';  // Proper import – shared & cached
+// Reference shared utilities (injected by builder or loaded via <script src> in two-file model)
+var svgGenerators = window.AGNI_SHARED ? window.AGNI_SHARED.svgGenerators : {};
+var vibrate = window.AGNI_SHARED ? window.AGNI_SHARED.vibrate : function() {};
+var subscribeToSensor = window.AGNI_SHARED ? window.AGNI_SHARED.subscribeToSensor : function() {};
+var publishSensorReading = window.AGNI_SHARED ? window.AGNI_SHARED.publishSensorReading : function() {};
 
-window.DEV_MODE = true;  // TODO: make configurable via build flag / env
+window.DEV_MODE = true;
 
-const IS_OLD_ANDROID = /Android [456]\./.test(navigator.userAgent) ||
-                       /Android 6\.0/.test(navigator.userAgent);
+var IS_OLD_ANDROID = /Android [456]\./.test(navigator.userAgent) ||
+                     /Android 6\.0/.test(navigator.userAgent);
 
-let currentStepIndex = 0;
-let lesson = null; // Populated from LESSON_DATA
-let sensorSubscriptions = new Map();
-let lastSensorValues = new Map();
-let freefallStartTime = null;
-let calibrationConfirmed = false;
-let sensorsActive = false;
+var currentStepIndex = 0;
+var lesson = null;
+var sensorSubscriptions = new Map();
+var lastSensorValues = new Map();
+var freefallStartTime = null;
+var calibrationConfirmed = false;
+var sensorsActive = false;
 
-// ── Vibration helper (can be moved to shared.js later) ──────────────────────
-function vibrate(pattern = 'short') {
-  if (!('vibrate' in navigator)) return;
-  const patterns = {
-    short: 70,
-    success_pattern: [100, 50, 100, 50, 150],
-    error: 250
+// Debug log at load
+console.log("[PLAYER] player.js loaded – checking shared:", !!window.AGNI_SHARED);
+
+// Vibration fallback if shared not loaded
+if (!vibrate) {
+  vibrate = function(pattern) {
+    if (!('vibrate' in navigator)) return;
+    navigator.vibrate(pattern === 'short' ? 70 : 150);
+    if (window.DEV_MODE) console.log("[FALLBACK VIBRATE]", pattern);
   };
-  navigator.vibrate(patterns[pattern] || 120);
-  if (window.DEV_MODE) console.log("[VIBRATE]", pattern);
 }
 
-// ── Sensor pub/sub ──────────────────────────────────────────────────────────
-function subscribeToSensor(sensorId, callback) {
-  if (!sensorSubscriptions.has(sensorId)) {
-    sensorSubscriptions.set(sensorId, new Set());
-  }
-  sensorSubscriptions.get(sensorId).add(callback);
+// Sensor pub/sub fallback
+if (!subscribeToSensor) {
+  subscribeToSensor = function() { console.warn("[WARN] subscribeToSensor not available"); };
+}
+if (!publishSensorReading) {
+  publishSensorReading = function() { console.warn("[WARN] publishSensorReading not available"); };
 }
 
-function publishSensorReading(reading) {
-  lastSensorValues.set(reading.sensorId, reading.value);
-  const subs = sensorSubscriptions.get(reading.sensorId);
-  if (subs) subs.forEach(cb => cb(reading));
-}
-
-// ── Gesture-unlocked sensor start (required on old Android) ─────────────────
+// Start sensors after gesture
 function unlockAndStartSensors() {
   if (sensorsActive) return;
-
   if (!window.DeviceMotionEvent) {
-    console.warn("DeviceMotionEvent not available");
+    console.warn("[WARN] DeviceMotionEvent not available");
     showSensorWarning();
     return;
   }
 
-  console.log("[DEBUG] Starting devicemotion listener after gesture");
+  console.log("[DEBUG] Starting devicemotion listener");
 
-  const handler = function(e) {
-    const acc = e.accelerationIncludingGravity;
+  function handler(e) {
+    var acc = e.accelerationIncludingGravity;
     if (!acc) return;
-
     var x = acc.x || 0;
     var y = acc.y || 0;
     var z = acc.z || 0;
@@ -69,30 +65,28 @@ function unlockAndStartSensors() {
     publishSensorReading({ sensorId: 'accel.magnitude', value: mag });
 
     if (window.DEV_MODE || IS_OLD_ANDROID) {
-      console.log("[ACCEL] x:" + x.toFixed(1) + " y:" + y.toFixed(1) +
-                  " z:" + z.toFixed(1) + " | mag:" + mag.toFixed(1));
+      console.log("[ACCEL] x:" + x.toFixed(1) + " y:" + y.toFixed(1) + " z:" + z.toFixed(1) + " | mag:" + mag.toFixed(1));
     }
-  };
+  }
 
   window.addEventListener('devicemotion', handler, { passive: true });
   sensorsActive = true;
-  console.log("[SENSORS] activated after gesture" +
-              (IS_OLD_ANDROID ? " (old Android mode)" : ""));
+  console.log("[SENSORS] activated" + (IS_OLD_ANDROID ? " (old mode)" : ""));
 }
 
-// ── Fallback UI if sensors never activate ───────────────────────────────────
+// Sensor fallback UI
 function showSensorWarning() {
   var p = document.createElement('p');
   p.style.color = '#ffcc00';
   p.style.textAlign = 'center';
   p.style.padding = '1rem';
   p.textContent = IS_OLD_ANDROID
-    ? "Sensors not responding. Use simulation buttons or shake device gently."
-    : "Sensors unavailable on this device.";
+    ? "Sensors not responding. Use buttons or shake device."
+    : "Sensors unavailable.";
   document.getElementById('app').appendChild(p);
 }
 
-// ── Calibration monitor (relaxed for old hardware) ──────────────────────────
+// Calibration monitor
 function monitorCalibration() {
   subscribeToSensor('accel.z', function(r) {
     var z = r.value;
@@ -108,7 +102,7 @@ function monitorCalibration() {
   });
 }
 
-// ── Freefall monitor (relaxed) ──────────────────────────────────────────────
+// Freefall monitor
 function monitorFreefall() {
   subscribeToSensor('accel.z', function(r) {
     var absZ = Math.abs(r.value);
@@ -129,19 +123,20 @@ function monitorFreefall() {
   });
 }
 
-// ── Skip binding check during development ───────────────────────────────────
+// Skip binding in dev
 async function verifyIntegrity() {
   if (window.DEV_MODE) {
-    console.log("[DEV MODE] Skipping device binding & signature check");
+    console.log("[DEV] Skipping integrity");
     return true;
   }
-  // TODO: implement real Ed25519 signature + UUID check here
+  // TODO: real check
   return true;
 }
 
-// ── Emulator-only simulation buttons ────────────────────────────────────────
+// Emulator buttons
 function addEmulatorControls() {
   if (!window.DEV_MODE) return;
+  console.log("[DEBUG] Adding emulator controls");
 
   var ctr = document.createElement('div');
   ctr.style.position = 'fixed';
@@ -174,9 +169,9 @@ function addEmulatorControls() {
   document.body.appendChild(ctr);
 }
 
-// ── Render current step ─────────────────────────────────────────────────────
+// Render step
 function renderStep(step) {
-  console.log("[DEBUG] Rendering step:", step.id);
+  console.log("[DEBUG] Rendering step:", step.id || step.type);
 
   var app = document.getElementById('app');
   if (!app) return;
@@ -194,7 +189,6 @@ function renderStep(step) {
   content.innerHTML = step.htmlContent || step.content.replace(/\n/g, '<br>');
   container.appendChild(content);
 
-  // Gesture unlock for hardware steps on old devices
   if (step.type === 'hardware_trigger' && !sensorsActive) {
     var unlockBtn = document.createElement('button');
     unlockBtn.className = 'btn btn-primary';
@@ -203,12 +197,11 @@ function renderStep(step) {
     unlockBtn.onclick = function() {
       unlockAndStartSensors();
       unlockBtn.remove();
-      renderStep(step);  // refresh to show waiting indicator
+      renderStep(step);
     };
     container.appendChild(unlockBtn);
   }
 
-  // Waiting indicator
   if (step.type === 'hardware_trigger' && sensorsActive) {
     var waiting = document.createElement('p');
     waiting.className = 'sensor-waiting';
@@ -216,7 +209,6 @@ function renderStep(step) {
     container.appendChild(waiting);
   }
 
-  // Quiz options
   if (step.type === 'quiz') {
     step.answer_options.forEach(function(opt, idx) {
       var btn = document.createElement('button');
@@ -233,14 +225,14 @@ function renderStep(step) {
   }
 
   app.appendChild(container);
+  document.getElementById('loading').style.display = 'none'; // Hide loading after render
 }
 
-// ── Navigation helper ───────────────────────────────────────────────────────
+// Navigation
 window.nextStep = function() {
   if (currentStepIndex >= lesson.steps.length - 1) {
     document.getElementById('app').innerHTML =
-      '<div class="completion-screen"><h1>Lesson Complete! 🎉</h1>' +
-      '<p>You felt what freefall really is.</p></div>';
+      '<div class="completion-screen"><h1>Lesson Complete! 🎉</h1><p>You felt freefall.</p></div>';
     return;
   }
 
@@ -251,52 +243,40 @@ window.nextStep = function() {
   if (currentStepIndex === 2) monitorFreefall();
 };
 
-// ── Main initialization ─────────────────────────────────────────────────────
+// Init
 async function initPlayer() {
-  console.log("[DEBUG] initPlayer started – LESSON_DATA exists:", !!window.LESSON_DATA);
+  console.log("[DEBUG] initPlayer started");
 
   lesson = window.LESSON_DATA;
 
   if (!lesson || !Array.isArray(lesson.steps) || lesson.steps.length === 0) {
-    console.error("[ERROR] Invalid or empty lesson data");
+    console.error("[ERROR] Invalid lesson data");
     document.body.innerHTML = '<h1 style="color:#ff5252">Error: Invalid lesson data</h1>';
     document.getElementById('loading').style.display = 'none';
     return;
   }
 
-  console.log("[DEBUG] Lesson loaded – starting sensors & rendering first step");
+  console.log("[DEBUG] Lesson loaded – starting sensors");
 
   startSensorListeners();
   renderStep(lesson.steps[currentStepIndex]);
-
-  // Hide loading explicitly after first render
-  const loading = document.getElementById('loading');
-  if (loading) loading.style.display = 'none';
 }
 
-// ── Entry point ─────────────────────────────────────────────────────────────
-window.addEventListener('load', async () => {
-  console.log("[DEBUG] window.load fired – starting integrity check");
-
-  if (await verifyIntegrity()) {
-    console.log("[DEBUG] Integrity passed – calling initPlayer");
-    await initPlayer();
-  } else {
-    console.log("[DEBUG] Integrity failed – not initializing player");
-  }
-
-  // Optional: global nextStep for manual debug
-  window.nextStep = function() {
-    if (currentStepIndex < lesson?.steps?.length - 1) {
-      currentStepIndex++;
-      renderStep(lesson.steps[currentStepIndex]);
+// Entry point
+window.addEventListener('load', function () {
+  console.log("[DEBUG] window.load fired");
+  verifyIntegrity().then(function(passed) {
+    if (passed) {
+      initPlayer();
     }
-  };
+  }).catch(function(err) {
+    console.error("[ERROR] verifyIntegrity failed:", err);
+  });
 });
 
-// Extra strong loading fallback (runs even if script crashes early)
+// Super fallback
 setTimeout(function() {
-  console.log("[SAFETY] 5-second fallback hiding loading");
-  const loading = document.getElementById('loading');
+  console.log("[SAFETY] Forcing hide loading");
+  var loading = document.getElementById('loading');
   if (loading) loading.style.display = 'none';
-}, 5000);
+}, 3000);
