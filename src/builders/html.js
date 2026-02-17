@@ -24,34 +24,44 @@ async function buildHtml(lessonData, options) {
             htmlContent = step.content.replace(/\n/g, '<br>'); // fallback
           }
         }
-        return {
-          ...step,
-          htmlContent
-        };
+        return { ...step, htmlContent };
       })
     )
   };
 
-  // 2. Read lesson-specific runtime (player.js)
+  // 2. Read lesson-specific runtime & styles
   const playerJs = fs.readFileSync(path.join(__dirname, '../runtime/player.js'), 'utf8');
   const styles = fs.readFileSync(path.join(__dirname, '../runtime/style.css'), 'utf8');
 
-  // 3. Generate shared-runtime.js (once per build directory)
+  // 3. Handle shared-runtime.js – only generate if missing or source is newer
   const outputDir = path.dirname(options.output);
   const sharedOutput = path.join(outputDir, 'shared-runtime.js');
-
-  // Check if shared already exists (to avoid overwriting unnecessarily)
   const sharedSource = path.join(__dirname, '../runtime/shared-runtime.js');
-  if (!fs.existsSync(sharedOutput) || fs.readFileSync(sharedSource, 'utf8') !== fs.readFileSync(sharedOutput, 'utf8')) {
+
+  let shouldWriteShared = false;
+
+  if (!fs.existsSync(sharedOutput)) {
+    shouldWriteShared = true;
+    console.log("Shared runtime missing → generating");
+  } else {
+    const sourceStat = fs.statSync(sharedSource);
+    const destStat = fs.statSync(sharedOutput);
+    if (sourceStat.mtimeMs > destStat.mtimeMs) {
+      shouldWriteShared = true;
+      console.log("Shared runtime source newer → updating");
+    }
+  }
+
+  if (shouldWriteShared) {
     const sharedCode = fs.readFileSync(sharedSource, 'utf8');
     ensureDir(outputDir);
     fs.writeFileSync(sharedOutput, sharedCode);
     console.log(`Shared runtime generated/updated: ${sharedOutput}`);
   } else {
-    console.log(`Shared runtime already exists: ${sharedOutput}`);
+    console.log(`Shared runtime up-to-date: ${sharedOutput}`);
   }
 
-  // 4. Serialize & sign lesson-specific data only
+  // 4. Serialize & sign lesson data only
   const dataString = JSON.stringify(runtimeData);
   const signature = signContent(dataString, options.deviceId, options.privateKey);
   const safeDataString = dataString.replace(/<\/script>/gi, '<\\/script>');
@@ -62,7 +72,6 @@ async function buildHtml(lessonData, options) {
     window.OLS_SIGNATURE = ${JSON.stringify(signature || '')};
     window.OLS_INTENDED_OWNER = ${JSON.stringify(options.deviceId || '')};
 
-    // Lesson-specific runtime code
     ${playerJs}
 
     // Safety net: hide loading if init fails
@@ -99,10 +108,10 @@ async function buildHtml(lessonData, options) {
   fs.writeFileSync(options.output, html);
 
   const sizeKB = (Buffer.byteLength(html) / 1024).toFixed(1);
-  console.log(`✅ Lesson HTML generated: ${options.output} (${sizeKB} KB)`);
+  console.log(`✅ Lesson HTML: ${options.output} (${sizeKB} KB)`);
 
   if (parseFloat(sizeKB) > 500) {
-    console.warn(`⚠️ Lesson HTML exceeds 500KB target (${sizeKB} KB)`);
+    console.warn(`⚠️ Lesson HTML exceeds 500KB (${sizeKB} KB)`);
   }
 }
 
