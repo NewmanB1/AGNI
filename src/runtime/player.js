@@ -1,11 +1,5 @@
-// src/runtime/player.js
-// AGNI / OLS Runtime – lesson-specific logic, depends on shared-runtime.js
-
-// Reference shared utilities (injected by builder or loaded via <script src> in two-file model)
-var svgGenerators = window.AGNI_SHARED ? window.AGNI_SHARED.svgGenerators : {};
-var vibrate = window.AGNI_SHARED ? window.AGNI_SHARED.vibrate : function() {};
-var subscribeToSensor = window.AGNI_SHARED ? window.AGNI_SHARED.subscribeToSensor : function() {};
-var publishSensorReading = window.AGNI_SHARED ? window.AGNI_SHARED.publishSensorReading : function() {};
+// src/runtime/player.js – lesson-specific runtime layer
+// Uses shared utilities from shared-runtime.js (injected or loaded via src)
 
 window.DEV_MODE = true;
 
@@ -14,33 +8,23 @@ var IS_OLD_ANDROID = /Android [456]\./.test(navigator.userAgent) ||
 
 var currentStepIndex = 0;
 var lesson = null;
-var sensorSubscriptions = new Map();
-var lastSensorValues = new Map();
-var freefallStartTime = null;
-var calibrationConfirmed = false;
 var sensorsActive = false;
 
-// Debug log at load
-console.log("[PLAYER] player.js loaded – checking shared:", !!window.AGNI_SHARED);
+// Pull from shared-runtime.js (injected or loaded)
+var svgGenerators = window.AGNI_SHARED ? window.AGNI_SHARED.svgGenerators : {};
+var vibrate = window.AGNI_SHARED ? window.AGNI_SHARED.vibrate : function(p) { console.log("[FALLBACK] vibrate:", p); };
+var subscribeToSensor = window.AGNI_SHARED ? window.AGNI_SHARED.subscribeToSensor : function() {};
+var publishSensorReading = window.AGNI_SHARED ? window.AGNI_SHARED.publishSensorReading : function() {};
 
-// Vibration fallback if shared not loaded
-if (!vibrate) {
-  vibrate = function(pattern) {
-    if (!('vibrate' in navigator)) return;
-    navigator.vibrate(pattern === 'short' ? 70 : 150);
-    if (window.DEV_MODE) console.log("[FALLBACK VIBRATE]", pattern);
-  };
-}
+// Debug at start
+console.log("[PLAYER] player.js loaded – shared available:", !!window.AGNI_SHARED);
 
-// Sensor pub/sub fallback
-if (!subscribeToSensor) {
-  subscribeToSensor = function() { console.warn("[WARN] subscribeToSensor not available"); };
-}
-if (!publishSensorReading) {
-  publishSensorReading = function() { console.warn("[WARN] publishSensorReading not available"); };
-}
+// Fallbacks if shared not loaded
+if (!vibrate) vibrate = function() {};
+if (!subscribeToSensor) subscribeToSensor = function() { console.warn("subscribeToSensor missing"); };
+if (!publishSensorReading) publishSensorReading = function() {};
 
-// Start sensors after gesture
+// Start sensors after user gesture (required on old Android)
 function unlockAndStartSensors() {
   if (sensorsActive) return;
   if (!window.DeviceMotionEvent) {
@@ -86,7 +70,7 @@ function showSensorWarning() {
   document.getElementById('app').appendChild(p);
 }
 
-// Calibration monitor
+// Calibration monitor (relaxed thresholds)
 function monitorCalibration() {
   subscribeToSensor('accel.z', function(r) {
     var z = r.value;
@@ -102,7 +86,7 @@ function monitorCalibration() {
   });
 }
 
-// Freefall monitor
+// Freefall monitor (relaxed)
 function monitorFreefall() {
   subscribeToSensor('accel.z', function(r) {
     var absZ = Math.abs(r.value);
@@ -133,7 +117,7 @@ async function verifyIntegrity() {
   return true;
 }
 
-// Emulator buttons
+// Emulator controls
 function addEmulatorControls() {
   if (!window.DEV_MODE) return;
   console.log("[DEBUG] Adding emulator controls");
@@ -225,7 +209,10 @@ function renderStep(step) {
   }
 
   app.appendChild(container);
-  document.getElementById('loading').style.display = 'none'; // Hide loading after render
+
+  // Hide loading after render
+  var loading = document.getElementById('loading');
+  if (loading) loading.style.display = 'none';
 }
 
 // Navigation
@@ -252,7 +239,8 @@ async function initPlayer() {
   if (!lesson || !Array.isArray(lesson.steps) || lesson.steps.length === 0) {
     console.error("[ERROR] Invalid lesson data");
     document.body.innerHTML = '<h1 style="color:#ff5252">Error: Invalid lesson data</h1>';
-    document.getElementById('loading').style.display = 'none';
+    var loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'none';
     return;
   }
 
@@ -268,6 +256,8 @@ window.addEventListener('load', function () {
   verifyIntegrity().then(function(passed) {
     if (passed) {
       initPlayer();
+    } else {
+      console.log("[DEBUG] Integrity failed");
     }
   }).catch(function(err) {
     console.error("[ERROR] verifyIntegrity failed:", err);
