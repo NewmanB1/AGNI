@@ -3,13 +3,13 @@ const path = require('path');
 const { signContent } = require('../utils/crypto');
 const { ensureDir } = require('../utils/io');
 
-// Import config async methods (no require() for ESM packages here)
+// Import config async methods
 const config = require('../config');
 
 async function buildHtml(lessonData, options) {
   console.log(`🌍 Building HTML for Device: ${options.deviceId || 'Unbound (Development Mode)'}`);
 
-  // 1. Process Markdown in each step (now async!)
+  // 1. Process Markdown in each step (async)
   console.log("Processing Markdown content asynchronously...");
   const runtimeData = {
     ...lessonData,
@@ -21,7 +21,7 @@ async function buildHtml(lessonData, options) {
             htmlContent = await config.processMarkdown(step.content);
           } catch (err) {
             console.error(`Markdown processing failed for step ${step.id}:`, err.message);
-            htmlContent = step.content.replace(/\n/g, '<br>'); // fallback: basic line breaks
+            htmlContent = step.content.replace(/\n/g, '<br>'); // fallback
           }
         }
         return {
@@ -32,34 +32,37 @@ async function buildHtml(lessonData, options) {
     )
   };
 
-  // 2. Read Source Templates (unchanged)
+  // 2. Read source templates
   const runtimeJs = fs.readFileSync(path.join(__dirname, '../runtime/player.js'), 'utf8');
   const styles = fs.readFileSync(path.join(__dirname, '../runtime/style.css'), 'utf8');
 
-  // 3. Serialize & Sign (unchanged)
+  // 3. Read shared svgLibrary.js (no longer hardcoded inlining)
+  const svgLibraryPath = path.join(__dirname, '../runtime/svgLibrary.js');
+  let svgLibraryCode = '';
+  if (fs.existsSync(svgLibraryPath)) {
+    svgLibraryCode = fs.readFileSync(svgLibraryPath, 'utf8');
+    console.log(`Injected shared svgLibrary.js from ${svgLibraryPath}`);
+  } else {
+    console.warn("svgLibrary.js not found – SVG generation may not work in runtime");
+  }
+
+  // 4. Serialize & Sign
   const dataString = JSON.stringify(runtimeData);
   const signature = signContent(dataString, options.deviceId, options.privateKey);
 
-  // 4. Safe data injection (prevent </script> breaking out)
+  // 5. Safe data injection (escape </script>)
   const safeDataString = dataString.replace(/<\/script>/gi, '<\\/script>');
 
-  // Inline svgGenerators (unchanged – good practice to avoid external fetches)
-  const svgGeneratorsInline = `
-    const svgGenerators = {
-      circle: (props) => \`<circle cx="\${props.cx || 50}" cy="\${props.cy || 50}" r="\${props.r || 20}" fill="\${props.fill || 'blue'}" />\`,
-      rect: (props) => \`<rect x="\${props.x || 0}" y="\${props.y || 0}" width="\${props.width || 100}" height="\${props.height || 100}" fill="\${props.fill || 'green'}" />\`,
-      line: (props) => \`<line x1="\${props.x1 || 0}" y1="\${props.y1 || 0}" x2="\${props.x2 || 100}" y2="\${props.y2 || 100}" stroke="\${props.stroke || 'black'}" stroke-width="\${props.width || 2}" />\`,
-      // Add more generators as needed (path, polygon, text, etc.)
-    };
-  `;
-
-  // 5. Final embedded script (unchanged structure)
+  // 6. Final embedded script – now includes svgLibrary + player
   const finalScript = `
-    ${svgGeneratorsInline}
+    ${svgLibraryCode}  // shared svgGenerators
+
     window.LESSON_DATA = ${safeDataString};
     window.OLS_SIGNATURE = ${JSON.stringify(signature || '')};
     window.OLS_INTENDED_OWNER = ${JSON.stringify(options.deviceId || '')};
+
     ${runtimeJs}
+
     // Safety net: hide loading if init fails
     window.addEventListener('load', () => {
       setTimeout(() => {
@@ -69,7 +72,7 @@ async function buildHtml(lessonData, options) {
     });
   `;
 
-  // 6. Assembly (unchanged)
+  // 7. Assembly
   const html = `<!DOCTYPE html>
 <html lang="${lessonData.meta.language || 'en'}">
 <head>
@@ -96,7 +99,7 @@ async function buildHtml(lessonData, options) {
   console.log(`✅ HTML Generated: ${options.output} (${sizeKB} KB)`);
 
   if (parseFloat(sizeKB) > 500) {
-    console.warn(`⚠️ Warning: Output exceeds 500KB target (${sizeKB} KB). Consider optimizing content or splitting assets.`);
+    console.warn(`⚠️ Warning: Output exceeds 500KB target (${sizeKB} KB). Consider optimizing content.`);
   }
 }
 
