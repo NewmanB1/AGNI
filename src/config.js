@@ -1,43 +1,43 @@
-// src/config.js – with logging to diagnose import issues
+// src/config.js – singleton loading + explicit await + more logging
 
-let unified;
-let remarkParse;
-let remarkMath;
-let remarkHtml;
+let processorPromise = null;
 
-async function loadRemark() {
-  console.log("[config] Starting lazy load of remark processors...");
-  try {
-    if (unified) {
-      console.log("[config] Processors already loaded");
-      return;
+async function getProcessor() {
+  if (processorPromise) return processorPromise;
+
+  processorPromise = (async () => {
+    console.log("[config] Initializing remark processor (singleton)...");
+
+    try {
+      console.log("[config] → importing unified");
+      const { unified } = await import('unified');
+
+      console.log("[config] → importing remark-parse");
+      const { default: remarkParse } = await import('remark-parse');
+
+      console.log("[config] → importing remark-math");
+      const { default: remarkMath } = await import('remark-math');
+
+      console.log("[config] → importing remark-html");
+      const { default: remarkHtml } = await import('remark-html');
+
+      console.log("[config] All imports successful – building processor");
+
+      const processor = unified()
+        .use(remarkParse)
+        .use(remarkMath)
+        .use(remarkHtml, { sanitize: false });
+
+      console.log("[config] Processor ready");
+      return processor;
+    } catch (err) {
+      console.error("[config] Failed to initialize remark processor:");
+      console.error(err.stack || err);
+      throw err;
     }
+  })();
 
-    console.log("[config] Importing unified...");
-    const u = await import('unified');
-    unified = u.unified;
-    console.log("[config] unified loaded");
-
-    console.log("[config] Importing remark-parse...");
-    const rp = await import('remark-parse');
-    remarkParse = rp.default || rp;
-    console.log("[config] remark-parse loaded");
-
-    console.log("[config] Importing remark-math...");
-    const rm = await import('remark-math');
-    remarkMath = rm.default || rm;
-    console.log("[config] remark-math loaded");
-
-    console.log("[config] Importing remark-html...");
-    const rh = await import('remark-html');
-    remarkHtml = rh.default || rh;
-    console.log("[config] remark-html loaded");
-
-  } catch (err) {
-    console.error("[config] Failed to load remark processors:");
-    console.error(err.stack || err.message);
-    throw err; // re-throw so caller sees it
-  }
+  return processorPromise;
 }
 
 module.exports = {
@@ -45,30 +45,23 @@ module.exports = {
     if (!text) return '';
 
     try {
-      console.log("[config] processMarkdown called – ensuring processors...");
-      await loadRemark();
+      console.log("[config] processMarkdown: awaiting processor...");
+      const processor = await getProcessor();
 
-      if (!unified) {
-        throw new Error("unified is still undefined after loadRemark()");
-      }
-
-      console.log("[config] Creating processor...");
-      const processor = unified()
-        .use(remarkParse)
-        .use(remarkMath)
-        .use(remarkHtml, { sanitize: false });
-
-      console.log("[config] Processing text...");
-      const file = await processor.process(text);
-      const result = String(file);
-      console.log("[config] Markdown processed successfully");
-      return result;
+      console.log("[config] processMarkdown: processing text...");
+      const result = await processor.process(text);
+      const html = String(result);
+      console.log("[config] processMarkdown: success");
+      return html;
     } catch (err) {
-      console.error("[config] Markdown processing error:");
+      console.error("[config] processMarkdown failed:");
       console.error(err.message);
-      console.error(err.stack ? err.stack.split('\n').slice(0, 6).join('\n') : '');
-      // Fallback: basic rendering
-      return text.replace(/\n/g, '<br>');
+      // Fallback to basic HTML
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
     }
   }
 };
