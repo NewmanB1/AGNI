@@ -1,30 +1,38 @@
+// src/cli.js
+// AGNI CLI – Builds lesson bundles (HTML, native, etc.)
+
 const fs = require('fs');
+const path = require('path');
 const yaml = require('js-yaml');
 const buildHtml = require('./builders/html');
 const buildNative = require('./builders/native');
 
-function run() {
+async function run() {
   const args = process.argv.slice(2);
 
-  // Handle --help
+  // ── Help ────────────────────────────────────────────────────────────────
   if (args.includes('--help') || args.includes('-h') || args.length === 0) {
     console.log(`
   🔥 AGNI — Open Lesson Standard Compiler
   Usage:
-    agni <input.yaml> [options]
+    node src/cli.js <input.yaml> [options]
+    npm run build   # if using package.json script
+
   Options:
-    --format=html|native Output format (default: html)
-    --output=<path> Output file path (required for html)
-    --output-dir=<path> Output directory (required for native)
-    --device-id=<uuid> Bind output to a specific device
-    --private-key=<path> Path to Ed25519 private key for signing
+    --format=html|native     Output format (default: html)
+    --output=<path>          Output file path (required for html)
+    --output-dir=<path>      Output directory (required for native)
+    --device-id=<uuid>       Bind output to a specific device
+    --private-key=<path>     Path to Ed25519 private key for signing
+
   Examples:
-    agni lessons/gravity.yaml --format=html --output=dist/gravity.html
-    agni lessons/gravity.yaml --format=native --output-dir=dist/native-gravity
+    node src/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html
+    node src/cli.js lessons/gravity.yaml --format=native --output-dir=dist/native-gravity
     `);
     process.exit(0);
   }
 
+  // ── Parse arguments ─────────────────────────────────────────────────────
   const params = {
     format: 'html',
     inputFile: null,
@@ -34,18 +42,20 @@ function run() {
     privateKey: null
   };
 
-  args.forEach(arg => {
-    if (arg.startsWith('--format=')) params.format = arg.split('=')[1];
+  args.forEach((arg, i) => {
+    if (arg.startsWith('--format='))     params.format   = arg.split('=')[1];
     else if (arg.startsWith('--output-dir=')) params.outputDir = arg.split('=')[1];
-    else if (arg.startsWith('--output=')) params.output = arg.split('=')[1];
-    else if (arg.startsWith('--device-id=')) params.deviceId = arg.split('=')[1];
+    else if (arg.startsWith('--output='))     params.output    = arg.split('=')[1];
+    else if (arg.startsWith('--device-id='))  params.deviceId  = arg.split('=')[1];
     else if (arg.startsWith('--private-key=')) params.privateKey = arg.split('=')[1];
-    else if (!arg.startsWith('-')) params.inputFile = arg;
+    else if (!arg.startsWith('-') && !params.inputFile) {
+      params.inputFile = arg;
+    }
   });
 
   if (!params.inputFile) {
     console.error('Error: No input file specified.');
-    console.error('Usage: agni <input.yaml> --format=<html|native> [options]');
+    console.error('Usage: node src/cli.js <input.yaml> --format=<html|native> [options]');
     process.exit(1);
   }
 
@@ -54,7 +64,7 @@ function run() {
     process.exit(1);
   }
 
-  // Load and parse YAML
+  // ── Load and parse YAML ─────────────────────────────────────────────────
   let data;
   try {
     const raw = fs.readFileSync(params.inputFile, 'utf8');
@@ -64,23 +74,19 @@ function run() {
     process.exit(1);
   }
 
-  // ── FEATURE INFERENCE ──
-  // Runs automatically on every build after YAML is loaded
+  // ── FEATURE INFERENCE (optional, continues on failure) ──────────────────
   try {
-    const { inferFeatures } = require('./src/utils/featureInference');
+    const { inferFeatures } = require('./utils/featureInference');
     const inferred = inferFeatures(data);
-
     console.log(`\n[FEATURE INFERENCE] ${data.meta?.title || 'Unnamed lesson'} (${params.inputFile})`);
     console.log(JSON.stringify(inferred, null, 2));
-
-    // Optional: attach to data for use in builders
     data.inferredFeatures = inferred;
   } catch (err) {
     console.warn(`[Warning] Feature inference failed: ${err.message}`);
-    // Continue build even if inference fails
+    // Continue anyway
   }
 
-  // Validate minimal structure
+  // ── Basic validation ────────────────────────────────────────────────────
   if (!data || !data.meta || !data.steps) {
     console.error('Error: Invalid OLS file. Must contain "meta" and "steps" fields.');
     process.exit(1);
@@ -90,29 +96,45 @@ function run() {
     process.exit(1);
   }
 
-  // Dispatch to the appropriate builder
-  if (params.format === 'html') {
-    if (!params.output) {
-      console.error('Error: --output=<path> is required for HTML format.');
+  // ── Dispatch to builder ─────────────────────────────────────────────────
+  try {
+    if (params.format === 'html') {
+      if (!params.output) {
+        console.error('Error: --output=<path> is required for HTML format.');
+        process.exit(1);
+      }
+      await buildHtml(data, params);
+    } else if (params.format === 'native') {
+      if (!params.outputDir) {
+        console.error('Error: --output-dir=<path> is required for Native format.');
+        process.exit(1);
+      }
+      await buildNative(data, params);
+    } else {
+      console.error(`Error: Unknown format "${params.format}". Use "html" or "native".`);
       process.exit(1);
     }
-    buildHtml(data, params);
-  } else if (params.format === 'native') {
-    if (!params.outputDir) {
-      console.error('Error: --output-dir=<path> is required for Native format.');
-      process.exit(1);
-    }
-    buildNative(data, params);
-  } else {
-    console.error(`Error: Unknown format "${params.format}". Use "html" or "native".`);
+  } catch (err) {
+    console.error('Build failed:');
+    console.error(err.message);
+    if (err.stack) console.error(err.stack.split('\n').slice(0, 6).join('\n'));
     process.exit(1);
   }
+
+  console.log('Build complete.');
 }
 
-// Export for programmatic use
-module.exports = { run };
-
-// Auto-execute when called directly
+// ── Auto-execute when called directly ──────────────────────────────────────
 if (require.main === module) {
-  run();
+  (async () => {
+    try {
+      await run();
+    } catch (err) {
+      console.error('Unexpected CLI error:');
+      console.error(err);
+      process.exit(1);
+    }
+  })();
 }
+
+module.exports = { run };
