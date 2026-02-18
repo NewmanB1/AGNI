@@ -1,0 +1,26 @@
+<!-- src/runtime/shell/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGNI Village Portal</title>
+    <style>
+        body { background: #1a1a2e; color: #fff; font-family: sans-serif; margin: 0; padding: 20px; }
+        .card { background: #16213e; border-radius: 12px; padding: 16px; margin-bottom: 12px; border-left: 5px solid #333; }
+        .card.recommended { border-left: 5px solid #00e676; background: #1f2b4e; }
+        .card h3 { margin: 0 0 8px 0; }
+        .meta { font-size: 0.85em; color: #aaa; display: flex; justify-content: space-between; }
+        .tag { background: #0f3460; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; }
+        .theta-score { color: #00e676; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Village Library</h1>
+    <div id="lesson-list">Loading curriculum...</div>
+
+    <!-- Load Dependencies -->
+    <script src="../navigator.js"></script>
+    <script src="library.js"></script>
+</body>
+</html>
