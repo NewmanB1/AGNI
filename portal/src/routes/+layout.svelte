@@ -1,11 +1,6 @@
-<script lang="ts">
-	import favicon from '$lib/assets/favicon.svg';
-
-	let { children } = $props();
+<!-- portal/src/routes/+layout.svelte -->
+<script>
+  import '../app.css';  // This brings in your global styles
 </script>
 
-<svelte:head>
-	<link rel="icon" href={favicon} />
-</svelte:head>
-
-{@render children()}
+<slot />
