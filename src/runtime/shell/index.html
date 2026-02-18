@@ -3,24 +3,50 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AGNI Village Portal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AGNI Village Library</title>
     <style>
-        body { background: #1a1a2e; color: #fff; font-family: sans-serif; margin: 0; padding: 20px; }
-        .card { background: #16213e; border-radius: 12px; padding: 16px; margin-bottom: 12px; border-left: 5px solid #333; }
-        .card.recommended { border-left: 5px solid #00e676; background: #1f2b4e; }
-        .card h3 { margin: 0 0 8px 0; }
-        .meta { font-size: 0.85em; color: #aaa; display: flex; justify-content: space-between; }
-        .tag { background: #0f3460; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; }
-        .theta-score { color: #00e676; font-weight: bold; }
+        :root { --bg: #1a1a2e; --card: #16213e; --accent: #00e676; --text: #e0e0e0; }
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 1rem; }
+        h1 { font-size: 1.5rem; margin-bottom: 1rem; color: #fff; border-bottom: 2px solid #333; padding-bottom: 0.5rem; }
+        
+        /* Grid Layout */
+        .lesson-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+        
+        /* Lesson Card */
+        .card { background: var(--card); border-radius: 12px; padding: 1.2rem; position: relative; border-left: 4px solid #333; transition: transform 0.2s; cursor: pointer; }
+        .card:active { transform: scale(0.98); }
+        .card.recommended { border-left-color: var(--accent); background: #1f2b4e; box-shadow: 0 4px 12px rgba(0,230,118,0.1); }
+        
+        .card h3 { margin: 0 0 0.5rem 0; color: #fff; font-size: 1.1rem; }
+        .card-meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #aaa; margin-top: 0.8rem; }
+        
+        /* Tags */
+        .tags { display: flex; gap: 0.5rem; }
+        .tag { background: #0f3460; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .tag.haptic { color: #ffab40; }
+        .tag.sensor { color: #40c4ff; }
+        
+        /* Scores */
+        .theta { font-family: monospace; font-weight: bold; color: var(--accent); }
+        
+        /* Debug toggle */
+        #debug-toggle { position: fixed; bottom: 10px; right: 10px; opacity: 0.3; font-size: 0.8rem; }
     </style>
 </head>
 <body>
-    <h1>Village Library</h1>
-    <div id="lesson-list">Loading curriculum...</div>
+    <header>
+        <h1>Village Library <span style="font-size:0.8rem; font-weight:normal; opacity:0.6; float:right">v2.0</span></h1>
+    </header>
 
-    <!-- Load Dependencies -->
-    <script src="../navigator.js"></script>
+    <div id="loading">Analyze local cognition...</div>
+    <div id="lesson-grid" class="lesson-grid"></div>
+
+    <div id="debug-toggle">DEV</div>
+
+    <!-- Dependencies -->
+    <!-- These will be copied to dist/ by the build script -->
+    <script src="navigator.js"></script>
     <script src="library.js"></script>
 </body>
 </html>
