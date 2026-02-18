@@ -1,0 +1,29 @@
+/* portal/src/app.css */
+@import url('./lib/styles/agni-theme.css');  /* or paste your full theme here */
+
+:root {
+  --bg: #1a1a2e;
+  --card: #16213e;
+  --accent: #00e676;
+  --text: #e0e0e0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  margin: 0;
+  padding: 1rem;
+  min-height: 100vh;
+}
+
+h1, h2, h3 {
+  color: #fff;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 1.2rem;
+  margin: 1rem 0;
+}
