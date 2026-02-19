@@ -2,16 +2,22 @@
   import { mockClasses, mockGovernanceMilestones } from '$lib/mockData';
 </script>
 
-<h1>AGNI Teacher Hub — Prototype</h1>
-
-<!-- Add at top of +page.svelte -->
+<!-- Top Navigation Bar -->
 <nav class="top-nav">
-  <select>
-    <option>Mixed Entry-Level Group</option>
-    <option>Advanced Learners</option>
-  </select>
-  <span>Teacher: Brian</span>
+  <div class="nav-left">
+    <select class="class-selector">
+      {#each mockClasses as cls}
+        <option value={cls.id}>{cls.name}</option>
+      {/each}
+    </select>
+  </div>
+  <div class="nav-right">
+    <span class="teacher-name">Teacher: Brian</span>
+    <!-- Later: logout, refresh, etc. -->
+  </div>
 </nav>
+
+<h1>AGNI Teacher Hub — Prototype</h1>
 
 <section class="card">
   <h2>Your Classes ({mockClasses.length})</h2>
@@ -113,20 +119,36 @@
   li {
     margin: 0.5rem 0;
   }
+
   .top-nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem;
+    padding: 1rem 1.5rem;
     background: #0f1626;
     border-bottom: 1px solid #2a2a4a;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0 0 8px 8px;
   }
-  select {
-    padding: 0.5rem;
+
+  .nav-left, .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .class-selector {
+    padding: 0.6rem 1rem;
     background: #1f2b4e;
     color: var(--text);
     border: 1px solid var(--border);
     border-radius: 6px;
+    font-size: 1rem;
+    min-width: 240px;
+  }
+
+  .teacher-name {
+    font-weight: bold;
+    color: var(--accent);
   }
 </style>
