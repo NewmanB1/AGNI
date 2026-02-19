@@ -1,5 +1,8 @@
 // portal/src/lib/mockData.ts
 
+/**
+ * Governance-level required skill clusters and deadlines
+ */
 export const mockGovernanceMilestones = [
   {
     id: 'math-basics-2026Q3',
@@ -19,6 +22,9 @@ export const mockGovernanceMilestones = [
   }
 ];
 
+/**
+ * Mock classes with realistic heterogeneity data
+ */
 export const mockClasses = [
   {
     id: 'class-mixed-refugee',
@@ -26,7 +32,8 @@ export const mockClasses = [
     studentsCount: 18,
     onTrackPercent: 62,
     notes: 'High heterogeneity: 7 new arrivals, 5 long-term, 6 mid-level',
-    entryLevels: [3, 7, 2, 5, 4, 1, 8, 9, 3, 6, 2, 7, 4, 5, 1, 8, 3, 6], // for spread calculation
+    // For heterogeneity calculation and visualization
+    entryLevels: [3, 7, 2, 5, 4, 1, 8, 9, 3, 6, 2, 7, 4, 5, 1, 8, 3, 6],
     arrivalCohorts: [
       '2025Q4-new', 'long-term', '2026Q1-new', 'long-term',
       '2025Q4-new', '2026Q1-new', 'long-term', '2026Q1-new',
@@ -41,7 +48,7 @@ export const mockClasses = [
       { id: 's4', name: 'Mohamed', entryLevel: 5, arrivalCohort: 'long-term', masteredSkills: ['ols.math:ratios'] },
       { id: 's5', name: 'Layla', entryLevel: 4, arrivalCohort: '2025Q4-new', masteredSkills: ['ols.math:counting'] },
       { id: 's6', name: 'Omar', entryLevel: 1, arrivalCohort: '2026Q1-new', masteredSkills: [] }
-      // Add more if you want — array length should match studentsCount for realism
+      // You can add up to 18 if desired
     ]
   },
   {
@@ -60,6 +67,9 @@ export const mockClasses = [
   }
 ];
 
+/**
+ * Available skills for reference / recommendations
+ */
 export const mockSkills = [
   { id: 'ols.math:ratios', title: 'Ratios & Proportions', difficulty: 4, metaphors: ['weaving', 'farming'] },
   { id: 'ols.math:fractions', title: 'Fractions Basics', difficulty: 3, metaphors: ['rhythm', 'sharing'] },
