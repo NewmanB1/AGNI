@@ -4,7 +4,7 @@
   let selectedClassId = mockClasses[0]?.id || '';
   $: currentClass = mockClasses.find(cls => cls.id === selectedClassId) || null;
 
-  // Reactive heterogeneity calculations
+  // Heterogeneity calculations
   $: entryMin = currentClass?.entryLevels?.length > 0 ? Math.min(...currentClass.entryLevels) : null;
   $: entryMax = currentClass?.entryLevels?.length > 0 ? Math.max(...currentClass.entryLevels) : null;
   $: cohortCount = currentClass?.arrivalCohorts ? new Set(currentClass.arrivalCohorts).size : 0;
@@ -15,13 +15,12 @@
   // Override modal state
   let showOverrideModal = false;
   let overrideSkillId = '';
-  let overrideScope = 'class'; // 'class', 'subgroup', 'individual'
+  let overrideScope = 'class'; // 'class' | 'subgroup' | 'individual'
   let overrideDuration = '1-week';
   let overrideReason = '';
 
   function openOverrideModal() {
     showOverrideModal = true;
-    // Reset form
     overrideSkillId = '';
     overrideScope = 'class';
     overrideDuration = '1-week';
@@ -34,21 +33,37 @@
 
   function submitOverride() {
     if (!overrideSkillId) {
-      alert('Please select a skill');
+      alert('Please select a skill to override to.');
       return;
     }
-    console.log('Override submitted:', {
+    if (!overrideReason.trim()) {
+      alert('Please provide a reason for the override.');
+      return;
+    }
+
+    const overrideData = {
       classId: currentClass.id,
       skillId: overrideSkillId,
       scope: overrideScope,
       duration: overrideDuration,
-      reason: overrideReason
-    });
-    // Later: save to localStorage / hub JSON
-    alert('Override applied (logged to console for now)');
+      reason: overrideReason.trim(),
+      timestamp: new Date().toISOString()
+    };
+
+    console.log('Override submitted:', overrideData);
+    alert(`Override applied for ${overrideScope} scope on ${overrideSkillId} (${overrideDuration})\nReason: ${overrideReason}`);
+
+    // TODO: Later - save to localStorage or hub JSON file
     closeOverrideModal();
   }
+
+  // Close modal on Esc key
+  function handleKeydown(event) {
+    if (event.key === 'Escape') closeOverrideModal();
+  }
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 <!-- Top Navigation Bar -->
 <nav class="top-nav">
@@ -157,11 +172,12 @@
 {#if showOverrideModal}
   <div class="modal-overlay" on:click|self={closeOverrideModal}>
     <div class="modal-content">
-      <h2>Override Recommendation for {currentClass.name}</h2>
+      <h2>Override Recommendation</h2>
+      <p>for {currentClass.name}</p>
 
       <label>
         Skill to force:
-        <select bind:value={overrideSkillId}>
+        <select bind:value={overrideSkillId} required>
           <option value="">Select a skill...</option>
           {#each mockSkills as skill}
             <option value={skill.id}>{skill.title}</option>
@@ -172,7 +188,7 @@
       <label>
         Scope:
         <select bind:value={overrideScope}>
-          <option value="class">Whole class</option>
+          <option value="class">Whole class ({currentClass.studentsCount} students)</option>
           <option value="subgroup">Subgroup (select students)</option>
           <option value="individual">Individual student</option>
         </select>
@@ -189,25 +205,30 @@
       </label>
 
       <label>
-        Reason:
-        <textarea bind:value={overrideReason} placeholder="Why this override? (e.g., group experiment, catch-up needed)" rows="3"></textarea>
+        Reason for override:
+        <textarea bind:value={overrideReason} placeholder="e.g., Group sensor experiment, catch-up for new arrivals" rows="3" required></textarea>
       </label>
 
       {#if overrideScope === 'class'}
-        <p class="warning">Warning: This overrides personalization for {currentClass.studentsCount || 'all'} students.</p>
+        <p class="warning">
+          Warning: This will override personalized paths for {currentClass.studentsCount} students.
+        </p>
       {/if}
 
-      <div class="modal-buttons">
-        <button class="cancel-btn" on:click={closeOverrideModal}>Cancel</button>
-        <button class="submit-btn" on:click={submitOverride} disabled={!overrideSkillId}>Apply Override</button>
+      <div class="modal-actions">
+        <button class="cancel" on:click={closeOverrideModal}>Cancel</button>
+        <button class="submit" on:click={submitOverride} disabled={!overrideSkillId || !overrideReason.trim()}>
+          Apply Override
+        </button>
       </div>
     </div>
   </div>
 {/if}
 
 <style>
-  /* Existing styles... keep all previous ones */
+  /* Keep all previous styles... */
 
+  /* Override button */
   .override-btn {
     margin-top: 1rem;
     padding: 0.6rem 1.2rem;
@@ -223,7 +244,7 @@
     background: #00c96a;
   }
 
-  /* Modal styles */
+  /* Modal */
   .modal-overlay {
     position: fixed;
     inset: 0;
@@ -242,12 +263,16 @@
     width: 90%;
     max-height: 90vh;
     overflow-y: auto;
-    color: var(--text);
-    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
   }
 
   .modal-content h2 {
+    margin-bottom: 0.5rem;
+  }
+
+  .modal-content p {
     margin-bottom: 1.5rem;
+    opacity: 0.9;
   }
 
   label {
@@ -263,26 +288,31 @@
     color: var(--text);
     border: 1px solid var(--border);
     border-radius: 6px;
+    font-size: 1rem;
   }
 
   textarea {
     resize: vertical;
+    min-height: 80px;
   }
 
   .warning {
     color: #ffaa00;
     font-size: 0.9rem;
-    margin: 0.5rem 0;
+    margin: 0.8rem 0;
+    padding: 0.6rem;
+    background: rgba(255,170,0,0.1);
+    border-radius: 6px;
   }
 
-  .modal-buttons {
+  .modal-actions {
     display: flex;
     gap: 1rem;
-    margin-top: 2rem;
     justify-content: flex-end;
+    margin-top: 2rem;
   }
 
-  .cancel-btn {
+  .cancel {
     padding: 0.6rem 1.2rem;
     background: #2a2a4a;
     color: var(--text);
@@ -291,7 +321,7 @@
     cursor: pointer;
   }
 
-  .submit-btn {
+  .submit {
     padding: 0.6rem 1.2rem;
     background: var(--accent);
     color: #1a1a2e;
@@ -301,7 +331,7 @@
     font-weight: bold;
   }
 
-  .submit-btn:disabled {
+  .submit:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
