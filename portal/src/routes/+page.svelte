@@ -1,5 +1,5 @@
 <script>
-  import { mockClasses, mockGovernanceMilestones } from '$lib/mockData';
+  import { mockClasses, mockGovernanceMilestones, mockSkills } from '$lib/mockData';
 
   let selectedClassId = mockClasses[0]?.id || '';
   $: currentClass = mockClasses.find(cls => cls.id === selectedClassId) || null;
@@ -11,6 +11,43 @@
   $: heteroLevel = (cohortCount > 2 || (entryMax !== null && entryMax - entryMin > 5)) ? 'high'
                   : (cohortCount > 1 || (entryMax !== null && entryMax - entryMin > 3)) ? 'medium'
                   : 'low';
+
+  // Override modal state
+  let showOverrideModal = false;
+  let overrideSkillId = '';
+  let overrideScope = 'class'; // 'class', 'subgroup', 'individual'
+  let overrideDuration = '1-week';
+  let overrideReason = '';
+
+  function openOverrideModal() {
+    showOverrideModal = true;
+    // Reset form
+    overrideSkillId = '';
+    overrideScope = 'class';
+    overrideDuration = '1-week';
+    overrideReason = '';
+  }
+
+  function closeOverrideModal() {
+    showOverrideModal = false;
+  }
+
+  function submitOverride() {
+    if (!overrideSkillId) {
+      alert('Please select a skill');
+      return;
+    }
+    console.log('Override submitted:', {
+      classId: currentClass.id,
+      skillId: overrideSkillId,
+      scope: overrideScope,
+      duration: overrideDuration,
+      reason: overrideReason
+    });
+    // Later: save to localStorage / hub JSON
+    alert('Override applied (logged to console for now)');
+    closeOverrideModal();
+  }
 </script>
 
 <!-- Top Navigation Bar -->
@@ -90,10 +127,13 @@
       </section>
     {/if}
 
-    <!-- Placeholder for recommendations -->
+    <!-- Recommendation & Override -->
     <section class="card recommendation" style="margin-top: 1.5rem;">
       <h2>AGNI Recommendation (coming soon)</h2>
       <p>Personalized next skill suggestions for this class will appear here.</p>
+      <button class="override-btn" on:click={openOverrideModal}>
+        Override Recommendation
+      </button>
     </section>
   {:else}
     <p>No class selected.</p>
@@ -113,126 +153,156 @@
   </section>
 </main>
 
+<!-- Override Modal -->
+{#if showOverrideModal}
+  <div class="modal-overlay" on:click|self={closeOverrideModal}>
+    <div class="modal-content">
+      <h2>Override Recommendation for {currentClass.name}</h2>
+
+      <label>
+        Skill to force:
+        <select bind:value={overrideSkillId}>
+          <option value="">Select a skill...</option>
+          {#each mockSkills as skill}
+            <option value={skill.id}>{skill.title}</option>
+          {/each}
+        </select>
+      </label>
+
+      <label>
+        Scope:
+        <select bind:value={overrideScope}>
+          <option value="class">Whole class</option>
+          <option value="subgroup">Subgroup (select students)</option>
+          <option value="individual">Individual student</option>
+        </select>
+      </label>
+
+      <label>
+        Duration:
+        <select bind:value={overrideDuration}>
+          <option value="1-day">1 day</option>
+          <option value="3-days">3 days</option>
+          <option value="1-week">1 week</option>
+          <option value="permanent">Permanent (until manual reset)</option>
+        </select>
+      </label>
+
+      <label>
+        Reason:
+        <textarea bind:value={overrideReason} placeholder="Why this override? (e.g., group experiment, catch-up needed)" rows="3"></textarea>
+      </label>
+
+      {#if overrideScope === 'class'}
+        <p class="warning">Warning: This overrides personalization for {currentClass.studentsCount || 'all'} students.</p>
+      {/if}
+
+      <div class="modal-buttons">
+        <button class="cancel-btn" on:click={closeOverrideModal}>Cancel</button>
+        <button class="submit-btn" on:click={submitOverride} disabled={!overrideSkillId}>Apply Override</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <style>
-  .top-nav {
+  /* Existing styles... keep all previous ones */
+
+  .override-btn {
+    margin-top: 1rem;
+    padding: 0.6rem 1.2rem;
+    background: var(--accent);
+    color: #1a1a2e;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  .override-btn:hover {
+    background: #00c96a;
+  }
+
+  /* Modal styles */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.5rem;
-    background: #0f1626;
-    border-bottom: 1px solid #2a2a4a;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal-content {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    color: var(--text);
+    position: relative;
+  }
+
+  .modal-content h2 {
     margin-bottom: 1.5rem;
-    border-radius: 0 0 8px 8px;
   }
 
-  .nav-left, .nav-right {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+  label {
+    display: block;
+    margin: 1rem 0 0.5rem;
+    font-weight: bold;
   }
 
-  .class-selector {
-    padding: 0.6rem 1rem;
+  select, textarea {
+    width: 100%;
+    padding: 0.6rem;
     background: #1f2b4e;
     color: var(--text);
     border: 1px solid var(--border);
     border-radius: 6px;
-    font-size: 1rem;
-    min-width: 280px;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  .warning {
+    color: #ffaa00;
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+  }
+
+  .modal-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    justify-content: flex-end;
+  }
+
+  .cancel-btn {
+    padding: 0.6rem 1.2rem;
+    background: #2a2a4a;
+    color: var(--text);
+    border: none;
+    border-radius: 6px;
     cursor: pointer;
   }
 
-  .teacher-name {
-    font-weight: bold;
-    color: var(--accent);
-  }
-
-  .heterogeneity {
-    font-size: 0.9rem;
-    opacity: 0.85;
-    margin: 0.4rem 0 0.8rem 0;
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    flex-wrap: wrap;
-  }
-
-  .label {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-
-  .high { color: #ff5252; font-weight: bold; }
-  .medium { color: #ffaa00; font-weight: bold; }
-  .low { color: var(--accent); font-weight: bold; }
-
-  .detail {
-    opacity: 0.7;
-  }
-
-  .spread-dots {
-    position: relative;
-    height: 12px;
-    width: 120px;
-    background: #0f1626;
+  .submit-btn {
+    padding: 0.6rem 1.2rem;
+    background: var(--accent);
+    color: #1a1a2e;
+    border: none;
     border-radius: 6px;
-    overflow: hidden;
-  }
-
-  .dot {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    border: 1px solid #fff;
-    box-shadow: 0 0 3px rgba(0,0,0,0.5);
-  }
-
-  .progress-container {
-    margin: 0.8rem 0;
-    background: #0f1626;
-    border-radius: 4px;
-    height: 24px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .progress-bar {
-    height: 100%;
-    transition: width 0.4s ease;
-  }
-
-  .progress-container span {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 0.9rem;
+    cursor: pointer;
     font-weight: bold;
-    color: #fff;
-    text-shadow: 0 0 3px #000;
   }
 
-  .student-list {
-    list-style: none;
-    padding: 0;
-    margin: 0.5rem 0 0 0;
-  }
-
-  .student-list li {
-    padding: 0.6rem 0;
-    border-bottom: 1px solid #2a2a4a;
-  }
-
-  .student-list li:last-child {
-    border-bottom: none;
-  }
-
-  .recommendation {
-    background: #0f1626;
-    border: 1px dashed var(--accent);
+  .submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>
