@@ -1,6 +1,16 @@
 <!-- portal/src/routes/+layout.svelte -->
 <script>
-  import '../app.css';  // This brings in your global styles
+  import '../app.css';
 </script>
 
-<slot />
+<main>
+  <slot />
+</main>
+
+<style>
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+</style>
