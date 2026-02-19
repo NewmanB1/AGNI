@@ -1,21 +1,44 @@
 <!-- portal/src/routes/+page.svelte -->
+<script>
+  import { mockClasses, mockGovernanceMilestones, mockSkills } from '$lib/mockData';
+</script>
+
 <h1>AGNI Teacher Hub — Prototype</h1>
 
-<div class="card">
-  <h2>Phase 0 Complete</h2>
-  <p>Dark theme loaded. Ready for dashboard in Phase 1.</p>
-  <p>If you're seeing this with light background / white text → CSS import failed.</p>
-</div>
+<section class="card">
+  <h2>Your Classes</h2>
+  {#each mockClasses as classGroup}
+    <div class="class-item">
+      <h3>{classGroup.name}</h3>
+      <p>Students: {classGroup.students.length}</p>
+      <p>On-track to governance targets: {Object.values(classGroup.governanceTargetStatus).reduce((a, b) => a + b, 0) / Object.keys(classGroup.governanceTargetStatus).length}% average</p>
+    </div>
+  {/each}
+</section>
 
-<p style="margin-top: 2rem;">
-  <a href="https://svelte.dev/docs/kit" target="_blank" rel="noopener">
-    SvelteKit docs (for reference)
-  </a>
-</p>
+<section class="card" style="margin-top: 2rem;">
+  <h2>Governance Milestones</h2>
+  <ul>
+    {#each mockGovernanceMilestones as milestone}
+      <li>
+        <strong>{milestone.description}</strong> — Due {milestone.targetDate} ({milestone.requiredPercent}% required)
+      </li>
+    {/each}
+  </ul>
+</section>
 
 <style>
-  h1 {
-    font-size: 2.2rem;
-    margin-bottom: 1.5rem;
+  .class-item {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #1f2b4e;
+    border-radius: 8px;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+  li {
+    margin: 0.75rem 0;
   }
 </style>
