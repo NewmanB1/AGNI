@@ -4,6 +4,15 @@
 
 <h1>AGNI Teacher Hub — Prototype</h1>
 
+<!-- Add at top of +page.svelte -->
+<nav class="top-nav">
+  <select>
+    <option>Mixed Entry-Level Group</option>
+    <option>Advanced Learners</option>
+  </select>
+  <span>Teacher: Brian</span>
+</nav>
+
 <section class="card">
   <h2>Your Classes ({mockClasses.length})</h2>
   {#each mockClasses as cls}
@@ -103,5 +112,21 @@
   }
   li {
     margin: 0.5rem 0;
+  }
+  .top-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #0f1626;
+    border-bottom: 1px solid #2a2a4a;
+    margin-bottom: 1rem;
+  }
+  select {
+    padding: 0.5rem;
+    background: #1f2b4e;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
   }
 </style>
