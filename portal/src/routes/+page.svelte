@@ -1,11 +1,16 @@
 <script>
   import { mockClasses, mockGovernanceMilestones } from '$lib/mockData';
 
-  // Selected class ID (starts with first class)
   let selectedClassId = mockClasses[0]?.id || '';
-
-  // Reactive: current class object
   $: currentClass = mockClasses.find(cls => cls.id === selectedClassId) || null;
+
+  // Reactive heterogeneity calculations
+  $: entryMin = currentClass?.entryLevels?.length > 0 ? Math.min(...currentClass.entryLevels) : null;
+  $: entryMax = currentClass?.entryLevels?.length > 0 ? Math.max(...currentClass.entryLevels) : null;
+  $: cohortCount = currentClass?.arrivalCohorts ? new Set(currentClass.arrivalCohorts).size : 0;
+  $: heteroLevel = (cohortCount > 2 || (entryMax !== null && entryMax - entryMin > 5)) ? 'high'
+                  : (cohortCount > 1 || (entryMax !== null && entryMax - entryMin > 3)) ? 'medium'
+                  : 'low';
 </script>
 
 <!-- Top Navigation Bar -->
@@ -28,17 +33,14 @@
 
     <!-- Heterogeneity Summary -->
     <div class="heterogeneity">
-      {#if currentClass.entryLevels && currentClass.entryLevels.length > 0}
-        {#let min = Math.min(...currentClass.entryLevels)}
-        {#let max = Math.max(...currentClass.entryLevels)}
-        {#let cohortCount = new Set(currentClass.arrivalCohorts || []).size}
+      {#if entryMin !== null}
         <span class="label">
           Heterogeneity: 
-          <strong class="{cohortCount > 2 || max - min > 5 ? 'high' : cohortCount > 1 || max - min > 3 ? 'medium' : 'low'}">
-            {cohortCount > 2 || max - min > 5 ? 'High' : cohortCount > 1 || max - min > 3 ? 'Medium' : 'Low'}
+          <strong class={heteroLevel}>
+            {heteroLevel === 'high' ? 'High' : heteroLevel === 'medium' ? 'Medium' : 'Low'}
           </strong>
           <span class="detail">
-            (Entry levels {min}–{max} • {cohortCount} cohorts)
+            (Entry levels {entryMin}–{entryMax} • {cohortCount} cohorts)
           </span>
         </span>
 
@@ -47,12 +49,12 @@
           {#each currentClass.entryLevels as level}
             <span 
               class="dot" 
-              style="left: {(level - min) / (max - min || 1) * 100}%; background: {level <= 3 ? '#ff5252' : level <= 6 ? '#ffaa00' : 'var(--accent)'};"
+              style="left: {(level - entryMin) / (entryMax - entryMin || 1) * 100}%; background: {level <= 3 ? '#ff5252' : level <= 6 ? '#ffaa00' : 'var(--accent)'};"
             ></span>
           {/each}
         </div>
       {:else}
-        <span class="label">Heterogeneity: Unknown</span>
+        <span class="label">Heterogeneity: Unknown (no entry data)</span>
       {/if}
     </div>
 
