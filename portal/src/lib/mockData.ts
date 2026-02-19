@@ -1,5 +1,4 @@
 // portal/src/lib/mockData.ts
-
 export const mockGovernanceMilestones = [
   {
     id: 'math-basics-2026Q3',
@@ -23,17 +22,32 @@ export const mockClasses = [
   {
     id: 'class-mixed-refugee',
     name: 'Mixed Entry-Level Group (New Arrivals + Long-term)',
+    studentsCount: 18,
+    onTrackPercent: 62,
+    notes: 'High heterogeneity: 7 new arrivals, 5 long-term, 6 mid-level',
     students: [
       { id: 's1', name: 'Amina', entryLevel: 3, arrivalCohort: '2025Q4-new', masteredSkills: ['ols.math:counting'] },
       { id: 's2', name: 'Jamal', entryLevel: 7, arrivalCohort: 'long-term', masteredSkills: ['ols.math:fractions'] },
-      { id: 's3', name: 'Sara', entryLevel: 2, arrivalCohort: '2026Q1-new', masteredSkills: [] }
+      { id: 's3', name: 'Sara', entryLevel: 2, arrivalCohort: '2026Q1-new', masteredSkills: [] },
+      { id: 's4', name: 'Mohamed', entryLevel: 5, arrivalCohort: 'long-term', masteredSkills: ['ols.math:ratios'] }
     ],
     governanceTargetStatus: { 'ols.math:ratios': 45, 'ols.science:gravity': 20 }
+  },
+  {
+    id: 'class-advanced',
+    name: 'Advanced Learners Group',
+    studentsCount: 12,
+    onTrackPercent: 88,
+    notes: 'Mostly on-track; focus on acceleration',
+    students: [
+      { id: 's5', name: 'Layla', entryLevel: 9, arrivalCohort: 'long-term', masteredSkills: ['ols.math:ratios', 'ols.science:gravity'] }
+    ],
+    governanceTargetStatus: { 'ols.math:ratios': 92, 'ols.science:gravity': 75 }
   }
 ];
 
 export const mockSkills = [
   { id: 'ols.math:ratios', title: 'Ratios & Proportions', difficulty: 4, metaphors: ['weaving', 'farming'] },
-  { id: 'ols.science:gravity', title: 'Gravity & Freefall', difficulty: 3, metaphors: ['drop', 'fall'] },
-  { id: 'ols.math:fractions', title: 'Fractions Basics', difficulty: 3, metaphors: ['rhythm', 'sharing'] }
+  { id: 'ols.math:fractions', title: 'Fractions Basics', difficulty: 3, metaphors: ['rhythm', 'sharing'] },
+  { id: 'ols.science:gravity', title: 'Gravity & Freefall', difficulty: 3, metaphors: ['drop', 'fall'] }
 ];
