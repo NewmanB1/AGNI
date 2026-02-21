@@ -1,18 +1,24 @@
+//src/builders/html.js
 const fs = require('fs');
 const path = require('path');
 const { signContent } = require('../utils/crypto');
 const { ensureDir } = require('../utils/io');
-
-// Async Markdown processor
 const config = require('../config');
 
 async function buildHtml(lessonData, options) {
   console.log(`🌍 Building HTML for Device: ${options.deviceId || 'Unbound (Development Mode)'}`);
 
-  // 1. Process Markdown in each step (async)
+  // ── 1. Stamp dev mode onto lesson data so the runtime can read it ─────────
+  // The runtime must never hardcode DEV_MODE — it reads lesson._devMode only.
+  const runtimeMeta = {
+    ...lessonData,
+    _devMode: options.dev === true   // only true when --dev flag was passed
+  };
+
+  // ── 2. Process Markdown in each step (async) ──────────────────────────────
   console.log("Processing Markdown content asynchronously...");
   const runtimeData = {
-    ...lessonData,
+    ...runtimeMeta,
     steps: await Promise.all(
       (lessonData.steps || []).map(async (step) => {
         let htmlContent = '';
@@ -21,7 +27,7 @@ async function buildHtml(lessonData, options) {
             htmlContent = await config.processMarkdown(step.content);
           } catch (err) {
             console.error(`Markdown failed for step ${step.id}:`, err.message);
-            htmlContent = step.content.replace(/\n/g, '<br>'); // fallback
+            htmlContent = step.content.replace(/\n/g, '<br>');
           }
         }
         return { ...step, htmlContent };
@@ -29,12 +35,12 @@ async function buildHtml(lessonData, options) {
     )
   };
 
-  // 2. Read lesson-specific runtime & styles
+  // ── 3. Read lesson-specific runtime & styles ──────────────────────────────
   const playerJs = fs.readFileSync(path.join(__dirname, '../runtime/player.js'), 'utf8');
-  const styles = fs.readFileSync(path.join(__dirname, '../runtime/style.css'), 'utf8');
+  const styles   = fs.readFileSync(path.join(__dirname, '../runtime/style.css'),  'utf8');
 
-  // 3. Handle shared-runtime.js – only generate if missing or source is newer
-  const outputDir = path.dirname(options.output);
+  // ── 4. Handle shared-runtime.js (write once, reuse across lessons) ────────
+  const outputDir    = path.dirname(options.output);
   const sharedOutput = path.join(outputDir, 'shared-runtime.js');
   const sharedSource = path.join(__dirname, '../runtime/shared-runtime.js');
 
@@ -45,7 +51,7 @@ async function buildHtml(lessonData, options) {
     console.log("Shared runtime missing → generating");
   } else {
     const sourceStat = fs.statSync(sharedSource);
-    const destStat = fs.statSync(sharedOutput);
+    const destStat   = fs.statSync(sharedOutput);
     if (sourceStat.mtimeMs > destStat.mtimeMs) {
       shouldWriteShared = true;
       console.log("Shared runtime source newer → updating");
@@ -61,20 +67,20 @@ async function buildHtml(lessonData, options) {
     console.log(`Shared runtime up-to-date: ${sharedOutput}`);
   }
 
-  // 4. Serialize & sign lesson data only
-  const dataString = JSON.stringify(runtimeData);
-  const signature = signContent(dataString, options.deviceId, options.privateKey);
+  // ── 5. Serialize & sign lesson data ──────────────────────────────────────
+  const dataString    = JSON.stringify(runtimeData);
+  const signature     = signContent(dataString, options.deviceId, options.privateKey);
   const safeDataString = dataString.replace(/<\/script>/gi, '<\\/script>');
 
-  // 5. Lesson-specific script (minimal – relies on shared-runtime.js)
+  // ── 6. Lesson-specific script ─────────────────────────────────────────────
   const lessonScript = `
-    window.LESSON_DATA = ${safeDataString};
-    window.OLS_SIGNATURE = ${JSON.stringify(signature || '')};
-    window.OLS_INTENDED_OWNER = ${JSON.stringify(options.deviceId || '')};
+    window.LESSON_DATA         = ${safeDataString};
+    window.OLS_SIGNATURE       = ${JSON.stringify(signature || '')};
+    window.OLS_INTENDED_OWNER  = ${JSON.stringify(options.deviceId || '')};
 
     ${playerJs}
 
-    // Safety net: hide loading if init fails
+    // Safety net: hide loading if init stalls
     window.addEventListener('load', () => {
       setTimeout(() => {
         const loading = document.getElementById('loading');
@@ -83,7 +89,7 @@ async function buildHtml(lessonData, options) {
     });
   `;
 
-  // 6. Lesson HTML – loads shared-runtime.js from same directory
+  // ── 7. Assemble HTML ──────────────────────────────────────────────────────
   const html = `<!DOCTYPE html>
 <html lang="${lessonData.meta.language || 'en'}">
 <head>
@@ -103,7 +109,7 @@ async function buildHtml(lessonData, options) {
 </body>
 </html>`;
 
-  // 7. Write lesson HTML
+  // ── 8. Write lesson HTML ──────────────────────────────────────────────────
   ensureDir(outputDir);
   fs.writeFileSync(options.output, html);
 
@@ -111,7 +117,7 @@ async function buildHtml(lessonData, options) {
   console.log(`✅ Lesson HTML: ${options.output} (${sizeKB} KB)`);
 
   if (parseFloat(sizeKB) > 500) {
-    console.warn(`⚠️ Lesson HTML exceeds 500KB (${sizeKB} KB)`);
+    console.warn(`⚠️  Lesson HTML exceeds 500KB (${sizeKB} KB)`);
   }
 }
 
