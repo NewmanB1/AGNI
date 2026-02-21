@@ -1,4 +1,5 @@
 version: "1.7.0"
+
 meta:
   identifier: "ols:physics:graph_accel_test_v1"
   title: "Graph Test – Acceleration Over Time"
@@ -37,7 +38,6 @@ steps:
     type: "instruction"
     content: |
       ## Acceleration During Freefall
-
       Look at this graph of acceleration:
 
       ![Acceleration Graph](assets/accel-graph.png)
@@ -51,7 +51,7 @@ steps:
 
       The relationship can be modeled as:
 
-      $$     a(t) = g - k \cdot t     $$
+      $$a(t) = g - k \cdot t$$
     expected_duration: "PT2M"
     weight: 0.6
 
@@ -59,11 +59,20 @@ steps:
     type: "hardware_trigger"
     sensor: "accelerometer"
     threshold: "freefall > 0.5s"
-    feedback: "vibration:success"
+    feedback: "vibration:success_pattern"
     content: |
       ## Try It Yourself
-      Drop the phone and watch the acceleration drop to near zero.
+      Drop the phone gently onto a soft surface and watch the acceleration drop to near zero.
     expected_duration: "PT2M"
     max_attempts: 3
     weight: 0.8
-    on_fail: "skip"
+    on_fail: "skip_to:completion"
+
+  - id: "completion"
+    type: "completion"
+    content: |
+      ## Well done! 🎉
+      You have seen how acceleration changes during freefall.
+      The graph matches what your phone just measured.
+    expected_duration: "PT30S"
+    weight: 0.05
