@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 380" width="600" height="380" style="background:#1a1a2e; font-family: sans-serif;">
+
+  <!-- Title -->
+  <text x="300" y="24" text-anchor="middle" fill="#ffffff" font-size="15">Acceleration During Freefall</text>
+
+  <!-- Grid lines -->
+  <!-- Y gridlines at 0, 2, 4, 6, 8, 9.8 — chart area: x 70–570, y 30–320, y_max=10.5 -->
+  <!-- y_px = 320 - (val/10.5)*290 -->
+  <line x1="70" y1="320" x2="570" y2="320" stroke="#2a2a4a" stroke-width="1"/> <!-- 0   -->
+  <line x1="70" y1="265" x2="570" y2="265" stroke="#2a2a4a" stroke-width="1"/> <!-- 2   -->
+  <line x1="70" y1="210" x2="570" y2="210" stroke="#2a2a4a" stroke-width="1"/> <!-- 4   -->
+  <line x1="70" y1="155" x2="570" y2="155" stroke="#2a2a4a" stroke-width="1"/> <!-- 6   -->
+  <line x1="70" y1="100" x2="570" y2="100" stroke="#2a2a4a" stroke-width="1"/> <!-- 8   -->
+  <line x1="70" y1="49"  x2="570" y2="49"  stroke="#2a2a4a" stroke-width="1"/> <!-- 9.8 -->
+
+  <!-- X gridlines at 0.0, 0.5, 1.0, 1.5 — x_max=2.0, x_px = 70 + (val/2.0)*500 -->
+  <line x1="70"  y1="30" x2="70"  y2="320" stroke="#2a2a4a" stroke-width="1"/> <!-- 0.0 -->
+  <line x1="195" y1="30" x2="195" y2="320" stroke="#2a2a4a" stroke-width="1"/> <!-- 0.5 -->
+  <line x1="320" y1="30" x2="320" y2="320" stroke="#2a2a4a" stroke-width="1"/> <!-- 1.0 -->
+  <line x1="445" y1="30" x2="445" y2="320" stroke="#2a2a4a" stroke-width="1"/> <!-- 1.5 -->
+
+  <!-- Axes -->
+  <line x1="70" y1="30"  x2="70"  y2="320" stroke="#aaaacc" stroke-width="2"/>
+  <line x1="70" y1="320" x2="570" y2="320" stroke="#aaaacc" stroke-width="2"/>
+
+  <!-- Y axis labels -->
+  <text x="58" y="324" text-anchor="end" fill="#8888aa" font-size="12">0</text>
+  <text x="58" y="269" text-anchor="end" fill="#8888aa" font-size="12">2</text>
+  <text x="58" y="214" text-anchor="end" fill="#8888aa" font-size="12">4</text>
+  <text x="58" y="159" text-anchor="end" fill="#8888aa" font-size="12">6</text>
+  <text x="58" y="104" text-anchor="end" fill="#8888aa" font-size="12">8</text>
+  <text x="58" y="53"  text-anchor="end" fill="#8888aa" font-size="12">9.8</text>
+
+  <!-- X axis labels -->
+  <text x="70"  y="338" text-anchor="middle" fill="#8888aa" font-size="12">0.0</text>
+  <text x="195" y="338" text-anchor="middle" fill="#8888aa" font-size="12">0.5</text>
+  <text x="320" y="338" text-anchor="middle" fill="#8888aa" font-size="12">1.0</text>
+  <text x="445" y="338" text-anchor="middle" fill="#8888aa" font-size="12">1.5</text>
+
+  <!-- Axis titles -->
+  <text x="18" y="175" text-anchor="middle" fill="#ccccee" font-size="12" transform="rotate(-90,18,175)">Accel (m/s²)</text>
+  <text x="320" y="362" text-anchor="middle" fill="#ccccee" font-size="12">Time (s)</text>
+
+  <!-- Data line: (0.0,9.8)→(0.5,9.8)→(1.0,0.2)→(1.5,0.1) -->
+  <!-- Points: (70,49), (195,49), (320,314), (445,317) -->
+  <polyline
+    points="70,49 195,49 320,314 445,317"
+    fill="none"
+    stroke="#ff6b35"
+    stroke-width="3"
+    stroke-linejoin="round"/>
+
+  <!-- Data point dots -->
+  <circle cx="70"  cy="49"  r="5" fill="#ff6b35" stroke="#ffffff" stroke-width="1.5"/>
+  <circle cx="195" cy="49"  r="5" fill="#ff6b35" stroke="#ffffff" stroke-width="1.5"/>
+  <circle cx="320" cy="314" r="5" fill="#ff6b35" stroke="#ffffff" stroke-width="1.5"/>
+  <circle cx="445" cy="317" r="5" fill="#ff6b35" stroke="#ffffff" stroke-width="1.5"/>
+
+  <!-- Data value labels -->
+  <text x="78"  y="44"  fill="#ffffff" font-size="11">9.8</text>
+  <text x="203" y="44"  fill="#ffffff" font-size="11">9.8</text>
+  <text x="328" y="311" fill="#ffffff" font-size="11">0.2</text>
+  <text x="453" y="314" fill="#ffffff" font-size="11">0.1</text>
+
+  <!-- Freefall annotation -->
+  <line x1="320" y1="304" x2="320" y2="270" stroke="#ffcc00" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="328" y="265" fill="#ffcc00" font-size="11">FREEFALL</text>
+
+</svg>
