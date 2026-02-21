@@ -24,9 +24,11 @@ async function run() {
     --output-dir=<path>      Output directory (required for native)
     --device-id=<uuid>       Bind output to a specific device
     --private-key=<path>     Path to Ed25519 private key for signing
+    --dev                    Enable developer mode (sensor logging, emulator controls)
 
   Examples:
     node src/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html
+    node src/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html --dev
     node src/cli.js lessons/gravity.yaml --format=native --output-dir=dist/native-gravity
     `);
     process.exit(0);
@@ -39,15 +41,17 @@ async function run() {
     output: null,
     outputDir: null,
     deviceId: null,
-    privateKey: null
+    privateKey: null,
+    dev: false
   };
 
-  args.forEach((arg, i) => {
-    if (arg.startsWith('--format='))     params.format   = arg.split('=')[1];
+  args.forEach((arg) => {
+    if (arg.startsWith('--format='))          params.format    = arg.split('=')[1];
     else if (arg.startsWith('--output-dir=')) params.outputDir = arg.split('=')[1];
     else if (arg.startsWith('--output='))     params.output    = arg.split('=')[1];
     else if (arg.startsWith('--device-id='))  params.deviceId  = arg.split('=')[1];
     else if (arg.startsWith('--private-key=')) params.privateKey = arg.split('=')[1];
+    else if (arg === '--dev')                 params.dev       = true;
     else if (!arg.startsWith('-') && !params.inputFile) {
       params.inputFile = arg;
     }
@@ -62,6 +66,10 @@ async function run() {
   if (!fs.existsSync(params.inputFile)) {
     console.error(`Error: File not found: ${params.inputFile}`);
     process.exit(1);
+  }
+
+  if (params.dev) {
+    console.log('⚠️  Developer mode enabled — not for distribution');
   }
 
   // ── Load and parse YAML ─────────────────────────────────────────────────
@@ -83,7 +91,6 @@ async function run() {
     data.inferredFeatures = inferred;
   } catch (err) {
     console.warn(`[Warning] Feature inference failed: ${err.message}`);
-    // Continue anyway
   }
 
   // ── Basic validation ────────────────────────────────────────────────────
