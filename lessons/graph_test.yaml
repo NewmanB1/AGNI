@@ -40,7 +40,7 @@ steps:
       ## Acceleration During Freefall
       Look at this graph of acceleration:
 
-      ![Acceleration Graph](assets/accel-graph.png)
+      ![Acceleration Graph](assets/accel-graph.svg)
 
       | Time (s) | Acceleration (m/s²) | Notes             |
       |----------|----------------------|-------------------|
