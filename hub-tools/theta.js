@@ -5,18 +5,15 @@
 // Applies Governance scheduling, jurisdictional curriculum graphs, and
 // dynamically queues unmastered prerequisites. Includes Gzip for edge APIs.
 //
-// Changes from v1.7.4:
-//   - rebuildLessonIndex() now reads lesson-ir.json sidecar files written by
-//     the compiler (html.js v1.8.0) instead of scraping window.LESSON_DATA
-//     from compiled HTML with a regex. The regex approach was fragile
-//     (broke on any whitespace variation in the HTML) and lossy (only
-//     ontology fields were extracted; inferredFeatures were discarded).
-//   - Sidecar fields used: identifier, slug, title, difficulty, language,
-//     ontology.requires, ontology.provides, inferredFeatures.
-//   - Falls back to HTML scraping if no sidecar exists, so lessons compiled
-//     before v1.8.0 continue to work without recompilation. The fallback
-//     path logs a notice so operators know which lessons need rebuilding.
-//   - Version bumped to 1.8.0.
+// Changes from v1.8.0 (Phase 2.5 integration):
+//   - require() LMS engine from src/engine/dist at startup (graceful degradation
+//     if tsc has not been run yet — theta scheduling continues unaffected)
+//   - rebuildLessonIndex() seeds all lessons into the LMS engine after index build
+//   - Added HTTP routes:
+//       GET  /api/lms/select          — bandit lesson selection from theta candidates
+//       POST /api/lms/observation     — record completed lesson, update all models
+//       GET  /api/lms/status          — engine diagnostic snapshot
+//       POST /api/lms/federation/merge — merge remote bandit summary
 // -----------------------------------------------------------------------------
 
 'use strict';
@@ -44,6 +41,22 @@ const MASTERY_THRESHOLD    = 0.6;
 const MIN_CONFIDENCE       = 0.5;
 const MIN_LOCAL_SAMPLE_SIZE = parseInt(process.env.AGNI_MIN_LOCAL_SAMPLE || '40');
 const MIN_LOCAL_EDGE_COUNT  = parseInt(process.env.AGNI_MIN_LOCAL_EDGES  || '5');
+
+// -- LMS engine (Phase 2.5) --------------------------------------------------
+// Loaded lazily so theta.js degrades gracefully if tsc has not been run yet.
+// Missing engine = degraded mode: theta scheduling works, bandit selection
+// is skipped and /api/lms/* routes return 503.
+const ENGINE_PATH = path.join(__dirname, '../src/engine/dist/engine/index.js');
+let lmsEngine = null;
+try {
+  lmsEngine = require(ENGINE_PATH);
+  console.log('[THETA] LMS engine loaded:', JSON.stringify(lmsEngine.getStatus()));
+} catch (err) {
+  console.warn(
+    '[THETA] LMS engine not available (run tsc to compile):', err.message,
+    '\n[THETA] Degraded mode: theta scheduling active, bandit selection disabled'
+  );
+}
 
 // -- Per-student cache -------------------------------------------------------
 const thetaCache = new Map(); // pseudoId -> { lessons, computedAt, masteryMtime }
@@ -313,10 +326,9 @@ function getLessonsSortedByTheta(pseudoId) {
  *   HTML scrape path and log a notice so operators know which lessons need
  *   rebuilding.
  *
- * The fallback path preserves backward compatibility for contributors who
- * have lessons compiled against an older version of the builder. It extracts
- * the same fields as before (ontology only) so theta continues to work, but
- * inferredFeatures will be absent for those lessons.
+ * Phase 2.5: after the index is written to disk, seeds all lessons into
+ * the LMS engine so the bandit knows about every theta-eligible lesson.
+ * Seeding is idempotent — safe to call on every full rebuild.
  *
  * @returns {void}  writes LESSON_INDEX (lesson_index.json) to DATA_DIR
  */
@@ -406,10 +418,51 @@ function rebuildLessonIndex() {
   fs.writeFileSync(LESSON_INDEX, JSON.stringify(index, null, 2));
   console.log('[THETA] Lesson index rebuilt:', index.length, 'lesson(s)',
     '(' + sidecarCount + ' from sidecar, ' + fallbackCount + ' from HTML fallback)');
+
+  // ── Phase 2.5: seed lesson index into LMS engine ───────────────────────────
+  // Every lesson with at least one provided skill is registered in the bandit.
+  // difficulty: prefers inferredFeatures value (more accurate than the top-level
+  // field which may come from the HTML scrape fallback). Falls back to entry
+  // difficulty, then to 2 (middle of the 1–5 scale) if neither is present.
+  // skill: primary skill from skillsProvided[0] — used as the Rasch probe id.
+  // Seeding is idempotent; lessons already known to the engine are skipped.
+  if (lmsEngine) {
+    const seedEntries = index
+      .filter(entry => entry.skillsProvided.length > 0)
+      .map(entry => ({
+        lessonId:   entry.lessonId,
+        difficulty: (entry.inferredFeatures && typeof entry.inferredFeatures.difficulty === 'number')
+          ? entry.inferredFeatures.difficulty
+          : (typeof entry.difficulty === 'number' ? entry.difficulty : 2),
+        skill: entry.skillsProvided[0].skill
+      }));
+
+    try {
+      lmsEngine.seedLessons(seedEntries);
+    } catch (err) {
+      // Seeding failure must not abort the index write — theta scheduling
+      // is more critical than bandit seeding for continued hub operation.
+      console.error('[THETA] LMS engine seeding failed:', err.message);
+    }
+  }
 }
 
 
 // -- HTTP API with Gzip -------------------------------------------------------
+
+/**
+ * Read the full request body as a string. Returns a Promise<string>.
+ * Used by POST routes that need a JSON body.
+ */
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end',  () => resolve(body));
+    req.on('error', reject);
+  });
+}
+
 function startApi() {
   const server = http.createServer((req, res) => {
     const sendResponse = (statusCode, payload) => {
@@ -430,7 +483,11 @@ function startApi() {
     const [urlPath, queryStr] = req.url.split('?');
     const qs = Object.fromEntries(new URLSearchParams(queryStr || ''));
 
-    if (req.method !== 'GET') return sendResponse(405, { error: 'Method not allowed' });
+    // ── Theta routes (unchanged) ─────────────────────────────────────────────
+
+    if (req.method !== 'GET' && !urlPath.startsWith('/api/lms')) {
+      return sendResponse(405, { error: 'Method not allowed' });
+    }
 
     if (urlPath === '/api/theta') {
       if (!qs.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
@@ -451,6 +508,95 @@ function startApi() {
     }
 
     if (urlPath === '/api/theta/graph') return sendResponse(200, getEffectiveGraphWeights());
+
+    // ── LMS routes (Phase 2.5) ───────────────────────────────────────────────
+
+    // GET /api/lms/select?pseudoId=<id>&candidates=<id1>,<id2>,...
+    //
+    // Called after /api/theta to ask the bandit which of the theta-eligible
+    // lessons to serve next. `candidates` must be a comma-separated list of
+    // lessonIds already filtered by theta's BFS prerequisite check — the
+    // bandit scores only within that set and never overrides prerequisite rules.
+    //
+    // Response includes the selected lessonId and the student's current Rasch
+    // ability estimate (useful for logging and adaptive UI).
+    if (req.method === 'GET' && urlPath === '/api/lms/select') {
+      if (!lmsEngine) return sendResponse(503, { error: 'LMS engine not available — run tsc' });
+      if (!qs.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
+      const candidates = qs.candidates
+        ? qs.candidates.split(',').map(s => s.trim()).filter(Boolean)
+        : [];
+      if (candidates.length === 0) return sendResponse(400, { error: 'candidates required' });
+      try {
+        const selected = lmsEngine.selectBestLesson(qs.pseudoId, candidates);
+        const ability  = lmsEngine.getStudentAbility(qs.pseudoId);
+        return sendResponse(200, {
+          pseudoId:   qs.pseudoId,
+          selected:   selected,
+          ability:    ability,
+          candidates: candidates.length
+        });
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    // POST /api/lms/observation
+    // Body: { studentId, lessonId, probeResults: [{ probeId, correct }] }
+    //
+    // Called after a student completes a lesson and post-lesson probe results
+    // are available. Updates Rasch ability, embeddings, and the bandit posterior
+    // in one atomic operation, then persists state to lms_state.json.
+    if (req.method === 'POST' && urlPath === '/api/lms/observation') {
+      if (!lmsEngine) return sendResponse(503, { error: 'LMS engine not available — run tsc' });
+      readBody(req).then(body => {
+        try {
+          const payload = JSON.parse(body);
+          if (!payload.studentId || !payload.lessonId || !Array.isArray(payload.probeResults)) {
+            return sendResponse(400, { error: 'studentId, lessonId, probeResults required' });
+          }
+          lmsEngine.recordObservation(payload.studentId, payload.lessonId, payload.probeResults);
+          sendResponse(200, { ok: true });
+        } catch (err) {
+          sendResponse(500, { error: err.message });
+        }
+      }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
+
+    // GET /api/lms/status
+    //
+    // Returns an engine diagnostic snapshot: student count, lesson count,
+    // observation count, embedding dim, state file path. Safe to expose on
+    // an internal admin endpoint.
+    if (req.method === 'GET' && urlPath === '/api/lms/status') {
+      if (!lmsEngine) return sendResponse(503, { error: 'LMS engine not available — run tsc' });
+      return sendResponse(200, lmsEngine.getStatus());
+    }
+
+    // POST /api/lms/federation/merge
+    // Body: BanditSummary { mean, precision, sampleSize }
+    //
+    // Called by a regional hub to push a merged bandit summary down to the
+    // village hub. Uses precision-weighted combination so both local and remote
+    // posteriors contribute proportionally to their observation counts.
+    // See federation.ts mergeBanditSummaries() for the full derivation.
+    if (req.method === 'POST' && urlPath === '/api/lms/federation/merge') {
+      if (!lmsEngine) return sendResponse(503, { error: 'LMS engine not available — run tsc' });
+      readBody(req).then(body => {
+        try {
+          const remote = JSON.parse(body);
+          if (!remote.mean || !remote.precision || typeof remote.sampleSize !== 'number') {
+            return sendResponse(400, { error: 'mean, precision, sampleSize required' });
+          }
+          lmsEngine.mergeRemoteSummary(remote);
+          sendResponse(200, { ok: true, status: lmsEngine.getStatus() });
+        } catch (err) {
+          sendResponse(500, { error: err.message });
+        }
+      }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
 
     sendResponse(404, { error: 'Not found' });
   });
