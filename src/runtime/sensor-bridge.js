@@ -1,9 +1,14 @@
 // src/runtime/sensor-bridge.js
-// AGNI Sensor Bridge  v1.7.0
+// AGNI Sensor Bridge  v1.7.1
 //
 // Connects physical device sensors to AGNI_SHARED.publishSensorReading.
 // Handles:
-//   - iOS 13+ DeviceMotion permission request (requires user gesture)
+//   - iOS 9–12: DeviceMotion events do not fire until the page has received
+//     a user touch interaction. There is no permission API — the gesture
+//     requirement is implicit and silent. Without an explicit user gesture,
+//     sensor steps will wait forever on a freshly loaded lesson.
+//   - iOS 13+: DeviceMotionEvent.requestPermission() must be called from
+//     an explicit user gesture handler. A programmatic call silently fails.
 //   - DeviceMotion event decomposition into named sensor streams
 //   - Old Android (4-6) axis convention and frequency differences
 //   - Gyroscope / rotation rate via DeviceMotion
@@ -21,6 +26,8 @@
 //   gyro.magnitude                     — √(rx²+ry²+rz²) rotation rate
 //
 // All readings: { sensorId, value, timestamp }
+//
+// Target platform: iOS 9+, Android 4+. No ES6, no arrow functions, no const/let.
 // ─────────────────────────────────────────────────────────────────────────────
 
 (function (global) {
@@ -33,19 +40,64 @@
   var log = S.log;
 
   // ── State ──────────────────────────────────────────────────────────────────
-  var _motionActive      = false;
-  var _orientationActive = false;
-  var _motionHandler     = null;
+  var _motionActive       = false;
+  var _orientationActive  = false;
+  var _motionHandler      = null;
   var _orientationHandler = null;
-  var _simInterval       = null;
-  var _permissionGranted = false;
+  var _simInterval        = null;
+  var _permissionGranted  = false;
 
   // Old Android: axes are reported with opposite signs and lower precision
   var IS_OLD_ANDROID = S.device.isOldAndroid;
 
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 1. DeviceMotion — primary accelerometer + gyroscope source
+  // 1. needsPermissionGesture
+  //
+  // Two distinct platform constraints require an explicit labeled button tap
+  // before sensors can be activated — do NOT call start() programmatically
+  // at lesson load if this flag is true:
+  //
+  //   iOS 9–12:  DeviceMotion events are silently suppressed until the page
+  //              has received a real user touch. There is no API to detect
+  //              this — it just never fires. An explicit button tap guarantees
+  //              the gesture has occurred before start() is called.
+  //
+  //   iOS 13+:   DeviceMotionEvent.requestPermission() exists and must be
+  //              called from within a user gesture event handler. Calling it
+  //              programmatically (e.g. in initPlayer()) silently fails and
+  //              the permission dialog never appears.
+  //
+  // The button must be a discrete labeled element — not a full-screen tap
+  // target — so that other UI elements on the same screen cannot accidentally
+  // satisfy the gesture requirement.
+  //
+  // On Android and desktop this is always false; start() can be called freely.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  var needsPermissionGesture = (function () {
+    var ua = navigator.userAgent || '';
+
+    // iOS 13+: explicit permission API present
+    if (typeof DeviceMotionEvent !== 'undefined' &&
+        typeof DeviceMotionEvent.requestPermission === 'function') {
+      return true;
+    }
+
+    // iOS 9–12: no permission API, but gesture is still required.
+    // Detected via WebKit user agent on a non-desktop platform.
+    // iPad on iOS 13+ in desktop mode reports as desktop Safari —
+    // that edge case is accepted as a known limitation.
+    if (/iP(hone|od|ad)/.test(ua) && /WebKit/.test(ua) && !/CriOS/.test(ua)) {
+      return true;
+    }
+
+    return false;
+  }());
+
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 2. DeviceMotion — primary accelerometer + gyroscope source
   // ═══════════════════════════════════════════════════════════════════════════
 
   function _onMotion(e) {
@@ -92,7 +144,9 @@
 
     if (DEV_MODE && S.device.isLowEnd) {
       // Reduced logging on low-end devices to avoid slowing the UI thread
-      if (Math.random() < 0.05) log.debug('motion sample accel.total:', (S.lastSensorValues.get('accel.total') || 0).toFixed(2));
+      if (Math.random() < 0.05) {
+        log.debug('motion sample accel.total:', (S.lastSensorValues.get('accel.total') || 0).toFixed(2));
+      }
     }
   }
 
@@ -109,17 +163,18 @@
 
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 2. Permission handling (iOS 13+)
+  // 3. Permission handling (iOS 13+)
   // ═══════════════════════════════════════════════════════════════════════════
 
   /**
    * Request device motion permission on iOS 13+.
    * Must be called from a user gesture (button tap etc.).
-   * On Android and desktop this resolves immediately.
+   * On iOS 9-12 and Android this resolves immediately — the gesture
+   * requirement on those platforms is satisfied by the button tap that
+   * called start(), not by a permission dialog.
    * @returns {Promise<boolean>}  true if permission granted or not needed
    */
   function requestPermission() {
-    // iOS 13+ requires explicit permission
     if (typeof DeviceMotionEvent !== 'undefined' &&
         typeof DeviceMotionEvent.requestPermission === 'function') {
       return DeviceMotionEvent.requestPermission().then(function (state) {
@@ -133,20 +188,21 @@
         return false;
       });
     }
-    // Android / desktop — permission not required
+    // Android / desktop / iOS 9-12 — no permission dialog needed
     _permissionGranted = true;
     return Promise.resolve(true);
   }
 
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 3. Start / stop
+  // 4. Start / stop
   // ═══════════════════════════════════════════════════════════════════════════
 
   /**
    * Start listening to device sensors.
-   * Returns a Promise<boolean> indicating whether hardware is available.
-   * Calling start() more than once is safe (idempotent).
+   * Must be called from within a user gesture handler on iOS (any version) —
+   * see needsPermissionGesture above. Safe to call multiple times (idempotent).
+   * @returns {Promise<boolean>}  true if hardware listeners attached successfully
    */
   function start() {
     if (_motionActive) return Promise.resolve(true);
@@ -187,8 +243,8 @@
     }
     if (_orientationHandler) {
       global.removeEventListener('deviceorientation', _orientationHandler);
-      _orientationHandler  = null;
-      _orientationActive   = false;
+      _orientationHandler = null;
+      _orientationActive  = false;
     }
     log.debug('Sensor bridge stopped');
   }
@@ -198,42 +254,41 @@
 
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 4. Phyphox bridge
+  // 5. Phyphox bridge
   //    When a lesson wants higher-precision or additional sensors not available
   //    via DeviceMotion (e.g. barometer, GPS, proximity), the student can run
   //    phyphox alongside the lesson. Phyphox publishes readings via postMessage.
   //
-  //    Phyphox message format (sent by a phyphox experiment page):
+  //    Phyphox message format:
   //    { type: 'phyphox', sensor: 'acc', x: 1.2, y: -3.4, z: 9.8, t: 1234567890 }
   // ═══════════════════════════════════════════════════════════════════════════
 
-  var _phyphoxActive = false;
+  var _phyphoxActive  = false;
   var _phyphoxHandler = null;
 
-  // Maps phyphox sensor names to AGNI sensor IDs
   var PHYPHOX_MAP = {
-    'acc':         function (d) {
+    'acc': function (d) {
       var now = d.t ? d.t * 1000 : Date.now();
       _pub('accel.x',         d.x || 0, now);
       _pub('accel.y',         d.y || 0, now);
       _pub('accel.z',         d.z || 0, now);
-      _pub('accel.magnitude', Math.sqrt((d.x||0)**2 + (d.y||0)**2 + (d.z||0)**2), now);
+      _pub('accel.magnitude', Math.sqrt((d.x||0)*(d.x||0) + (d.y||0)*(d.y||0) + (d.z||0)*(d.z||0)), now);
     },
-    'gyr':         function (d) {
+    'gyr': function (d) {
       var now = d.t ? d.t * 1000 : Date.now();
       _pub('gyro.x', d.x || 0, now);
       _pub('gyro.y', d.y || 0, now);
       _pub('gyro.z', d.z || 0, now);
     },
-    'mag':         function (d) {
+    'mag': function (d) {
       var now = d.t ? d.t * 1000 : Date.now();
       _pub('mag.x', d.x || 0, now);
       _pub('mag.y', d.y || 0, now);
       _pub('mag.z', d.z || 0, now);
-      _pub('mag.magnitude', Math.sqrt((d.x||0)**2 + (d.y||0)**2 + (d.z||0)**2), now);
+      _pub('mag.magnitude', Math.sqrt((d.x||0)*(d.x||0) + (d.y||0)*(d.y||0) + (d.z||0)*(d.z||0)), now);
     },
-    'light':       function (d) { _pub('light', d.value || d.lux || 0, d.t ? d.t*1000 : Date.now()); },
-    'pressure':    function (d) { _pub('pressure', d.value || d.p || 0, d.t ? d.t*1000 : Date.now()); },
+    'light':       function (d) { _pub('light',       d.value || d.lux  || 0, d.t ? d.t*1000 : Date.now()); },
+    'pressure':    function (d) { _pub('pressure',    d.value || d.p    || 0, d.t ? d.t*1000 : Date.now()); },
     'temperature': function (d) { _pub('temperature', d.value || d.temp || 0, d.t ? d.t*1000 : Date.now()); }
   };
 
@@ -245,11 +300,10 @@
       if (handler) {
         handler(data);
       } else {
-        // Unknown sensor: publish as-is under phyphox.<sensor>
         _pub('phyphox.' + data.sensor, data.value || 0, Date.now());
       }
     } catch (e) {
-      // Malformed message — ignore
+      // Malformed message — ignore silently
     }
   }
 
@@ -275,9 +329,13 @@
 
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 5. Simulation mode (dev / test without hardware)
+  // 6. Simulation mode (dev / test without hardware)
   //    Publishes synthetic readings so factories and the threshold evaluator
-  //    can be exercised on a desktop browser.
+  //    can be exercised on a desktop browser without a physical device.
+  //
+  //    The emulator buttons in player.js call startSimulation() with the
+  //    appropriate pattern for the current step — they do NOT call routeStep()
+  //    directly, so the full evaluation path is always exercised in dev mode.
   // ═══════════════════════════════════════════════════════════════════════════
 
   /**
@@ -285,18 +343,18 @@
    * @param {object} [simOpts]
    *   pattern  'still'|'shake'|'freefall'|'tilt'|'custom'  (default 'still')
    *   hz       readings per second (default 20)
-   *   fn       custom function(t) → { sensorId, value } array
+   *   fn       custom function(t) → [{ sensorId, value }] array
    */
   function startSimulation(simOpts) {
-    if (_simInterval) return;
-    simOpts = simOpts || {};
-    var hz = simOpts.hz || 20;
-    var pattern = simOpts.pattern || 'still';
+    if (_simInterval) stopSimulation();
+    simOpts  = simOpts || {};
+    var hz       = simOpts.hz      || 20;
+    var pattern  = simOpts.pattern || 'still';
     var customFn = simOpts.fn;
-    var t0 = Date.now();
+    var t0       = Date.now();
 
     _simInterval = setInterval(function () {
-      var t = (Date.now() - t0) / 1000;
+      var t   = (Date.now() - t0) / 1000;
       var now = Date.now();
       var readings;
 
@@ -314,7 +372,7 @@
       } else if (pattern === 'freefall') {
         // Oscillate between freefall (near 0) and held (near 9.8)
         var cycle = Math.floor(t / 2) % 2 === 0;
-        var val = cycle ? 0.3 + Math.random()*0.4 : 9.6 + Math.random()*0.4;
+        var val   = cycle ? 0.3 + Math.random()*0.4 : 9.6 + Math.random()*0.4;
         readings = [
           { sensorId: 'accel.total',   value: val },
           { sensorId: 'accel.total.z', value: val }
@@ -325,7 +383,7 @@
           { sensorId: 'rotation.beta',  value: 15 * Math.cos(t * 0.5) }
         ];
       } else {
-        // still — phone sitting on table
+        // still — phone sitting flat on a surface, accel.z ≈ 9.8
         readings = [
           { sensorId: 'accel.x',         value: (Math.random()-0.5)*0.1 },
           { sensorId: 'accel.y',         value: (Math.random()-0.5)*0.1 },
@@ -353,22 +411,32 @@
 
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 6. Attach to AGNI_SHARED and register
+  // 7. Attach to AGNI_SHARED and register
   // ═══════════════════════════════════════════════════════════════════════════
 
   S.sensorBridge = {
-    start:           start,
-    stop:            stop,
-    isActive:        isActive,
+    // ── Capability flag ────────────────────────────────────────────────────
+    // Read this before calling start(). If true, start() must be called from
+    // within a user gesture handler (button onclick). See section 1 above.
+    needsPermissionGesture: needsPermissionGesture,
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────
+    start:             start,
+    stop:              stop,
+    isActive:          isActive,
     requestPermission: requestPermission,
-    startPhyphox:    startPhyphox,
-    stopPhyphox:     stopPhyphox,
+
+    // ── Phyphox bridge ─────────────────────────────────────────────────────
+    startPhyphox:  startPhyphox,
+    stopPhyphox:   stopPhyphox,
+
+    // ── Simulation (dev only) ──────────────────────────────────────────────
     startSimulation: startSimulation,
     stopSimulation:  stopSimulation
   };
 
-  S.registerModule('sensor-bridge', '1.7.0');
+  S.registerModule('sensor-bridge', '1.7.1');
 
-  if (DEV_MODE) log.debug('sensor-bridge v1.7.0 loaded');
+  if (DEV_MODE) log.debug('sensor-bridge v1.7.1 loaded');
 
 }(window));
