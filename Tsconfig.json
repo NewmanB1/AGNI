@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    // ── Output ───────────────────────────────────────────────────────────────
+    // CommonJS output so theta.js can require() the compiled engine without
+    // any ESM interop shim. Node 14 is the minimum target for the village hub.
+    "target": "ES2019",
+    "module": "commonjs",
+    "outDir": "src/engine/dist",
+    "rootDir": "src",
+
+    // ── Type checking ─────────────────────────────────────────────────────────
+    // Strict mode catches the class of shape/null bugs this codebase is
+    // most exposed to (matrix dimension mismatches, missing state fields).
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+
+    // ── Module resolution ─────────────────────────────────────────────────────
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+
+    // ── Source maps ───────────────────────────────────────────────────────────
+    // Inline source maps so Node stack traces point at .ts lines, not .js.
+    // Useful for hub operators reading crash logs without access to the source tree.
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "src/engine/dist"]
+}
