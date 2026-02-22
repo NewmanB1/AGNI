@@ -1,5 +1,5 @@
 // src/runtime/player.js
-// AGNI Lesson Player  v1.8.0
+// AGNI Lesson Player  v1.9.3
 //
 // The lesson-specific runtime layer. Orchestrates the lesson lifecycle:
 //   gate evaluation → sensor init → step rendering → routing → completion
@@ -22,27 +22,50 @@
 //     renderCompletion()         — renders lesson complete screen
 //     addEmulatorControls()      — dev-only sensor simulation controls
 //
+// Changes from v1.9.2:
+//   - Fix: startup log now correctly reports v1.9.2 (was still v1.9.1).
+//   - Perf: added getElementsByTagName('table').length guard before calling
+//     tableRenderer.renderAll(). On Android 4–6 WebView, getElementsByTagName
+//     returns a live HTMLCollection in O(1) and is cheaper than entering
+//     renderAll()'s DOM walk on the majority of steps that contain no tables.
+//     renderAll() still owns its own internal no-op guard — this is an outer
+//     fast-path, not a correctness change.
+//
+// Changes from v1.9.1 → v1.9.2:
+//   - Fix: startup log correctly reports v1.9.1 (was v1.9.0).
+//   - Fix: showPermissionPrompt() resolves Promise<boolean>. Hardware failure
+//     now shows inline error + 'Try again' + 'Continue without sensor' rather
+//     than silently proceeding into broken sensor state.
+//
+// Changes from v1.9.0 → v1.9.1:
+//   - Fix: vibration pattern names normalized to lowercase before lookup.
+//   - Fix: DEV_MODE warning when inferPrimarySensor() falls back to accel.total.
+//
+// Changes from v1.8.0 → v1.9.0:
+//   - Phase 2e: renderStep() calls S.mountStepVisual(specContainer, step.spec).
+//   - Phase 2f: renderStep() calls S.tableRenderer.renderAll(container).
+//
 // Dependencies (loaded by html.js or factory-loader.js before player.js):
-//   shared-runtime.js  — AGNI_SHARED: pub/sub, vibration, device detection
-//   sensor-bridge.js   — AGNI_SHARED.sensorBridge: hardware sensor access
+//   shared-runtime.js      — AGNI_SHARED: pub/sub, vibration, device detection
+//   sensor-bridge.js       — AGNI_SHARED.sensorBridge: hardware sensor access
 //   threshold-evaluator.js — AGNI_SHARED.thresholdEvaluator: threshold parsing
 //
 // Target platform: iOS 9+, Android 4+. No ES6+, no arrow functions,
 // no const/let, no async/await — use explicit Promise chains throughout.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── DEV_MODE ────────────────────────────────────────────────────────────────
+// ── DEV_MODE ──────────────────────────────────────────────────────────────────
 // Single source of truth: window.LESSON_DATA._devMode, set by the compiler
 // when --dev flag is passed. Resolved in initPlayer() after LESSON_DATA is
 // guaranteed available. Default false is safe — never hardcode true here.
 var DEV_MODE = false;
 
-// ── Lesson state ─────────────────────────────────────────────────────────────
+// ── Lesson state ──────────────────────────────────────────────────────────────
 var lesson           = null;   // full LESSON_DATA object
 var currentStepIndex = 0;      // index of the currently displayed step
-var stepIndex        = null;   // Map<step_id, index> — built once in initPlayer()
+var stepIndex        = null;   // plain object { step_id: index } — built once in initPlayer()
 
-// ── Active threshold cancel handle ───────────────────────────────────────────
+// ── Active threshold cancel handle ────────────────────────────────────────────
 // Holds the cancel function returned by thresholdEvaluator.watch() for the
 // currently active hardware_trigger step. Null when no hardware_trigger is
 // active. Must be called and nulled before any step transition so that stale
@@ -58,14 +81,14 @@ function _vibrate(pattern) {
   }
 }
 
-console.log('[PLAYER] player.js v1.8.0 loaded – shared available:', !!window.AGNI_SHARED);
+console.log('[PLAYER] player.js v1.9.3 loaded – shared available:', !!window.AGNI_SHARED);
 
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BUSINESS LAYER
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ── Step index ───────────────────────────────────────────────────────────────
+// ── Step index ────────────────────────────────────────────────────────────────
 
 /**
  * Builds a plain-object lookup table { step_id: index } from the lesson steps array.
@@ -90,7 +113,7 @@ function buildStepIndex(steps) {
 }
 
 
-// ── Directive resolution ─────────────────────────────────────────────────────
+// ── Directive resolution ──────────────────────────────────────────────────────
 
 /**
  * Parses a branching directive string into a target step id.
@@ -125,7 +148,7 @@ function resolveDirective(directive) {
 }
 
 
-// ── Step routing ─────────────────────────────────────────────────────────────
+// ── Step routing ──────────────────────────────────────────────────────────────
 
 /**
  * Resolves a step outcome to a target step and advances the lesson.
@@ -133,16 +156,15 @@ function resolveDirective(directive) {
  * This is the single point of navigation control. Nothing else should
  * directly manipulate currentStepIndex — all transitions flow here.
  *
+ * Phase 2e teardown: destroyStepVisual() is called here before navigation.
+ * mountStepVisual() in renderStep() also tears down before mounting a new
+ * visual — double protection for the initial render path where routeStep()
+ * is not called.
+ *
  * Routing resolution order:
  *   1. Outcome-specific directive on the step (on_success / on_fail)
  *   2. Next step by index
  *   3. Lesson complete (no next step)
- *
- * Supported outcome values: 'success', 'fail', 'skip'
- *
- * External redirects (ols: URIs) are treated as lesson completion — the
- * player logs the intended redirect but cannot follow it. Cross-lesson
- * routing is the village hub's responsibility.
  *
  * @param {object} step     the step that just completed
  * @param {string} outcome  'success' | 'fail' | 'skip'
@@ -165,14 +187,16 @@ function routeStep(step, outcome) {
     window.AGNI_SHARED.clearSensorSubscriptions();
   }
 
-  // Tear down any active visual (SVG factory etc.) before re-rendering
+  // Tear down any active visual (SVG stage, RAF loop, sensor bindings).
+  // Primary teardown path for Phase 2e — mountStepVisual() also tears down
+  // on mount, so both the transition path and initial render path are covered.
   if (window.AGNI_SHARED && window.AGNI_SHARED.destroyStepVisual) {
     window.AGNI_SHARED.destroyStepVisual();
   }
 
   if (DEV_MODE) console.log('[ROUTER] step:', (step && step.id) || '?', 'outcome:', outcome);
 
-  // ── Resolve directive ──────────────────────────────────────────────────────
+  // ── Resolve directive ────────────────────────────────────────────────────
   var directive = null;
   if (outcome === 'fail'    && step && step.on_fail)    directive = step.on_fail;
   if (outcome === 'success' && step && step.on_success) directive = step.on_success;
@@ -188,9 +212,9 @@ function routeStep(step, outcome) {
 
   // Named target — look up by id
   if (targetId) {
-    var targetIndex = (stepIndex && stepIndex[targetId] !== undefined) ? stepIndex[targetId] : undefined;
-    if (targetIndex !== undefined) {
-      currentStepIndex = targetIndex;
+    var targetIdx = stepIndex ? stepIndex[targetId] : undefined;
+    if (targetIdx !== undefined) {
+      currentStepIndex = targetIdx;
       renderStep(lesson.steps[currentStepIndex]);
       return;
     }
@@ -227,9 +251,8 @@ function routeStep(step, outcome) {
  *   'vibration:<pattern_name>'  e.g. 'vibration:success_pattern'
  *
  * If threshold-evaluator.js is not loaded (factory not yet cached on device),
- * this logs a warning and does not set up evaluation — the step will display
- * its content but sensor triggering will not work. This is a graceful
- * degradation, not a crash.
+ * this logs a warning and does not set up evaluation — graceful degradation,
+ * not a crash.
  *
  * max_attempts tracking is not yet implemented — noted for Phase 5.
  *
@@ -247,9 +270,6 @@ function evaluateHardwareTrigger(step) {
     return;
   }
 
-  // Infer primary sensor from threshold string if step.sensor is generic
-  // ('accelerometer') or absent. threshold-evaluator.watch() needs a specific
-  // sensor id to subscribe to (e.g. 'accel.total', 'accel.z').
   var primarySensor = inferPrimarySensor(step.threshold, step.sensor);
 
   if (DEV_MODE) {
@@ -263,10 +283,11 @@ function evaluateHardwareTrigger(step) {
     function onMet() {
       _activeCancel = null;
 
-      // Parse and trigger feedback before routing
       if (step.feedback) {
         var fbMatch = step.feedback.match(/^vibration:(.+)$/i);
-        if (fbMatch) _vibrate(fbMatch[1]);
+        // Normalize to lowercase: pattern keys in shared-runtime.js are always
+        // lowercase. Author YAML may use any case (e.g. 'Vibration:Success_Pattern').
+        if (fbMatch) _vibrate(fbMatch[1].toLowerCase());
       }
 
       // Small delay so the student feels the feedback before the UI changes
@@ -293,19 +314,23 @@ function evaluateHardwareTrigger(step) {
  * @returns {string}               specific sensor id
  */
 function inferPrimarySensor(thresholdStr, stepSensor) {
-  // Named keywords map to their driving sensor
   if (/\bfreefall\b/i.test(thresholdStr)) return 'accel.total';
   if (/\bsteady\b/i.test(thresholdStr))   return 'accel.total';
 
-  // Extract first sensorId-looking token (word chars and dots, not a keyword)
   var match = thresholdStr.match(/\b([a-z_][a-z0-9_.]*)\s*(?:>=|<=|==|!=|>|<)/i);
   if (match && match[1]) return match[1];
 
-  // Fall back to generic category mapping
   if (stepSensor === 'accelerometer') return 'accel.total';
   if (stepSensor === 'gyroscope')     return 'gyro.magnitude';
   if (stepSensor === 'orientation')   return 'rotation.gamma';
 
+  // No match found — falling back to accel.total. In DEV_MODE, warn so authors
+  // know to add an explicit step.sensor or a recognisable threshold expression.
+  if (DEV_MODE) {
+    console.warn('[PLAYER] inferPrimarySensor: could not infer sensor from threshold "' +
+      thresholdStr + '" — falling back to accel.total. ' +
+      'Add step.sensor or use a named sensor in the threshold expression.');
+  }
   return 'accel.total';
 }
 
@@ -325,10 +350,6 @@ function inferPrimarySensor(thresholdStr, stepSensor) {
  *
  * retry_delay (ISO 8601 duration) is parsed but not enforced in this
  * implementation — noted for Phase 5 alongside max_attempts.
- *
- * Cross-lesson redirects (ols: URIs) cannot be followed by the player —
- * that is the village hub's responsibility. renderGateRedirect() informs
- * the student which prerequisite to complete.
  *
  * @param  {object} lesson   full lesson data object
  * @returns {Promise<boolean>}  true if gate passes or absent, false if halted
@@ -351,7 +372,7 @@ function evaluateGate(lesson) {
 }
 
 
-// ── Emulator controls (dev only) ─────────────────────────────────────────────
+// ── Emulator controls (dev only) ──────────────────────────────────────────────
 
 /**
  * Adds developer emulator controls to the bottom of the screen.
@@ -376,7 +397,6 @@ function evaluateGate(lesson) {
 function addEmulatorControls() {
   if (!DEV_MODE) return;
 
-  // Remove any previous emulator controls
   var existing = document.getElementById('agni-emulator-controls');
   if (existing) existing.parentNode.removeChild(existing);
 
@@ -398,7 +418,7 @@ function addEmulatorControls() {
   // Label so it's obvious in the UI this is a dev overlay
   var label = document.createElement('div');
   label.style.cssText = 'width:100%;font-size:0.7rem;color:#ffcc00;opacity:0.8;';
-  label.textContent = '⚙ DEV MODE';
+  label.textContent = '\u2699 DEV MODE';
   ctr.appendChild(label);
 
   // hardware_trigger: simulate button drives the full evaluation path
@@ -467,8 +487,7 @@ function inferSimulationPattern(thresholdStr) {
  * TODO (Phase 4): implement Ed25519 verification using the Web Crypto
  * SubtleCrypto API. On iOS 9 SubtleCrypto is available under the
  * window.crypto.subtle prefix but Ed25519 support is limited — a polyfill
- * or pure-JS fallback will be needed. Track at:
- * https://github.com/NewmanB1/AGNI/issues/XXX
+ * or pure-JS fallback will be needed.
  *
  * In dev mode, verification is skipped entirely to avoid blocking development.
  *
@@ -484,7 +503,7 @@ function verifyIntegrity() {
 }
 
 
-// ── Sensor permission prompt ─────────────────────────────────────────────────
+// ── Sensor permission prompt ──────────────────────────────────────────────────
 
 /**
  * Renders a pre-lesson sensor activation screen with an explicit labeled button.
@@ -510,17 +529,21 @@ function verifyIntegrity() {
  * so that other UI elements on the same screen cannot accidentally satisfy
  * the iOS gesture requirement.
  *
- * Resolves after the user taps and sensorBridge.start() completes.
- * Called by initPlayer() only when sensorBridge.needsPermissionGesture is
- * true. Never called from renderStep() — sensor lifecycle is the business
- * layer's responsibility, not the view layer's.
+ * Resolves with true if sensors started successfully, false if hardware
+ * failed or sensorBridge is unavailable. The caller (initPlayer) uses
+ * this value to decide whether sensor-dependent steps can run.
  *
- * @returns {Promise<void>}
+ * On failure: displays an inline error message and a 'Try again' button
+ * so the student can retry without reloading the page. Does not resolve
+ * false until the student explicitly dismisses (via a 'Continue anyway'
+ * button), keeping the lesson from advancing silently into broken state.
+ *
+ * @returns {Promise<boolean>}  true if sensors available, false otherwise
  */
 function showPermissionPrompt() {
   return new Promise(function (resolve) {
     var app = document.getElementById('app');
-    if (!app) { resolve(); return; }
+    if (!app) { resolve(false); return; }
     app.innerHTML = '';
 
     var container = document.createElement('div');
@@ -534,19 +557,62 @@ function showPermissionPrompt() {
     msg.textContent = 'This lesson uses your phone\'s motion sensor to detect movement.';
     container.appendChild(msg);
 
+    // Feedback line — hidden until a start attempt is made
+    var feedback = document.createElement('p');
+    feedback.style.cssText = 'color:#ffcc00;min-height:1.5rem;';
+    container.appendChild(feedback);
+
     var btn = document.createElement('button');
     btn.className = 'btn btn-primary';
     btn.textContent = 'Allow motion sensor';
     btn.onclick = function () {
+      btn.disabled = true;
+      btn.textContent = 'Starting\u2026';
+      feedback.textContent = '';
+
       var S = window.AGNI_SHARED;
-      if (S && S.sensorBridge) {
-        S.sensorBridge.start().then(function (available) {
-          if (!available) showSensorWarning();
-          resolve();
-        });
-      } else {
-        resolve();
+      if (!S || !S.sensorBridge) {
+        showSensorWarning();
+        resolve(false);
+        return;
       }
+
+      S.sensorBridge.start().then(function (available) {
+        if (available) {
+          resolve(true);
+          return;
+        }
+
+        // Sensor hardware unavailable — show error and options.
+        // Student can retry (hardware may have been slow) or continue
+        // without sensors (sensor steps will show a warning rather than trigger).
+        showSensorWarning();
+        feedback.textContent = 'Motion sensor not available on this device.';
+        btn.disabled = false;
+        btn.textContent = 'Try again';
+
+        var skipBtn = document.createElement('button');
+        skipBtn.className = 'btn btn-primary';
+        skipBtn.style.marginTop = '0.5rem';
+        skipBtn.textContent = 'Continue without sensor';
+        skipBtn.onclick = function () { resolve(false); };
+        container.appendChild(skipBtn);
+
+      }).catch(function (err) {
+        // start() rejected — unexpected, but guard it
+        if (DEV_MODE) console.warn('[PLAYER] sensorBridge.start() rejected:', err);
+        showSensorWarning();
+        feedback.textContent = 'Sensor error. You can continue without motion detection.';
+        btn.disabled = false;
+        btn.textContent = 'Try again';
+
+        var skipBtn = document.createElement('button');
+        skipBtn.className = 'btn btn-primary';
+        skipBtn.style.marginTop = '0.5rem';
+        skipBtn.textContent = 'Continue without sensor';
+        skipBtn.onclick = function () { resolve(false); };
+        container.appendChild(skipBtn);
+      });
     };
     container.appendChild(btn);
 
@@ -587,7 +653,7 @@ function showSensorWarning() {
 }
 
 
-// ── Step rendering ────────────────────────────────────────────────────────────
+// ── Step rendering ─────────────────────────────────────────────────────────────
 
 /**
  * Renders a lesson step into the #app container.
@@ -603,6 +669,23 @@ function showSensorWarning() {
  *   completion       — handed off to renderCompletion()
  *   (unknown)        — renders content with a continue button as fallback
  *
+ * Phase 2f — Table renderer:
+ *   After htmlContent injection, calls S.tableRenderer.renderAll(container)
+ *   if tableRenderer is available. No-ops on steps with no tables — the call
+ *   is unconditional so any step can contain a table without special flags.
+ *   tableRenderer.js documents this as its expected call site.
+ *
+ * Phase 2e — SVG spec rendering:
+ *   After htmlContent injection (and table rendering), if step.spec is present,
+ *   calls S.mountStepVisual(specContainer, step.spec). mountStepVisual() tears
+ *   down any previously mounted stage first (RAF cancel + sensor unsub), then
+ *   delegates to AGNI_SVG.fromSpec() via shared-runtime.js.
+ *
+ *   The spec container is resolved from a <div class="agni-spec-container">
+ *   inside htmlContent if the lesson author placed one, otherwise a new div
+ *   is appended after the content block. Authors can control spec placement
+ *   within step content by including the container in their Markdown.
+ *
  * @param {object} step   a step object from lesson.steps
  */
 function renderStep(step) {
@@ -615,19 +698,58 @@ function renderStep(step) {
   var container = document.createElement('div');
   container.className = 'step-container';
 
-  // ── Title ──────────────────────────────────────────────────────────────────
+  // ── Title ────────────────────────────────────────────────────────────────
   var h2 = document.createElement('h2');
   var titleMatch = step.content ? step.content.match(/^##\s*(.+)$/m) : null;
   h2.textContent = titleMatch ? titleMatch[1] : (step.id || 'Step');
   container.appendChild(h2);
 
-  // ── Content ────────────────────────────────────────────────────────────────
+  // ── Content ──────────────────────────────────────────────────────────────
   var content = document.createElement('div');
   content.className = 'step-content';
   content.innerHTML = step.htmlContent || (step.content || '').replace(/\n/g, '<br>');
   container.appendChild(content);
 
-  // ── Step-type-specific UI ──────────────────────────────────────────────────
+  // ── Phase 2f: Table renderer ─────────────────────────────────────────────
+  // Called after content injection. tableRenderer.renderAll() scans the
+  // container for <table> elements and enhances them semantically (adds
+  // role, scope, responsive wrappers).
+  //
+  // Guard: check for table presence before calling renderAll(). On Android
+  // 4–6 WebView, getElementsByTagName returns a live HTMLCollection in O(1)
+  // and is cheaper than entering renderAll()'s own DOM walk when no tables
+  // are present. Most steps have no tables, so this guard pays for itself.
+  var S = window.AGNI_SHARED;
+  if (S && S.tableRenderer && typeof S.tableRenderer.renderAll === 'function') {
+    if (container.getElementsByTagName('table').length > 0) {
+      try {
+        S.tableRenderer.renderAll(container);
+      } catch (e) {
+        console.warn('[PLAYER] tableRenderer.renderAll failed:', e.message);
+      }
+    }
+  }
+
+  // ── Phase 2e: SVG spec rendering ─────────────────────────────────────────
+  // mountStepVisual() tears down any previously mounted stage before mounting.
+  // Returns a Promise — we fire-and-forget but log failures in dev mode.
+  // The spec container is either author-placed inside htmlContent (preferred)
+  // or created here and appended after the content block.
+  if (step.spec && S && typeof S.mountStepVisual === 'function') {
+    var specContainer = container.querySelector('.agni-spec-container');
+    if (!specContainer) {
+      specContainer = document.createElement('div');
+      specContainer.className = 'agni-spec-container';
+      container.appendChild(specContainer);
+    }
+    S.mountStepVisual(specContainer, step.spec).then(function () {
+      if (DEV_MODE) console.log('[PLAYER] spec mounted for step:', step.id || step.type);
+    }).catch(function (e) {
+      console.warn('[PLAYER] mountStepVisual failed:', e.message);
+    });
+  }
+
+  // ── Step-type-specific UI ────────────────────────────────────────────────
   if (step.type === 'completion') {
     app.appendChild(container);
     renderCompletion();
@@ -635,8 +757,6 @@ function renderStep(step) {
   }
 
   if (step.type === 'hardware_trigger') {
-    // Waiting indicator — shown when sensors are active
-    var S = window.AGNI_SHARED;
     var bridgeActive = S && S.sensorBridge && S.sensorBridge.isActive();
 
     if (bridgeActive) {
@@ -666,7 +786,6 @@ function renderStep(step) {
           setTimeout(function () { routeStep(step, 'success'); }, 1400);
         } else {
           // Incorrect: stay on step (max_attempts tracking — Phase 5)
-          // If on_fail directive exists, it will be followed on next incorrect
           if (step.on_fail) {
             setTimeout(function () { routeStep(step, 'fail'); }, 1400);
           }
@@ -718,7 +837,7 @@ function renderCompletion() {
 }
 
 
-// ── Gate quiz ─────────────────────────────────────────────────────────────────
+// ── Gate quiz ──────────────────────────────────────────────────────────────────
 
 /**
  * Renders the gate prerequisite quiz and returns a Promise<'pass'|'fail'>.
@@ -763,14 +882,14 @@ function renderGateQuiz(gate) {
     btn.className = 'btn btn-primary';
     btn.textContent = 'Check answer';
     btn.onclick = function () {
-      var answer = input.value.trim().toLowerCase();
+      var answer   = input.value.trim().toLowerCase();
       var expected = (gate.expected_answer || '').toString().trim().toLowerCase();
       if (answer === expected) {
         _vibrate('short');
         resolve('pass');
       } else {
         _vibrate('error');
-        feedback.textContent = 'Not quite — try again.';
+        feedback.textContent = 'Not quite \u2014 try again.';
         input.value = '';
         input.focus();
         // on_fail routing handled by evaluateGate() — renderGateQuiz resolves 'fail'
@@ -854,10 +973,7 @@ function renderGateRedirect(gate) {
 function initPlayer() {
   lesson = window.LESSON_DATA;
 
-  // ── 1. Resolve DEV_MODE — single source of truth ───────────────────────────
-  // DEV_MODE is set by the compiler via LESSON_DATA._devMode (--dev flag).
-  // It is never hardcoded. All other runtime files read from LESSON_DATA
-  // or from AGNI_SHARED.log which respects the same flag.
+  // ── 1. Resolve DEV_MODE — single source of truth ─────────────────────────
   DEV_MODE = !!(lesson && lesson._devMode);
   if (DEV_MODE) console.log('[DEV] Developer mode active');
 
@@ -870,19 +986,16 @@ function initPlayer() {
     return;
   }
 
-  // ── 2. Build step id lookup map ────────────────────────────────────────────
-  // Built once here — all navigation uses this map, never scans steps array.
+  // ── 2. Build step id lookup map ───────────────────────────────────────────
   stepIndex = buildStepIndex(lesson.steps);
 
-  // ── 3. Load lesson vibration patterns ──────────────────────────────────────
+  // ── 3. Load lesson vibration patterns ────────────────────────────────────
   var S = window.AGNI_SHARED;
   if (S && S.loadLessonVibrationPatterns) {
     S.loadLessonVibrationPatterns(lesson);
   }
 
-  // ── 4. Gate evaluation ─────────────────────────────────────────────────────
-  // Must complete before sensor init and step rendering.
-  // Returns a Promise — use .then() chain, not async/await (iOS 9 target).
+  // ── 4. Gate evaluation ────────────────────────────────────────────────────
   var gatePromise = lesson.gate
     ? evaluateGate(lesson)
     : Promise.resolve(true);
@@ -890,14 +1003,9 @@ function initPlayer() {
   gatePromise.then(function (gatePassed) {
     if (!gatePassed) return;   // renderGateRedirect() already shown
 
-    // ── 5. Sensor init ─────────────────────────────────────────────────────
-    // Sensor initialisation happens here, in the business layer, before any
-    // step renders. renderStep() must never own sensor state or call
-    // sensorBridge directly.
-    //
+    // ── 5. Sensor init ────────────────────────────────────────────────────
     // On iOS (any version) we cannot call sensorBridge.start() programmatically
-    // — it must be triggered by an explicit labeled user gesture. On all other
-    // platforms start() can be called directly.
+    // — it must be triggered by an explicit labeled user gesture.
     //
     // We check lesson.inferredFeatures.flags.has_sensors if available;
     // otherwise we check step types directly as a fallback for lessons
@@ -910,7 +1018,17 @@ function initPlayer() {
     var sensorPromise;
     if (hasSensors && S && S.sensorBridge) {
       if (S.sensorBridge.needsPermissionGesture) {
-        sensorPromise = showPermissionPrompt();
+        sensorPromise = showPermissionPrompt().then(function (available) {
+          // showPermissionPrompt() now resolves with the boolean from
+          // sensorBridge.start(). false means hardware unavailable — the
+          // prompt already showed a warning and a 'Continue without sensor'
+          // button, so no further UI action is needed here.
+          // In DEV_MODE, log so it's visible in console even if UI is dismissed.
+          if (!available && DEV_MODE) {
+            console.warn('[PLAYER] Sensor permission prompt: hardware unavailable.' +
+              ' Sensor steps will show a warning instead of triggering.');
+          }
+        });
       } else {
         sensorPromise = S.sensorBridge.start().then(function (available) {
           if (!available) showSensorWarning();
