@@ -1,3 +1,6 @@
+
+Copy
+
 // hub-tools/theta.js
 // AGNI Theta Engine v1.8.0 – with shared skill-graph cache, pre-filtered lessons & BFS cycle guard
 //
@@ -6,8 +9,8 @@
 // dynamically queues unmastered prerequisites. Includes Gzip for edge APIs.
 //
 // Changes from v1.8.0 (Phase 2.5 integration):
-//   - require() LMS engine from src/engine/dist at startup (graceful degradation
-//     if tsc has not been run yet — theta scheduling continues unaffected)
+//   - require() LMS engine from src/engine/index.js at startup (graceful
+//     degradation if engine files are missing — theta scheduling continues)
 //   - rebuildLessonIndex() seeds all lessons into the LMS engine after index build
 //   - Added HTTP routes:
 //       GET  /api/lms/select          — bandit lesson selection from theta candidates
@@ -43,17 +46,17 @@ const MIN_LOCAL_SAMPLE_SIZE = parseInt(process.env.AGNI_MIN_LOCAL_SAMPLE || '40'
 const MIN_LOCAL_EDGE_COUNT  = parseInt(process.env.AGNI_MIN_LOCAL_EDGES  || '5');
 
 // -- LMS engine (Phase 2.5) --------------------------------------------------
-// Loaded lazily so theta.js degrades gracefully if tsc has not been run yet.
-// Missing engine = degraded mode: theta scheduling works, bandit selection
-// is skipped and /api/lms/* routes return 503.
-const ENGINE_PATH = path.join(__dirname, '../src/engine/dist/engine/index.js');
+// Loaded lazily so theta.js degrades gracefully if the engine files are
+// missing. Missing engine = degraded mode: theta scheduling works, bandit
+// selection is skipped and /api/lms/* routes return 503.
+const ENGINE_PATH = path.join(__dirname, '../src/engine/index.js');
 let lmsEngine = null;
 try {
   lmsEngine = require(ENGINE_PATH);
   console.log('[THETA] LMS engine loaded:', JSON.stringify(lmsEngine.getStatus()));
 } catch (err) {
   console.warn(
-    '[THETA] LMS engine not available (run tsc to compile):', err.message,
+    '[THETA] LMS engine not available:', err.message,
     '\n[THETA] Degraded mode: theta scheduling active, bandit selection disabled'
   );
 }
@@ -521,7 +524,7 @@ function startApi() {
     // Response includes the selected lessonId and the student's current Rasch
     // ability estimate (useful for logging and adaptive UI).
     if (req.method === 'GET' && urlPath === '/api/lms/select') {
-      if (!lmsEngine) return sendResponse(503, { error: 'LMS engine not available — run tsc' });
+      if (!lmsEngine) return sendResponse(503, { error: 'LMS engine not available' });
       if (!qs.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
       const candidates = qs.candidates
         ? qs.candidates.split(',').map(s => s.trim()).filter(Boolean)
@@ -548,7 +551,7 @@ function startApi() {
     // are available. Updates Rasch ability, embeddings, and the bandit posterior
     // in one atomic operation, then persists state to lms_state.json.
     if (req.method === 'POST' && urlPath === '/api/lms/observation') {
-      if (!lmsEngine) return sendResponse(503, { error: 'LMS engine not available — run tsc' });
+      if (!lmsEngine) return sendResponse(503, { error: 'LMS engine not available' });
       readBody(req).then(body => {
         try {
           const payload = JSON.parse(body);
@@ -570,7 +573,7 @@ function startApi() {
     // observation count, embedding dim, state file path. Safe to expose on
     // an internal admin endpoint.
     if (req.method === 'GET' && urlPath === '/api/lms/status') {
-      if (!lmsEngine) return sendResponse(503, { error: 'LMS engine not available — run tsc' });
+      if (!lmsEngine) return sendResponse(503, { error: 'LMS engine not available' });
       return sendResponse(200, lmsEngine.getStatus());
     }
 
@@ -582,7 +585,7 @@ function startApi() {
     // posteriors contribute proportionally to their observation counts.
     // See federation.ts mergeBanditSummaries() for the full derivation.
     if (req.method === 'POST' && urlPath === '/api/lms/federation/merge') {
-      if (!lmsEngine) return sendResponse(503, { error: 'LMS engine not available — run tsc' });
+      if (!lmsEngine) return sendResponse(503, { error: 'LMS engine not available' });
       readBody(req).then(body => {
         try {
           const remote = JSON.parse(body);
