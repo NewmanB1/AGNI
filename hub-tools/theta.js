@@ -1,6 +1,3 @@
-
-Copy
-
 // hub-tools/theta.js
 // AGNI Theta Engine v1.8.0 – with shared skill-graph cache, pre-filtered lessons & BFS cycle guard
 //
@@ -611,7 +608,24 @@ function startApi() {
 // -- Startup -----------------------------------------------------------------
 if (require.main === module) {
   rebuildLessonIndex();
-  startApi();
+  const server = startApi();
+
+  // Attach hub-transform lesson delivery routes (Phase 3).
+  // Provides GET /lessons/:slug, GET /factories/:file, GET /katex/:file,
+  // GET /manifest.json, GET /sw.js on the same port as the theta API.
+  // Gracefully skips if hub-transform.js is missing.
+  const HUB_TRANSFORM_PATH = path.join(__dirname, '../server/hub-transform.js');
+  try {
+    const hubTransform = require(HUB_TRANSFORM_PATH);
+    hubTransform.attachRoutes(server, {
+      dev:        process.env.NODE_ENV !== 'production',
+      deviceId:   null,
+      privateKey: null
+    });
+  } catch (err) {
+    console.warn('[THETA] hub-transform not available:', err.message,
+      '\n[THETA] /lessons/, /factories/, /katex/ routes disabled');
+  }
 }
 
 module.exports = {
