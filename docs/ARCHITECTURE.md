@@ -1,6 +1,6 @@
-# 🏗️ Open Lesson Standard (OLS): System Architecture v2.3
-> **Draft status:** Updated from v2.2 to reflect Phase 3 completion.
-> Sections marked `[DRAFT NOTE]` are changes that need editorial review before finalising.
+# 🏗️ Open Lesson Standard (OLS): System Architecture v2.1
+> **Draft status:** Updated from v2.0 to reflect implementation reality as of Phase 2 completion.
+> Sections marked `[DRAFT NOTE]` are changes from v2.0 that need editorial review before finalising.
 
 ---
 
@@ -16,6 +16,10 @@ generated Just-in-Time (JIT) at the edge — the Village Hub.
 ### Core Design Constraints
 
 - **Hardware:** Android 4.0+, <2GB RAM, intermittent power.
+  `[DRAFT NOTE: v2.0 said Android 6.0+. Implementation targets Android 4.0+ throughout —
+  Map/Set avoided in hot paths, explicit Promise chains instead of async/await, no ES6+
+  syntax anywhere. This is a hard constraint that affects every JS compatibility decision.
+  Update to 4.0+ unless there is a policy reason to restrict to 6.0+.]`
 - **Network:** 100% Offline capability. Intermittent "Village Hub" updates via Satellite/LoRa/USB/SD.
 - **Input:** Haptic/Sensor-first (Accelerometer, Vibration) + Touch.
 - **Trust:** Hub-and-Spoke Distribution for content (security), Mesh for signaling (interaction).
@@ -46,20 +50,18 @@ They reference them or use parameters.
 - **Images:** `image: "assets/physics/earth_diagram.png"`
 - **SVGs:** Parameter-based factory calls (see SVG Factory Pattern below)
 
-#### SVG Factory Pattern
+#### SVG Factory Pattern (v2.1)
 
-The hub maintains a shared factory system cached on each edge device via `factory-loader.js`.
+`[DRAFT NOTE: v2.0 described a single shared.js as the factory library. The implementation
+has split this into two distinct files with different responsibilities:]`
+
+The hub maintains a shared factory system cached on each edge device via Service Worker.
 Lessons only send parameters — the device generates visuals locally from cached code.
 
 **Implementation (as built):**
-- `factory-loader.js` — Asset bootstrap. Inlined into lesson HTML. Reads
-  `LESSON_DATA.requires.factories`, fetches each file from the hub cache (Cache API first,
-  hub fetch fallback), and executes them in dependency order. Exposes `AGNI_LOADER`.
 - `shared-runtime.js` — Runtime utilities: pub/sub event system, vibration patterns,
   device detection, sensor subscription management, visual mounting lifecycle
-  (`mountStepVisual` / `destroyStepVisual`). Always the first file the loader fetches.
-- `sensor-bridge.js` — Hardware sensor abstraction (DeviceMotion iOS/Android). Cached asset
-  loaded by the factory loader. Must execute after `shared-runtime.js` and before `svg-stage.js`.
+  (`mountStepVisual` / `destroyStepVisual`)
 - `svg-stage.js` — Spec-driven visual rendering. Translates a declarative `step.spec`
   object into a live SVG stage via `AGNI_SVG.fromSpec()`. Handles RAF loop, sensor
   bindings owned by the stage, and teardown.
@@ -77,15 +79,6 @@ Example lesson YAML:
 
 At render time, `svg-stage.js` (cached on the device) generates and animates the SVG
 locally from the spec parameters.
-
-**Runtime load order** (enforced by `factory-loader.js`):
-1. `factory-loader.js` — inline, executes first
-2. `shared-runtime.js` — always fetched first by loader (AGNI_SHARED)
-3. `sensor-bridge.js` — fetched before stage; attaches sensor streams to AGNI_SHARED
-4. `svg-stage.js` — binds sensors via `AGNI_SHARED.subscribeToSensor()`
-5. `svg-factories*.js` — factory functions attached to `AGNI_SVG`
-6. `svg-registry.js` — `fromSpec()` dispatch; always last in SVG chain
-7. `table-renderer.js` — only if lesson has tables and visuals
 
 Result: After first lesson, new lessons are tiny (no duplicated code), and bandwidth is saved.
 
@@ -107,39 +100,32 @@ agni-core/
 │   │   └── buildLessonIR.js      # Canonical IR layer — single source of truth for all builders
 │   ├── utils/
 │   │   ├── featureInference.js   # Build-time feature inference from lesson YAML
-│   │   ├── katex-css-builder.js  # Splits katex.min.css into per-lesson subset files
 │   │   ├── crypto.js             # Ed25519 signing & device binding
 │   │   └── io.js                 # File system & asset hydration
 │   ├── builders/
 │   │   ├── html.js               # Strategy A: The "Universal" SPA (HTML + sidecar)
 │   │   └── native.js             # Strategy B: The "Efficient" Native Bundle [Phase 6]
-│   ├── runtime/                  # The player engine (compiled into lesson HTML)
-│   │   ├── player.js             # Core logic (state machine, sensors, routing)
-│   │   ├── style.css             # High-contrast UI
-│   │   ├── factory-loader.js     # Inlined: cache-first asset bootstrap (AGNI_LOADER)
-│   │   ├── shared-runtime.js     # Cached: pub/sub, vibration, device detection, visual lifecycle
-│   │   ├── sensor-bridge.js      # Cached: hardware sensor abstraction (iOS/Android motion)
-│   │   └── svg-stage.js          # Cached: spec-driven SVG factory + stage system
-│   └── engine/                   # LMS adaptive engine (hub-side, Node.js only)
-│       ├── index.js              # Engine entry point — state persistence, public API
-│       ├── types.js              # JSDoc type definitions (LMSState, BanditSummary, etc.)
-│       ├── math.js               # Pure math utilities (Cholesky, invertSPD, sampleMVN)
-│       ├── rasch.js              # 1PL IRT ability estimation (Newton-Raphson MAP)
-│       ├── embeddings.js         # Online matrix factorization (student × lesson vectors)
-│       ├── thompson.js           # Linear Thompson Sampling bandit
-│       └── federation.js         # Precision-weighted Bayesian merge across hubs
+│   └── runtime/                  # The player engine (compiled into lesson HTML)
+│       ├── player.js             # Core logic (state machine, sensors, routing)
+│       ├── style.css             # High-contrast UI
+│       ├── shared-runtime.js     # Cached: pub/sub, vibration, device detection, visual lifecycle
+│       ├── sensor-bridge.js      # Hardware sensor abstraction (iOS/Android motion)
+│       └── svg-stage.js          # Cached: spec-driven SVG factory + stage system
 │
 ├── hub-tools/
-│   └── theta.js                  # Adaptive scheduling engine (skill graph, MLC, lesson index,
-│                                 # LMS engine integration — /api/lms/* routes)
+│   └── theta.js                  # Adaptive scheduling engine (skill graph, MLC, lesson index)
 │
-└── server/                       # [Phase 3 — implemented]
-    ├── hub-transform.js          # On-demand YAML → PWA compilation + /factories/ serving
-    ├── sw.js                     # Service Worker: cache-first factories, network-first lessons
-    └── manifest.json             # PWA manifest (name, icons, display, theme)
+└── server/                       # [Phase 3 — not yet implemented]
+    ├── hub-transform.js          # YAML → PWA/JSON transformation
+    ├── pwa-shell.html            # PWA entry point template
+    ├── sw.js                     # Service Worker for caching
+    └── manifest.json             # PWA manifest
 ```
 
-#### The IR Layer (Phase 2)
+`[DRAFT NOTE: v2.0 file tree did not include compiler/, hub-tools/, or the runtime split.
+The server/ directory remains accurate as Phase 3 scope — not yet built.]`
+
+#### The IR Layer (new in Phase 2)
 
 `buildLessonIR.js` is the canonical intermediate representation layer. All builders receive
 a fully enriched IR rather than raw YAML. The IR contains:
@@ -147,72 +133,11 @@ a fully enriched IR rather than raw YAML. The IR contains:
 - Pre-rendered HTML for each step (Markdown processed at build time — no parsing cost at runtime)
 - `inferredFeatures` — full feature profile (difficulty, VARK, Bloom ceiling, sensor flags,
   factory manifest, KaTeX asset list)
-- `requires.factories` — ordered factory dependency list read by `factory-loader.js` at runtime.
-  Built by `html.js` from `inferredFeatures.factoryManifest` with `shared-runtime.js` always
-  prepended first. `sensor-bridge.js` is included whenever the lesson has visuals or sensor steps.
 - `ontology` — skill requires/provides for the theta scheduling engine
 - Compiler stamps (`_compiledAt`, `_schemaVersion`, `_devMode`, `metadata_source`)
 
 The IR builder also writes a `lesson-ir.json` sidecar alongside each compiled lesson HTML.
 The theta engine reads this file for its lesson index (see Section 7).
-
-#### The Factory Loader (Phase 3)
-
-`factory-loader.js` is inlined into lesson HTML as the first script. It is the bootstrap for
-all runtime assets and must execute before `LESSON_DATA` is assigned and before `player.js` runs.
-
-**Cache-first strategy:**
-1. Check Cache API for versioned factory file (cache key: `file@version`)
-2. If missing → fetch from village hub (`/factories/<file>`) → write to Cache API → execute
-3. If hub unreachable → show offline banner with tap-to-retry
-4. On connectivity return → `retryQueued()` re-fetches missing files and re-inits the player
-
-**Hub URL resolution order:**
-1. `LESSON_DATA._hubUrl` (compiled in by author)
-2. `window.AGNI_HUB` (set by PWA install or local config)
-3. Same origin as the lesson file (sneakernet folder delivery)
-4. Offline fallback with queue
-
-**`AGNI_LOADER` API:**
-- `loadDependencies(lessonData)` — loads all files in `requires.factories` in declared order;
-  always loads `shared-runtime.js` before `Promise.all()` fires on the rest
-- `register(factoryId, version)` — called by each factory file on execution
-- `isAvailable(factoryId)` — check if a factory function is ready on `AGNI_SVG`
-- `listCached()`, `evict(file, version)`, `clearCache()` — cache management for device info screen
-- `retryQueued()` — retry failed loads after connectivity returns
-
-#### The KaTeX CSS Builder (Phase 3)
-
-`katex-css-builder.js` splits `node_modules/katex/dist/katex.min.css` into subset files at
-build time. Only the files a lesson actually needs are written to the output directory.
-
-**Output files:**
-- `katex-core.css` — layout rules, sizing (~15KB). Written when any equations present.
-- `katex-symbols-{domain}.css` — operator/symbol subsets per detected domain:
-  algebra, trig, calculus, physics, sets. Only the domains detected in the lesson are written.
-- `katex-fonts.css` — `@font-face` declarations (~80KB). Written once, cached aggressively.
-
-**Splitting strategy:** CSS is walked character-by-character at brace depth to correctly
-handle nested blocks (`@font-face`, `@keyframes`). `@font-face` rules → fonts file;
-domain-specific selectors → per-domain symbols file; everything else → core. Algebra
-operators are included in core (not a separate file) since they appear in nearly every
-equation — the algebra symbols file is written as a stub so the loader does not 404.
-
-**Build-time optimisation:** The split result is cached in-process keyed to source file mtime.
-A multi-lesson build run pays the split cost once. Files already present and up-to-date are skipped.
-
-#### The LMS Engine (Phase 2.5)
-
-`src/engine/` is a pure Node.js module that runs entirely on the hub. It is never loaded
-on student devices. All six files are plain CommonJS JavaScript — no TypeScript, no compile
-step, no `tsc` required.
-
-The engine is loaded by `theta.js` at startup via `require('./src/engine')`. If the engine
-files are missing, theta degrades gracefully: prerequisite scheduling continues unaffected
-and `/api/lms/*` routes return 503.
-
-State is persisted to `DATA_DIR/lms_state.json` using an atomic write (`.tmp` → `rename`)
-so a process crash cannot corrupt the state file.
 
 ### 3.2 Output Strategies
 
@@ -221,29 +146,13 @@ The compiler supports dual-mode distribution:
 | Feature | Strategy A: HTML SPA | Strategy B: Native Bundle |
 |---------|---------------------|--------------------------|
 | Target | Browsers (Chrome, WebView, KaiOS) | OLS Android Player (Kotlin/Flutter) |
-| Format | Single HTML file + `lesson-ir.json` sidecar + KaTeX CSS subset files | `lesson.json` + `content/*.md` + shared libraries |
+| Format | Single HTML file + `lesson-ir.json` sidecar + cached `shared-runtime.js` | `lesson.json` + `content/*.md` + shared libraries |
 | Battery | Moderate (browser overhead) | Excellent (screen-off capability) |
 | Sensors | Standard Web APIs (DeviceMotion) | HAL Access (high fidelity) |
-| Caching | Cache API via factory-loader.js | Native caching |
-| Packet Size | ~5–500 KB per lesson HTML (factory files cached separately) | ~10–20 KB per new lesson |
+| Caching | Service Worker caches shared assets + lesson data | Native caching |
+| Packet Size | ~5–500 KB per lesson (shared assets cached separately) | ~10–20 KB per new lesson |
 | Use Case | Zero-install entry point, sneakernet/Starlink | Long-term retention, pocket learning |
 | Status | **Implemented** | Phase 6 |
-
-### 3.3 Build Output Per Lesson
-
-```
-dist/
-  gravity.html              # lesson HTML — inlines factory-loader.js + LESSON_DATA + player.js
-  gravity-ir.json           # metadata sidecar for theta engine
-  shared-runtime.js         # written once per dist/, reused across lessons (write-if-newer)
-  katex-core.css            # written if lesson has equations (write-if-newer)
-  katex-symbols-trig.css    # written if lesson has trig equations (example)
-  katex-fonts.css           # written if lesson has equations (write-if-newer)
-```
-
-Factory files (`svg-stage.js`, `svg-factories*.js`, `sensor-bridge.js`, etc.) are served
-by the village hub from its `/factories/` endpoint and cached on-device by `factory-loader.js`.
-They are not written to `dist/` per-lesson — the hub serves them separately.
 
 ---
 
@@ -258,29 +167,30 @@ By transmitting Source YAML instead of pre-built HTML:
 
 Result: The Hub uses its local CPU to "inflate" the content for the village.
 
-The shared runtime assets (`shared-runtime.js`, `sensor-bridge.js`, `svg-stage.js`,
-factory files, KaTeX CSS) are cached once by `factory-loader.js` and not retransmitted
-per lesson. Only lesson-specific content (HTML packet + IR sidecar) changes between lessons.
+The shared runtime assets (`shared-runtime.js`, `svg-stage.js`, KaTeX CSS) are cached once
+by the Service Worker and not retransmitted per lesson. Only lesson-specific content (HTML
+packet + IR sidecar) changes between lessons.
 
 ### 4.2 Content Negotiation & Delivery
 
-**Current (Phase 3) delivery:**
-1. Hub operator runs `node src/cli.js --input gravity.yaml --output dist/gravity.html`
-2. Compiler builds `gravity.html` + `gravity-ir.json` sidecar + required KaTeX CSS subset files
-3. `shared-runtime.js` written to `dist/` once (write-if-newer), reused across all lessons
-4. Files distributed to devices via USB/SD/sneakernet
-5. On first lesson open, `factory-loader.js` fetches factory files from hub and caches them via Cache API
-6. Subsequent lessons: factory files served from Cache API — no hub request needed
+`[DRAFT NOTE: This flow describes the Phase 3 server/ target. Current (Phase 2) delivery
+is direct file compilation via CLI, not on-demand hub-transform. Marking this section as
+the target architecture rather than current state.]`
 
-**On-demand delivery (Phase 3 — implemented):**
+**Target architecture (Phase 3):**
 
 1. Device requests `GET /lessons/gravity`
-2. `hub-transform.js` loads `gravity.yaml` → runs `buildLessonIR()` → wraps in PWA shell HTML
-3. Response served immediately; lesson HTML cached in memory keyed to YAML mtime
-4. Service Worker (`sw.js`) pre-caches core factory files on install
-5. `factory-loader.js` fetches remaining factory files and caches via Cache API
-6. Subsequent lessons: factory files served from Cache API — no hub request needed
-7. A changed YAML file invalidates only that lesson's in-memory cache entry
+2. Hub detects User-Agent / capabilities
+3. Hub runs `hub-transform.js`: loads YAML → runs inference → builds IR → wraps in PWA shell
+4. Hub serves the PWA bundle
+5. Edge device loads in Chrome → Service Worker caches shared assets
+6. Subsequent lessons only need new HTML packet + IR sidecar (shared code already cached)
+
+**Current (Phase 2) delivery:**
+1. Hub operator runs `node src/cli.js --input gravity.yaml --output dist/gravity.html`
+2. Compiler builds `gravity.html` + `gravity-ir.json` sidecar
+3. `shared-runtime.js` written to `dist/` once, reused across all lessons
+4. Files distributed to devices via USB/SD/sneakernet
 
 ---
 
@@ -333,6 +243,10 @@ node to distribute content (Star).
 
 ## 7. The Adaptive Graph Engine (Navigation)
 
+`[DRAFT NOTE: v2.0 described a sketch of the MLC heuristic. The implementation is
+substantially more developed. Updating this section to reflect what is built and what
+is queued.]`
+
 OLS uses a probabilistic graph to order lessons based on observed learning outcomes.
 The engine has two layers with distinct responsibilities.
 
@@ -349,57 +263,29 @@ before any lesson is offered to a student.
   may see "Modulo Arithmetic" first.
 - **Lesson index:** Built from `lesson-ir.json` sidecar files written by the compiler.
   Falls back to HTML scraping for lessons compiled before Phase 2.
-- **LMS integration:** After `rebuildLessonIndex()` completes, theta seeds all lessons
-  into the LMS engine. Seeding is idempotent — safe on every full rebuild.
 
-**HTTP API** (served on `AGNI_THETA_PORT`, default 8082):
+### 7.2 LMS Engine — Adaptive Selection (Phase 2.5 — queued)
 
-| Method | Route | Description |
-|--------|-------|-------------|
-| GET | `/api/theta` | Theta-sorted eligible lessons for a student (`?pseudoId=`) |
-| GET | `/api/theta/all` | Theta results for all known students |
-| GET | `/api/theta/graph` | Current effective graph weights |
-| GET | `/api/lms/select` | Bandit lesson selection from a theta candidate set |
-| POST | `/api/lms/observation` | Record completed lesson, update all models |
-| GET | `/api/lms/status` | Engine diagnostic snapshot |
-| POST | `/api/lms/federation/merge` | Merge remote bandit summary from regional hub |
+A principled ML engine that selects among theta-eligible lessons using observed learning gain.
+Theta handles prerequisite enforcement; the LMS engine handles selection within the eligible set.
 
-### 7.2 LMS Engine — Adaptive Selection (Phase 2.5 — implemented)
+**Architecture (Option B integration):**
 
-A principled ML engine that selects among theta-eligible lessons using observed learning
-gain. Theta handles prerequisite enforcement; the LMS engine handles selection within
-the eligible set. Neither system needs to be complete before the other ships.
-
-**JS compatibility note:** All engine files run on the hub (Node.js 14+) only. They are
-never loaded on student devices and therefore are not subject to the ES5 constraint that
-governs the runtime files in `src/runtime/`.
-
-**Architecture:**
-
-| File | Algorithm | Role |
-|------|-----------|------|
-| `rasch.js` | 1PL IRT (Newton-Raphson MAP) | Estimates student ability on logit scale; produces gain proxy for bandit |
-| `embeddings.js` | Online matrix factorization | Student × lesson latent factors with exponential forgetting |
-| `thompson.js` | Linear Thompson Sampling | Selects next lesson by sampling from RLS posterior over gain-given-features |
-| `federation.js` | Precision-weighted Bayesian merge | Merges bandit posteriors across village hubs without sharing raw student data |
-| `math.js` | Pure utilities | Cholesky decomposition, `invertSPD`, `sampleMVN`, matrix/vector ops |
-| `engine/index.js` | Engine entry point | State load/persist, public API surface, lesson seeding |
+| Layer | Algorithm | Role |
+|-------|-----------|------|
+| `rasch.ts` | 1PL IRT (Newton-Raphson MAP) | Estimates student ability on logit scale; produces gain proxy |
+| `embeddings.ts` | Online matrix factorization | Student × lesson latent factors with forgetting |
+| `thompson.ts` | Linear Thompson Sampling | Selects next lesson by sampling from posterior over gain-given-features |
+| `federation.ts` | Precision-weighted Bayesian merge | Merges bandit posteriors across village hubs without raw data sharing |
 
 **Feature vectors:**
-- Bandit feature vector: `[...studentVec, ...lessonVec]` — always `embeddingDim * 2` in length.
-  This constraint is enforced at runtime by `ensureBanditInitialized()`.
-- Lesson vector seeded from `lesson-ir.json` sidecar `inferredFeatures`
-- Student vector from Rasch ability estimate + learned embedding
-
-**State persistence:**
-- `DATA_DIR/lms_state.json` — single JSON file, atomically written (`.tmp` → `rename`)
-- Loaded once at `require()` time; all mutations persist before returning to caller
-- On parse failure: corrupted file is preserved as `.bak`, fresh state is initialised
+- Lesson feature vector populated from `lesson-ir.json` sidecar `inferredFeatures`
+  (difficulty, VARK profile, Bloom ceiling, pedagogical style)
+- Student feature vector from Rasch ability estimate + learned embedding
 
 **Federated learning:** Village hubs can merge their bandit posteriors using
-`federation.js` without sharing raw student data. The merge uses precision-weighted
-Bayesian combination: each hub's precision matrix is normalised to per-observation units
-before combining, then restored to total-observation scale.
+`federation.ts` without sharing raw student data. Each hub improves from the
+collective without centralising sensitive learning logs.
 
 ### 7.3 The Skill Collapse Concept
 
@@ -413,6 +299,133 @@ The Village Sentry analyzes anonymized local learning logs to detect these colla
 Result: The graph weights (`graph_weights.json`) are updated over time as real cohort
 data accumulates, making the system progressively more culturally adapted.
 
+## 8. Knowledge Architecture: UTUs and Skill Ontology
+
+OLS operates two distinct but related knowledge structures. They serve different consumers
+and must not be conflated.
+
+### 8.1 Universal Transformative Units (UTUs) — Taxonomy Layer
+
+UTUs are broad classification labels, analogous to a Dewey Decimal system for skills.
+A UTU says: "this lesson engages this *kind* of reasoning at this *developmental level*."
+
+```yaml
+meta:
+  utu:
+    class: "MAC-2"      # Mathematical Activity Class: Transformation
+    band: 4             # Developmental Band: Relational Abstraction (ages 11–13)
+```
+
+**Who uses UTUs:**
+
+- **Governance authorities** — a regional body declares "11-year-olds should demonstrate
+  MAC-2 Band 4." The system maps that declaration to the set of skill nodes in that bucket
+  and reports stabilisation rates. The authority gets compliance evidence without prescribing
+  specific lessons or representations.
+- **Lesson authors** — browsing for lessons to fork. `MAC-6 Band 3` is a discoverable
+  category; authors find peer lessons in the same bucket and adapt them for their cohort.
+- **The LMS engine (Phase 2.5)** — UTU class and band are features in the lesson embedding
+  vector, allowing the bandit to learn that a student who stabilises MAC-3 quickly tends
+  to need more exposure to MAC-7 before advancing.
+
+**What UTUs do not do:** They do not determine lesson sequencing. A UTU bucket may contain
+fifty distinct skill nodes at varying levels of prerequisite depth. The order in which those
+skills are acquired is governed entirely by the ontology layer.
+
+### 8.2 Skill Ontology — Sequencing Layer
+
+The `ontology` block in OLS YAML defines the fine-grained prerequisite chain that actually
+governs lesson ordering. Each `provides` entry is a specific, atomic skill node. Each
+`requires` entry is a hard dependency — theta will not offer a lesson until all required
+skills are stabilised.
+
+This is the layer that makes a complex target like:
+
+```
+(3(x - 2)) / 4 + 5 = (2x + 7) / 2 - 1
+```
+
+reachable, because the full dependency chain is encoded explicitly:
+
+```
+ols:math:integer_arithmetic
+  → ols:math:variable_as_placeholder
+    → ols:math:one_step_linear
+      → ols:math:multi_step_linear
+        → ols:math:equations_with_fractions
+          → ols:math:distributive_property
+            → ols:math:fractions_and_distribution_both_sides
+```
+
+Each node in this chain is a separate OLS lesson with its own `requires` and `provides`.
+Theta's BFS skill graph traverses these edges to determine eligibility. The student
+cannot reach the final lesson until every upstream node is stabilised — not because
+the system is rigid, but because the prerequisite structure reflects genuine cognitive
+dependencies.
+
+**Example YAML (a mid-chain lesson):**
+
+```yaml
+meta:
+  title: "Solving equations with fractions"
+  utu:
+    class: "MAC-2"
+    band: 4
+
+ontology:
+  requires:
+    - skill: "ols:math:multi_step_linear"
+    - skill: "ols:math:fraction_arithmetic"
+  provides:
+    - skill: "ols:math:equations_with_fractions"
+      level: 1
+```
+
+The UTU label (`MAC-2 Band 4`) sits on top of the graph as a governance/discovery tag.
+It does not affect how theta routes the student.
+
+### 8.3 The Relationship Between Layers
+
+```
+Governance authority
+    ↓ declares
+  UTU targets (e.g. "MAC-2 Band 4 by age 13")
+    ↓ maps to
+  Set of skill nodes carrying that UTU label
+    ↓ theta tracks stabilisation across
+  Individual OLS lessons
+    ↓ each connected by
+  ontology.requires / ontology.provides edges
+    ↓ forming
+  Directed acyclic prerequisite graph
+```
+
+A UTU is a *label on a subgraph*, not a node in the graph. Many skill nodes share the
+same UTU classification. The governance layer asks "how many MAC-2 Band 4 nodes has this
+cohort stabilised?" — theta answers by counting stabilised nodes in that bucket. The
+authority gets meaningful aggregate evidence without seeing individual student data or
+prescribing specific lesson content.
+
+### 8.4 Schema Fields
+
+| Field | Layer | Consumer |
+|-------|-------|----------|
+| `meta.utu.class` | Taxonomy | Governance reporting, lesson discovery, LMS features |
+| `meta.utu.band` | Taxonomy | Governance, Band-ceiling validation at compile time |
+| `ontology.requires[].skill` | Sequencing | Theta (eligibility gate), LMS (prerequisite distance) |
+| `ontology.provides[].skill` | Sequencing | Theta (stabilisation tracking) |
+| `ontology.provides[].level` | Sequencing | Future: multi-level mastery tracking |
+| `inferredFeatures.difficulty` | Both | LMS bandit feature vector, UI display |
+| `inferredFeatures.bloom_ceiling` | Taxonomy | Band validation (compile-time warning if mismatch) |
+
+`[DRAFT NOTE: meta.utu is not yet in the OLS YAML schema or the IR. Adding it requires:
+(1) Schema update to accept utu.class and utu.band in the meta block.
+(2) featureInference.js: warn at compile time if declared band conflicts with inferred
+    bloom_ceiling (e.g. author declares Band 2 but content requires formal abstraction).
+(3) buildLessonIR.js: pass utu fields through to IR and sidecar unchanged.
+(4) theta.js: index lessons by UTU class/band for governance reporting queries.
+This is clean additive work — no breaking changes to existing lessons that omit utu.]`
+
 ---
 
 ## Appendix: Phase Roadmap
@@ -421,8 +434,8 @@ data accumulates, making the system progressively more culturally adapted.
 |-------|-------|--------|
 | Phase 1 | player.js sensor bridge, threshold evaluator, emulator controls | Complete |
 | Phase 2 | IR layer, Markdown pipeline, sidecar, config fixes | Complete |
-| Phase 2.5 | LMS engine (Rasch + embeddings + bandit + federation) | Complete |
-| Phase 3 | factory-loader.js, KaTeX CSS, sensor-bridge.js as cached asset, server/ PWA delivery | **Complete** |
+| Phase 2.5 | LMS engine (Rasch + embeddings + bandit + federation) | Queued |
+| Phase 3 | factory-loader.js, KaTeX CSS splitting, server/ PWA delivery, config.js fixes | Queued |
 | Phase 4 | Ed25519 integrity verification (Web Crypto SubtleCrypto) | Queued |
 | Phase 5 | Gate retry_delay/passing_score, max_attempts, step-level sensor dependency tracking | Queued |
 | Phase 6 | native.js builder, yaml-packet.js builder (thin client targets) | Queued |
