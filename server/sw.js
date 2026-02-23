@@ -200,8 +200,11 @@ function _offlineResponse(url) {
     '</body></html>'
   ].join('');
 
+  // 200 not 503 — browsers treat 503 as a genuine server error and may
+  // suppress or delay retry in ways that interfere with the offline UX.
+  // The page content makes the offline state clear to the user.
   return new Response(body, {
-    status: 503,
+    status: 200,
     headers: { 'Content-Type': 'text/html; charset=utf-8' }
   });
 }
