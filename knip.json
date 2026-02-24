@@ -1,44 +1,38 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "extends": [
-    "sveltekit"   // Activates SvelteKit plugin for better auto-detection of routes/+page.svelte, +layout.svelte, hooks, etc.
-  ],
   "entry": [
-    // Core SvelteKit entries (plugin usually handles these, but explicit helps)
-    "portal/src/routes/**/+*.{js,ts,svelte,server.js,server.ts}",
+    // Portal/SvelteKit main anchors (adjust if configs are portal/svelte.config.js etc.)
+    "portal/src/routes/**/+*.{js,ts,svelte,jsm,server.js,server.ts}",
     "portal/src/hooks.{js,ts,server.js,server.ts}",
     "portal/src/params/**/*.{js,ts}",
-    "portal/src/app.html",           // If relevant for assets
-    // Protect known active root-level files/folders as explicit entries
+    "portal/src/app.html",
+    // Protect core runtime entry points
     "player.js",
-    "src/runtime/player.js",         // If this is the one; adjust path if different
-    "!**/*.d.ts",
-    "!**/*.test.{js,ts}"
+    "src/runtime/player.js",
+    "src/runtime/factory-loader.js",
+    "src/runtime/sensor-bridge.js"
   ],
   "project": [
-    // Scan everything in the active folders
+    // Scan these for usage / dead code inside
     "portal/src/**/*.{js,ts,svelte,jsm}",
     "src/**/*.{js,ts}",
     "server/**/*.{js,ts}",
-    // Exclude generated stuff to avoid noise
+    "hub-tools/**/*.{js}",
     "!portal/.svelte-kit/**",
-    "!**/*.d.ts"
+    "!**/*.d.ts",
+    "!**/*.test.{js,ts}"
   ],
   "ignoreFiles": [
-    // Suppress "unused file" reports only (still checks exports/deps inside)
-    // Add patterns here if specific files/folders inside src/server still false-positive
-    // e.g. "src/runtime/sw.js" if dynamic service worker
+    // Hide false positives: generated + dynamic refs
+    "portal/.svelte-kit/**",
     "**/sw.js",
     "**/service-worker.js",
     "server/pwa/sw.js",
-    "server/pwa/shared.js"
-  ],
-  "ignore": [
-    // Full suppression (all issue types) — use sparingly
-    "portal/.svelte-kit/**"
+    "server/pwa/shared.js",
+    "src/runtime/sw.js"
   ],
   "rules": {
-    "files": "error",        // Treat unused files as errors
+    "files": "error",
     "dependencies": "warn",
     "unlisted": "warn"
   }
