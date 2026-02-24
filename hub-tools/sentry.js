@@ -286,8 +286,16 @@ async function runAnalysis() {
   const now = new Date().toISOString();
   const gw = {
     '$schema': 'https://github.com/NewmanB1/AGNI/schemas/graph_weights.schema.json',
-    version: SCHEMA_VERSION, discovered_cohort: cohortId, level: 'village', sample_size: largest.members.length,
-    created_date: now, last_updated: now, default_weight: 1.0, edges,
+    version: SCHEMA_VERSION,
+    discovered_cohort: cohortId,
+    level: 'village',
+    sample_size: largest.members.length,
+    created_date: now,
+    last_updated: now,
+    default_weight: 1.0,
+    weight_estimation_method: 'correlation_based',
+    clustering_method: 'jaccard_similarity',
+    edges,
     metadata: { computation_date: now, software_version: SW_VERSION }
   };
 

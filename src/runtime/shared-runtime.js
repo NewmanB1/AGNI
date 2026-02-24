@@ -280,30 +280,31 @@
 
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 9. Binary / encoding utilities (Phase 4)
-  //
-  //    base64ToBytes() is used by player.js verifyIntegrity() to decode
-  //    OLS_SIGNATURE and OLS_PUBLIC_KEY from base64 strings into Uint8Arrays
-  //    before passing them to SubtleCrypto or TweetNaCl.
-  //
-  //    Exposed here so any future module that needs base64 decoding does not
-  //    need to re-implement atob() wrapping.
+  // 9. Binary / encoding utilities (Phase 4; Backlog task 13)
+  //    Use OLS_BINARY from binary-utils.js when loaded first; else fallback.
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /**
-   * Decode a base64 string to a Uint8Array.
-   * @param  {string} b64
-   * @returns {Uint8Array}
-   */
+  var OLS_BINARY = global.OLS_BINARY;
   function base64ToBytes(b64) {
+    if (OLS_BINARY && typeof OLS_BINARY.base64ToBytes === 'function') {
+      return OLS_BINARY.base64ToBytes(b64);
+    }
     var binary = atob(b64);
     var bytes  = new Uint8Array(binary.length);
-    for (var i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     return bytes;
   }
-
+  function concatBytes() {
+    if (OLS_BINARY && typeof OLS_BINARY.concatBytes === 'function') {
+      return OLS_BINARY.concatBytes.apply(OLS_BINARY, arguments);
+    }
+    var arrays = Array.prototype.slice.call(arguments);
+    var total  = arrays.reduce(function (n, a) { return n + a.length; }, 0);
+    var result = new Uint8Array(total);
+    var offset = 0;
+    arrays.forEach(function (a) { result.set(a, offset); offset += a.length; });
+    return result;
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 10. Assemble and expose AGNI_SHARED
@@ -345,8 +346,9 @@
     // ── Logging ───────────────────────────────────────────────────────────────
     log: log,
 
-    // ── Encoding utilities (Phase 4) ──────────────────────────────────────────
-    base64ToBytes: base64ToBytes
+    // ── Encoding (Phase 4; from binary-utils.js when present) ───────────────────
+    base64ToBytes: base64ToBytes,
+    concatBytes:   concatBytes
   };
 
   // ── Self-register with factory-loader if present ────────────────────────────

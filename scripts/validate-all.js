@@ -1,9 +1,11 @@
 // scripts/validate-all.js
 // Validates all .yaml/.yml lessons in lessons/ against the OLS schema
+// and threshold syntax for hardware_trigger steps (e.g. freefall > 0.2s).
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 const { execSync } = require('child_process');
+const { validateThresholdSyntax } = require('../src/utils/threshold-syntax');
 
 const lessonsDir = path.resolve(__dirname, '..', 'lessons');
 const schemaPath = path.resolve(__dirname, '..', 'schemas', 'ols.schema.json');
@@ -21,6 +23,20 @@ if (files.length === 0) {
 let passed = 0;
 let failed = 0;
 
+function validateThresholds(data, file) {
+  const steps = data.steps || [];
+  const errors = [];
+  steps.forEach((step, idx) => {
+    if (step.type === 'hardware_trigger' && step.threshold) {
+      const result = validateThresholdSyntax(step.threshold);
+      if (!result.valid) {
+        errors.push(`step ${idx + 1} (${step.id || '?'}): threshold "${step.threshold}" — ${result.error}`);
+      }
+    }
+  });
+  return errors;
+}
+
 files.forEach(file => {
   const fullPath = path.join(lessonsDir, file);
   const tmpJson = path.resolve(__dirname, '..', `tmp_${file}.json`);
@@ -36,14 +52,22 @@ files.forEach(file => {
       stdio: 'pipe'
     });
 
+    const thresholdErrors = validateThresholds(data, file);
+    if (thresholdErrors.length > 0) {
+      thresholdErrors.forEach(e => console.error(`   ✗ ${e}`));
+      throw new Error('Threshold syntax errors');
+    }
+
     console.log(`   ✓ Valid\n`);
     passed++;
   } catch (err) {
     const output = err.stdout ? err.stdout.toString() : '';
     const errOutput = err.stderr ? err.stderr.toString() : '';
-    console.error(`   ✗ INVALID`);
-    if (output) console.error(`   ${output.trim()}`);
-    if (errOutput) console.error(`   ${errOutput.trim()}`);
+    if (err.message !== 'Threshold syntax errors') {
+      console.error(`   ✗ INVALID`);
+      if (output) console.error(`   ${output.trim()}`);
+      if (errOutput) console.error(`   ${errOutput.trim()}`);
+    }
     console.log('');
     failed++;
   } finally {

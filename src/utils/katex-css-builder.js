@@ -1,6 +1,3 @@
-
-Copy
-
 // src/utils/katex-css-builder.js
 // AGNI KaTeX CSS Builder  v1.0.0
 //

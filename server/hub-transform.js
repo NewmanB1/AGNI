@@ -43,12 +43,14 @@ var path    = require('path');
 var zlib    = require('zlib');
 var yaml    = require('js-yaml');
 
-var buildLessonIR      = require('../src/compiler/buildLessonIR').buildLessonIR;
-var buildLessonSidecar = require('../src/compiler/buildLessonIR').buildLessonSidecar;
+var compiler           = require('../src/compiler');
+var buildLessonIR      = compiler.buildLessonIR;
+var buildLessonSidecar = compiler.buildLessonSidecar;
 var buildKatexCss      = require('../src/utils/katex-css-builder');
 var signContent        = require('../src/utils/crypto').signContent;
 var generateNonce      = require('../src/utils/csp').generateNonce;
 var buildCspMeta       = require('../src/utils/csp').buildCspMeta;
+var lessonAssembly     = require('../src/services/lessonAssembly');
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 var YAML_DIR      = process.env.AGNI_YAML_DIR    || path.join(__dirname, '../data/yaml');
@@ -81,6 +83,7 @@ var _compilingNow  = {};
 // Whitelist prevents directory traversal. Only files in this set can be
 // served from /factories/. All are ES5-compatible IIFE scripts.
 var ALLOWED_FACTORY_FILES = new Set([
+  'binary-utils.js',
   'shared-runtime.js',
   'sensor-bridge.js',
   'svg-stage.js',
@@ -211,7 +214,7 @@ async function _doCompile(slug, loaded, options) {
 
   // Build factory dependency list (same logic as html.js Step 6)
   var RUNTIME_VERSION = '1.9.0';
-  var factoryDeps     = [{ file: 'shared-runtime.js', version: RUNTIME_VERSION }];
+  var factoryDeps     = [{ file: 'binary-utils.js', version: RUNTIME_VERSION }, { file: 'shared-runtime.js', version: RUNTIME_VERSION }];
   var manifest        = (ir.inferredFeatures && ir.inferredFeatures.factoryManifest) || [];
   manifest.forEach(function (filename) {
     factoryDeps.push({ file: filename, version: RUNTIME_VERSION });
@@ -230,28 +233,16 @@ async function _doCompile(slug, loaded, options) {
   var playerJs        = fs.readFileSync(path.join(runtimeDir, 'player.js'),         'utf8');
   var styles          = fs.readFileSync(path.join(runtimeDir, 'style.css'),          'utf8');
 
-  // Serialize and sign
-  var dataString     = JSON.stringify(ir);
-  var signature      = signContent(dataString, options.deviceId, options.privateKey);
-  var safeDataString = dataString.replace(/<\/script>/gi, '<\\/script>');
-
-  var lessonScript = [
-    '// factory-loader.js — AGNI_LOADER bootstrap',
-    factoryLoaderJs,
-    '',
-    'window.LESSON_DATA        = ' + safeDataString + ';',
-    'window.OLS_SIGNATURE      = ' + JSON.stringify(signature || '') + ';',
-    'window.OLS_INTENDED_OWNER = ' + JSON.stringify(options.deviceId || '') + ';',
-    '',
-    playerJs,
-    '',
-    'window.addEventListener(\'load\', function () {',
-    '  setTimeout(function () {',
-    '    var loading = document.getElementById(\'loading\');',
-    '    if (loading) loading.style.display = \'none\';',
-    '  }, 5000);',
-    '});'
-  ].join('\n');
+  // Serialize and sign; script block shared with CLI html builder (lessonAssembly)
+  var dataString = JSON.stringify(ir);
+  var signature  = signContent(dataString, options.deviceId, options.privateKey);
+  var lessonScript = lessonAssembly.buildLessonScript(ir, {
+    signature:       signature,
+    publicKeySpki:   options.publicKeySpki != null ? options.publicKeySpki : '',
+    deviceId:        options.deviceId || '',
+    factoryLoaderJs: factoryLoaderJs,
+    playerJs:        playerJs
+  });
 
   // Generate a per-request nonce for the CSP <meta> tag.
   // LESSON_DATA changes every compilation so a hash would have to be

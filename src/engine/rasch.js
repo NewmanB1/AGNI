@@ -1,4 +1,4 @@
-// src/rasch.js
+// src/engine/rasch.js
 // AGNI LMS Engine — Rasch model ability estimation
 //
 // Updates student ability using approximate Newton-Raphson (MAP estimate).
@@ -19,7 +19,7 @@
  * regularization term (1e-5) is added to the Hessian to prevent
  * instability when very few probes are available.
  *
- * @param {import('./types').LMSState} state
+ * @param {import('../types').LMSState} state
  * @param {string} studentId
  * @param {{ probeId: string, correct: boolean }[]} probeResults
  * @returns {number}  ability delta (approximate gain proxy for the bandit)
@@ -59,10 +59,10 @@ function updateAbility(state, studentId, probeResults) {
   // Clip ability to reasonable range
   student.ability = Math.max(-10, Math.min(10, student.ability));
 
-  // Return step as gain proxy (positive = improved, negative = regressed)
   return step;
 }
 
 module.exports = {
-  updateAbility
+  updateAbility: updateAbility
 };
+

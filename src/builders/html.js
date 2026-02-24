@@ -49,8 +49,10 @@ var path = require('path');
 
 var signContent        = require('../utils/crypto').signContent;
 var ensureDir          = require('../utils/io').ensureDir;
-var buildLessonIR      = require('../compiler/buildLessonIR').buildLessonIR;
-var buildLessonSidecar = require('../compiler/buildLessonIR').buildLessonSidecar;
+var compiler           = require('../compiler');
+var lessonAssembly     = require('../services/lessonAssembly');
+var buildLessonIR      = compiler.buildLessonIR;
+var buildLessonSidecar = compiler.buildLessonSidecar;
 var buildKatexCss      = require('../utils/katex-css-builder').buildKatexCss;
 
 
@@ -119,7 +121,14 @@ async function buildHtml(lessonData, options) {
   var factoryLoaderJs = fs.readFileSync(path.join(runtimeDir, 'factory-loader.js'), 'utf8');
   var styles          = fs.readFileSync(path.join(runtimeDir, 'style.css'),          'utf8');
 
-  // -- 5. Handle shared-runtime.js (write once, reuse across lessons) ----------
+  // -- 5a. binary-utils.js (load before shared-runtime; Backlog task 13) -------
+  var binaryUtilsOutput = path.join(outputDir, 'binary-utils.js');
+  var binaryUtilsSource = path.join(runtimeDir, 'binary-utils.js');
+  if (fs.existsSync(binaryUtilsSource)) {
+    fs.writeFileSync(binaryUtilsOutput, fs.readFileSync(binaryUtilsSource, 'utf8'));
+  }
+
+  // -- 5b. Handle shared-runtime.js (write once, reuse across lessons) -------
   var sharedOutput = path.join(outputDir, 'shared-runtime.js');
   var sharedSource = path.join(runtimeDir, 'shared-runtime.js');
 
@@ -145,9 +154,13 @@ async function buildHtml(lessonData, options) {
   }
 
   // -- 6. Build the factory dependency list ------------------------------------
+  // binary-utils.js first (sets OLS_BINARY), then shared-runtime.js (AGNI_SHARED).
   var RUNTIME_VERSION = '1.9.1';
 
   var factoryDeps = [];
+  if (fs.existsSync(binaryUtilsSource)) {
+    factoryDeps.push({ file: 'binary-utils.js', version: RUNTIME_VERSION });
+  }
   factoryDeps.push({ file: 'shared-runtime.js', version: RUNTIME_VERSION });
 
   var manifest = (ir.inferredFeatures && ir.inferredFeatures.factoryManifest) || [];
@@ -176,40 +189,14 @@ async function buildHtml(lessonData, options) {
       Buffer.from(publicKeySpki, 'base64').length + ' bytes)');
   }
 
-  var safeDataString = dataString.replace(/<\/script>/gi, '<\\/script>');
-
-  // -- 9. Assemble lesson-specific script block --------------------------------
-  var lessonScript = [
-    '// factory-loader.js \u2014 AGNI_LOADER bootstrap (must run before all other runtime code)',
-    factoryLoaderJs,
-    '',
-    '// Lesson data + factory dependency manifest',
-    'window.LESSON_DATA        = ' + safeDataString + ';',
-    '',
-    '// Phase 4 integrity globals \u2014 written by html.js at build time.',
-    '// player.js verifyIntegrity() reads these to verify the lesson has not',
-    '// been tampered with and belongs to this device.',
-    '// OLS_PUBLIC_KEY: base64 SPKI DER Ed25519 public key (44 bytes decoded).',
-    '//   Import in browser: crypto.subtle.importKey("spki", bytes, {name:"Ed25519"}, ...)',
-    '//   Do NOT strip the DER header \u2014 SubtleCrypto requires the full SPKI wrapper.',
-    '// OLS_SIGNATURE: base64 Ed25519 signature over SHA-256(content + NUL + deviceId).',
-    '// OLS_INTENDED_OWNER: UUID of the intended device.',
-    'window.OLS_SIGNATURE      = ' + JSON.stringify(signature || '') + ';',
-    'window.OLS_PUBLIC_KEY     = ' + JSON.stringify(publicKeySpki || '') + ';',
-    'window.OLS_INTENDED_OWNER = ' + JSON.stringify(options.deviceId || '') + ';',
-    '',
-    '// player.js \u2014 lesson state machine. Calls AGNI_LOADER.loadDependencies()',
-    '// before mounting the first step.',
-    playerJs,
-    '',
-    '// Safety net: hide loading spinner if init stalls beyond 5s.',
-    'window.addEventListener(\'load\', function () {',
-    '  setTimeout(function () {',
-    '    var loading = document.getElementById(\'loading\');',
-    '    if (loading) loading.style.display = \'none\';',
-    '  }, 5000);',
-    '});'
-  ].join('\n');
+  // -- 9. Assemble lesson-specific script block (shared with hub-transform) ----
+  var lessonScript = lessonAssembly.buildLessonScript(ir, {
+    signature:       signature,
+    publicKeySpki:   publicKeySpki || '',
+    deviceId:        options.deviceId || '',
+    factoryLoaderJs: factoryLoaderJs,
+    playerJs:        playerJs
+  });
 
   // -- 10. Assemble HTML -------------------------------------------------------
   var html = [

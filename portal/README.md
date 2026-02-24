@@ -18,6 +18,16 @@ To recreate this project with the same configuration:
 npx sv create --template minimal --types ts --install npm ./
 ```
 
+## Running against the hub
+
+To use real hub APIs (theta, LMS, governance, authoring) instead of mock data, set `VITE_HUB_URL` and start the dev server:
+
+```sh
+VITE_HUB_URL=http://localhost:8082 npm run dev
+```
+
+Start the hub first from the repo root: `node hub-tools/theta.js`. See the root README and `docs/api-contract.md` for the API contract.
+
 ## Developing
 
 Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:

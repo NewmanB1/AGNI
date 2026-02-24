@@ -2,10 +2,7 @@
 // AGNI CLI – Builds lesson bundles (HTML, native, etc.)
 
 const fs = require('fs');
-const path = require('path');
-const yaml = require('js-yaml');
-const buildHtml = require('./builders/html');
-const buildNative = require('./builders/native');
+const compilerService = require('./services/compiler');
 
 async function run() {
   const args = process.argv.slice(2);
@@ -16,6 +13,7 @@ async function run() {
   🔥 AGNI — Open Lesson Standard Compiler
   Usage:
     node src/cli.js <input.yaml> [options]
+    node src/cli.js lms-repair   # Migrate/repair LMS state file (data/lms_state.json)
     npm run build   # if using package.json script
 
   Options:
@@ -30,8 +28,18 @@ async function run() {
     node src/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html
     node src/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html --dev
     node src/cli.js lessons/gravity.yaml --format=native --output-dir=dist/native-gravity
+    node src/cli.js lms-repair
     `);
     process.exit(0);
+  }
+
+  // ── LMS repair (Backlog task 7) ──────────────────────────────────────────
+  const firstArg = args.find(a => !a.startsWith('-'));
+  if (firstArg === 'lms-repair') {
+    const engine = require('./engine');
+    engine.reloadState();
+    console.log('LMS state reloaded; migration applied if needed. State path: AGNI_DATA_DIR/data/lms_state.json');
+    return;
   }
 
   // ── Parse arguments ─────────────────────────────────────────────────────
@@ -63,64 +71,17 @@ async function run() {
     process.exit(1);
   }
 
-  if (!fs.existsSync(params.inputFile)) {
-    console.error(`Error: File not found: ${params.inputFile}`);
-    process.exit(1);
-  }
-
-  if (params.dev) {
-    console.log('⚠️  Developer mode enabled — not for distribution');
-  }
-
-  // ── Load and parse YAML ─────────────────────────────────────────────────
-  let data;
+  // ── Dispatch to compiler service ────────────────────────────────────────
   try {
-    const raw = fs.readFileSync(params.inputFile, 'utf8');
-    data = yaml.load(raw);
-  } catch (err) {
-    console.error(`Error parsing YAML: ${err.message}`);
-    process.exit(1);
-  }
-
-  // ── FEATURE INFERENCE (optional, continues on failure) ──────────────────
-  try {
-    const { inferFeatures } = require('./utils/featureInference');
-    const inferred = inferFeatures(data);
-    console.log(`\n[FEATURE INFERENCE] ${data.meta?.title || 'Unnamed lesson'} (${params.inputFile})`);
-    console.log(JSON.stringify(inferred, null, 2));
-    data.inferredFeatures = inferred;
-  } catch (err) {
-    console.warn(`[Warning] Feature inference failed: ${err.message}`);
-  }
-
-  // ── Basic validation ────────────────────────────────────────────────────
-  if (!data || !data.meta || !data.steps) {
-    console.error('Error: Invalid OLS file. Must contain "meta" and "steps" fields.');
-    process.exit(1);
-  }
-  if (!Array.isArray(data.steps)) {
-    console.error('Error: "steps" must be a YAML array (each item prefixed with "-").');
-    process.exit(1);
-  }
-
-  // ── Dispatch to builder ─────────────────────────────────────────────────
-  try {
-    if (params.format === 'html') {
-      if (!params.output) {
-        console.error('Error: --output=<path> is required for HTML format.');
-        process.exit(1);
-      }
-      await buildHtml(data, params);
-    } else if (params.format === 'native') {
-      if (!params.outputDir) {
-        console.error('Error: --output-dir=<path> is required for Native format.');
-        process.exit(1);
-      }
-      await buildNative(data, params);
-    } else {
-      console.error(`Error: Unknown format "${params.format}". Use "html" or "native".`);
-      process.exit(1);
-    }
+    await compilerService.compileLessonFromYamlFile(params.inputFile, {
+      format:      params.format,
+      output:      params.output,
+      outputDir:   params.outputDir,
+      deviceId:    params.deviceId,
+      privateKey:  params.privateKey,
+      dev:         params.dev,
+      logFeatures: true
+    });
   } catch (err) {
     console.error('Build failed:');
     console.error(err.message);

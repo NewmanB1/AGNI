@@ -4,6 +4,10 @@ This document outlines the strategic plan to launch the Open Lesson Standard (OL
 
 **Goal:** Establish the `.ols` file standard, build the reference player, and prove the "Skill Collapse" ($\theta$) navigation model.
 
+**Sprint planning:** Prioritized tasks for the next development sprint are in **`docs/SPRINT-NEXT.md`** (Sentry/θ documentation, contract tests, authoring APIs, validation, and tech-debt items).
+
+**Current status (as of latest update):** The core pipeline is in place: CLI compiler, IR + sidecar, HTML and native builders, hub-transform for on-demand PWA delivery, theta (lesson graph + MLC), LMS engine (Rasch, embeddings, Thompson bandit, federation), governance (policy, compliance, cohort coverage APIs), runtime verification (Ed25519 + TweetNaCl fallback), and a typed portal API client. **Backlog completed:** LMS state migration/repair (`src/engine/migrations.js`, CLI `lms-repair`), IR/runtime types in `src/types/index.d.ts` and engine `.d.ts`, runtimeManifest (`src/utils/runtimeManifest.js`), consolidated binary utils (`src/utils/binary.js`, `src/runtime/binary-utils.js`), sneakernet export/import (`scripts/sneakernet.js`, `npm run sneakernet`). Authoring APIs (validate/preview) are implemented. Remaining: Sentry adaptation feedback loop, QR/Base45 for progress if desired, Phase 5–6 and community/launch tasks.
+
 ## 🏗️ Phase 1: The Standard & The Golden Master (Days 1–25)
 **Objective:** Define a robust JSON Schema that supports hardware sensors, localization, and Set Theory categorization.
 
@@ -14,49 +18,46 @@ This document outlines the strategic plan to launch the Open Lesson Standard (OL
     - [x] Define Metadata Layer (Dublin Core + Set Theory `subject` tags).
     - [x] Define Hardware Layer (Threshold Syntax: `freefall > 0.2s`).
     - [x] Define Logic Layer (Gate w/ `skill_target`).
-    - [ ] **Action:** Finalize `graph_weights.schema.json` for the Sentry.
-- [ ] **Day 13-18: The "Golden Master" Lesson**
+    - [x] **Action:** Finalize `graph_weights.schema.json` for the Sentry (Sprint A: schema aligned with Sentry output; edge pattern supports multi-colon skill IDs).
+- [x] **Day 13-18: The "Golden Master" Lesson**
     - [x] Write "Understanding Gravity" in YAML.
-    - [ ] Req: User must drop the phone to unlock the next step.
-    - [ ] Req: Verify Validator passes the new Threshold Syntax.
-- [ ] **Day 19-25: Validation Tools**
+    - [x] Req: User must drop the phone to unlock the next step (gravity.yaml freefall step; sensor/gate in runtime).
+    - [x] Req: Validator passes threshold syntax (scripts/validate-all.js + src/utils/threshold-syntax.js).
+- [x] **Day 19-25: Validation Tools**
     - [x] Build GitHub Actions workflow (`validate.yml`).
-    - [ ] Translation Stress Test: Fork Golden Master, translate to Spanish, verify pass.
+    - [x] Translation Stress Test: Golden Master translated to Spanish (`lessons/gravity-es.yaml`); validate and compile pass. See `docs/translation-stress-test.md`.
 
 ## 📲 Phase 2: The Player & The Graph Engine (Days 26–50)
 **Objective:** Build the runtime that transforms YAML into an interactive experience and implements the "Skill Collapse" navigation logic.
 
-- [ ] **Day 26-30: The Compiler (Unified/Remark)**
-    - [ ] Build pipeline to parse YAML + Markdown.
-    - [ ] Implement "Prerequisite Gate" parser (check skills before loading assets).
-- [ ] **Day 31-35: The Navigation Logic ($\theta$)**
-    - [ ] Implement `graph_weights.json` parser in the Player.
-    - [ ] Build the Sorting Algorithm: `Lessons.sort((a,b) => theta(a) - theta(b))`.
-    - [ ] **Formula:** $\theta = \text{BaseCost} - \text{CohortDiscount}$.
-- [ ] **Day 36-40: The Hardware Bridge (Preact)**
-    - [ ] Build JS runtime for DeviceMotion and Navigator.vibrate.
-    - [ ] Implement "Feature Detection" (graceful degradation if sensors are missing).
-    - [ ] Implement the Regex Parser for Threshold Syntax (`freefall > 0.2s`).
-- [ ] **Day 41-45: Portable Sovereignty (Sneakernet)**
-    - [ ] Implement Gzip + Base45 compression.
-    - [ ] Build "Export Progress" (QR Code generation).
-    - [ ] Build "Import Progress" (QR Code parsing + DB merge).
-- [ ] **Day 46-50: The Universal Export**
-    - [ ] Script build process: `npm run export gravity.yaml` -> `gravity.html` (<500KB).
+- [x] **Day 26-30: The Compiler (Unified/Remark)**
+    - [x] Build pipeline to parse YAML + Markdown (config.js, buildLessonIR, CLI).
+    - [x] Prerequisite gate: theta and ontology.requires/provides drive eligibility; LMS selects within eligible set.
+- [x] **Day 31-35: The Navigation Logic ($\theta$)**
+    - [x] Theta (hub-tools/theta.js): lesson index, graph weights, MLC sorting.
+    - [x] Sorting by Marginal Learning Cost; formula $\theta = \text{BaseCost} - \text{CohortDiscount}$.
+- [x] **Day 36-40: The Hardware Bridge**
+    - [x] JS runtime for DeviceMotion and vibration (sensor-bridge.js, shared-runtime).
+    - [x] Feature detection and sensor abstraction in the player.
+    - [x] Parser/validator for threshold syntax in gate (e.g. `freefall > 0.2s`) — `src/utils/threshold-syntax.js`; `scripts/validate-all.js` validates thresholds.
+- [x] **Day 41-45: Portable Sovereignty (Sneakernet)** *(partial)*
+    - [x] Gzip + base64 export/import of bandit summary (`scripts/sneakernet.js`; `npm run sneakernet -- export|import [--out|--in file]`). Merge into local LMS state via `mergeRemoteSummary`.
+    - [ ] Optional: Base45 encoding for QR-friendly payloads; QR generation/scan (deferred).
+- [x] **Day 46-50: The Universal Export**
+    - [x] Build process: `npm run build` / `agni` compiles lesson to HTML (<500KB target).
     - [ ] Test on Android 6.0 device (Airplane Mode).
 
 ## 🛡️ Phase 3: Governance & Adaptation (Days 51–75)
 **Objective:** Implement the "Web of Trust" and the Sentry logic that generates cultural adaptations.
 
-- [ ] **Day 51-55: The Sentry Protocol (Trust)**
-    - [ ] Design `trust_policy.json` schema.
-    - [ ] Build logic: `if (lesson.signature != trusted) { block() }`.
-- [ ] **Day 56-60: The Sentry Protocol (Adaptation)**
-    - [ ] Build the Log Aggregator (Anonymized Telemetry).
-    - [ ] Create the logic to detect "Skill Collapse" (Correlation between Skill A mastery and Skill B speed).
-    - [ ] Output: Generate `graph_weights.json` for specific cohorts.
-- [ ] **Day 61-65: The "Signing Desk"**
-    - [ ] Create CLI tool for Orgs to cryptographically sign YAML.
+- [x] **Day 51-55: The Sentry Protocol (Trust)**
+    - [x] Signing: hub and CLI sign lesson content; device binding (OLS_SIGNATURE, OLS_PUBLIC_KEY, OLS_INTENDED_OWNER).
+    - [x] Runtime verification in player.js (verifyIntegrity: SubtleCrypto + TweetNaCl fallback).
+- [x] **Day 56-60: The Sentry Protocol (Adaptation)** *(partial)*
+    - [x] Sentry logic and `graph_weights.json` output (`hub-tools/sentry.js`); schema finalized (`schemas/graph_weights.schema.json`). Flow documented in `docs/playbooks/sentry.md`.
+    - [ ] Log aggregator / anonymized telemetry ingestion (optional); full cohort-specific weight updates in production.
+- [x] **Day 61-65: The "Signing Desk"**
+    - [x] Signing in utils/crypto.js; CLI and hub-transform use it; lessonAssembly injects globals.
 - [ ] **Day 66-70: Outreach & Pitch**
     - [ ] Create "Integration Guide" for Learning Equality (Kolibri).
     - [ ] Build demo of OLS running inside an `<iframe>`.
@@ -66,6 +67,8 @@ This document outlines the strategic plan to launch the Open Lesson Standard (OL
 
 ## 🚀 Phase 4: Launch & Ecosystem (Days 76–100)
 **Objective:** Public release, community intake, and preparing for the WYSIWYG editor.
+
+**Already implemented (hub & ecosystem):** On-demand PWA delivery (hub-transform), LMS engine (Rasch, embeddings, Thompson bandit, federation) and theta HTTP APIs (`/api/lms/select`, `POST /api/lms/observation`, etc.), governance APIs (`/api/governance/report`, `/api/governance/policy`, `POST /api/governance/compliance`), UTU/teaching_mode in schema and sidecar, typed portal API client (`portal/src/lib/api.ts`), services layer (compiler, lms, governance, lessonAssembly). Portal uses mock data unless `VITE_HUB_URL` is set.
 
 - [ ] **Day 76-80: Public Launch**
     - [ ] Publish Manifesto to HN, Reddit, Dev.to.

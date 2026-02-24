@@ -76,32 +76,24 @@
   //   3. DEV_MODE      — skip, always pass
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /**
-   * Decode a base64 string to a Uint8Array (needed for SubtleCrypto + TweetNaCl).
-   * @param  {string} b64
-   * @returns {Uint8Array}
-   */
-  function base64ToBytes(b64) {
-    var binary = atob(b64);
-    var bytes  = new Uint8Array(binary.length);
-    for (var i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
+  // Use shared binary helpers (AGNI_SHARED from shared-runtime; refreshed after loadDependencies).
+  function getBase64ToBytes() {
+    return (global.AGNI_SHARED && global.AGNI_SHARED.base64ToBytes) || function (b64) {
+      var binary = atob(b64);
+      var bytes  = new Uint8Array(binary.length);
+      for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    };
   }
-
-  /**
-   * Concatenate multiple Uint8Arrays into a single Uint8Array.
-   * @param  {...Uint8Array} arrays
-   * @returns {Uint8Array}
-   */
-  function concatBytes() {
-    var arrays = Array.prototype.slice.call(arguments);
-    var total  = arrays.reduce(function (n, a) { return n + a.length; }, 0);
-    var result = new Uint8Array(total);
-    var offset = 0;
-    arrays.forEach(function (a) { result.set(a, offset); offset += a.length; });
-    return result;
+  function getConcatBytes() {
+    return (global.AGNI_SHARED && global.AGNI_SHARED.concatBytes) || function () {
+      var arrays = Array.prototype.slice.call(arguments);
+      var total  = arrays.reduce(function (n, a) { return n + a.length; }, 0);
+      var result = new Uint8Array(total);
+      var offset = 0;
+      arrays.forEach(function (a) { result.set(a, offset); offset += a.length; });
+      return result;
+    };
   }
 
   /**
@@ -117,7 +109,7 @@
     var contentBytes = enc.encode(contentString);
     var sepBytes     = new Uint8Array([0x00]);    // NUL separator
     var deviceBytes  = enc.encode(deviceId);
-    var combined     = concatBytes(contentBytes, sepBytes, deviceBytes);
+    var combined     = getConcatBytes()(contentBytes, sepBytes, deviceBytes);
     return crypto.subtle.digest('SHA-256', combined);
   }
 
@@ -127,6 +119,7 @@
    * @returns {Promise<boolean>}
    */
   function verifyWithSubtleCrypto() {
+    var base64ToBytes = getBase64ToBytes();
     var sigBytes    = base64ToBytes(global.OLS_SIGNATURE);
     var pubKeyBytes = base64ToBytes(global.OLS_PUBLIC_KEY);
     var owner       = global.OLS_INTENDED_OWNER;
@@ -173,6 +166,8 @@
     }
 
     try {
+      var base64ToBytes = getBase64ToBytes();
+      var concatBytes   = getConcatBytes();
       var sigBytes  = base64ToBytes(global.OLS_SIGNATURE);
       var spkiBytes = base64ToBytes(global.OLS_PUBLIC_KEY);
       // SPKI DER for Ed25519 is always 44 bytes: 12-byte header + 32-byte key.

@@ -82,6 +82,20 @@
           "type": "string",
           "pattern": "^sha256:[a-f0-9]{64}$",
           "description": "SHA-256 hash of the steps array (JSON-serialized, sorted keys). Allows integrity verification without full signature infrastructure."
+        },
+        "utu": {
+          "type": "object",
+          "description": "UTU label for governance and discovery.",
+          "additionalProperties": false,
+          "properties": {
+            "class": { "type": "string" },
+            "band": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "teaching_mode": {
+          "type": "string",
+          "description": "Author-declared teaching mode.",
+          "enum": ["socratic", "didactic", "guided_discovery", "narrative", "constructivist", "direct"]
         }
       }
     },

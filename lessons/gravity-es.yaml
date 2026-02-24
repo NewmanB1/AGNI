@@ -1,0 +1,136 @@
+# Spanish translation of Golden Master (gravity.yaml) — Translation stress test (Sprint B)
+# Same structure and threshold syntax; user-facing text in Spanish.
+version: "1.7.0"
+
+meta:
+  identifier: ols:physics:gravity_intro_v1_es
+  title: Sentir la gravedad
+  description: Usa tu teléfono para sentir la gravedad y la caída libre – actividad segura
+  language: es
+  locale: ES
+  license: AGPL-3.0
+  created: "2024-03-10T14:00:00Z"
+  updated: "2026-02-17T13:00:00Z"
+  authors:
+    - name: Jane Doe
+      email: jane@openlesson.org
+  subject: [Physics, Classical Mechanics, Gravity]
+  tags: [beginner, indoor, drop-safe, sensor, 10-14]
+  audience:
+    educational_role: student
+    typical_age_range: 10-14
+  time_required: PT10M
+  difficulty: 2
+
+ontology:
+  requires: [{skill: ols:physics:observation_basics}]
+  provides: [{skill: ols:physics:gravity_concept, level: 1}]
+
+gate:
+  type: quiz
+  skill_target: ols:physics:observation_basics
+  question: ¿Qué fuerza atrae los objetos hacia el centro de la Tierra?
+  expected_answer: gravedad
+  on_fail: redirect:ols:physics:observation_basics/review
+  passing_score: 1
+  retry_delay: PT2M
+
+steps:
+  - id: intro
+    type: instruction
+    content: |
+      ## La fuerza invisible
+      La gravedad está tirando de **todo** hacia abajo todo el tiempo — ¡incluso ahora!
+      
+      Tu teléfono puede **sentir** esta fuerza con su sensor.
+    expected_duration: PT45S
+    weight: 0.1
+
+  - id: safety
+    type: instruction
+    content: |
+      ## Importante – ¡Mantente seguro!
+      - Usa una **superficie blanda** (almohada, cama, manta, cojín)
+      - Suelta desde **solo 30–50 cm** (altura de la rodilla)
+      - Sujeta el teléfono bien antes de soltarlo
+      - **No** lo sueltes en suelos duros, cemento o fuera
+    expected_duration: PT30S
+    weight: 0.15
+
+  - id: calibration
+    type: hardware_trigger
+    sensor: accelerometer
+    threshold: accel.z > 7.5
+    feedback: vibration:short
+    content: |
+      ## Paso 1 – Mantén quieto (calibración)
+      Pon el teléfono plano en la palma de la mano o en una mesa  
+      (pantalla hacia **arriba**)
+      
+      Mantenlo muy quieto hasta que sientas una vibración corta.
+      
+      Si no pasa nada en 20 segundos → toca "Continuar de todos modos"
+    expected_duration: PT45S
+    max_attempts: 999
+    weight: 0.2
+    on_fail: skip_to:freefall
+
+  - id: freefall
+    type: hardware_trigger
+    sensor: accelerometer
+    threshold: freefall > 0.35s
+    feedback: vibration:success_pattern
+    content: |
+      ## Paso 2 – Suelta suave (caída libre)
+      Sujeta el teléfono a 30–50 cm sobre una superficie blanda.
+      
+      Suelta con cuidado → el teléfono se sentirá "sin peso" un momento.
+      
+      Sentirás una vibración más larga y rítmica cuando funcione.
+      
+      Si no pasa nada después de unos intentos → toca "Continuar de todos modos"
+    expected_duration: PT2M
+    max_attempts: 5
+    weight: 0.8
+    on_fail: skip_to:explanation
+
+  - id: explanation
+    type: instruction
+    content: |
+      ## ¿Qué acaba de pasar?
+      
+      - En la mano → el teléfono sintió ~9,8 m/s² hacia abajo (gravedad normal)
+      - Durante la caída → el teléfono sintió casi 0 m/s² → eso es **caída libre**
+      
+      ¡Los astronautas sienten la misma ingravidez en órbita!
+    expected_duration: PT1M30S
+    weight: 0.6
+
+  - id: quiz-gravity
+    type: quiz
+    content: |
+      ## Comprueba
+      ¿Por qué el teléfono se sintió sin peso durante la caída?
+    answer_options:
+      - El teléfono pesaba menos
+      - La gravedad dejó de actuar
+      - El teléfono caía a la misma velocidad que tira la gravedad → no se siente fuerza
+      - Se acabó la batería
+    correct_index: 2
+    expected_duration: PT50S
+    max_attempts: 2
+    weight: 0.9
+    on_fail: redirect:explanation
+
+  - id: completion
+    type: instruction
+    content: |
+      ## ¡Bien hecho! 🎉
+      
+      Acabas de sentir qué es la caída libre.
+      
+      La gravedad no desapareció — tú y el teléfono caíais juntos.
+      
+      Prueba a soltarlo unas veces más si quieres.
+    expected_duration: PT30S
+    weight: 0.05

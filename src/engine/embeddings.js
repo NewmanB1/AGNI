@@ -1,4 +1,4 @@
-// src/embeddings.js
+// src/engine/embeddings.js
 // AGNI LMS Engine — student and lesson embedding vectors
 //
 // Online matrix factorization with forgetting and L2 regularization.
@@ -15,7 +15,7 @@ var math = require('./math');
 /**
  * Lazy-initialize student embedding vector if missing.
  * Initializes with small random noise to break symmetry.
- * @param {import('./types').LMSState} state
+ * @param {import('../types').LMSState} state
  * @param {string} studentId
  * @returns {number[]}
  */
@@ -33,7 +33,7 @@ function ensureStudentVector(state, studentId) {
 /**
  * Lazy-initialize lesson embedding vector if missing.
  * Initializes with small random noise to break symmetry.
- * @param {import('./types').LMSState} state
+ * @param {import('../types').LMSState} state
  * @param {string} lessonId
  * @returns {number[]}
  */
@@ -60,34 +60,35 @@ function ensureLessonVector(state, lessonId) {
  *   z_k ← γ·z_k + lr·(err·w_k − reg·z_k)
  *   w_k ← γ·w_k + lr·(err·z_k − reg·w_k)
  *
- * @param {import('./types').LMSState} state
+ * @param {import('../types').LMSState} state
  * @param {string} studentId
  * @param {string} lessonId
- * @param {number} gain  normalized learning gain (from Rasch Δability)
+ * @param {number} gain
  */
 function updateEmbedding(state, studentId, lessonId, gain) {
   var z = ensureStudentVector(state, studentId);
   var w = ensureLessonVector(state, lessonId);
 
-  var lr      = state.embedding.lr;
-  var reg     = state.embedding.reg;
-  var gamma   = state.embedding.forgetting;
-  var dim     = state.embedding.dim;
+  var gamma = state.embedding.forgetting;
+  var lr    = state.embedding.lr;
+  var reg   = state.embedding.reg;
 
-  var pred = 0;
-  for (var k = 0; k < dim; k++) pred += z[k] * w[k];
-  var err = gain - pred;
+  var dotZW = math.dot(z, w);
+  var err   = gain - dotZW;
 
-  for (var k = 0; k < dim; k++) {
-    var zi = z[k];
-    var wj = w[k];
-    z[k] = gamma * zi + lr * (err * wj - reg * zi);
-    w[k] = gamma * wj + lr * (err * zi - reg * wj);
+  for (var k = 0; k < z.length; k++) {
+    var zk = z[k];
+    var wk = w[k];
+    var newZk = gamma * zk + lr * (err * wk - reg * zk);
+    var newWk = gamma * wk + lr * (err * zk - reg * wk);
+    z[k] = newZk;
+    w[k] = newWk;
   }
 }
 
 module.exports = {
-  ensureStudentVector,
-  ensureLessonVector,
-  updateEmbedding
+  ensureStudentVector: ensureStudentVector,
+  ensureLessonVector:  ensureLessonVector,
+  updateEmbedding:     updateEmbedding
 };
+

@@ -37,11 +37,26 @@ npm run build
 # Run feature inference on all lessons
 node test-inference.js
 
-# Validate lessons against the OLS schema
+# Validate lessons against the OLS schema (and threshold syntax for hardware_trigger steps)
 npm run validate
 ```
 
 The compiled output lands in `dist/`. Open `dist/gravity.html` in any browser — no server needed.
+
+### Running the portal against the hub
+
+The teacher portal (`portal/`) can talk to a live hub for theta, LMS, governance, and authoring APIs. Start the hub (theta) and the portal with the hub URL set:
+
+```bash
+# Terminal 1: start the hub (theta API, default port 8082)
+node hub-tools/theta.js
+
+# Terminal 2: run the portal with the hub URL (from repo root)
+cd portal
+VITE_HUB_URL=http://localhost:8082 npm run dev
+```
+
+Then open the portal in your browser. With `VITE_HUB_URL` set, the UI uses the real hub APIs instead of mock data. See `portal/src/lib/api.ts` and `docs/api-contract.md` for the API contract.
 
 ---
 

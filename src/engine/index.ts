@@ -1,4 +1,4 @@
-// src/engine/index.js
+// src/engine/index.ts
 // AGNI LMS Engine  v1.0.0
 //
 // Entry point for the Phase 2.5 adaptive learning engine.
@@ -27,13 +27,16 @@
 
 'use strict';
 
+import type { LMSState, BanditSummary, EmbeddingEntityState } from '../types';
+
 var fs         = require('fs');
 var path       = require('path');
-var rasch      = require('../rasch');
-var embeddings = require('../embeddings');
-var thompson   = require('../thompson');
-var federation = require('../federation');
-var math       = require('../math');
+var rasch       = require('./rasch');
+var embeddings  = require('./embeddings');
+var thompson    = require('./thompson');
+var federation  = require('./federation');
+var math        = require('./math');
+var migrations  = require('./migrations');
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 var DATA_DIR       = process.env.AGNI_DATA_DIR || path.join(__dirname, '../../data');
@@ -59,7 +62,7 @@ var DEFAULT_EMBEDDING_REG  = parseFloat(process.env.AGNI_EMBEDDING_REG || '0.001
  * file cannot be parsed.
  * @returns {import('../types').LMSState}
  */
-function buildDefaultState() {
+function buildDefaultState(): LMSState {
   var dim = DEFAULT_EMBEDDING_DIM;
   return {
     rasch: {
@@ -91,7 +94,7 @@ function buildDefaultState() {
  * corruption is surfaced early rather than silently overwritten.
  * @returns {import('../types').LMSState}
  */
-function loadState() {
+function loadState(): LMSState {
   if (!fs.existsSync(STATE_PATH)) {
     console.log('[LMS] No state file found — starting fresh');
     return buildDefaultState();
@@ -99,7 +102,13 @@ function loadState() {
 
   try {
     var raw   = fs.readFileSync(STATE_PATH, 'utf8');
-    var state = JSON.parse(raw);
+    var parsed = JSON.parse(raw) as unknown;
+    var migratedResult = migrations.migrateLMSState(parsed, { embeddingDim: DEFAULT_EMBEDDING_DIM });
+    var state: LMSState = migratedResult.state;
+    if (migratedResult.migrated) {
+      console.log('[LMS] State repaired (schema migration applied) — saving');
+      saveState(state);
+    }
     console.log('[LMS] State loaded:', STATE_PATH,
       '— students:', Object.keys(state.rasch.students).length,
       'lessons:', Object.keys(state.embedding.lessons).length,
@@ -120,7 +129,7 @@ function loadState() {
  * A process crash mid-write cannot leave a truncated state file.
  * @param {import('../types').LMSState} state
  */
-function saveState(state) {
+function saveState(state: LMSState): void {
   try {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
     fs.writeFileSync(STATE_TMP_PATH, JSON.stringify(state, null, 2));
@@ -133,7 +142,7 @@ function saveState(state) {
 }
 
 // ── Module-level state (loaded once at require() time) ────────────────────────
-var _state = loadState();
+var _state: LMSState = loadState();
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -153,7 +162,7 @@ var _state = loadState();
  * @param {number} difficulty  1–5 from inferredFeatures
  * @param {string} skill       primary skill from ontology.provides[0].skill
  */
-function seedLesson(lessonId, difficulty, skill) {
+function seedLesson(lessonId: string, difficulty: number, skill: string): void {
   embeddings.ensureLessonVector(_state, lessonId);
 
   if (!_state.rasch.probes[lessonId]) {
@@ -172,7 +181,7 @@ function seedLesson(lessonId, difficulty, skill) {
  *
  * @param {{ lessonId: string, difficulty: number, skill: string }[]} lessons
  */
-function seedLessons(lessons) {
+function seedLessons(lessons: Array<{ lessonId: string; difficulty: number; skill: string }>): void {
   var seeded = 0;
   for (var i = 0; i < lessons.length; i++) {
     var entry  = lessons[i];
@@ -206,13 +215,13 @@ function seedLessons(lessons) {
  * @param {string[]} candidates  lessonIds already filtered by theta BFS
  * @returns {string|null}
  */
-function selectBestLesson(studentId, candidates) {
+function selectBestLesson(studentId: string, candidates: string[]): string | null {
   if (!candidates || candidates.length === 0) return null;
 
   // Temporarily restrict embedding.lessons to the candidate set so that
   // selectLesson() only scores lessons theta has deemed eligible.
   var fullLessons     = _state.embedding.lessons;
-  var filteredLessons = {};
+  var filteredLessons: Record<string, EmbeddingEntityState> = {};
 
   for (var i = 0; i < candidates.length; i++) {
     var id = candidates[i];
@@ -242,7 +251,11 @@ function selectBestLesson(studentId, candidates) {
  * @param {string}   lessonId
  * @param {{ probeId: string, correct: boolean }[]} probeResults
  */
-function recordObservation(studentId, lessonId, probeResults) {
+function recordObservation(
+  studentId: string,
+  lessonId: string,
+  probeResults: Array<{ probeId: string; correct: boolean }>
+): void {
   // 1. Update Rasch ability — returns delta as gain proxy
   var gain = rasch.updateAbility(_state, studentId, probeResults);
 
@@ -262,7 +275,7 @@ function recordObservation(studentId, lessonId, probeResults) {
  * @param {string} studentId
  * @returns {{ ability: number, variance: number }|null}
  */
-function getStudentAbility(studentId) {
+function getStudentAbility(studentId: string): { ability: number; variance: number } | null {
   return _state.rasch.students[studentId] || null;
 }
 
@@ -285,7 +298,7 @@ function exportBanditSummary() {
  *
  * @param {import('../types').BanditSummary} remote
  */
-function mergeRemoteSummary(remote) {
+function mergeRemoteSummary(remote: BanditSummary): void {
   thompson.ensureBanditInitialized(_state);
   var local  = federation.getBanditSummary(_state);
   var merged = federation.mergeBanditSummaries(local, remote);

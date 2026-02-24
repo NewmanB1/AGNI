@@ -27,60 +27,9 @@
 
 'use strict';
 
-// ── Factory file load order ──────────────────────────────────────────────────
-// The order below is the ONLY valid load order for the SVG factory system.
-// factory-loader.js must load files in this sequence.
-//
-// shared-runtime.js    — provides AGNI_SHARED (prepended by html.js, not here)
-// sensor-bridge.js     — provides sensor data to AGNI_SHARED.subscribeToSensor()
-//                        must load before svg-stage.js which calls subscribeToSensor
-// svg-stage.js         — stage + RAF loop + sensor binding via AGNI_SHARED
-// svg-factories.js     — static factory functions attached to AGNI_SVG
-// svg-factories-dynamic.js — sensor-driven factories; requires stage
-// svg-factories-geometry.js — geometry factories; requires stage
-// svg-registry.js      — fromSpec() dispatch; must be last in SVG chain
-// table-renderer.js    — uses AGNI_SVG.barGraph; loads after factories
-//
-var FACTORY_LOAD_ORDER = [
-  'sensor-bridge.js',
-  'svg-stage.js',
-  'svg-factories.js',
-  'svg-factories-dynamic.js',
-  'svg-factories-geometry.js',
-  'svg-registry.js',
-  'table-renderer.js'
-];
-
-// ── Registry ID → file membership ────────────────────────────────────────────
-// Maps each svg-registry.js factory id to the file that implements it.
-// sensor-bridge.js has no registry id — it is included based on flags,
-// not factory spec references.
-//
-var FACTORY_FILE_MAP = {
-  // svg-factories.js (static)
-  'venn':          'svg-factories.js',
-  'axis':          'svg-factories.js',
-  'numberLine':    'svg-factories.js',
-  'balanceScale':  'svg-factories.js',
-  'barGraph':      'svg-factories.js',
-  'clockFace':     'svg-factories.js',
-  'flowMap':       'svg-factories.js',
-  'pieChart':      'svg-factories.js',
-  'polygon':       'svg-factories.js',
-  'tree':          'svg-factories.js',
-
-  // svg-factories-dynamic.js (sensor-driven)
-  'numberLineDynamic': 'svg-factories-dynamic.js',
-  'clockFaceDynamic':  'svg-factories-dynamic.js',
-  'timeGraph':         'svg-factories-dynamic.js',
-  'arrowMap':          'svg-factories-dynamic.js',
-  'compose':           'svg-factories-dynamic.js',
-
-  // svg-factories-geometry.js (geometry)
-  'polygonDynamic':  'svg-factories-geometry.js',
-  'cartesianGrid':   'svg-factories-geometry.js',
-  'unitCircle':      'svg-factories-geometry.js'
-};
+var runtimeManifest = require('./runtimeManifest');
+var FACTORY_LOAD_ORDER = runtimeManifest.FACTORY_LOAD_ORDER;
+var FACTORY_FILE_MAP  = runtimeManifest.FACTORY_FILE_MAP;
 
 // ── Equation type detection patterns ────────────────────────────────────────
 var EQUATION_TYPE_PATTERNS = {
@@ -191,10 +140,10 @@ function inferFeatures(lessonData) {
   var hasStaticVisuals  = !!specFactoryIds.length ||
     STATIC_VISUAL_PATTERNS.some(function (p) { return p.test(allContent); });
   var hasDynamicVisuals = specFactoryIds.some(function (id) {
-    return FACTORY_FILE_MAP[id] === 'svg-factories-dynamic.js';
+    return runtimeManifest.getFileForFactoryId(id) === 'svg-factories-dynamic.js';
   }) || DYNAMIC_VISUAL_PATTERNS.some(function (p) { return p.test(allContent); });
   var hasGeometryVisuals = specFactoryIds.some(function (id) {
-    return FACTORY_FILE_MAP[id] === 'svg-factories-geometry.js';
+    return runtimeManifest.getFileForFactoryId(id) === 'svg-factories-geometry.js';
   }) || GEOMETRY_PATTERNS.some(function (p) { return p.test(allContent); });
   var hasVisuals = hasStaticVisuals || hasDynamicVisuals || hasGeometryVisuals;
 
@@ -315,13 +264,13 @@ function _collectSpecFactoryIds(steps) {
   steps.forEach(function (step) {
     if (!step.spec) return;
     var spec = step.spec;
-    if (spec.factory && FACTORY_FILE_MAP[spec.factory]) {
+    if (spec.factory && runtimeManifest.getFileForFactoryId(spec.factory)) {
       if (!seen[spec.factory]) { ids.push(spec.factory); seen[spec.factory] = true; }
     }
     if (spec.compose && Array.isArray(spec.layers)) {
       spec.layers.forEach(function (layer) {
         var fid = layer.factory;
-        if (fid && FACTORY_FILE_MAP[fid] && !seen[fid]) {
+        if (fid && runtimeManifest.getFileForFactoryId(fid) && !seen[fid]) {
           ids.push(fid);
           seen[fid] = true;
         }
@@ -332,39 +281,18 @@ function _collectSpecFactoryIds(steps) {
 }
 
 /**
- * Builds the ordered factory manifest for a lesson.
- *
- * sensor-bridge.js is first (after shared-runtime.js which html.js prepends).
- * svg-stage.js follows immediately — it calls AGNI_SHARED.subscribeToSensor()
- * which requires sensor-bridge.js to already be attached to AGNI_SHARED.
- * svg-registry.js is always last in the SVG chain (provides fromSpec()).
- * table-renderer.js is appended when the lesson has tables AND visuals.
- *
- * @param  {string[]} specIds
- * @param  {boolean}  hasDynamic
- * @param  {boolean}  hasGeometry
- * @param  {boolean}  includeTableRenderer
- * @param  {boolean}  includeSensorBridge
- * @returns {string[]}
+ * Builds the ordered factory manifest for a lesson via runtimeManifest.
+ * Capabilities only; filenames and order are owned by runtimeManifest.
  */
 function _buildFactoryManifest(specIds, hasDynamic, hasGeometry,
     includeTableRenderer, includeSensorBridge) {
-  var files = [];
-
-  // sensor-bridge.js must precede svg-stage.js
-  if (includeSensorBridge) files.push('sensor-bridge.js');
-
-  files.push('svg-stage.js');
-  files.push('svg-factories.js');
-
-  if (hasDynamic)  files.push('svg-factories-dynamic.js');
-  if (hasGeometry) files.push('svg-factories-geometry.js');
-
-  files.push('svg-registry.js');
-
-  if (includeTableRenderer) files.push('table-renderer.js');
-
-  return files;
+  return runtimeManifest.getOrderedFactoryFiles({
+    specIds:               specIds,
+    hasDynamic:            hasDynamic,
+    hasGeometry:           hasGeometry,
+    includeTableRenderer:  includeTableRenderer,
+    includeSensorBridge:   includeSensorBridge
+  });
 }
 
 /**

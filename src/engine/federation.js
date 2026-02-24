@@ -1,4 +1,4 @@
-// src/federation.js
+// src/engine/federation.js
 // AGNI LMS Engine — federated bandit summary export and merging
 //
 // Handles precision-weighted combination of bandit posteriors from two hubs.
@@ -18,8 +18,8 @@ var math = require('./math');
  * It is a *raw* precision matrix — not scaled by sampleSize. Downstream
  * consumers (e.g. mergeBanditSummaries) must be aware of this unit.
  *
- * @param {import('./types').LMSState} state
- * @returns {import('./types').BanditSummary}
+ * @param {import('../types').LMSState} state
+ * @returns {import('../types').BanditSummary}
  */
 function getBanditSummary(state) {
   var Ainv = math.invertSPD(state.bandit.A);
@@ -74,9 +74,9 @@ function getBanditSummary(state) {
  * corresponding to the merged posterior with (n_local + n_remote) observations,
  * which is the correct interpretation.
  *
- * @param {import('./types').BanditSummary} local   Summary from the local hub
- * @param {import('./types').BanditSummary} remote  Summary from a remote hub
- * @returns {import('./types').BanditSummary}        Merged summary. precision is in raw (total) units.
+ * @param {import('../types').BanditSummary} local   Summary from the local hub
+ * @param {import('../types').BanditSummary} remote  Summary from a remote hub
+ * @returns {import('../types').BanditSummary}        Merged summary. precision is in raw (total) units.
  */
 function mergeBanditSummaries(local, remote) {
   // Dimension guard: merging summaries from different feature spaces is a
@@ -130,6 +130,7 @@ function mergeBanditSummaries(local, remote) {
 }
 
 module.exports = {
-  getBanditSummary,
-  mergeBanditSummaries
+  getBanditSummary:      getBanditSummary,
+  mergeBanditSummaries:  mergeBanditSummaries
 };
+

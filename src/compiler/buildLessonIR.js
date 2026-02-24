@@ -163,6 +163,10 @@ function buildLessonSidecar(ir) {
     language:       meta.language || ir.language     || 'en',
     difficulty:     ir.inferredFeatures.difficulty   || meta.difficulty || 2,
 
+    // ── Governance / pedagogy (for reporting and compliance) ───────────────────
+    utu:            meta.utu || undefined,
+    teaching_mode:  meta.teaching_mode || ir.teaching_mode || undefined,
+
     // ── Compiler stamps ───────────────────────────────────────────────────────
     compiledAt:     ir._compiledAt,
     schemaVersion:  ir._schemaVersion,

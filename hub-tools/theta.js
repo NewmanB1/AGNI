@@ -1,6 +1,3 @@
-
-Copy
-
 // hub-tools/theta.js
 // AGNI Theta Engine v1.8.0 – with shared skill-graph cache, pre-filtered lessons & BFS cycle guard
 //
@@ -25,6 +22,10 @@ const path = require('path');
 const http = require('http');
 const zlib = require('zlib');
 
+const lmsService = require('../src/services/lms');
+const governanceService = require('../src/services/governance');
+const authorService = require('../src/services/author');
+
 // -- Paths -------------------------------------------------------------------
 const DATA_DIR              = process.env.AGNI_DATA_DIR  || path.join(__dirname, '../data');
 const SERVE_DIR             = process.env.AGNI_SERVE_DIR || path.join(__dirname, '../serve');
@@ -46,17 +47,18 @@ const MIN_LOCAL_SAMPLE_SIZE = parseInt(process.env.AGNI_MIN_LOCAL_SAMPLE || '40'
 const MIN_LOCAL_EDGE_COUNT  = parseInt(process.env.AGNI_MIN_LOCAL_EDGES  || '5');
 
 // -- LMS engine (Phase 2.5) --------------------------------------------------
-// Loaded lazily so theta.js degrades gracefully if the engine files are
-// missing. Missing engine = degraded mode: theta scheduling works, bandit
-// selection is skipped and /api/lms/* routes return 503.
-const ENGINE_PATH = path.join(__dirname, '../src/engine/index.js');
-let lmsEngine = null;
-try {
-  lmsEngine = require(ENGINE_PATH);
-  console.log('[THETA] LMS engine loaded:', JSON.stringify(lmsEngine.getStatus()));
-} catch (err) {
+// Wrapped by src/services/lms so callers do not depend on engine internals.
+const lmsEngine = lmsService;
+
+if (lmsEngine.isAvailable()) {
+  try {
+    console.log('[THETA] LMS engine loaded:', JSON.stringify(lmsEngine.getStatus()));
+  } catch (err) {
+    console.log('[THETA] LMS engine loaded (status unavailable):', err.message);
+  }
+} else {
   console.warn(
-    '[THETA] LMS engine not available:', err.message,
+    '[THETA] LMS engine not available.',
     '\n[THETA] Degraded mode: theta scheduling active, bandit selection disabled'
   );
 }
@@ -364,6 +366,8 @@ function rebuildLessonIndex() {
           language:         sidecar.language     || entry.language  || 'en',
           compiledAt:       sidecar.compiledAt   || null,
           metadata_source:  sidecar.metadata_source || 'inferred',
+          utu:              sidecar.utu || null,
+          teaching_mode:    sidecar.teaching_mode || null,
           skillsProvided:   (sidecar.ontology && sidecar.ontology.provides) || [],
           skillsRequired:   (sidecar.ontology && sidecar.ontology.requires
             ? sidecar.ontology.requires.map(r => typeof r === 'string' ? r : r.skill)
@@ -429,7 +433,7 @@ function rebuildLessonIndex() {
   // difficulty, then to 2 (middle of the 1–5 scale) if neither is present.
   // skill: primary skill from skillsProvided[0] — used as the Rasch probe id.
   // Seeding is idempotent; lessons already known to the engine are skipped.
-  if (lmsEngine) {
+  if (lmsEngine.isAvailable && lmsEngine.isAvailable()) {
     const seedEntries = index
       .filter(entry => entry.skillsProvided.length > 0)
       .map(entry => ({
@@ -466,7 +470,8 @@ function readBody(req) {
   });
 }
 
-function startApi() {
+function startApi(port) {
+  const listenPort = (typeof port === 'number' && port >= 0) ? port : PORT;
   const server = http.createServer((req, res) => {
     const sendResponse = (statusCode, payload) => {
       const jsonStr = JSON.stringify(payload);
@@ -486,9 +491,10 @@ function startApi() {
     const [urlPath, queryStr] = req.url.split('?');
     const qs = Object.fromEntries(new URLSearchParams(queryStr || ''));
 
-    // ── Theta routes (unchanged) ─────────────────────────────────────────────
-
-    if (req.method !== 'GET' && !urlPath.startsWith('/api/lms')) {
+    // ── Method guard: GET for most routes; POST for /api/lms/*, governance/compliance, author/* ──
+    const isPostRoute = urlPath.startsWith('/api/lms') || urlPath === '/api/governance/compliance' ||
+      urlPath === '/api/author/validate' || urlPath === '/api/author/preview';
+    if (req.method !== 'GET' && !(req.method === 'POST' && isPostRoute)) {
       return sendResponse(405, { error: 'Method not allowed' });
     }
 
@@ -524,7 +530,9 @@ function startApi() {
     // Response includes the selected lessonId and the student's current Rasch
     // ability estimate (useful for logging and adaptive UI).
     if (req.method === 'GET' && urlPath === '/api/lms/select') {
-      if (!lmsEngine) return sendResponse(503, { error: 'LMS engine not available' });
+      if (!lmsEngine.isAvailable || !lmsEngine.isAvailable()) {
+        return sendResponse(503, { error: 'LMS engine not available' });
+      }
       if (!qs.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
       const candidates = qs.candidates
         ? qs.candidates.split(',').map(s => s.trim()).filter(Boolean)
@@ -550,8 +558,10 @@ function startApi() {
     // Called after a student completes a lesson and post-lesson probe results
     // are available. Updates Rasch ability, embeddings, and the bandit posterior
     // in one atomic operation, then persists state to lms_state.json.
-    if (req.method === 'POST' && urlPath === '/api/lms/observation') {
-      if (!lmsEngine) return sendResponse(503, { error: 'LMS engine not available' });
+      if (req.method === 'POST' && urlPath === '/api/lms/observation') {
+      if (!lmsEngine.isAvailable || !lmsEngine.isAvailable()) {
+        return sendResponse(503, { error: 'LMS engine not available' });
+      }
       readBody(req).then(body => {
         try {
           const payload = JSON.parse(body);
@@ -573,7 +583,9 @@ function startApi() {
     // observation count, embedding dim, state file path. Safe to expose on
     // an internal admin endpoint.
     if (req.method === 'GET' && urlPath === '/api/lms/status') {
-      if (!lmsEngine) return sendResponse(503, { error: 'LMS engine not available' });
+      if (!lmsEngine.isAvailable || !lmsEngine.isAvailable()) {
+        return sendResponse(503, { error: 'LMS engine not available' });
+      }
       return sendResponse(200, lmsEngine.getStatus());
     }
 
@@ -585,7 +597,9 @@ function startApi() {
     // posteriors contribute proportionally to their observation counts.
     // See federation.ts mergeBanditSummaries() for the full derivation.
     if (req.method === 'POST' && urlPath === '/api/lms/federation/merge') {
-      if (!lmsEngine) return sendResponse(503, { error: 'LMS engine not available' });
+      if (!lmsEngine.isAvailable || !lmsEngine.isAvailable()) {
+        return sendResponse(503, { error: 'LMS engine not available' });
+      }
       readBody(req).then(body => {
         try {
           const remote = JSON.parse(body);
@@ -601,17 +615,80 @@ function startApi() {
       return;
     }
 
+    // ── Governance routes (Phase 7) ─────────────────────────────────────────
+    if (req.method === 'GET' && urlPath === '/api/governance/report') {
+      try {
+        const lessonIndex = loadLessonIndex();
+        const masterySummary = loadMasterySummary();
+        const report = governanceService.aggregateCohortCoverage(lessonIndex, masterySummary);
+        return sendResponse(200, report);
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    if (req.method === 'GET' && urlPath === '/api/governance/policy') {
+      try {
+        const policy = governanceService.loadPolicy();
+        return sendResponse(200, policy || {});
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    if (req.method === 'POST' && urlPath === '/api/governance/compliance') {
+      readBody(req).then(body => {
+        try {
+          const sidecar = JSON.parse(body);
+          const result = governanceService.evaluateLessonCompliance(sidecar);
+          sendResponse(200, result);
+        } catch (err) {
+          sendResponse(500, { error: err.message });
+        }
+      }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
+
+    // ── Authoring routes (Sprint C) ─────────────────────────────────────────
+    if (req.method === 'POST' && urlPath === '/api/author/validate') {
+      readBody(req).then(body => {
+        try {
+          const parsed = authorService.parseAuthorBody(body);
+          if (parsed.error) return sendResponse(400, { error: parsed.error });
+          const result = authorService.validateForAuthor(parsed.lessonData);
+          sendResponse(200, { valid: result.valid, errors: result.errors || [], warnings: result.warnings || [] });
+        } catch (err) {
+          sendResponse(500, { error: err.message });
+        }
+      }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
+
+    if (req.method === 'POST' && urlPath === '/api/author/preview') {
+      readBody(req).then(body => {
+        const parsed = authorService.parseAuthorBody(body);
+        if (parsed.error) return sendResponse(400, { error: parsed.error });
+        authorService.previewForAuthor(parsed.lessonData)
+          .then(result => {
+            if (result.error) return sendResponse(400, { error: result.error });
+            sendResponse(200, { ir: result.ir, sidecar: result.sidecar });
+          })
+          .catch(err => sendResponse(500, { error: err.message }));
+      }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
+
     sendResponse(404, { error: 'Not found' });
   });
 
-  server.listen(PORT, '0.0.0.0', () => console.log('[THETA] API listening on port', PORT));
+  server.listen(listenPort, '0.0.0.0', () => console.log('[THETA] API listening on port', server.address().port));
   return server;
 }
 
 // -- Startup -----------------------------------------------------------------
 if (require.main === module) {
   rebuildLessonIndex();
-  const server = startApi();
+  const server = startApi(PORT);
 
   // Attach hub-transform lesson delivery routes (Phase 3).
   // Provides GET /lessons/:slug, GET /factories/:file, GET /katex/:file,
@@ -632,6 +709,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  startApi,
   getLessonsSortedByTheta,
   computeLessonTheta,
   getResidualCostFactor,

@@ -75,13 +75,15 @@
         "properties": {
           "from": {
             "type": "string",
-            "pattern": "^[a-z0-9_-]{1,64}:[a-z0-9_-]{1,64}$",
-            "description": "Skill identifier (namespace:skill). Hyphens allowed, max 64 chars per part."
+            "pattern": "^[a-z0-9_.-]+(:[a-z0-9_.-]+)+$",
+            "maxLength": 128,
+            "description": "Skill identifier (e.g. namespace:skill or ols:physics:gravity_concept). At least two colon-separated segments."
           },
           "to": {
             "type": "string",
-            "pattern": "^[a-z0-9_-]{1,64}:[a-z0-9_-]{1,64}$",
-            "description": "Skill identifier (namespace:skill). Hyphens allowed, max 64 chars per part."
+            "pattern": "^[a-z0-9_.-]+(:[a-z0-9_.-]+)+$",
+            "maxLength": 128,
+            "description": "Skill identifier (e.g. namespace:skill or ols:physics:gravity_concept). At least two colon-separated segments."
           },
           "weight": {
             "type": "number",
