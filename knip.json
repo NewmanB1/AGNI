@@ -1,35 +1,46 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
   "entry": [
-    // Portal/SvelteKit main anchors (adjust if configs are portal/svelte.config.js etc.)
-    "portal/src/routes/**/+*.{js,ts,svelte,jsm,server.js,server.ts}",
-    "portal/src/hooks.{js,ts,server.js,server.ts}",
-    "portal/src/params/**/*.{js,ts}",
-    "portal/src/app.html",
-    // Protect core runtime entry points
+    // Core runtime + player anchors (protect dynamic loaders)
     "player.js",
     "src/runtime/player.js",
     "src/runtime/factory-loader.js",
-    "src/runtime/sensor-bridge.js"
+    "src/runtime/sensor-bridge.js",
+    "src/runtime/math-renderer.js",
+    "src/runtime/telemetry.js",
+    "src/runtime/threshold-evaluator.js",
+    "src/runtime/svg-stage.js",
+    // Compiler / build entries
+    "src/compiler/buildLessonIR.js",
+    "src/cli.js",                 // If this is your build CLI
+    "src/engine/index.ts",
+    // Portal SvelteKit (force since subfolder)
+    "portal/src/routes/**/+*.{js,ts,svelte,jsm,server.js,server.ts}",
+    "portal/src/hooks.{js,ts,server.js,server.ts}",
+    "portal/src/app.html"
   ],
   "project": [
-    // Scan these for usage / dead code inside
     "portal/src/**/*.{js,ts,svelte,jsm}",
     "src/**/*.{js,ts}",
-    "server/**/*.{js,ts}",
+    "server/**/*.{js}",
     "hub-tools/**/*.{js}",
     "!portal/.svelte-kit/**",
     "!**/*.d.ts",
     "!**/*.test.{js,ts}"
   ],
   "ignoreFiles": [
-    // Hide false positives: generated + dynamic refs
     "portal/.svelte-kit/**",
     "**/sw.js",
     "**/service-worker.js",
+    "server/sw.js",               // New server/sw.js from recent commit
     "server/pwa/sw.js",
     "server/pwa/shared.js",
     "src/runtime/sw.js"
+  ],
+  "ignoreDependencies": [
+    "express",
+    "remark-html",
+    "ajv-formats"
   ],
   "rules": {
     "files": "error",
