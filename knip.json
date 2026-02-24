@@ -1,0 +1,45 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "extends": [
+    "sveltekit"   // Activates SvelteKit plugin for better auto-detection of routes/+page.svelte, +layout.svelte, hooks, etc.
+  ],
+  "entry": [
+    // Core SvelteKit entries (plugin usually handles these, but explicit helps)
+    "portal/src/routes/**/+*.{js,ts,svelte,server.js,server.ts}",
+    "portal/src/hooks.{js,ts,server.js,server.ts}",
+    "portal/src/params/**/*.{js,ts}",
+    "portal/src/app.html",           // If relevant for assets
+    // Protect known active root-level files/folders as explicit entries
+    "player.js",
+    "src/runtime/player.js",         // If this is the one; adjust path if different
+    "!**/*.d.ts",
+    "!**/*.test.{js,ts}"
+  ],
+  "project": [
+    // Scan everything in the active folders
+    "portal/src/**/*.{js,ts,svelte,jsm}",
+    "src/**/*.{js,ts}",
+    "server/**/*.{js,ts}",
+    // Exclude generated stuff to avoid noise
+    "!portal/.svelte-kit/**",
+    "!**/*.d.ts"
+  ],
+  "ignoreFiles": [
+    // Suppress "unused file" reports only (still checks exports/deps inside)
+    // Add patterns here if specific files/folders inside src/server still false-positive
+    // e.g. "src/runtime/sw.js" if dynamic service worker
+    "**/sw.js",
+    "**/service-worker.js",
+    "server/pwa/sw.js",
+    "server/pwa/shared.js"
+  ],
+  "ignore": [
+    // Full suppression (all issue types) — use sparingly
+    "portal/.svelte-kit/**"
+  ],
+  "rules": {
+    "files": "error",        // Treat unused files as errors
+    "dependencies": "warn",
+    "unlisted": "warn"
+  }
+}
