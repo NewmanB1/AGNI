@@ -1,7 +1,9 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
   "entry": [
-    // Core runtime + player anchors (protect dynamic loaders)
+    "portal/src/routes/**/+*.{js,ts,svelte,jsm,server.js,server.ts}",
+    "portal/src/hooks.{js,ts,server.js,server.ts}",
+    "portal/src/app.html",
     "player.js",
     "src/runtime/player.js",
     "src/runtime/factory-loader.js",
@@ -10,14 +12,14 @@
     "src/runtime/telemetry.js",
     "src/runtime/threshold-evaluator.js",
     "src/runtime/svg-stage.js",
-    // Compiler / build entries
+    "src/runtime/svg-registry.js",
+    "src/runtime/svg-factories.js",
+    "src/runtime/svg-factories-dynamic.js",
+    "src/runtime/svg-factories-geometry.js",
+    "src/runtime/table-renderer.js",
     "src/compiler/buildLessonIR.js",
-    "src/cli.js",                 // If this is your build CLI
     "src/engine/index.ts",
-    // Portal SvelteKit (force since subfolder)
-    "portal/src/routes/**/+*.{js,ts,svelte,jsm,server.js,server.ts}",
-    "portal/src/hooks.{js,ts,server.js,server.ts}",
-    "portal/src/app.html"
+    "src/cli.js"
   ],
   "project": [
     "portal/src/**/*.{js,ts,svelte,jsm}",
@@ -32,15 +34,24 @@
     "portal/.svelte-kit/**",
     "**/sw.js",
     "**/service-worker.js",
-    "server/sw.js",               // New server/sw.js from recent commit
+    "server/sw.js",
     "server/pwa/sw.js",
     "server/pwa/shared.js",
-    "src/runtime/sw.js"
+    "src/runtime/sw.js",
+    "src/rasch.js",
+    "src/thompson.js",
+    "src/factory-loader.js",
+    "src/runtime/svg-factories*.js",
+    "src/runtime/svg-registry.js",
+    "src/runtime/table-renderer.js"
   ],
   "ignoreDependencies": [
     "express",
     "remark-html",
-    "ajv-formats"
+    "ajv-formats",
+    "remark-rehype",
+    "rehype-katex",
+    "rehype-stringify"
   ],
   "rules": {
     "files": "error",
