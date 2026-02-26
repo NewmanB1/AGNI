@@ -47,6 +47,7 @@ var compiler           = require('../src/compiler');
 var buildLessonIR      = compiler.buildLessonIR;
 var buildLessonSidecar = compiler.buildLessonSidecar;
 var buildKatexCss      = require('../src/utils/katex-css-builder');
+var lessonSchema       = require('../src/services/lessonSchema');
 var signContent        = require('../src/utils/crypto').signContent;
 var generateNonce      = require('../src/utils/csp').generateNonce;
 var buildCspMeta       = require('../src/utils/csp').buildCspMeta;
@@ -206,8 +207,14 @@ async function compileLesson(slug, options) {
 /**
  * Internal: perform the actual compilation. Called only by compileLesson()
  * after the in-flight and mtime checks pass.
+ * Validates with same OLS schema as CLI and author API before buildIR.
  */
 async function _doCompile(slug, loaded, options) {
+
+  var validation = lessonSchema.validateLessonData(loaded.lessonData);
+  if (!validation.valid) {
+    throw new Error('Lesson validation failed: ' + validation.errors.join('; '));
+  }
 
   var ir      = await buildLessonIR(loaded.lessonData, options);
   var sidecar = buildLessonSidecar(ir);

@@ -31,6 +31,9 @@
 //   [Fix] routeStep() now normalises external gate redirect directives through
 //     resolveDirective() so skip_to: prefixes are stripped, matching all other
 //     routing paths.
+//
+//   [Phase 5] Gate: use expected_answer (schema), passing_score (default 1.0),
+//     retry_delay (ISO 8601 duration before allowing next attempt after wrong answer).
 // ─────────────────────────────────────────────────────────────────────────────
 
 (function (global) {
@@ -51,6 +54,16 @@
   var history   = [];
   var stepIndex = 0;
 
+  /** Parse ISO 8601 duration (e.g. PT2M, PT30S) to milliseconds. Phase 5 retry_delay. */
+  function parseDurationMs(str) {
+    if (!str || typeof str !== 'string') return 0;
+    var m = str.match(/^P(?:T(?=(\d)))?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
+    if (!m) return 0;
+    var h = parseInt(m[2], 10) || 0;
+    var min = parseInt(m[3], 10) || 0;
+    var s = parseInt(m[4], 10) || 0;
+    return (h * 3600 + min * 60 + s) * 1000;
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTION 1 — Integrity Verification (Phase 4)
@@ -318,11 +331,18 @@
     escapeBtn.onclick         = function () { resolve('fail'); };
     container.appendChild(escapeBtn);
 
-    function checkAnswer() {
-      var answer  = input.value.trim().toLowerCase();
-      var correct = (gate.answer || '').trim().toLowerCase();
+    var retryDelayMs = parseDurationMs(gate.retry_delay);
+    var passingScore = (typeof gate.passing_score === 'number' && gate.passing_score >= 0 && gate.passing_score <= 1)
+      ? gate.passing_score : 1;
+    var expectedAnswer = (gate.expected_answer != null ? gate.expected_answer : gate.answer || '').trim().toLowerCase();
+    var waitingRetry = false;
 
-      if (answer === correct) {
+    function checkAnswer() {
+      if (waitingRetry) return;
+      var answer = input.value.trim().toLowerCase();
+      var score = (answer === expectedAnswer) ? 1 : 0;
+
+      if (score >= passingScore) {
         resolve('pass');
         return;
       }
@@ -342,6 +362,29 @@
         + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining)';
       input.value = '';
       input.focus();
+
+      if (retryDelayMs > 0) {
+        waitingRetry = true;
+        submitBtn.disabled = true;
+        input.disabled = true;
+        var deadline = Date.now() + retryDelayMs;
+        function updateWait() {
+          var left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+          if (left <= 0) {
+            waitingRetry = false;
+            submitBtn.disabled = false;
+            input.disabled = false;
+            feedback.textContent = 'Not quite \u2014 try again. ('
+              + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining)';
+            input.focus();
+            return;
+          }
+          feedback.textContent = 'Please wait ' + left + 's before trying again. ('
+            + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining)';
+          setTimeout(updateWait, 500);
+        }
+        updateWait();
+      }
     }
 
     submitBtn.onclick = checkAnswer;

@@ -6,8 +6,10 @@
 //   - Running feature inference (optional logging)
 //   - Dispatching to the appropriate builder (HTML or Native)
 //
-// They are used by the CLI today and are intended to be reused by
-// future authoring tools and HTTP endpoints.
+// Phase 2 / Sprint K: Every path validates with the same OLS schema before
+// business logic. Pure pipeline: parse → validate → buildIR → buildArtifact.
+// I/O (file read/write) is at the edges; runCompilePipeline(rawYaml) is pure
+// except for Markdown processor init.
 
 var fs   = require('fs');
 var path = require('path');
@@ -16,6 +18,28 @@ var yaml = require('js-yaml');
 var buildHtml   = require('../builders/html');
 var buildNative = require('../builders/native');
 var inferFeatures = require('../utils/featureInference').inferFeatures;
+var lessonSchema = require('./lessonSchema');
+var compiler = require('../compiler');
+var buildLessonIR = compiler.buildLessonIR;
+var buildLessonSidecar = compiler.buildLessonSidecar;
+
+/**
+ * Parse raw YAML string to lesson data. Pure: no I/O.
+ *
+ * @param  {string} rawYaml
+ * @returns {{ lessonData: object }|{ error: string }}
+ */
+function parseLessonFromString(rawYaml) {
+  if (rawYaml == null || typeof rawYaml !== 'string') {
+    return { error: 'Raw YAML must be a string' };
+  }
+  try {
+    var lessonData = yaml.load(rawYaml.trim());
+    return { lessonData: lessonData };
+  } catch (err) {
+    return { error: (err && err.message) ? err.message : String(err) };
+  }
+}
 
 /**
  * Read and parse an OLS lesson YAML file from disk.
@@ -36,12 +60,7 @@ function parseLessonYaml(inputPath) {
  * @param {object} lessonData
  */
 function validateLessonStructure(lessonData) {
-  if (!lessonData || !lessonData.meta || !lessonData.steps) {
-    throw new Error('Invalid OLS file. Must contain "meta" and "steps" fields.');
-  }
-  if (!Array.isArray(lessonData.steps)) {
-    throw new Error('"steps" must be a YAML array (each item prefixed with "-").');
-  }
+  lessonSchema.validateStructure(lessonData);
 }
 
 /**
@@ -67,9 +86,34 @@ function maybeLogFeatureInference(lessonData, inputPath) {
 }
 
 /**
+ * Compile from raw YAML string: parse → validate(schema + thresholds) → buildIR.
+ * Pure pipeline: no file I/O; returns { ir, sidecar } or throws.
+ * Use for author preview and tests. Caller is responsible for writing artifacts.
+ *
+ * @param  {string} rawYaml
+ * @param  {object} options  { dev: boolean }
+ * @returns {Promise<{ ir: object, sidecar: object }>}
+ */
+async function runCompilePipeline(rawYaml, options) {
+  options = options || {};
+  var parsed = parseLessonFromString(rawYaml);
+  if (parsed.error) {
+    throw new Error('Parse error: ' + parsed.error);
+  }
+  var lessonData = parsed.lessonData;
+  var validation = lessonSchema.validateLessonData(lessonData);
+  if (!validation.valid) {
+    throw new Error('Validation failed: ' + validation.errors.join('; '));
+  }
+  var ir = await buildLessonIR(lessonData, { dev: options.dev === true });
+  var sidecar = buildLessonSidecar(ir);
+  return { ir: ir, sidecar: sidecar };
+}
+
+/**
  * Compile a lesson from a YAML file path, performing:
  *   - YAML parse
- *   - basic structural validation
+ *   - schema + structure + threshold validation (same as author API and hub)
  *   - optional feature inference logging
  *   - dispatch to the selected builder
  *
@@ -92,7 +136,13 @@ async function compileLessonFromYamlFile(inputPath, options) {
 
   var lessonData = parsed.lessonData;
 
-  validateLessonStructure(lessonData);
+  var validation = lessonSchema.validateLessonData(lessonData);
+  if (!validation.valid) {
+    throw new Error('Validation failed: ' + validation.errors.join('; '));
+  }
+  if (validation.warnings && validation.warnings.length > 0) {
+    validation.warnings.forEach(function (w) { console.warn('[Compiler]', w); });
+  }
 
   if (options.dev) {
     console.log('⚠️  Developer mode enabled — not for distribution');
@@ -113,16 +163,36 @@ async function compileLessonFromYamlFile(inputPath, options) {
     if (!options.outputDir) {
       throw new Error('--output-dir=<path> is required for Native format.');
     }
-    await buildNative(lessonData, options);
+    var ir = await buildLessonIR(lessonData, { dev: options.dev === true });
+    var sidecar = buildLessonSidecar(ir);
+    await buildNative(ir, options);
+    fs.writeFileSync(
+      path.join(options.outputDir, 'lesson-ir.json'),
+      JSON.stringify(sidecar, null, 2)
+    );
+  } else if (format === 'yaml-packet') {
+    if (!options.outputDir) {
+      throw new Error('--output-dir=<path> is required for yaml-packet format.');
+    }
+    var buildYamlPacket = require('../builders/yaml-packet').buildYamlPacket;
+    var ir = await buildLessonIR(lessonData, { dev: options.dev === true });
+    var sidecar = buildLessonSidecar(ir);
+    await buildYamlPacket(parsed.raw, ir, sidecar, options);
+    fs.writeFileSync(
+      path.join(options.outputDir, 'lesson-ir.json'),
+      JSON.stringify(sidecar, null, 2)
+    );
   } else {
-    throw new Error('Unknown format "' + format + '". Use "html" or "native".');
+    throw new Error('Unknown format "' + format + '". Use "html", "native", or "yaml-packet".');
   }
 }
 
 module.exports = {
+  parseLessonFromString:   parseLessonFromString,
   parseLessonYaml:          parseLessonYaml,
   validateLessonStructure:  validateLessonStructure,
   maybeLogFeatureInference: maybeLogFeatureInference,
+  runCompilePipeline:       runCompilePipeline,
   compileLessonFromYamlFile: compileLessonFromYamlFile
 };
 

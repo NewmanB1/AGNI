@@ -41,7 +41,44 @@ Returns lessons for a student sorted by Marginal Learning Cost (theta).
 }
 ```
 
+**Response 200**
+
+```json
+{
+  "pseudoId": "string",
+  "lessons": [ "... same lesson shape as above ..." ],
+  "computedAt": "ISO8601",
+  "cached": "boolean",
+  "graphSource": "string",
+  "override": "string | undefined"
+}
+```
+
+- **override:** If set, the teacher has overridden the recommendation for this student; the first lesson in **lessons** is the override target (and is guaranteed to be in the theta-eligible list).
+
 **Errors:** 400 (missing pseudoId), 405 (method not allowed).
+
+---
+
+### POST /api/theta/override (Phase 3 / Sprint G)
+
+Set or clear a teacher recommendation override for a student. Override is **pure** in the sense that the effective list is `applyRecommendationOverride(thetaOrderedList, overrideLessonId)`; persistence is at the edge (file `data/recommendation_overrides.json`).
+
+**Request body**
+
+```json
+{
+  "pseudoId": "string",
+  "lessonId": "string | null"
+}
+```
+
+- **lessonId** set: must be a lesson ID that appears in the theta-eligible list for that student (GET /api/theta?pseudoId=...). That lesson becomes the first recommended.
+- **lessonId** null or omitted: clear the override for that student.
+
+**Response 200** `{ "ok": true, "override": "string | null" }`
+
+**Errors:** 400 (pseudoId required, or lessonId not in eligible list), 500 (server error).
 
 ---
 
@@ -258,6 +295,61 @@ Returns the current governance policy (if loaded from file). Uses cached policy 
   "requireTeachingMode": "boolean"
 }
 ```
+
+---
+
+### PUT /api/governance/policy
+
+Saves the governance policy (configuration wizard G1). Validates against `governance-policy.schema.json` before writing.
+
+**Request body:** JSON policy object (utuTargets, allowedTeachingModes, minDifficulty, maxDifficulty, requireUtu, requireTeachingMode).
+
+**Response 200** `{ "ok": true }`
+
+**Errors:** 400 (validation failed), 500 (server error).
+
+---
+
+### GET /api/governance/catalog
+
+Returns the approved lesson catalog. When present, theta filters eligible lessons to this set.
+
+**Response 200**
+
+```json
+{
+  "lessonIds": ["string"],
+  "provenance": { "sourceAuthorityId": "string", "exportedAt": "string", "version": "string" }
+}
+```
+
+---
+
+### POST /api/governance/catalog
+
+Add or remove lesson IDs from the approved catalog.
+
+**Request body:** `{ "add"?: string[], "remove"?: string[], "lessonIds"?: string[] }` — use `lessonIds` to replace entire set; otherwise `add` and `remove` modify the current set.
+
+**Response 200** `{ "ok": true, "catalog": { "lessonIds": [...], "provenance"?: {...} } }`
+
+**Errors:** 400 (validation failed), 500 (server error).
+
+---
+
+### POST /api/governance/catalog/import
+
+Import approved catalog from another authority. Conflicts resolved at import time.
+
+**Request body:** `{ "catalog": { "lessonIds": string[], "provenance"?: {...} }, "strategy": "replace" | "merge" | "add-only" }`
+
+- **replace:** Imported catalog becomes the full approved set.
+- **merge:** Union of current and imported IDs.
+- **add-only:** Add imported IDs not already in current set.
+
+**Response 200** `{ "ok": true, "catalog": { "lessonIds": [...], "provenance": {...} } }`
+
+**Errors:** 400 (catalog/strategy missing or invalid), 500 (server error).
 
 ---
 

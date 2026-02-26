@@ -1,6 +1,6 @@
 ## AGNI / OLS Architecture (Implementation Overview)
 
-This document describes the **implemented architecture** of the AGNI core compiler, runtime, hub services, and portal. It is complementary to `docs/ARCHITECTURE.md`, which focuses more on conceptual design and roadmap.
+**Where is the truth?** The **canonical architecture reference** is **`docs/ARCHITECTURE.md`** (conceptual design, phase roadmap, security/governance). This file is the **implementation overview** (directory layout, build pipeline, hub/engine wiring) and is kept at the repo root for visibility. Keep both in sync on key decisions; when in doubt, refer to `docs/ARCHITECTURE.md`.
 
 ---
 
@@ -96,6 +96,7 @@ AGNI/
   - Orchestrates reading YAML, schema validation, feature inference, IR construction, and output via specific builders.
 - **Key flows**
   - Parses CLI args (input YAML, format, output path/dir, flags).
+  - **Phase 2 / Sprint K:** All paths (CLI, hub-transform, author API) validate with the **same** OLS schema and threshold rules via `src/services/lessonSchema.js` before any build; invalid data fails fast. Pure pipeline entry: `runCompilePipeline(rawYaml)` (parse → validate → buildIR → sidecar); I/O at the edges.
   - Loads YAML (via `js-yaml` and filesystem utilities).
   - Optionally runs feature inference (`utils/featureInference.js`).
   - Calls `compiler/buildLessonIR.js` to construct the canonical **Intermediate Representation (IR)**.
@@ -216,6 +217,7 @@ AGNI/
 
 ### 2.7 LMS Engine (`src/engine/*`)
 
+- **Build:** The engine entry is TypeScript (`index.ts`). Run **`npm run build:engine`** to compile it to `src/engine/index.js` so that theta, the LMS service, and sneakernet can load it in a clean clone. See `tsconfig.engine.json` and README "Running the portal against the hub."
 - **`engine/index.ts`**
   - Public API for the LMS engine:
     - `buildDefaultState`, `loadState`, `saveState`.
@@ -276,8 +278,10 @@ AGNI/
     - Ingests `lesson-ir.json` sidecars.
     - Enforces `ontology.requires`/`provides` prerequisite relationships.
     - Filters eligible lessons for a student based on mastered skills.
+  - **Phase 2 / Sprint M:** Pure ordering function **`computeLessonOrder(lessonIndex, skillGraph, baseCosts, graphWeights, masterySummary, pseudoId, scheduledSkills)`** returns sorted lesson list; no I/O. `getLessonsSortedByTheta(pseudoId)` loads from disk and calls it.
   - Provides an API to query for eligible lessons and pass candidate sets to the LMS engine.
-  - **Governance routes (Phase 7):** `GET /api/governance/report`, `GET /api/governance/policy`, `POST /api/governance/compliance`; uses `src/services/governance` for cohort coverage and lesson compliance.
+  - **Governance routes (Phase 7):** `GET /api/governance/report`, `GET /api/governance/policy`, `POST /api/governance/compliance`; uses `src/services/governance` for cohort coverage and lesson compliance. **Phase 2 / Sprint L:** Policy files are validated against `schemas/governance-policy.schema.json` on load; compliance remains a pure function `(policy, sidecar) → result`.
+- **Phase 3 / Sprint G:** **Teacher override:** `POST /api/theta/override` with `{ pseudoId, lessonId }` (or `lessonId: null` to clear). Pure `applyRecommendationOverride(orderedLessons, overrideLessonId)`; overrides stored in `data/recommendation_overrides.json`. GET /api/theta returns `lessons` with override applied and optional `override` field.
 
 - **`sentry.js` and `sync.js`**
   - `sentry.js`:
@@ -421,8 +425,9 @@ AGNI/
 
 ## 4.1 Compatibility (runtime and hardware)
 
-- **Baseline:** Runtime and player target **Android 6.0+** and modern mobile browsers (Chrome, Safari, WebView). For older devices (e.g. Android 4.0+), the codebase avoids `Map`/`Set` in hot paths and uses ES5-friendly patterns (e.g. explicit Promise chains) where possible.
-- **Runtime:** `src/runtime/` is written for broad compatibility: no `async`/`await` in critical paths, no reliance on ES2015+ syntax in the player or threshold-evaluator. KaTeX and SVG factories may require a capable engine.
+- **Declared baseline:** **Android 6.0+** and **ES5 in the runtime** (player, factory-loader, shared-runtime, threshold-evaluator). This is the single supported target; older devices (e.g. Android 4.0+) are best-effort only (codebase avoids `Map`/`Set` in hot paths and uses ES5-friendly patterns where possible).
+- **Runtime:** `src/runtime/` uses no `async`/`await` in critical paths and no ES2015+ syntax in the player or threshold-evaluator. KaTeX and SVG factories may require a capable engine.
+- **Checklist:** Run `npm run validate` (schema + threshold syntax). For runtime compatibility, avoid introducing `Map`/`Set` in player.js, shared-runtime.js, factory-loader.js, or threshold-evaluator.js hot paths; prefer ES5 patterns there.
 - **Validation:** `npm run validate` runs schema validation and **threshold syntax** checks (e.g. `freefall > 0.2s`, `accel.total > 2.5g`) for `hardware_trigger` steps via `src/utils/threshold-syntax.js`.
 
 ---
@@ -556,8 +561,10 @@ A goal-oriented evaluation of this architecture—strengths, gaps, and recommend
   - Hub HTTP endpoints and request/response shapes are specified in **`docs/api-contract.md`**. When adding or changing hub routes, update that document and the typed client in `portal/src/lib/api.ts`.
 - **Architecture evaluation**
   - **`docs/ARCHITECTURE-EVALUATION.md`** — Evaluates the architecture against project goals; use it for planning and onboarding.
+- **Reference implementation vision (future)**
+  - **`docs/REFERENCE-IMPLEMENTATION-VISION.md`** — Describes a future direction: schema-based, possibly functional refactor so AGNI can serve as a true reference implementation of OLS. For use when planning larger refactors or onboarding.
 - **Playbooks and conventions**
-  - **`docs/playbooks/`** — Short "how to modify X" guides: `compiler.md`, `runtime.md`, `lms.md`, `governance.md`. Use them to find the right files and avoid breaking contracts.
+  - **`docs/playbooks/`** — Short "how to modify X" guides: `compiler.md`, `runtime.md`, `lms.md`, `governance.md`, **`federation.md`** (sync and graph_weights deployment), **`schema-to-types.md`** (optional codegen). Use them to find the right files and avoid breaking contracts.
   - **`docs/CONVENTIONS.md`** — LLM-friendly coding rules: small pure functions, public API via index, header comments, JSDoc, types in `src/types`, and running `npm run lint`, `npm run format:check`, `npm run typecheck` as guardrails.
 - **Maintenance**
   - When adding new modules or changing data flows:

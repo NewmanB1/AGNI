@@ -36,6 +36,8 @@ const BASE_COSTS            = path.join(DATA_DIR, 'base_costs.json');
 const LESSON_INDEX          = path.join(DATA_DIR, 'lesson_index.json');
 const SCHEDULES             = path.join(DATA_DIR, 'schedules.json');
 const CURRICULUM_GRAPH      = path.join(DATA_DIR, 'curriculum.json');
+const OVERRIDES_PATH       = path.join(DATA_DIR, 'recommendation_overrides.json');
+const APPROVED_CATALOG     = process.env.AGNI_APPROVED_CATALOG || path.join(DATA_DIR, 'approved_catalog.json');
 
 const PORT = parseInt(process.env.AGNI_THETA_PORT || '8082', 10);
 
@@ -96,11 +98,12 @@ function getEffectiveGraphWeights() {
 }
 
 // -- Data loaders ------------------------------------------------------------
-const loadMasterySummary = () => loadJSON(MASTERY_SUMMARY, { students: {} });
-const loadBaseCosts      = () => loadJSON(BASE_COSTS, {});
-const loadLessonIndex    = () => loadJSON(LESSON_INDEX, []);
-const loadSchedules      = () => loadJSON(SCHEDULES, { students: {} });
-const loadCurriculum     = () => loadJSON(CURRICULUM_GRAPH, { graph: {} });
+const loadMasterySummary  = () => loadJSON(MASTERY_SUMMARY, { students: {} });
+const loadBaseCosts       = () => loadJSON(BASE_COSTS, {});
+const loadLessonIndex     = () => loadJSON(LESSON_INDEX, []);
+const loadSchedules       = () => loadJSON(SCHEDULES, { students: {} });
+const loadCurriculum      = () => loadJSON(CURRICULUM_GRAPH, { graph: {} });
+const loadApprovedCatalog = () => governanceService.loadCatalog ? governanceService.loadCatalog() : loadJSON(APPROVED_CATALOG, { lessonIds: [] });
 
 // -- Shared skill graph construction -----------------------------------------
 function buildSkillGraph(lessonIndex, curriculum) {
@@ -242,43 +245,31 @@ function computeLessonTheta(lesson, pseudoId, baseCosts, masterySummary, graphWe
   };
 }
 
-// -- Main function – uses shared cache --------------------------------------
-function getLessonsSortedByTheta(pseudoId) {
-  const currentMasteryMtime    = getFileMtime(MASTERY_SUMMARY);
-  const currentScheduleMtime   = getFileMtime(SCHEDULES);
-  const currentCurriculumMtime = getFileMtime(CURRICULUM_GRAPH);
+// -- Pure ordering (Phase 2 / Sprint M) ---------------------------------------
+// (index, graph, weights, mastery, pseudoId, scheduledSkills) → sorted lesson[].
+// No I/O; used by getLessonsSortedByTheta and tests.
 
-  if (currentMasteryMtime   > (thetaCache._lastMasteryMtime   || 0) ||
-      currentScheduleMtime  > (thetaCache._lastScheduleMtime  || 0) ||
-      currentCurriculumMtime > (thetaCache._lastCurriculumMtime || 0)) {
-    thetaCache.clear();
-    thetaCache._lastMasteryMtime    = currentMasteryMtime;
-    thetaCache._lastScheduleMtime   = currentScheduleMtime;
-    thetaCache._lastCurriculumMtime = currentCurriculumMtime;
-  }
-
-  updateSharedCacheIfNeeded();
-
-  const cached = thetaCache.get(pseudoId);
-  if (cached && cached.masteryMtime === currentMasteryMtime) {
-    return cached.lessons;
-  }
-
-  const baseCosts      = loadBaseCosts();
-  const masterySummary = loadMasterySummary();
-  const graphWeights   = getEffectiveGraphWeights();
-  const studentSkills  = masterySummary.students?.[pseudoId] || {};
-  const schedules      = loadSchedules();
-  const scheduledSkills = schedules.students?.[pseudoId] || [];
-  const skillGraph     = sharedCache.skillGraph || {};
-
+/**
+ * Compute lesson order by theta for one student. Pure: no file or cache access.
+ *
+ * @param  {object[]} lessonIndex      full lesson list (with skillsProvided, skillsRequired)
+ * @param  {object}  skillGraph       skill -> Set of prerequisite skill ids
+ * @param  {object}  baseCosts        skillId -> number
+ * @param  {object}  graphWeights     { edges: Array<{from,to,weight,confidence}> }
+ * @param  {object}  masterySummary   { students: { [pseudoId]: { [skillId]: number } } }
+ * @param  {string}  pseudoId
+ * @param  {string[]} scheduledSkills  skills the student is scheduled for (from schedules)
+ * @returns {object[]}                sorted array of { lessonId, slug, title, theta, ... }
+ */
+function computeLessonOrder(lessonIndex, skillGraph, baseCosts, graphWeights, masterySummary, pseudoId, scheduledSkills) {
+  const studentSkills   = (masterySummary.students || {})[pseudoId] || {};
   const effectiveScheduledSkills = expandScheduledSkills(
-    scheduledSkills, studentSkills, skillGraph
+    Array.isArray(scheduledSkills) ? scheduledSkills : [],
+    studentSkills,
+    skillGraph
   );
 
-  let candidates = sharedCache.eligibleLessons || loadLessonIndex();
-
-  const eligibleLessons = candidates.filter(lesson => {
+  const eligibleLessons = (lessonIndex || []).filter(lesson => {
     if (effectiveScheduledSkills.size > 0) {
       const providesNeeded = lesson.skillsProvided.some(p => effectiveScheduledSkills.has(p.skill));
       if (!providesNeeded) return false;
@@ -300,6 +291,93 @@ function getLessonsSortedByTheta(pseudoId) {
     if (a.alreadyMastered !== b.alreadyMastered) return a.alreadyMastered ? 1 : -1;
     return a.theta - b.theta;
   });
+
+  return results;
+}
+
+// -- Recommendation override (Phase 3 / Sprint G) -----------------------------
+// Pure: (orderedLessons, overrideLessonId) → reordered list (override first if in list).
+// Persistence at edge: load/save in API layer.
+
+/**
+ * Apply teacher override to theta-ordered list. Pure.
+ * If overrideLessonId is in the list, move it to first position; else return list unchanged.
+ *
+ * @param  {object[]} orderedLessons  sorted lesson objects (each has lessonId)
+ * @param  {string|null} overrideLessonId
+ * @returns {object[]}
+ */
+function applyRecommendationOverride(orderedLessons, overrideLessonId) {
+  if (!overrideLessonId || !Array.isArray(orderedLessons) || orderedLessons.length === 0) {
+    return orderedLessons;
+  }
+  const idx = orderedLessons.findIndex(l => l.lessonId === overrideLessonId);
+  if (idx <= 0) return orderedLessons;
+  const out = orderedLessons.slice();
+  const [over] = out.splice(idx, 1);
+  out.unshift(over);
+  return out;
+}
+
+function loadOverrides() {
+  if (!fs.existsSync(OVERRIDES_PATH)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(OVERRIDES_PATH, 'utf8'));
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveOverrides(overrides) {
+  try {
+    fs.mkdirSync(path.dirname(OVERRIDES_PATH), { recursive: true });
+    fs.writeFileSync(OVERRIDES_PATH, JSON.stringify(overrides, null, 2));
+  } catch (e) {
+    console.warn('[THETA] Failed to save recommendation overrides:', e.message);
+  }
+}
+
+// -- Main function – uses shared cache --------------------------------------
+function getLessonsSortedByTheta(pseudoId) {
+  const currentMasteryMtime    = getFileMtime(MASTERY_SUMMARY);
+  const currentScheduleMtime   = getFileMtime(SCHEDULES);
+  const currentCurriculumMtime = getFileMtime(CURRICULUM_GRAPH);
+  const currentCatalogMtime    = fs.existsSync(APPROVED_CATALOG) ? getFileMtime(APPROVED_CATALOG) : 0;
+
+  if (currentMasteryMtime   > (thetaCache._lastMasteryMtime   || 0) ||
+      currentScheduleMtime  > (thetaCache._lastScheduleMtime  || 0) ||
+      currentCurriculumMtime > (thetaCache._lastCurriculumMtime || 0) ||
+      currentCatalogMtime   > (thetaCache._lastCatalogMtime   || 0)) {
+    thetaCache.clear();
+    thetaCache._lastMasteryMtime    = currentMasteryMtime;
+    thetaCache._lastScheduleMtime   = currentScheduleMtime;
+    thetaCache._lastCurriculumMtime = currentCurriculumMtime;
+    thetaCache._lastCatalogMtime    = currentCatalogMtime;
+  }
+
+  updateSharedCacheIfNeeded();
+
+  const cached = thetaCache.get(pseudoId);
+  if (cached && cached.masteryMtime === currentMasteryMtime) {
+    return cached.lessons;
+  }
+
+  const baseCosts      = loadBaseCosts();
+  const masterySummary = loadMasterySummary();
+  const graphWeights   = getEffectiveGraphWeights();
+  const schedules      = loadSchedules();
+  const scheduledSkills = schedules.students?.[pseudoId] || [];
+  let candidates       = sharedCache.eligibleLessons || loadLessonIndex();
+  const catalog        = loadApprovedCatalog();
+  if (catalog.lessonIds && catalog.lessonIds.length > 0) {
+    const approvedSet = new Set(catalog.lessonIds);
+    candidates = candidates.filter(l => approvedSet.has(l.lessonId));
+  }
+  const skillGraph    = sharedCache.skillGraph || {};
+
+  const results = computeLessonOrder(
+    candidates, skillGraph, baseCosts, graphWeights, masterySummary, pseudoId, scheduledSkills
+  );
 
   thetaCache.set(pseudoId, {
     lessons: results,
@@ -491,21 +569,29 @@ function startApi(port) {
     const [urlPath, queryStr] = req.url.split('?');
     const qs = Object.fromEntries(new URLSearchParams(queryStr || ''));
 
-    // ── Method guard: GET for most routes; POST for /api/lms/*, governance/compliance, author/* ──
-    const isPostRoute = urlPath.startsWith('/api/lms') || urlPath === '/api/governance/compliance' ||
+    // ── Method guard: GET for most routes; POST for /api/lms/*, /api/theta/override, governance/compliance, governance/catalog, author/*; PUT for governance/policy ──
+    const isPostRoute = urlPath.startsWith('/api/lms') || urlPath === '/api/theta/override' ||
+      urlPath === '/api/governance/compliance' || urlPath === '/api/governance/catalog' ||
+      urlPath === '/api/governance/catalog/import' ||
       urlPath === '/api/author/validate' || urlPath === '/api/author/preview';
-    if (req.method !== 'GET' && !(req.method === 'POST' && isPostRoute)) {
+    const isPutRoute = urlPath === '/api/governance/policy';
+    if (req.method !== 'GET' && !(req.method === 'POST' && isPostRoute) && !(req.method === 'PUT' && isPutRoute)) {
       return sendResponse(405, { error: 'Method not allowed' });
     }
 
     if (urlPath === '/api/theta') {
       if (!qs.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
+      const lessons = getLessonsSortedByTheta(qs.pseudoId);
+      const overrides = loadOverrides();
+      const overrideLessonId = overrides[qs.pseudoId]?.lessonId || null;
+      const effectiveLessons = applyRecommendationOverride(lessons, overrideLessonId);
       return sendResponse(200, {
         pseudoId:    qs.pseudoId,
-        lessons:     getLessonsSortedByTheta(qs.pseudoId),
+        lessons:     effectiveLessons,
         computedAt:  new Date().toISOString(),
         cached:      thetaCache.has(qs.pseudoId),
-        graphSource: getEffectiveGraphWeights().level || 'village'
+        graphSource: getEffectiveGraphWeights().level || 'village',
+        override:    overrideLessonId || undefined
       });
     }
 
@@ -517,6 +603,37 @@ function startApi(port) {
     }
 
     if (urlPath === '/api/theta/graph') return sendResponse(200, getEffectiveGraphWeights());
+
+    // POST /api/theta/override — set or clear teacher recommendation override (Phase 3 / Sprint G)
+    if (req.method === 'POST' && urlPath === '/api/theta/override') {
+      readBody(req).then(body => {
+        try {
+          const payload = JSON.parse(body || '{}');
+          const pseudoId = payload.pseudoId;
+          const lessonId = payload.lessonId !== undefined ? payload.lessonId : null;
+          if (!pseudoId || typeof pseudoId !== 'string') {
+            return sendResponse(400, { error: 'pseudoId required' });
+          }
+          const overrides = loadOverrides();
+          if (lessonId === null || lessonId === '') {
+            delete overrides[pseudoId];
+            saveOverrides(overrides);
+            return sendResponse(200, { ok: true, override: null });
+          }
+          const eligible = getLessonsSortedByTheta(pseudoId);
+          const inList = eligible.some(l => l.lessonId === lessonId);
+          if (!inList) {
+            return sendResponse(400, { error: 'lessonId not in eligible list for this student', lessonId });
+          }
+          overrides[pseudoId] = { lessonId: String(lessonId) };
+          saveOverrides(overrides);
+          return sendResponse(200, { ok: true, override: lessonId });
+        } catch (err) {
+          return sendResponse(500, { error: err.message });
+        }
+      }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
 
     // ── LMS routes (Phase 2.5) ───────────────────────────────────────────────
 
@@ -649,6 +766,73 @@ function startApi(port) {
       return;
     }
 
+    // PUT /api/governance/policy — save policy (configuration wizard G1)
+    if (req.method === 'PUT' && urlPath === '/api/governance/policy') {
+      readBody(req).then(body => {
+        try {
+          const policy = JSON.parse(body || '{}');
+          const result = governanceService.savePolicy(policy);
+          if (result.ok) sendResponse(200, { ok: true });
+          else sendResponse(400, { error: result.error });
+        } catch (err) {
+          sendResponse(500, { error: err.message });
+        }
+      }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
+
+    // GET /api/governance/catalog — return approved lesson catalog
+    if (req.method === 'GET' && urlPath === '/api/governance/catalog') {
+      try {
+        const catalog = governanceService.loadCatalog();
+        return sendResponse(200, catalog || { lessonIds: [] });
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    // POST /api/governance/catalog — add/remove lesson IDs
+    if (req.method === 'POST' && urlPath === '/api/governance/catalog') {
+      readBody(req).then(body => {
+        try {
+          const payload = JSON.parse(body || '{}');
+          const result = governanceService.updateCatalog(payload);
+          if (result.ok) {
+            thetaCache.clear();
+            sendResponse(200, { ok: true, catalog: result.catalog });
+          } else {
+            sendResponse(400, { error: result.error });
+          }
+        } catch (err) {
+          sendResponse(500, { error: err.message });
+        }
+      }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
+
+    // POST /api/governance/catalog/import — import from another authority (strategy: replace | merge | add-only)
+    if (req.method === 'POST' && urlPath === '/api/governance/catalog/import') {
+      readBody(req).then(body => {
+        try {
+          const payload = JSON.parse(body || '{}');
+          const { catalog: imported, strategy } = payload;
+          if (!imported || !strategy) {
+            return sendResponse(400, { error: 'catalog and strategy required' });
+          }
+          const result = governanceService.importCatalog(imported, strategy);
+          if (result.ok) {
+            thetaCache.clear();
+            sendResponse(200, { ok: true, catalog: result.catalog });
+          } else {
+            sendResponse(400, { error: result.error });
+          }
+        } catch (err) {
+          sendResponse(500, { error: err.message });
+        }
+      }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
+
     // ── Authoring routes (Sprint C) ─────────────────────────────────────────
     if (req.method === 'POST' && urlPath === '/api/author/validate') {
       readBody(req).then(body => {
@@ -711,9 +895,11 @@ if (require.main === module) {
 module.exports = {
   startApi,
   getLessonsSortedByTheta,
+  computeLessonOrder,
   computeLessonTheta,
   getResidualCostFactor,
   getBaseCost,
   rebuildLessonIndex,
-  getEffectiveGraphWeights
+  getEffectiveGraphWeights,
+  applyRecommendationOverride
 };

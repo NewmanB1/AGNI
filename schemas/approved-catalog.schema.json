@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agni-project.org/schemas/approved-catalog.schema.json",
+  "title": "AGNI Approved Lesson Catalog",
+  "description": "Governance-approved set of lesson IDs. When present, theta filters eligible lessons to this set. Old and new lessons coexist by ID; student pointers are unchanged.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "lessonIds": {
+      "type": "array",
+      "description": "List of approved lesson identifiers (must exist in lesson index).",
+      "items": { "type": "string" }
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Optional provenance when catalog was imported from another authority.",
+      "additionalProperties": false,
+      "properties": {
+        "sourceAuthorityId": { "type": "string", "description": "Authority that exported this catalog." },
+        "exportedAt": { "type": "string", "format": "date-time", "description": "When the catalog was exported (ISO8601)." },
+        "version": { "type": "string", "description": "Catalog version or spec version." }
+      }
+    }
+  },
+  "required": ["lessonIds"]
+}

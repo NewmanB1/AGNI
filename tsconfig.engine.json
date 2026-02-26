@@ -1,0 +1,10 @@
+{
+  "extends": "./Tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src/engine",
+    "outDir": "src/engine",
+    "noEmit": false
+  },
+  "include": ["src/engine/index.ts"],
+  "exclude": ["node_modules"]
+}

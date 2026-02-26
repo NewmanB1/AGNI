@@ -2,6 +2,8 @@
 
 Thank you for considering contributing to AGNI. This project aims to make interactive, sensor-rich education accessible to anyone with a phone — even a 10-year-old one. Every contribution matters.
 
+**New to the codebase?** See **`docs/ONBOARDING-CONCEPTS.md`** for a short glossary (OLS, theta, Rasch, Thompson bandit, skill graph, hub) and links to the right docs.
+
 ---
 
 ## Ways to Contribute
@@ -57,7 +59,8 @@ The codebase is JavaScript (Node.js). Key entry points:
 |------|---------|
 | `src/cli.js` | CLI entry point — parses args, calls builders |
 | `src/builders/html.js` | Compiles YAML → single-file HTML bundle |
-| `src/builders/native.js` | Compiles YAML → Markdown + JSON (native format) |
+| `src/builders/native.js` | Compiles IR → lesson.json + content/*.md (native format) |
+| `src/builders/yaml-packet.js` | Compiles to lesson.yaml + packet.json (thin-client YAML format) |
 | `src/runtime/player.js` | In-browser lesson player with sensor bridges |
 | `src/utils/featureInference.js` | Analyzes lessons and extracts feature metadata |
 
@@ -73,7 +76,9 @@ node test-inference.js  # run feature inference on all lessons
 
 ### Translate a Lesson
 
-Copy an existing lesson and change the `language` field in the meta block. Translate the `content` fields (the human-readable text). Keep everything else the same — the structure, sensors, thresholds, and feedback don't change across languages.
+**Full tutorial:** See **`docs/tutorials/fork-and-translate-lesson.md`** for a step-by-step guide (fork, translate metadata and content, validate, build).
+
+Short version: Copy an existing lesson and change the `language` field in the meta block. Translate the `content` fields (the human-readable text). Keep everything else the same — the structure, sensors, thresholds, and feedback don't change across languages.
 
 ```yaml
 meta:
@@ -150,13 +155,22 @@ AGNI/
 ├── schemas/          # JSON Schema for validating lessons
 ├── src/
 │   ├── cli.js        # Compiler CLI
-│   ├── builders/     # Output generators (html, native)
+│   ├── builders/     # Output generators (html, native, yaml-packet)
 │   ├── runtime/      # Browser-based lesson player
 │   └── utils/        # Shared utilities
 ├── fixtures/         # Test data
 ├── docs/             # Project documentation
 └── .github/workflows # CI pipelines
 ```
+
+---
+
+## Technical debt and conventions
+
+- **Architecture:** The canonical architecture doc is **`docs/ARCHITECTURE.md`**. The root **`ARCHITECTURE.md`** is the implementation overview; keep both in sync on key decisions.
+- **Types:** Central place is **`src/types/index.d.ts`** (LessonIR, LessonSidecar, LMSState, etc.). Keep it aligned with `schemas/*.schema.json` and with compiler/engine usage. See **`docs/playbooks/typing-and-languages.md`** for TS vs JS and where types are enforced.
+- **Binary / base64:** **`src/utils/binary.js`** and **`src/runtime/binary-utils.js`** — use these for base64/bytes and UTF-8 helpers instead of ad-hoc logic in crypto or runtime.
+- **Validation:** Lesson builds require **schema validation** (Ajv). If validation fails with "Schema validation unavailable", run `npm install` so `ajv` and `ajv-formats` are present.
 
 ---
 

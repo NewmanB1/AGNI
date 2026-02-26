@@ -18,6 +18,7 @@ Use this when changing how lessons are compiled from YAML to IR or to HTML/nativ
 | Change what gets inferred (features, factories) | `src/utils/featureInference.js` — `inferFeatures()`, `FACTORY_LOAD_ORDER`, `FACTORY_FILE_MAP`. Keep in sync with `src/runtime/` filenames. |
 | Change HTML output or signing | `src/builders/html.js` — shared runtime path, integrity globals, and `server/hub-transform.js` (PWA shell) should stay in sync; consider a shared lesson-assembly layer later. |
 | Change native bundle layout | `src/builders/native.js`. |
+| Change YAML packet layout | `src/builders/yaml-packet.js`. See also `docs/playbooks/thin-client-targets.md`. |
 
 ## Do not
 

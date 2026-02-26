@@ -1,37 +1,44 @@
 const fs = require('fs');
 const path = require('path');
-const { processMarkdown } = require('../config');
 const { ensureDir } = require('../utils/io');
 
-function buildNative(lessonData, options) {
+/**
+ * Build native bundle from lesson IR (Phase 6).
+ * Output: lesson.json (manifest with ontology, inferredFeatures, steps with content_src),
+ *         content/*.md, and lesson-ir.json (written by compiler service).
+ *
+ * @param {object} ir      Full IR from buildLessonIR (steps have .content and .htmlContent)
+ * @param {object} options  { outputDir }
+ */
+function buildNative(ir, options) {
   console.log('📦 Building Native Bundle...');
 
   const outputDir = options.outputDir;
   ensureDir(outputDir);
 
-  // 1. Create content directory and write step markdown files
   const contentDir = path.join(outputDir, 'content');
   ensureDir(contentDir);
 
-  const cleanSteps = lessonData.steps.map((step, index) => {
+  const cleanSteps = (ir.steps || []).map((step, index) => {
     const stepFile = `step-${String(index + 1).padStart(2, '0')}.md`;
     if (step.content) {
       fs.writeFileSync(path.join(contentDir, stepFile), step.content);
     }
-    return {
-      ...step,
-      content_src: `content/${stepFile}`,
-      content: undefined
-    };
+    const { content, htmlContent, ...rest } = step;
+    return Object.assign({}, rest, { content_src: `content/${stepFile}` });
   });
 
-  // 2. Build manifest
   const manifest = {
-    ...lessonData,
-    steps: cleanSteps
+    version: ir.version,
+    meta: ir.meta,
+    ontology: ir.ontology,
+    gate: ir.gate,
+    steps: cleanSteps,
+    inferredFeatures: ir.inferredFeatures,
+    _compiledAt: ir._compiledAt,
+    _schemaVersion: ir._schemaVersion
   };
 
-  // 3. Write lesson.json
   fs.writeFileSync(
     path.join(outputDir, 'lesson.json'),
     JSON.stringify(manifest, null, 2)

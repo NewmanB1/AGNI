@@ -129,7 +129,94 @@ From README, ROADMAP, and docs/ARCHITECTURE.md, the project aims to:
 
 ---
 
-## 5. Recommendations
+## 5. Alignment with Proposed Consumers
+
+The design explicitly or implicitly addresses several consumer types. Below is how well the system as designed serves each.
+
+### 5.1 Student (on device)
+
+| Need | Design response | Alignment |
+|------|------------------|-----------|
+| Offline lessons, no live server | Self-contained HTML; SW cache; optional CLI-built static bundle | **Strong** — playback is offline-first |
+| Sensor-based interaction (e.g. “drop the phone”) | Hardware layer in schema; sensor-bridge, threshold syntax, gate in player | **Strong** — Golden Master and validator cover this |
+| One device, no cloning | Device binding: hub signs Content+UUID; player verifies before run | **Strong** — signed lease implemented |
+| Progress when offline / no hub | Sneakernet export/import (bandit summary); progress can move via file | **Partial** — progress portable; full “offline student then sync later” story not fully specified |
+| Low-end hardware | ES5-friendly runtime; docs mention Android 4.0+ / 6.0+ | **Unclear** — no single baseline or compatibility matrix |
+
+**Verdict:** Strong for core use (offline, sensors, binding). Progress portability and a clear hardware baseline would complete the student story.
+
+### 5.2 Teacher (portal)
+
+| Need | Design response | Alignment |
+|------|------------------|-----------|
+| See classes and students | Theta/LMS APIs; portal consumes via typed client (`api.ts`) | **Strong** — contract and client exist |
+| See recommendations and ordering | GET /api/theta, /api/theta/all; lesson list by θ | **Strong** — API returns theta-sorted lessons per student |
+| Governance / compliance view | GET /api/governance/report, /policy; POST /compliance | **Strong** — governance APIs implemented and documented |
+| (Future) Override recommendations | Not implemented; modules/README marks as “in future” | **Gap** — design allows it; no override API yet |
+| Use real hub vs. demos | VITE_HUB_URL; contract tests assert portal ↔ hub | **Strong** — one config; tests guard boundary |
+
+**Verdict:** Aligns well. Teachers get scheduling, compliance, and recommendations through the hub API; only recommendation overrides are missing.
+
+### 5.3 Lesson author (YAML / future WYSIWYG)
+
+| Need | Design response | Alignment |
+|------|------------------|-----------|
+| Validate content before publish | POST /api/author/validate (schema + structure + thresholds) | **Strong** — implemented and tested |
+| Preview without saving | POST /api/author/preview (IR + sidecar) | **Strong** — implemented |
+| Discover/fork by taxonomy | UTU (class/band) in schema and sidecar; governance and theta index by UTU | **Strong** — discoverable categories; no dedicated “browse by UTU” API yet |
+| Single contract for tools | api-contract.md + types; no direct compiler/engine access | **Strong** — authoring tools stay behind API |
+
+**Verdict:** Validate and preview are in place and match a future WYSIWYG. Taxonomy is in the data model; a dedicated discovery API would strengthen author workflows.
+
+### 5.4 Governance authority (regional body)
+
+| Need | Design response | Alignment |
+|------|------------------|-----------|
+| Declare targets (e.g. “MAC-2 Band 4 by age 13”) | Policy as data (UTU targets); policy endpoint | **Strong** — policy is loadable and exposable |
+| Get evidence without raw student data | Cohort coverage report: by UTU, by skill, counts; no PII | **Strong** — aggregate counts only (docs/ARCHITECTURE §8) |
+| Compliance check on lessons | POST /api/governance/compliance (sidecar vs policy) | **Strong** — implemented for authoring and audit |
+
+**Verdict:** Design matches “governance as data” and privacy: targets, evidence, and compliance are supported without exposing individual records.
+
+### 5.5 Village hub operator
+
+| Need | Design response | Alignment |
+|------|------------------|-----------|
+| Serve lessons to devices (JIT or static) | hub-transform (on-demand) + CLI (static); lessonAssembly shared | **Strong** — dual delivery |
+| Run scheduling and LMS | Theta + LMS engine; single process, configurable | **Strong** — one hub process |
+| Recover from bad state | Migrations on load; CLI `lms-repair` | **Strong** — repair path exists |
+| Move progress between hubs | Sneakernet script (export/import bandit summary) | **Strong** — file-based flow |
+| Sync with regional / other hubs | federation.js, sync.js; graph_weights regional fallback | **Partial** — code exists; deployment and discovery not fully specified |
+
+**Verdict:** Day-to-day operation and recovery are well supported; multi-hub sync and topology need a clearer deployment story.
+
+### 5.6 External platforms (Kolibri, Moodle, etc.)
+
+| Need | Design response | Alignment |
+|------|------------------|-----------|
+| Integrate OLS (e.g. iframe, plugin) | ROADMAP Year 2: “Integration Guide” for Kolibri; iframe demo | **Planned** — not implemented; standard and APIs are integrable |
+| Consume same APIs as portal | Hub API contract; any client can call theta, LMS, governance, authoring | **Strong** — contract is consumer-agnostic |
+
+**Verdict:** Design allows external consumers to use the same APIs; integration guides and reference integrations are future work.
+
+---
+
+### 5.7 Consumer summary
+
+| Consumer | Alignment | Main gap |
+|----------|-----------|----------|
+| Student | Strong | Hardware baseline; optional: full offline→sync narrative |
+| Teacher | Strong | Recommendation override API (planned) |
+| Author | Strong | Optional: explicit “browse by UTU” discovery API |
+| Governance authority | Strong | — |
+| Hub operator | Strong | Federation/sync deployment model |
+| External platforms | Partial | Integration guides and reference integrations (Year 2) |
+
+**Overall:** The design aligns well with the proposed consumers. Students, teachers, authors, and governance are served by existing APIs and data model; hub operators are well covered aside from federation topology. External platforms are supported by the same contract but need integration work. The main gaps are a single hardware baseline, recommendation overrides for teachers, and a clear federation/sync deployment story.
+
+---
+
+## 6. Recommendations
 
 1. **Lock hardware and runtime policy**  
   Decide and document one Android/runtime baseline (e.g. “Android 6.0+, ES5 in runtime”). Add a short “Compatibility” section and, if feasible, a simple CI or checklist so the “hardware reality” goal is testable.
@@ -148,6 +235,6 @@ From README, ROADMAP, and docs/ARCHITECTURE.md, the project aims to:
 
 ---
 
-## 6. Conclusion
+## 7. Conclusion
 
 The system is **well aligned** with its goals. The standard (IR/sidecar, schema, validation), offline-first delivery, hub-centric JIT compilation, and the split between θ (theta) and adaptive selection (LMS) are in place. Trust (signing and runtime verification), state repair (migrations, lms-repair), progress portability (sneakernet), and authoring APIs (validate/preview) strengthen the core story. Sentry and graph_weights are implemented and documented, so the “cultural adaptation” loop is narrative- and code-complete; proving it in the field (e.g. Weaver vs Farmer test) remains. Refactor work (runtimeManifest, binary utils, types, migrations) has improved modularity and type safety. Remaining gaps are a **single hardware/runtime baseline**, **empirical proof of θ** (graph verification test), and **federation deployment narrative**; the portal and authoring are in good shape with contract tests and implemented APIs.

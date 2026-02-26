@@ -8,11 +8,13 @@ var lms            = require('./lms');
 var governance     = require('./governance');
 var author         = require('./author');
 var lessonAssembly = require('./lessonAssembly');
+var lessonSchema    = require('./lessonSchema');
 
 module.exports = {
   compiler:       compiler,
   lms:            lms,
   governance:     governance,
   author:         author,
-  lessonAssembly: lessonAssembly
+  lessonAssembly: lessonAssembly,
+  lessonSchema:   lessonSchema
 };

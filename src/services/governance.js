@@ -25,6 +25,20 @@ function loadPolicy(filePath) {
 }
 
 /**
+ * Save policy. Clears cache so next loadPolicy() reads fresh.
+ *
+ * @param  {object} policy
+ * @param  {string} [filePath]
+ * @returns {{ ok: boolean, error?: string }}
+ */
+function savePolicy(policy, filePath) {
+  var p = filePath || DEFAULT_POLICY_PATH;
+  var result = governance.savePolicy(policy, p);
+  if (result.ok) _policyCache = null;
+  return result;
+}
+
+/**
  * Evaluate a lesson sidecar against the current policy.
  *
  * @param  {object} sidecar
@@ -49,6 +63,11 @@ function aggregateCohortCoverage(lessonIndex, masterySummary, policy) {
 
 module.exports = {
   loadPolicy:               loadPolicy,
+  savePolicy:               savePolicy,
   evaluateLessonCompliance: evaluateLessonCompliance,
-  aggregateCohortCoverage:  aggregateCohortCoverage
+  aggregateCohortCoverage:  aggregateCohortCoverage,
+  loadCatalog:              governance.loadCatalog,
+  updateCatalog:            governance.updateCatalog,
+  importCatalog:            governance.importCatalog,
+  saveCatalog:              governance.saveCatalog
 };

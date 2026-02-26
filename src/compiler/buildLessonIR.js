@@ -5,8 +5,8 @@
 // lesson. The IR is the single source of truth consumed by all builders:
 //
 //   html.js        — compiles to lesson HTML for the village hub
-//   native.js      — compiles to compact packet for thin clients (Phase 6)
-//   yaml-packet.js — thin-client YAML renderer (Phase 6)
+//   native.js      — compiles to compact packet for thin clients (Phase 6, IR-fed)
+//   yaml-packet.js — thin-client YAML packet format (Phase 6)
 //
 // The IR is NOT format-specific. It contains everything a builder needs
 // and nothing a builder should decide — format decisions (inlining,

@@ -26,6 +26,8 @@ export interface ThetaResponse {
   computedAt: string;
   cached: boolean;
   graphSource?: string;
+  /** Set when a teacher override is active for this student (Phase 3). */
+  override?: string;
 }
 
 export interface ThetaAllResponse {
@@ -99,6 +101,22 @@ export interface ComplianceResult {
   issues: string[];
 }
 
+export interface ApprovedCatalog {
+  lessonIds: string[];
+  provenance?: { sourceAuthorityId?: string; exportedAt?: string; version?: string };
+}
+
+export interface CatalogUpdateBody {
+  add?: string[];
+  remove?: string[];
+  lessonIds?: string[];
+}
+
+export interface CatalogImportBody {
+  catalog: ApprovedCatalog;
+  strategy: 'replace' | 'merge' | 'add-only';
+}
+
 // ─── Client ─────────────────────────────────────────────────────────────────
 
 function ensureTrailingSlash(base: string): string {
@@ -144,6 +162,15 @@ export function createHubApi(baseUrl: string) {
     return parseJson<T>(res);
   }
 
+  async function put<T>(path: string, body: unknown): Promise<T> {
+    const res = await fetch(base + path.replace(/^\//, ''), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(body)
+    });
+    return parseJson<T>(res);
+  }
+
   return {
     baseUrl: base || undefined,
 
@@ -157,6 +184,11 @@ export function createHubApi(baseUrl: string) {
 
     getThetaGraph(): Promise<GraphWeightsResponse> {
       return get<GraphWeightsResponse>('api/theta/graph');
+    },
+
+    /** Phase 3: set or clear teacher recommendation override. */
+    setRecommendationOverride(pseudoId: string, lessonId: string | null): Promise<{ ok: boolean; override: string | null }> {
+      return post<{ ok: boolean; override: string | null }>('api/theta/override', { pseudoId, lessonId });
     },
 
     getLmsSelect(pseudoId: string, candidateIds: string[]): Promise<LmsSelectResponse> {
@@ -186,9 +218,29 @@ export function createHubApi(baseUrl: string) {
       return get<unknown>('api/governance/policy');
     },
 
-    /** Planned: POST /api/governance/compliance. Throws if endpoint not implemented. */
+    /** POST /api/governance/compliance. */
     async postGovernanceCompliance(sidecar: LessonSidecar): Promise<ComplianceResult> {
       return post<ComplianceResult>('api/governance/compliance', sidecar);
+    },
+
+    /** PUT /api/governance/policy (configuration wizard G1). */
+    async putGovernancePolicy(policy: unknown): Promise<{ ok: boolean }> {
+      return put<{ ok: boolean }>('api/governance/policy', policy);
+    },
+
+    /** GET /api/governance/catalog (configuration wizard G2, G4). */
+    async getGovernanceCatalog(): Promise<ApprovedCatalog> {
+      return get<ApprovedCatalog>('api/governance/catalog');
+    },
+
+    /** POST /api/governance/catalog (configuration wizard G2). */
+    async postGovernanceCatalog(body: CatalogUpdateBody): Promise<{ ok: boolean; catalog: ApprovedCatalog }> {
+      return post<{ ok: boolean; catalog: ApprovedCatalog }>('api/governance/catalog', body);
+    },
+
+    /** POST /api/governance/catalog/import (configuration wizard G3). */
+    async postGovernanceCatalogImport(body: CatalogImportBody): Promise<{ ok: boolean; catalog: ApprovedCatalog }> {
+      return post<{ ok: boolean; catalog: ApprovedCatalog }>('api/governance/catalog/import', body);
     }
   };
 }

@@ -71,20 +71,22 @@ This document outlines the strategic plan to launch the Open Lesson Standard (OL
 **Already implemented (hub & ecosystem):** On-demand PWA delivery (hub-transform), LMS engine (Rasch, embeddings, Thompson bandit, federation) and theta HTTP APIs (`/api/lms/select`, `POST /api/lms/observation`, etc.), governance APIs (`/api/governance/report`, `/api/governance/policy`, `POST /api/governance/compliance`), UTU/teaching_mode in schema and sidecar, typed portal API client (`portal/src/lib/api.ts`), services layer (compiler, lms, governance, lessonAssembly). Portal uses mock data unless `VITE_HUB_URL` is set.
 
 - [ ] **Day 76-80: Public Launch**
-    - [ ] Publish Manifesto to HN, Reddit, Dev.to.
+    - [ ] Publish Manifesto to HN, Reddit, Dev.to. See **`docs/LAUNCH-AND-COMMUNITY.md`** for checklist and one-line pitch.
 - [ ] **Day 81-85: Community Onboarding**
     - [ ] Triage Issues.
-    - [ ] Label "Good First Issues" (e.g., Translation).
+    - [ ] Label "Good First Issues" (e.g., Translation). See **`docs/LAUNCH-AND-COMMUNITY.md`** for suggested labels and where to point contributors.
 - [ ] **Day 86-90: The "Code-as-Content" Tutorial**
-    - [ ] Record video: "How to Fork and Translate a Lesson."
-- [ ] **Day 91-95: Graph Verification Test**
-    - [ ] Simulate a "Weaver Cohort" vs "Farmer Cohort."
-    - [ ] Prove that the Lesson Menu reorders itself differently for each group using the same content.
+    - [x] Tutorial doc: **`docs/tutorials/fork-and-translate-lesson.md`** (step-by-step fork and translate).
+    - [ ] Record video: "How to Fork and Translate a Lesson" (optional; use the tutorial as script).
+- [x] **Day 91-95: Graph Verification Test** (Phase 1)
+    - [x] Simulate a "Weaver Cohort" vs "Farmer Cohort."
+    - [x] Prove that the Lesson Menu reorders itself differently for each group using the same content (`npm run test:graph`).
 - [ ] **Day 96-100: Year 2 Prep**
-    - [ ] Research TipTap for WYSIWYG editor.
-    - [ ] Finalize v1.0 Spec.
+    - [ ] Research TipTap for WYSIWYG editor. See **`docs/YEAR2-PREP.md`** for options and requirements.
+    - [ ] Finalize v1.0 Spec. See **`docs/YEAR2-PREP.md`** for checklist.
 
 ## 🔭 Future Horizons (Year 2)
 *   **The Editor:** A drag-and-drop GUI that generates valid OLS YAML.
 *   **The Plugins:** Official plugins for Moodle, Kolibri, and Canvas.
 *   **The Mesh:** Enabling Village Hubs to sync `graph_weights.json` via LoRa to share cultural adaptations between villages.
+*   **Reference implementation refactor:** Move toward a schema-based, functionally styled design so AGNI is a true reference implementation of OLS (schemas as source of truth, pure pipelines where it helps, side effects at the edges). See **`docs/REFERENCE-IMPLEMENTATION-VISION.md`**.

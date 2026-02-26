@@ -12,9 +12,13 @@
 // Architecture note:
 //   theta.js owns prerequisite enforcement (BFS skill graph) and builds the
 //   candidate set of eligible lessons. The engine selects among that candidate
-//   set using Thompson Sampling. Neither system needs to be complete before
-//   the other ships — theta.js passes an array of eligible lesson ids and
-//   the engine returns the best one.
+//   set using Thompson Sampling — it never sees ineligible lessons and never
+//   overrides prerequisite rules.
+//
+// Phase 2 / Sprint M + Reference Implementation: Persistence is at the edge.
+// applyObservation(state, observation) → newState is pure (no I/O); recordObservation
+// is load → applyObservation → save. Core logic runs on a clone so reference behaviour
+// is testable without the filesystem.
 //
 // State persistence:
 //   LMSState is a single JSON file. All mutations go through recordObservation()
@@ -27,7 +31,7 @@
 
 'use strict';
 
-import type { LMSState, BanditSummary, EmbeddingEntityState } from '../types';
+import type { LMSState, BanditSummary, EmbeddingEntityState, LMSObservation } from '../types';
 
 var fs         = require('fs');
 var path       = require('path');
@@ -242,10 +246,25 @@ function selectBestLesson(studentId: string, candidates: string[]): string | nul
 }
 
 /**
- * Record a completed lesson observation and update all model parameters.
+ * Pure core: (state, observation) → newState. No I/O.
+ * Reference implementation: use this to test LMS behaviour without the filesystem.
+ * Mutating helpers (rasch, embeddings, thompson) run on a deep clone so input state is unchanged.
  *
- * Updates Rasch ability, embeddings, and the bandit posterior in one
- * atomic operation, then persists state.
+ * @param {LMSState} state
+ * @param {LMSObservation} observation
+ * @returns {LMSState}
+ */
+function applyObservation(state: LMSState, observation: LMSObservation): LMSState {
+  var next = JSON.parse(JSON.stringify(state)) as LMSState;
+  var gain = rasch.updateAbility(next, observation.studentId, observation.probeResults);
+  embeddings.updateEmbedding(next, observation.studentId, observation.lessonId, gain);
+  thompson.updateBandit(next, observation.studentId, observation.lessonId, gain);
+  return next;
+}
+
+/**
+ * Record a completed lesson observation and update all model parameters.
+ * Persistence at the edge: load → applyObservation → save.
  *
  * @param {string}   studentId
  * @param {string}   lessonId
@@ -256,16 +275,7 @@ function recordObservation(
   lessonId: string,
   probeResults: Array<{ probeId: string; correct: boolean }>
 ): void {
-  // 1. Update Rasch ability — returns delta as gain proxy
-  var gain = rasch.updateAbility(_state, studentId, probeResults);
-
-  // 2. Update student/lesson embeddings
-  embeddings.updateEmbedding(_state, studentId, lessonId, gain);
-
-  // 3. Update bandit posterior
-  thompson.updateBandit(_state, studentId, lessonId, gain);
-
-  // 4. Persist atomically
+  _state = applyObservation(_state, { studentId, lessonId, probeResults });
   saveState(_state);
 }
 
@@ -341,6 +351,7 @@ module.exports = {
   seedLessons,
   selectBestLesson,
   recordObservation,
+  applyObservation,
   getStudentAbility,
   exportBanditSummary,
   mergeRemoteSummary,

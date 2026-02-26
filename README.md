@@ -48,7 +48,8 @@ The compiled output lands in `dist/`. Open `dist/gravity.html` in any browser �
 The teacher portal (`portal/`) can talk to a live hub for theta, LMS, governance, and authoring APIs. Start the hub (theta) and the portal with the hub URL set:
 
 ```bash
-# Terminal 1: start the hub (theta API, default port 8082)
+# Terminal 1: build the LMS engine (required for bandit selection and sneakernet), then start the hub
+npm run build:engine
 node hub-tools/theta.js
 
 # Terminal 2: run the portal with the hub URL (from repo root)
@@ -115,6 +116,8 @@ AGNI/
 
 **Sneakernet-ready.** Data travels with the human via QR codes (Base45/Gzip). No cloud accounts, no identities — just competency gates.
 
+**Compatibility.** The runtime targets **Android 6.0+** and **ES5** in the player and core runtime scripts. See `ARCHITECTURE.md` §4.1 for the full baseline and checklist.
+
 ---
 
 ## Pilot Lessons
@@ -131,11 +134,16 @@ AGNI/
 
 | Doc | What it covers |
 |-----|---------------|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Compiler pipeline, runtime design, output formats |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Compiler pipeline, runtime design, output formats |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Canonical architecture and roadmap |
+| [docs/ONBOARDING-CONCEPTS.md](docs/ONBOARDING-CONCEPTS.md) | Key concepts: OLS, theta, Rasch, bandit, skill graph |
 | [SCHEMA_SPEC.md](docs/SCHEMA_SPEC.md) | Full OLS YAML schema reference |
 | [ROADMAP.md](docs/ROADMAP.md) | What's planned and what's shipping |
 | [GOVERNANCE.md](docs/GOVERNANCE.md) | Web of trust, signing, community structure |
 | [Threshold Grammar](docs/specs/threshold_grammar.md) | How sensor thresholds are defined |
+| [Fork and translate tutorial](docs/tutorials/fork-and-translate-lesson.md) | Step-by-step: fork and translate a lesson |
+| [Launch and community](docs/LAUNCH-AND-COMMUNITY.md) | Phase 4 launch checklist, labels, onboarding |
+| [Year 2 prep](docs/YEAR2-PREP.md) | WYSIWYG research, v1.0 spec finalization |
 
 ---
 
@@ -146,8 +154,8 @@ We need help from **educators**, **developers**, and **translators**. See **[CON
 **Quick ways to help right now:**
 
 - Write a new lesson in YAML (see `lessons/gravity.yaml` as a template)
+- **Translate a lesson** — [tutorial](docs/tutorials/fork-and-translate-lesson.md)
 - Improve the compiler output for low-end devices
-- Translate an existing lesson
 - Test on old Android phones and file issues
 
 ---

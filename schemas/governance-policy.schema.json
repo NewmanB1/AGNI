@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agni-project.org/schemas/governance-policy.schema.json",
+  "title": "AGNI Governance Policy",
+  "description": "Policy for lesson compliance: UTU, teaching modes, difficulty bounds.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "utuTargets": {
+      "type": "array",
+      "description": "Target UTU classes and bands for cohort coverage.",
+      "items": {
+        "type": "object",
+        "required": ["class", "band"],
+        "additionalProperties": false,
+        "properties": {
+          "class": { "type": "string" },
+          "band": { "type": "number" }
+        }
+      }
+    },
+    "allowedTeachingModes": {
+      "type": "array",
+      "description": "Teaching modes permitted for lessons.",
+      "items": { "type": "string" }
+    },
+    "minDifficulty": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Minimum lesson difficulty (1-5)."
+    },
+    "maxDifficulty": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Maximum lesson difficulty (1-5)."
+    },
+    "requireUtu": {
+      "type": "boolean",
+      "description": "If true, lessons must have a UTU label."
+    },
+    "requireTeachingMode": {
+      "type": "boolean",
+      "description": "If true, lessons must declare teaching_mode."
+    }
+  }
+}

@@ -17,9 +17,9 @@ async function run() {
     npm run build   # if using package.json script
 
   Options:
-    --format=html|native     Output format (default: html)
+    --format=html|native|yaml-packet   Output format (default: html)
     --output=<path>          Output file path (required for html)
-    --output-dir=<path>      Output directory (required for native)
+    --output-dir=<path>      Output directory (required for native and yaml-packet)
     --device-id=<uuid>       Bind output to a specific device
     --private-key=<path>     Path to Ed25519 private key for signing
     --dev                    Enable developer mode (sensor logging, emulator controls)
@@ -28,6 +28,7 @@ async function run() {
     node src/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html
     node src/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html --dev
     node src/cli.js lessons/gravity.yaml --format=native --output-dir=dist/native-gravity
+    node src/cli.js lessons/gravity.yaml --format=yaml-packet --output-dir=dist/yaml-gravity
     node src/cli.js lms-repair
     `);
     process.exit(0);
@@ -67,7 +68,7 @@ async function run() {
 
   if (!params.inputFile) {
     console.error('Error: No input file specified.');
-    console.error('Usage: node src/cli.js <input.yaml> --format=<html|native> [options]');
+    console.error('Usage: node src/cli.js <input.yaml> --format=<html|native|yaml-packet> [options]');
     process.exit(1);
   }
 

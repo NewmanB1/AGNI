@@ -2,9 +2,11 @@
 
 // Evaluate a single lesson (sidecar) against a governance policy.
 // Returns status and a list of issues for authoring tools and hub APIs.
+// Pure: (sidecar, policy) → { status, issues }; no I/O or hidden state.
 
 /**
  * Evaluate lesson compliance against policy.
+ * Pure function: same inputs always yield the same output.
  *
  * @param  {object} sidecar  Lesson sidecar (identifier, utu, teaching_mode, difficulty, ontology, ...)
  * @param  {object} policy   Optional. { allowedTeachingModes?, requireUtu?, requireTeachingMode?, minDifficulty?, maxDifficulty? }

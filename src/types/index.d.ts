@@ -210,6 +210,13 @@ export interface BanditSummary {
   sampleSize: number;
 }
 
+/** Input to applyObservation: one completed lesson attempt. Reference implementation: pure (state, observation) → newState. */
+export interface LMSObservation {
+  studentId: string;
+  lessonId: string;
+  probeResults: Array<{ probeId: string; correct: boolean }>;
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Governance types
 // ──────────────────────────────────────────────────────────────────────────────
