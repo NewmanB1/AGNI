@@ -115,13 +115,36 @@
     attention:       [100, 60, 100]
   };
 
+  function getHapticIntensity() {
+    try {
+      var val = localStorage.getItem('agni_haptic_intensity');
+      if (val !== null) return Math.max(0, Math.min(1, parseFloat(val)));
+    } catch (e) { /* localStorage unavailable */ }
+    return 1;
+  }
+
+  function getReducedMotion() {
+    try {
+      if (localStorage.getItem('agni_reduced_motion') === 'true') return true;
+    } catch (e) { /* localStorage unavailable */ }
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+    return false;
+  }
+
   function vibrate(pattern) {
     if (!('vibrate' in navigator)) return;
+    var intensity = getHapticIntensity();
+    if (intensity === 0) return;
     var ms = Array.isArray(pattern)
       ? pattern
       : (VIBRATION_PATTERNS[pattern] || VIBRATION_PATTERNS.short);
+    if (intensity < 1) {
+      ms = ms.map(function(v) { return Math.round(v * intensity); });
+    }
     navigator.vibrate(ms);
-    if (DEV_MODE) console.log('[VIBRATE]', typeof pattern === 'string' ? pattern : JSON.stringify(ms));
+    if (DEV_MODE) console.log('[VIBRATE]', typeof pattern === 'string' ? pattern : JSON.stringify(ms), 'intensity=' + intensity);
   }
 
   function registerVibrationPattern(name, msArray) {
@@ -326,6 +349,8 @@
     registerVibrationPattern:    registerVibrationPattern,
     loadLessonVibrationPatterns: loadLessonVibrationPatterns,
     VIBRATION_PATTERNS:          VIBRATION_PATTERNS,
+    getHapticIntensity:          getHapticIntensity,
+    getReducedMotion:            getReducedMotion,
 
     // ── Device ────────────────────────────────────────────────────────────────
     device: DEVICE,

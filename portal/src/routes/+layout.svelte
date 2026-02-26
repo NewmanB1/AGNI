@@ -2,9 +2,15 @@
 <script>
   import { page } from '$app/stores';
   import '../app.css';
+  import HubSetupPrompt from '$lib/components/HubSetupPrompt.svelte';
 
   $: isGovernance = $page.url.pathname.startsWith('/governance');
   $: isHub = $page.url.pathname.startsWith('/hub');
+  $: isGroups = $page.url.pathname === '/groups' || $page.url.pathname.startsWith('/groups/');
+  $: isAdmin = $page.url.pathname.startsWith('/admin');
+  $: isSettings = $page.url.pathname === '/settings';
+  $: isAuthor = $page.url.pathname.startsWith('/author');
+  $: isParent = $page.url.pathname.startsWith('/parent');
 </script>
 
 <header class="app-header">
@@ -12,9 +18,16 @@
   <nav>
     <a href="/">Home</a>
     <a href="/hub" class:active={isHub}>Hub</a>
+    <a href="/groups" class:active={isGroups}>Groups</a>
+    <a href="/author/new" class:active={isAuthor}>Author</a>
+    <a href="/parent/dashboard" class:active={isParent}>Parent</a>
     <a href="/governance/setup" class:active={isGovernance}>Governance</a>
+    <a href="/admin/hub" class:active={isAdmin}>Admin</a>
+    <a href="/settings" class:active={isSettings}>Settings</a>
   </nav>
 </header>
+
+<HubSetupPrompt />
 
 <main>
   <slot />

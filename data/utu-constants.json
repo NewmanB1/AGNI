@@ -1,0 +1,66 @@
+{
+  "version": "1.0",
+  "description": "Canonical UTU constants for authoring and governance. Source of truth: docs/specs/utu-architecture.md",
+  "protocols": [
+    { "id": 1, "name": "Transmission", "short": "P1", "cognitiveRole": "Schema acquisition: high-fidelity data loading and modeling", "failureMode": "Passive Familiarity Illusion: recognition without ability to act" },
+    { "id": 2, "name": "Guided Construction", "short": "P2", "cognitiveRole": "Conceptual restructuring: merging new data with existing schema", "failureMode": "Cognitive Flailing: inquiry without stable P1 buffer" },
+    { "id": 3, "name": "Apprenticeship", "short": "P3", "cognitiveRole": "Proceduralization: hard-coding the model into a fluid skill", "failureMode": "Mimicry: execution without underlying abstraction" },
+    { "id": 4, "name": "Dev. Sequencing", "short": "P4", "cognitiveRole": "Stabilization: matching task complexity to biological bandwidth", "failureMode": "Lockstep Stagnation: rigid, non-adaptive pacing" },
+    { "id": 5, "name": "Meaning Activation", "short": "P5", "cognitiveRole": "Transfer: deploying the skill in high-stakes, authentic context", "failureMode": "Activity without Rigor: high engagement, zero structural output" }
+  ],
+  "spines": {
+    "MAC": {
+      "name": "Mathematical Spine",
+      "ids": ["MAC-1", "MAC-2", "MAC-3", "MAC-4", "MAC-5", "MAC-6", "MAC-7", "MAC-8"],
+      "items": [
+        { "id": "MAC-1", "description": "Quantification: composition, decomposition, conservation of quantity" },
+        { "id": "MAC-2", "description": "Transformation: how actions change states while preserving structure" },
+        { "id": "MAC-3", "description": "Relation & Structure: meaning as a function of connections/constraints" },
+        { "id": "MAC-4", "description": "Representation: translation between external encodings (symbols/tools)" },
+        { "id": "MAC-5", "description": "Invariance & Equivalence: what survives change (congruence)" },
+        { "id": "MAC-6", "description": "Composition/Decomposition: complexity as structured assembly" },
+        { "id": "MAC-7", "description": "Uncertainty & Variation: quantifiable structure within non-fixed outcomes" },
+        { "id": "MAC-8", "description": "Justification & Generalization: the study of necessity and proof" }
+      ]
+    },
+    "SCI": {
+      "name": "Science Spine",
+      "ids": ["SCI-1", "SCI-2", "SCI-3", "SCI-4", "SCI-5", "SCI-6", "SCI-7"],
+      "items": [
+        { "id": "SCI-1", "description": "System Observation: disciplined noticing as root of knowledge" },
+        { "id": "SCI-2", "description": "Pattern Detection: moving from event to expectation via repetition" },
+        { "id": "SCI-3", "description": "Model Construction: imagining mechanisms to explain the unseen" },
+        { "id": "SCI-4", "description": "Testing & Intervention: strengthening knowledge through interaction" },
+        { "id": "SCI-5", "description": "Scale Navigation: relating micro-phenomena to macro-consequences" },
+        { "id": "SCI-6", "description": "Uncertainty Management: quantifying reliability and known-ness of claims" },
+        { "id": "SCI-7", "description": "Knowledge Revision: self-correction and being \"less wrong\"" }
+      ]
+    },
+    "SOC": {
+      "name": "Social Studies Spine",
+      "ids": ["SOC-1", "SOC-2", "SOC-3", "SOC-4", "SOC-5", "SOC-6", "SOC-7"],
+      "items": [
+        { "id": "SOC-1", "description": "Collective Organization: solving coordination via roles and norms" },
+        { "id": "SOC-2", "description": "Resource Exchange: negotiated allocation of value and scarcity" },
+        { "id": "SOC-3", "description": "Authority & Legitimacy: justification and contestation of power" },
+        { "id": "SOC-4", "description": "Cultural Expression: meaning systems that stabilize group identity" },
+        { "id": "SOC-5", "description": "Historical Continuity: reconstructing the past to guide action" },
+        { "id": "SOC-6", "description": "Human–Environment Interaction: co-evolution of culture and landscape" },
+        { "id": "SOC-7", "description": "Perspective Taking: social truth is multi-voiced" }
+      ]
+    }
+  },
+  "spineIds": [
+    "MAC-1", "MAC-2", "MAC-3", "MAC-4", "MAC-5", "MAC-6", "MAC-7", "MAC-8",
+    "SCI-1", "SCI-2", "SCI-3", "SCI-4", "SCI-5", "SCI-6", "SCI-7",
+    "SOC-1", "SOC-2", "SOC-3", "SOC-4", "SOC-5", "SOC-6", "SOC-7"
+  ],
+  "bands": [
+    { "id": 1, "phase": "Embodied/Representational: action-based and iconic reasoning" },
+    { "id": 2, "phase": "Embodied/Representational: action-based and iconic reasoning" },
+    { "id": 3, "phase": "Operational/Structural: procedural mastery moving to abstract relations" },
+    { "id": 4, "phase": "Operational/Structural: procedural mastery moving to abstract relations" },
+    { "id": 5, "phase": "Hypothetical/Formal: systemic modeling and epistemic validation" },
+    { "id": 6, "phase": "Hypothetical/Formal: systemic modeling and epistemic validation" }
+  ]
+}

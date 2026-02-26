@@ -1,52 +1,107 @@
 <script>
-  import { mockClasses, mockGovernanceMilestones, mockSkills } from '$lib/mockData';
+  import { hubApiStore } from '$lib/api';
+  import { mockClasses, mockGovernanceMilestones } from '$lib/mockData';
 
-  let selectedClassId = mockClasses[0]?.id || '';
-  $: currentClass = mockClasses.find(cls => cls.id === selectedClassId) || null;
+  let selectedClassId = $state(mockClasses[0]?.id || '');
+  const currentClass = $derived(mockClasses.find(cls => cls.id === selectedClassId) || null);
 
   // Heterogeneity calculations
-  $: entryMin = currentClass?.entryLevels?.length > 0 ? Math.min(...currentClass.entryLevels) : null;
-  $: entryMax = currentClass?.entryLevels?.length > 0 ? Math.max(...currentClass.entryLevels) : null;
-  $: cohortCount = currentClass?.arrivalCohorts ? new Set(currentClass.arrivalCohorts).size : 0;
-  $: heteroLevel = (cohortCount > 2 || (entryMax !== null && entryMax - entryMin > 5)) ? 'high'
+  const entryMin = $derived(currentClass?.entryLevels?.length > 0 ? Math.min(...currentClass.entryLevels) : null);
+  const entryMax = $derived(currentClass?.entryLevels?.length > 0 ? Math.max(...currentClass.entryLevels) : null);
+  const cohortCount = $derived(currentClass?.arrivalCohorts ? new Set(currentClass.arrivalCohorts).size : 0);
+  const heteroLevel = $derived((cohortCount > 2 || (entryMax !== null && entryMax - entryMin > 5)) ? 'high'
                   : (cohortCount > 1 || (entryMax !== null && entryMax - entryMin > 3)) ? 'medium'
-                  : 'low';
+                  : 'low');
 
-  // Override modal state
-  let showOverrideModal = false;
-  let overrideSkillId = '';
-  let overrideScope = 'class';
-  let overrideDuration = '1-week';
-  let overrideReason = '';
+  // Override modal (T1)
+  let showOverrideModal = $state(false);
+  let overridePseudoId = $state('');
+  let overrideLessonId = $state('');
+  let thetaStudents = $state({});
+  let thetaLessons = $state([]);
+  let overrideLoading = $state(false);
+  let overrideError = $state('');
+  let hubConnected = $state(false);
 
-  function openOverrideModal() {
+  async function openOverrideModal() {
     showOverrideModal = true;
-    overrideSkillId = '';
-    overrideScope = 'class';
-    overrideDuration = '1-week';
-    overrideReason = '';
+    overridePseudoId = '';
+    overrideLessonId = '';
+    overrideError = '';
+    thetaStudents = {};
+    thetaLessons = [];
+    if ($hubApiStore.baseUrl) {
+      hubConnected = true;
+      try {
+        const all = await $hubApiStore.getThetaAll();
+        thetaStudents = all.students || {};
+      } catch (e) {
+        overrideError = e instanceof Error ? e.message : String(e);
+        hubConnected = false;
+      }
+    } else {
+      hubConnected = false;
+    }
+  }
+
+  async function loadThetaForStudent() {
+    if (!overridePseudoId || !$hubApiStore.baseUrl) return;
+    overrideLoading = true;
+    overrideError = '';
+    try {
+      const res = await $hubApiStore.getTheta(overridePseudoId);
+      thetaLessons = res.lessons || [];
+      overrideLessonId = res.override || (thetaLessons[0]?.lessonId || '');
+    } catch (e) {
+      overrideError = e instanceof Error ? e.message : String(e);
+      thetaLessons = [];
+    }
+    overrideLoading = false;
   }
 
   function closeOverrideModal() {
     showOverrideModal = false;
   }
 
-  function submitOverride() {
-    if (!overrideSkillId) {
-      alert('Please select a skill to override to.');
+  async function submitOverride() {
+    if (!$hubApiStore.baseUrl) {
+      overrideError = 'Hub not connected.';
       return;
     }
-    if (!overrideReason.trim()) {
-      alert('Please provide a reason for the override.');
+    if (!overridePseudoId) {
+      overrideError = 'Select a student.';
       return;
     }
-    console.log('Override submitted:', { classId: currentClass.id, skillId: overrideSkillId, scope: overrideScope, duration: overrideDuration, reason: overrideReason.trim() });
-    alert(`Override applied for ${overrideScope} scope on ${overrideSkillId} (${overrideDuration})\nReason: ${overrideReason}`);
-    closeOverrideModal();
+    overrideLoading = true;
+    overrideError = '';
+    try {
+      await $hubApiStore.setRecommendationOverride(overridePseudoId, overrideLessonId || null);
+      closeOverrideModal();
+    } catch (e) {
+      overrideError = e instanceof Error ? e.message : String(e);
+    }
+    overrideLoading = false;
   }
 
+  async function clearOverride() {
+    if (!$hubApiStore.baseUrl || !overridePseudoId) return;
+    overrideLoading = true;
+    overrideError = '';
+    try {
+      await $hubApiStore.setRecommendationOverride(overridePseudoId, null);
+      overrideLessonId = '';
+      await loadThetaForStudent();
+    } catch (e) {
+      overrideError = e instanceof Error ? e.message : String(e);
+    }
+    overrideLoading = false;
+  }
+
+  const studentIds = $derived(Object.keys(thetaStudents));
+  const hasStudents = $derived(studentIds.length > 0);
+
   function handleKeydown(event) {
-    if (event.key === 'Escape') closeOverrideModal();
+    if (event.key === 'Escape' && showOverrideModal) closeOverrideModal();
   }
 </script>
 
@@ -115,6 +170,7 @@
     <h2>AGNI Recommendation (coming soon)</h2>
     <p>Personalized next skill suggestions for this class will appear here.</p>
     <button class="override-btn" on:click={openOverrideModal}>Override Recommendation</button>
+    <p class="hub-hint">Configure hub URL in <a href="/settings">Settings</a> to manage overrides.</p>
   </section>
 {:else}
   <p>No class selected.</p>
@@ -133,43 +189,43 @@
 </section>
 
 {#if showOverrideModal}
-  <div class="modal-overlay" on:click|self={closeOverrideModal}>
+  <div class="modal-overlay" on:click|self={closeOverrideModal} role="dialog" aria-modal="true">
     <div class="modal-content">
       <h2>Override Recommendation</h2>
-      <p>for {currentClass.name}</p>
-      <label>Skill to force:
-        <select bind:value={overrideSkillId} required>
-          <option value="">Select a skill...</option>
-          {#each mockSkills as skill}
-            <option value={skill.id}>{skill.title}</option>
-          {/each}
-        </select>
-      </label>
-      <label>Scope:
-        <select bind:value={overrideScope}>
-          <option value="class">Whole class ({currentClass.studentsCount} students)</option>
-          <option value="subgroup">Subgroup (select students)</option>
-          <option value="individual">Individual student</option>
-        </select>
-      </label>
-      <label>Duration:
-        <select bind:value={overrideDuration}>
-          <option value="1-day">1 day</option>
-          <option value="3-days">3 days</option>
-          <option value="1-week">1 week</option>
-          <option value="permanent">Permanent (until manual reset)</option>
-        </select>
-      </label>
-      <label>Reason for override:
-        <textarea bind:value={overrideReason} placeholder="e.g., Group sensor experiment, catch-up for new arrivals" rows="3" required></textarea>
-      </label>
-      {#if overrideScope === 'class'}
-        <p class="warning">Warning: This will override personalized paths for {currentClass.studentsCount} students.</p>
+      {#if !hubConnected}
+        <p class="hub-required">Configure hub URL in <a href="/settings">Settings</a> to set overrides.</p>
+      {:else if !hasStudents}
+        <p class="no-students">No students in hub. Ensure mastery data exists.</p>
+      {:else}
+        <label>Student:
+          <select bind:value={overridePseudoId} on:change={loadThetaForStudent} disabled={overrideLoading}>
+            <option value="">Select student...</option>
+            {#each studentIds as id}
+              <option value={id}>{id}</option>
+            {/each}
+          </select>
+        </label>
+        {#if overridePseudoId}
+          <label>Override lesson:
+            <select bind:value={overrideLessonId} disabled={overrideLoading}>
+              <option value="">— Use theta order (no override) —</option>
+              {#each thetaLessons as l}
+                <option value={l.lessonId}>{l.title} ({l.slug}) · θ={l.theta}</option>
+              {/each}
+            </select>
+          </label>
+        {/if}
+        {#if overrideError}
+          <p class="override-error">{overrideError}</p>
+        {/if}
+        <div class="modal-actions">
+          <button class="cancel" on:click={closeOverrideModal} disabled={overrideLoading}>Cancel</button>
+          {#if overridePseudoId}
+            <button class="clear" on:click={clearOverride} disabled={overrideLoading}>Clear Override</button>
+            <button class="submit" on:click={submitOverride} disabled={overrideLoading || !overrideLessonId}>Apply Override</button>
+          {/if}
+        </div>
       {/if}
-      <div class="modal-actions">
-        <button class="cancel" on:click={closeOverrideModal}>Cancel</button>
-        <button class="submit" on:click={submitOverride} disabled={!overrideSkillId || !overrideReason.trim()}>Apply Override</button>
-      </div>
     </div>
   </div>
 {/if}
@@ -198,8 +254,12 @@
   .modal-content select, .modal-content textarea { width: 100%; padding: 0.6rem; background: #1f2b4e; color: var(--text); border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; }
   .modal-content textarea { resize: vertical; min-height: 80px; }
   .warning { color: #ffaa00; font-size: 0.9rem; margin: 0.8rem 0; padding: 0.6rem; background: rgba(255,170,0,0.1); border-radius: 6px; }
-  .modal-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem; }
+  .hub-hint { margin-top: 0.5rem; font-size: 0.9rem; opacity: 0.7; }
+  .hub-required, .no-students { color: var(--text); opacity: 0.9; }
+  .override-error { color: #ff6b6b; font-size: 0.9rem; margin: 0.5rem 0; }
+  .modal-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem; flex-wrap: wrap; }
   .cancel { padding: 0.6rem 1.2rem; background: #2a2a4a; color: var(--text); border: none; border-radius: 6px; cursor: pointer; }
+  .clear { padding: 0.6rem 1.2rem; background: #3a3a5a; color: var(--text); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
   .submit { padding: 0.6rem 1.2rem; background: var(--accent); color: #1a1a2e; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-  .submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .submit:disabled, .clear:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>

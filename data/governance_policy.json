@@ -1,0 +1,10 @@
+{
+  "utuTargets": [
+    {
+      "class": "MAC-2",
+      "band": 4
+    }
+  ],
+  "minDifficulty": 1,
+  "maxDifficulty": 5
+}

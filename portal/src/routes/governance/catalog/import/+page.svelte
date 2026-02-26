@@ -1,7 +1,6 @@
 <script>
-  import { hubApi } from '$lib/api';
+  import { hubApiStore } from '$lib/api';
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
 
   let fileInput;
   let pasteText = '';
@@ -9,15 +8,11 @@
   let loading = false;
   let error = '';
   let success = '';
-  let hubConnected = false;
   let preview = null;
 
-  onMount(() => {
-    hubConnected = !!hubApi.baseUrl;
-    if (!hubConnected) {
-      error = 'Hub not connected. Set VITE_HUB_URL to use import.';
-    }
-  });
+  const api = $derived($hubApiStore);
+  const hubConnected = $derived(!!api.baseUrl);
+  $effect(() => { if (!hubConnected) error = 'Configure hub URL in Settings to use import.'; });
 
   function handleFileChange(e) {
     const input = e.target;
@@ -68,12 +63,12 @@
   }
 
   async function doImport() {
-    if (!preview || !hubApi.baseUrl) return;
+    if (!preview || !api.baseUrl) return;
     loading = true;
     error = '';
     success = '';
     try {
-      await hubApi.postGovernanceCatalogImport({
+      await api.postGovernanceCatalogImport({
         catalog: preview,
         strategy
       });

@@ -13,6 +13,10 @@ async function run() {
   🔥 AGNI — Open Lesson Standard Compiler
   Usage:
     node src/cli.js <input.yaml> [options]
+    node src/cli.js hub setup --wizard   # Hub config (paths, ports, cache)
+    node src/cli.js hub init --wizard    # First-run: minimal config
+    node src/cli.js deploy setup --wizard # Deployment: hub ID, home URL, ports, USB
+    node src/cli.js sync setup --wizard   # Sync: transport, home URL, USB path
     node src/cli.js lms-repair   # Migrate/repair LMS state file (data/lms_state.json)
     npm run build   # if using package.json script
 
@@ -34,8 +38,27 @@ async function run() {
     process.exit(0);
   }
 
-  // ── LMS repair (Backlog task 7) ──────────────────────────────────────────
+  // ── Hub setup wizard (A1) ────────────────────────────────────────────────
   const firstArg = args.find(a => !a.startsWith('-'));
+  const secondArg = args.filter(a => !a.startsWith('-'))[1];
+  if (firstArg === 'hub' && secondArg === 'setup' && args.includes('--wizard')) {
+    await require('../scripts/hub-setup-wizard.js').run();
+    return;
+  }
+  if (firstArg === 'hub' && secondArg === 'init' && args.includes('--wizard')) {
+    await require('../scripts/hub-init-wizard.js').run();
+    return;
+  }
+  if (firstArg === 'deploy' && secondArg === 'setup' && args.includes('--wizard')) {
+    await require('../scripts/deploy-setup-wizard.js').run();
+    return;
+  }
+  if (firstArg === 'sync' && secondArg === 'setup' && args.includes('--wizard')) {
+    await require('../scripts/sync-setup-wizard.js').run();
+    return;
+  }
+
+  // ── LMS repair (Backlog task 7) ──────────────────────────────────────────
   if (firstArg === 'lms-repair') {
     const engine = require('./engine');
     engine.reloadState();

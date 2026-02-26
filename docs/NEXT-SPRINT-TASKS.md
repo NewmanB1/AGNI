@@ -1,8 +1,10 @@
 # Next Sprint — Recommended Tasks
 
-Prioritized tasks for the **upcoming** sprint. Drawn from ROADMAP (Days 76–100), ARCHITECTURE-EVALUATION recommendations, and remaining open items. Pick by priority and capacity.
+Prioritized tasks for the **upcoming** sprint. Drawn from ROADMAP, ARCHITECTURE-EVALUATION, and `docs/SPRINT-PLAN.md`.
 
-**Context:** Phases 5–6, Reference Implementation refactor, and friction reductions are done. The lists in `docs/SPRINT-NEXT.md` mark many items Done; this file focuses on the next batch of open work.
+**Multi-sprint plan:** See **`docs/SPRINT-PLAN.md`** for the full 6-sprint sequence (UTU Architecture, Config wizards, Groups + Save API, WYSIWYG foundation, WYSIWYG full, Parent/Student/Launch).
+
+**Context:** Config wizards G1–G4 (Governance) done. Common top page done.
 
 ---
 
@@ -35,16 +37,25 @@ Prioritized tasks for the **upcoming** sprint. Drawn from ROADMAP (Days 76–100
 
 ---
 
-## Configuration wizards (by role)
+## Next sprint: UTU Architecture (Sprint 1)
 
-Configuration wizards give each persona guided setup flows instead of editing JSON or env vars. Full sprint plan in **`docs/SPRINT-CONFIGURATION-WIZARDS.md`**.
+From `docs/SPRINT-PLAN.md`:
+
+| # | Task | Deliverable |
+|---|------|-------------|
+| U1 | Extend OLS schema `meta.utu` | Add protocol (1–5); formalize spineId; document Spine enum |
+| U2 | UTU constants reference | `docs/specs/utu-architecture.md` |
+| U3 | Extend governance policy | Protocol-progression rules; failure-mode hints |
+| U4 | Policy wizard: UTU/Protocol | Update policy wizard with Protocol, Spine picker |
+
+## Configuration wizards (remaining)
+
+G1–G4 done. Remaining in **`docs/SPRINT-PLAN.md`** Sprint 2–3:
 
 | Sprint | Focus | Tasks |
 |--------|-------|-------|
-| **W1** | Governance + Admin core | Policy wizard (G1), Approved catalog (G2), Hub setup (A1), First-run onboarding (A3) |
-| **W2** | Catalog sharing + Field tech | Catalog import/export (G3, G4), Deployment wizard (F1), Sync wizard (F2) |
-| **W3** | Teacher | Override wizard (T1), Student groups (T2), Hub connection (T4) |
-| **W4** | Groups + Parent + Student | Group assignment (T3), Parent linking + dashboard (P1, P3), Device setup + accessibility (S1, S2) |
+| **Sprint 2** | Admin, Field Tech, Teacher | A1, A3, F1, F2, T1, T4 |
+| **Sprint 3** | Groups + Save API | T2, T3, Lesson save API, Lesson discovery |
 
 ---
 
@@ -59,7 +70,8 @@ Configuration wizards give each persona guided setup flows instead of editing JS
 
 ## References
 
-- **Configuration wizards sprint:** `docs/SPRINT-CONFIGURATION-WIZARDS.md`
+- **Multi-sprint plan:** `docs/SPRINT-PLAN.md`
+- **Configuration wizards:** `docs/SPRINT-CONFIGURATION-WIZARDS.md`
 - **Full task list and history:** `docs/SPRINT-NEXT.md`
 - **Roadmap:** `docs/ROADMAP.md`
 - **Launch checklist:** `docs/LAUNCH-AND-COMMUNITY.md`

@@ -183,6 +183,34 @@ async function run(baseUrl) {
     failures.push(`/api/author/preview: ${e.message}`);
   }
 
+  // GET /api/admin/onboarding-status (A3)
+  try {
+    const { statusCode, data } = await get(baseUrl, '/api/admin/onboarding-status');
+    if (statusCode !== 200) failures.push(`/api/admin/onboarding-status: expected 200, got ${statusCode}: ${data.error || ''}`);
+    if (data && typeof data.isFirstRun !== 'boolean') failures.push(`/api/admin/onboarding-status: isFirstRun must be boolean`);
+  } catch (e) {
+    failures.push(`/api/admin/onboarding-status: ${e.message}`);
+  }
+
+  // GET /api/admin/config (A1)
+  try {
+    const { statusCode, data } = await get(baseUrl, '/api/admin/config');
+    if (statusCode !== 200) failures.push(`/api/admin/config: expected 200, got ${statusCode}: ${data.error || ''}`);
+    if (data && typeof data !== 'object') failures.push(`/api/admin/config: must return object`);
+  } catch (e) {
+    failures.push(`/api/admin/config: ${e.message}`);
+  }
+
+  // PUT /api/admin/config (A1)
+  try {
+    const cfg = { thetaPort: 8082, dataDir: '' };
+    const { statusCode, data } = await put(baseUrl, '/api/admin/config', cfg);
+    if (statusCode !== 200) failures.push(`/api/admin/config PUT: expected 200, got ${statusCode}: ${data.error || ''}`);
+    if (data && data.ok !== true) failures.push(`/api/admin/config PUT: ok must be true`);
+  } catch (e) {
+    failures.push(`/api/admin/config PUT: ${e.message}`);
+  }
+
   // GET /api/governance/catalog (configuration wizard G2, G4)
   try {
     const { statusCode, data } = await get(baseUrl, '/api/governance/catalog');

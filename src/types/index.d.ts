@@ -228,6 +228,10 @@ export interface GovernancePolicy {
   maxDifficulty?: number;
   requireUtu?: boolean;
   requireTeachingMode?: boolean;
+  allowedProtocols?: number[];   // P1–P5; e.g. [1,2,3] for rigor
+  minProtocol?: number;
+  maxProtocol?: number;
+  failureModeHints?: boolean;
 }
 
 export interface ComplianceResult {

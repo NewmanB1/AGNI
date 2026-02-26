@@ -22,6 +22,33 @@ const path = require('path');
 const http = require('http');
 const zlib = require('zlib');
 
+// -- Hub config bootstrap (A1) ------------------------------------------------
+// Load data/hub_config.json if present; apply to process.env before any module reads paths/ports.
+(function loadHubConfig() {
+  const cfgPath = path.join(__dirname, '../data/hub_config.json');
+  if (fs.existsSync(cfgPath)) {
+    try {
+      const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+      if (cfg.dataDir) process.env.AGNI_DATA_DIR = cfg.dataDir;
+      if (cfg.serveDir) process.env.AGNI_SERVE_DIR = cfg.serveDir;
+      if (cfg.thetaPort != null) process.env.AGNI_THETA_PORT = String(cfg.thetaPort);
+      if (cfg.approvedCatalog) process.env.AGNI_APPROVED_CATALOG = cfg.approvedCatalog;
+      if (cfg.minLocalSample != null) process.env.AGNI_MIN_LOCAL_SAMPLE = String(cfg.minLocalSample);
+      if (cfg.minLocalEdges != null) process.env.AGNI_MIN_LOCAL_EDGES = String(cfg.minLocalEdges);
+      if (cfg.yamlDir) process.env.AGNI_YAML_DIR = cfg.yamlDir;
+      if (cfg.factoryDir) process.env.AGNI_FACTORY_DIR = cfg.factoryDir;
+      if (cfg.katexDir) process.env.AGNI_KATEX_DIR = cfg.katexDir;
+      if (cfg.servePort != null) process.env.AGNI_SERVE_PORT = String(cfg.servePort);
+      if (cfg.cacheMax != null) process.env.AGNI_CACHE_MAX = String(cfg.cacheMax);
+      if (cfg.hubId) process.env.AGNI_HUB_ID = cfg.hubId;
+      if (cfg.homeUrl) process.env.AGNI_HOME_URL = cfg.homeUrl;
+      if (cfg.usbPath) process.env.AGNI_USB_PATH = cfg.usbPath;
+      if (cfg.sentryPort != null) process.env.AGNI_SENTRY_PORT = String(cfg.sentryPort);
+      if (cfg.syncTransport) process.env.AGNI_SYNC_TRANSPORT = cfg.syncTransport;
+    } catch (e) { /* ignore */ }
+  }
+})();
+
 const lmsService = require('../src/services/lms');
 const governanceService = require('../src/services/governance');
 const authorService = require('../src/services/author');
@@ -37,6 +64,8 @@ const LESSON_INDEX          = path.join(DATA_DIR, 'lesson_index.json');
 const SCHEDULES             = path.join(DATA_DIR, 'schedules.json');
 const CURRICULUM_GRAPH      = path.join(DATA_DIR, 'curriculum.json');
 const OVERRIDES_PATH       = path.join(DATA_DIR, 'recommendation_overrides.json');
+const GROUPS_PATH          = path.join(DATA_DIR, 'groups.json');
+const PARENT_LINKS_PATH    = path.join(DATA_DIR, 'parent-links.json');
 const APPROVED_CATALOG     = process.env.AGNI_APPROVED_CATALOG || path.join(DATA_DIR, 'approved_catalog.json');
 
 const PORT = parseInt(process.env.AGNI_THETA_PORT || '8082', 10);
@@ -337,6 +366,57 @@ function saveOverrides(overrides) {
   }
 }
 
+// -- Student groups (data/groups.json) ---------------------------------------
+function loadGroups() {
+  if (!fs.existsSync(GROUPS_PATH)) return { groups: [] };
+  try {
+    const data = JSON.parse(fs.readFileSync(GROUPS_PATH, 'utf8'));
+    return Array.isArray(data.groups) ? data : { groups: [] };
+  } catch (e) {
+    return { groups: [] };
+  }
+}
+
+function saveGroups(data) {
+  try {
+    fs.mkdirSync(path.dirname(GROUPS_PATH), { recursive: true });
+    const payload = { groups: Array.isArray(data.groups) ? data.groups : [] };
+    fs.writeFileSync(GROUPS_PATH, JSON.stringify(payload, null, 2));
+  } catch (e) {
+    console.warn('[THETA] Failed to save groups:', e.message);
+  }
+}
+
+function generateGroupId() {
+  return 'group-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
+}
+
+// -- Parent link helpers (P1) ------------------------------------------------
+function loadParentLinks() {
+  if (!fs.existsSync(PARENT_LINKS_PATH)) return { links: [], invites: [] };
+  try {
+    const data = JSON.parse(fs.readFileSync(PARENT_LINKS_PATH, 'utf8'));
+    return {
+      links: Array.isArray(data.links) ? data.links : [],
+      invites: Array.isArray(data.invites) ? data.invites : []
+    };
+  } catch (e) { return { links: [], invites: [] }; }
+}
+
+function saveParentLinks(data) {
+  try {
+    fs.mkdirSync(path.dirname(PARENT_LINKS_PATH), { recursive: true });
+    fs.writeFileSync(PARENT_LINKS_PATH, JSON.stringify(data, null, 2));
+  } catch (e) { /* best-effort */ }
+}
+
+function generateInviteCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
 // -- Main function – uses shared cache --------------------------------------
 function getLessonsSortedByTheta(pseudoId) {
   const currentMasteryMtime    = getFileMtime(MASTERY_SUMMARY);
@@ -569,12 +649,16 @@ function startApi(port) {
     const [urlPath, queryStr] = req.url.split('?');
     const qs = Object.fromEntries(new URLSearchParams(queryStr || ''));
 
-    // ── Method guard: GET for most routes; POST for /api/lms/*, /api/theta/override, governance/compliance, governance/catalog, author/*; PUT for governance/policy ──
+    // ── Method guard: GET for most routes; POST for /api/lms/*, /api/theta/override, /api/groups, governance/*, author/*; PUT for governance/policy, /api/admin/config, /api/groups ──
     const isPostRoute = urlPath.startsWith('/api/lms') || urlPath === '/api/theta/override' ||
+      urlPath === '/api/groups' ||
+      (urlPath.startsWith('/api/groups/') && urlPath.endsWith('/assign')) ||
       urlPath === '/api/governance/compliance' || urlPath === '/api/governance/catalog' ||
       urlPath === '/api/governance/catalog/import' ||
-      urlPath === '/api/author/validate' || urlPath === '/api/author/preview';
-    const isPutRoute = urlPath === '/api/governance/policy';
+      urlPath === '/api/author/validate' || urlPath === '/api/author/preview' || urlPath === '/api/author/save' ||
+      urlPath === '/api/parent/invite' || urlPath === '/api/parent/link' ||
+      urlPath === '/api/admin/sync-test';
+    const isPutRoute = urlPath === '/api/governance/policy' || urlPath === '/api/admin/config' || urlPath === '/api/groups';
     if (req.method !== 'GET' && !(req.method === 'POST' && isPostRoute) && !(req.method === 'PUT' && isPutRoute)) {
       return sendResponse(405, { error: 'Method not allowed' });
     }
@@ -604,6 +688,28 @@ function startApi(port) {
 
     if (urlPath === '/api/theta/graph') return sendResponse(200, getEffectiveGraphWeights());
 
+    // GET /api/lessons — lesson index with optional ?utu=, ?spine=, ?teaching_mode= filters (S2)
+    if (req.method === 'GET' && urlPath === '/api/lessons') {
+      let index = loadLessonIndex();
+      const savedSlugs = authorService.listSavedLessons(process.env.AGNI_YAML_DIR || path.join(DATA_DIR, 'yaml'));
+      if (qs.utu) {
+        const utuFilter = qs.utu.toLowerCase();
+        index = index.filter(l => l.utu && typeof l.utu === 'object' && String(l.utu.class || '').toLowerCase() === utuFilter);
+      }
+      if (qs.spine) {
+        const spineFilter = qs.spine.toUpperCase();
+        index = index.filter(l => {
+          const cls = l.utu && typeof l.utu === 'object' ? String(l.utu.class || '') : '';
+          return cls.toUpperCase().startsWith(spineFilter);
+        });
+      }
+      if (qs.teaching_mode) {
+        const modeFilter = qs.teaching_mode.toLowerCase();
+        index = index.filter(l => String(l.teaching_mode || '').toLowerCase() === modeFilter);
+      }
+      return sendResponse(200, { lessons: index, savedSlugs, total: index.length });
+    }
+
     // POST /api/theta/override — set or clear teacher recommendation override (Phase 3 / Sprint G)
     if (req.method === 'POST' && urlPath === '/api/theta/override') {
       readBody(req).then(body => {
@@ -628,6 +734,88 @@ function startApi(port) {
           overrides[pseudoId] = { lessonId: String(lessonId) };
           saveOverrides(overrides);
           return sendResponse(200, { ok: true, override: lessonId });
+        } catch (err) {
+          return sendResponse(500, { error: err.message });
+        }
+      }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
+
+    // ── Student groups (GET/POST/PUT /api/groups) ────────────────────────────
+    if (urlPath === '/api/groups') {
+      if (req.method === 'GET') {
+        const data = loadGroups();
+        return sendResponse(200, data);
+      }
+      if (req.method === 'POST') {
+        readBody(req).then(body => {
+          try {
+            const payload = JSON.parse(body || '{}');
+            const name = payload.name && String(payload.name).trim();
+            if (!name) return sendResponse(400, { error: 'name required' });
+            const studentIds = Array.isArray(payload.studentIds) ? payload.studentIds.filter(s => typeof s === 'string') : [];
+            const data = loadGroups();
+            const id = generateGroupId();
+            const group = { id, name, studentIds };
+            data.groups.push(group);
+            saveGroups(data);
+            return sendResponse(200, { ok: true, group });
+          } catch (err) {
+            return sendResponse(500, { error: err.message });
+          }
+        }).catch(err => sendResponse(500, { error: err.message }));
+        return;
+      }
+      if (req.method === 'PUT') {
+        readBody(req).then(body => {
+          try {
+            const payload = JSON.parse(body || '{}');
+            const id = payload.id && String(payload.id);
+            if (!id) return sendResponse(400, { error: 'id required' });
+            const data = loadGroups();
+            const idx = data.groups.findIndex(g => g.id === id);
+            if (idx < 0) return sendResponse(404, { error: 'group not found', id });
+            const existing = data.groups[idx];
+            if (payload.name !== undefined) existing.name = String(payload.name).trim() || existing.name;
+            if (payload.studentIds !== undefined) existing.studentIds = Array.isArray(payload.studentIds) ? payload.studentIds.filter(s => typeof s === 'string') : existing.studentIds;
+            saveGroups(data);
+            return sendResponse(200, { ok: true, group: existing });
+          } catch (err) {
+            return sendResponse(500, { error: err.message });
+          }
+        }).catch(err => sendResponse(500, { error: err.message }));
+        return;
+      }
+    }
+
+    // POST /api/groups/:id/assign — assign lesson to group (T3: applies override to all members)
+    const assignMatch = urlPath.match(/^\/api\/groups\/(.+)\/assign$/);
+    if (req.method === 'POST' && assignMatch) {
+      const groupId = assignMatch[1];
+      readBody(req).then(body => {
+        try {
+          const payload = JSON.parse(body || '{}');
+          const lessonId = payload.lessonId && String(payload.lessonId);
+          if (!lessonId) return sendResponse(400, { error: 'lessonId required' });
+          const data = loadGroups();
+          const group = data.groups.find(g => g.id === groupId);
+          if (!group) return sendResponse(404, { error: 'group not found', id: groupId });
+          const studentIds = group.studentIds || [];
+          const overrides = loadOverrides();
+          const assigned = [];
+          const skipped = [];
+          for (const pseudoId of studentIds) {
+            const eligible = getLessonsSortedByTheta(pseudoId);
+            const inList = eligible.some(l => l.lessonId === lessonId);
+            if (inList) {
+              overrides[pseudoId] = { lessonId };
+              assigned.push(pseudoId);
+            } else {
+              skipped.push(pseudoId);
+            }
+          }
+          saveOverrides(overrides);
+          return sendResponse(200, { ok: true, lessonId, assigned: assigned.length, skipped: skipped.length, assignedIds: assigned, skippedIds: skipped });
         } catch (err) {
           return sendResponse(500, { error: err.message });
         }
@@ -753,6 +941,17 @@ function startApi(port) {
       }
     }
 
+    // GET /api/governance/utu-constants — canonical UTU reference for policy wizard (U4)
+    if (req.method === 'GET' && urlPath === '/api/governance/utu-constants') {
+      try {
+        const utuPath = path.join(DATA_DIR, 'utu-constants.json');
+        const utu = loadJSON(utuPath, { protocols: [], spineIds: [], spines: {}, bands: [] });
+        return sendResponse(200, utu);
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
     if (req.method === 'POST' && urlPath === '/api/governance/compliance') {
       readBody(req).then(body => {
         try {
@@ -776,6 +975,97 @@ function startApi(port) {
           else sendResponse(400, { error: result.error });
         } catch (err) {
           sendResponse(500, { error: err.message });
+        }
+      }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
+
+    // GET /api/admin/onboarding-status — first-run detection (A3)
+    if (req.method === 'GET' && urlPath === '/api/admin/onboarding-status') {
+      try {
+        const cfgPath = path.join(__dirname, '../data/hub_config.json');
+        const isFirstRun = !fs.existsSync(cfgPath);
+        return sendResponse(200, { isFirstRun });
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    // GET /api/admin/config — read hub config (A1)
+    if (req.method === 'GET' && urlPath === '/api/admin/config') {
+      try {
+        const cfgPath = path.join(__dirname, '../data/hub_config.json');
+        const cfg = loadJSON(cfgPath, {});
+        const effective = {
+          dataDir: DATA_DIR,
+          serveDir: SERVE_DIR,
+          thetaPort: PORT,
+          approvedCatalog: APPROVED_CATALOG,
+          minLocalSample: MIN_LOCAL_SAMPLE_SIZE,
+          minLocalEdges: MIN_LOCAL_EDGE_COUNT,
+          ...cfg
+        };
+        return sendResponse(200, effective);
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    // POST /api/admin/sync-test — test sync transport connection (F2)
+    if (req.method === 'POST' && urlPath === '/api/admin/sync-test') {
+      readBody(req).then(body => {
+        try {
+          const { transport, homeUrl, usbPath } = JSON.parse(body || '{}');
+          const t = transport || 'starlink';
+          if (t === 'usb') {
+            const p = usbPath || '/mnt/usb/agni-sync';
+            if (!fs.existsSync(p)) {
+              try {
+                fs.mkdirSync(p, { recursive: true });
+                return sendResponse(200, { ok: true, message: 'USB path created and writable.' });
+              } catch (e) {
+                return sendResponse(200, { ok: false, message: 'USB path not accessible: ' + e.message });
+              }
+            }
+            try {
+              fs.writeFileSync(path.join(p, '.agni-test'), 'ok');
+              fs.unlinkSync(path.join(p, '.agni-test'));
+              return sendResponse(200, { ok: true, message: 'USB path writable.' });
+            } catch (e) {
+              return sendResponse(200, { ok: false, message: 'USB path not writable: ' + e.message });
+            }
+          }
+          const url = (homeUrl || '').replace(/\/$/, '');
+          if (!url) return sendResponse(200, { ok: false, message: 'Home URL required for Starlink test.' });
+          const target = url + (url.endsWith('/api/hub-sync') ? '' : '/api/hub-sync');
+          const parsed = new URL(target);
+          const client = parsed.protocol === 'https:' ? require('https') : require('http');
+          const reqOpt = { hostname: parsed.hostname, port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80), path: parsed.pathname || '/api/hub-sync', method: 'OPTIONS', timeout: 5000 };
+          const r = client.request(reqOpt, (res) => {
+            return sendResponse(200, { ok: res.statusCode < 400, message: 'Home server responded: ' + res.statusCode });
+          });
+          r.on('error', (e) => sendResponse(200, { ok: false, message: 'Connection failed: ' + e.message }));
+          r.on('timeout', () => { r.destroy(); sendResponse(200, { ok: false, message: 'Connection timeout.' }); });
+          r.end();
+        } catch (err) {
+          sendResponse(500, { error: err.message });
+        }
+      }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
+
+    // PUT /api/admin/config — write hub config (A1). Restart hub for changes to take effect.
+    if (req.method === 'PUT' && urlPath === '/api/admin/config') {
+      readBody(req).then(body => {
+        try {
+          const cfg = JSON.parse(body || '{}');
+          const cfgPath = path.join(__dirname, '../data/hub_config.json');
+          const dir = path.dirname(cfgPath);
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2));
+          return sendResponse(200, { ok: true, message: 'Config saved. Restart hub for changes to take effect.' });
+        } catch (err) {
+          return sendResponse(500, { error: err.message });
         }
       }).catch(err => sendResponse(500, { error: err.message }));
       return;
@@ -833,7 +1123,123 @@ function startApi(port) {
       return;
     }
 
+    // ── Parent portal routes (P1) ───────────────────────────────────────────
+
+    // POST /api/parent/invite — teacher creates invite code for a student
+    if (req.method === 'POST' && urlPath === '/api/parent/invite') {
+      readBody(req).then(body => {
+        try {
+          const payload = JSON.parse(body || '{}');
+          const pseudoId = payload.pseudoId && String(payload.pseudoId);
+          if (!pseudoId) return sendResponse(400, { error: 'pseudoId required' });
+          const mastery = loadMasterySummary();
+          if (!mastery.students || !mastery.students[pseudoId]) {
+            return sendResponse(404, { error: 'Student not found', pseudoId });
+          }
+          const data = loadParentLinks();
+          const existing = data.invites.find(inv => inv.pseudoId === pseudoId && !inv.used);
+          if (existing) {
+            return sendResponse(200, { code: existing.code, pseudoId, existing: true });
+          }
+          const code = generateInviteCode();
+          data.invites.push({
+            code,
+            pseudoId,
+            createdAt: new Date().toISOString(),
+            used: false
+          });
+          saveParentLinks(data);
+          return sendResponse(200, { code, pseudoId, existing: false });
+        } catch (err) {
+          return sendResponse(500, { error: err.message });
+        }
+      }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
+
+    // POST /api/parent/link — parent redeems invite code to link to child
+    if (req.method === 'POST' && urlPath === '/api/parent/link') {
+      readBody(req).then(body => {
+        try {
+          const payload = JSON.parse(body || '{}');
+          const code = payload.code && String(payload.code).trim().toUpperCase();
+          const parentId = payload.parentId && String(payload.parentId).trim();
+          if (!code) return sendResponse(400, { error: 'code required' });
+          if (!parentId) return sendResponse(400, { error: 'parentId required' });
+          const data = loadParentLinks();
+          const invite = data.invites.find(inv => inv.code === code && !inv.used);
+          if (!invite) return sendResponse(404, { error: 'Invalid or expired invite code' });
+          const alreadyLinked = data.links.find(l => l.parentId === parentId && l.pseudoId === invite.pseudoId);
+          if (alreadyLinked) {
+            return sendResponse(200, { ok: true, pseudoId: invite.pseudoId, alreadyLinked: true });
+          }
+          invite.used = true;
+          invite.usedAt = new Date().toISOString();
+          invite.usedBy = parentId;
+          data.links.push({
+            parentId,
+            pseudoId: invite.pseudoId,
+            linkedAt: new Date().toISOString()
+          });
+          saveParentLinks(data);
+          return sendResponse(200, { ok: true, pseudoId: invite.pseudoId, alreadyLinked: false });
+        } catch (err) {
+          return sendResponse(500, { error: err.message });
+        }
+      }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
+
+    // GET /api/parent/child/:pseudoId/progress — parent views child's progress
+    const parentProgressMatch = urlPath.match(/^\/api\/parent\/child\/(.+)\/progress$/);
+    if (req.method === 'GET' && parentProgressMatch) {
+      const pseudoId = decodeURIComponent(parentProgressMatch[1]);
+      const parentId = qs.parentId;
+      if (!parentId) return sendResponse(400, { error: 'parentId query param required' });
+      const data = loadParentLinks();
+      const link = data.links.find(l => l.parentId === parentId && l.pseudoId === pseudoId);
+      if (!link) return sendResponse(403, { error: 'Not linked to this student' });
+      const mastery = loadMasterySummary();
+      const studentMastery = mastery.students?.[pseudoId] || {};
+      const lessons = getLessonsSortedByTheta(pseudoId);
+      const overrides = loadOverrides();
+      const override = overrides[pseudoId]?.lessonId || null;
+      const completedCount = Object.values(studentMastery).filter(v => typeof v === 'number' && v >= 1.0).length;
+      const totalSkills = Object.keys(studentMastery).length;
+      return sendResponse(200, {
+        pseudoId,
+        linkedAt: link.linkedAt,
+        mastery: studentMastery,
+        completedSkills: completedCount,
+        totalSkills,
+        recommendedLessons: lessons.slice(0, 5),
+        currentOverride: override
+      });
+    }
+
+    // GET /api/parent/children — list all children linked to a parent
+    if (req.method === 'GET' && urlPath === '/api/parent/children') {
+      const parentId = qs.parentId;
+      if (!parentId) return sendResponse(400, { error: 'parentId query param required' });
+      const data = loadParentLinks();
+      const children = data.links
+        .filter(l => l.parentId === parentId)
+        .map(l => ({ pseudoId: l.pseudoId, linkedAt: l.linkedAt }));
+      return sendResponse(200, { parentId, children });
+    }
+
     // ── Authoring routes (Sprint C) ─────────────────────────────────────────
+
+    // GET /api/author/load/:slug — load saved YAML lesson for round-trip editing (E9)
+    const authorLoadMatch = urlPath.match(/^\/api\/author\/load\/(.+)$/);
+    if (req.method === 'GET' && authorLoadMatch) {
+      const slug = decodeURIComponent(authorLoadMatch[1]);
+      const yamlDir = process.env.AGNI_YAML_DIR || path.join(DATA_DIR, 'yaml');
+      const result = authorService.loadLesson(slug, yamlDir);
+      if (result.error) return sendResponse(404, { error: result.error });
+      return sendResponse(200, { slug, lessonData: result.lessonData });
+    }
+
     if (req.method === 'POST' && urlPath === '/api/author/validate') {
       readBody(req).then(body => {
         try {
@@ -841,6 +1247,23 @@ function startApi(port) {
           if (parsed.error) return sendResponse(400, { error: parsed.error });
           const result = authorService.validateForAuthor(parsed.lessonData);
           sendResponse(200, { valid: result.valid, errors: result.errors || [], warnings: result.warnings || [] });
+        } catch (err) {
+          sendResponse(500, { error: err.message });
+        }
+      }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
+
+    // POST /api/author/save — validate + write YAML to data/yaml/<slug>.yaml (S1)
+    if (req.method === 'POST' && urlPath === '/api/author/save') {
+      readBody(req).then(body => {
+        try {
+          const parsed = authorService.parseAuthorBody(body);
+          if (parsed.error) return sendResponse(400, { error: parsed.error });
+          const yamlDir = process.env.AGNI_YAML_DIR || path.join(DATA_DIR, 'yaml');
+          const result = authorService.saveLesson(parsed.lessonData, yamlDir);
+          if (result.error) return sendResponse(400, { error: result.error });
+          sendResponse(200, { ok: true, slug: result.slug, path: result.path, warnings: result.warnings || [] });
         } catch (err) {
           sendResponse(500, { error: err.message });
         }

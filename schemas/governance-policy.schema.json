@@ -43,6 +43,27 @@
     "requireTeachingMode": {
       "type": "boolean",
       "description": "If true, lessons must declare teaching_mode."
+    },
+    "allowedProtocols": {
+      "type": "array",
+      "description": "Pedagogical protocols permitted (P1-P5). E.g. [1,2,3] for rigor.",
+      "items": { "type": "integer", "minimum": 1, "maximum": 5 }
+    },
+    "minProtocol": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Minimum protocol for rigor bounds."
+    },
+    "maxProtocol": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Maximum protocol for rigor bounds."
+    },
+    "failureModeHints": {
+      "type": "boolean",
+      "description": "Include failure-mode hint when protocol check fails."
     }
   }
 }

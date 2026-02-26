@@ -1,6 +1,8 @@
 <script>
-  import { hubApi } from '$lib/api';
+  import { hubApiStore } from '$lib/api';
   import { onMount } from 'svelte';
+
+  const api = $derived($hubApiStore);
 
   let catalog = { lessonIds: [] };
   let loading = true;
@@ -15,28 +17,28 @@
   async function loadCatalog() {
     loading = true;
     error = '';
-    if (hubApi.baseUrl) {
+    if (api.baseUrl) {
       try {
-        catalog = await hubApi.getGovernanceCatalog();
+        catalog = await api.getGovernanceCatalog();
         if (!catalog.lessonIds) catalog.lessonIds = [];
         hubConnected = true;
       } catch (e) {
         error = 'Could not load catalog: ' + (e instanceof Error ? e.message : String(e));
       }
     } else {
-      error = 'Hub not connected. Set VITE_HUB_URL to use governance wizards.';
+      error = 'Configure hub URL in Settings to use governance wizards.';
     }
     loading = false;
   }
 
   async function addLesson() {
     const id = newId.trim();
-    if (!id || !hubApi.baseUrl) return;
+    if (!id || !api.baseUrl) return;
     saving = true;
     error = '';
     success = '';
     try {
-      const res = await hubApi.postGovernanceCatalog({ add: [id] });
+      const res = await api.postGovernanceCatalog({ add: [id] });
       catalog = res.catalog;
       newId = '';
       success = 'Added ' + id;
@@ -47,12 +49,12 @@
   }
 
   async function removeLesson(id) {
-    if (!hubApi.baseUrl) return;
+    if (!api.baseUrl) return;
     saving = true;
     error = '';
     success = '';
     try {
-      const res = await hubApi.postGovernanceCatalog({ remove: [id] });
+      const res = await api.postGovernanceCatalog({ remove: [id] });
       catalog = res.catalog;
       success = 'Removed ' + id;
     } catch (e) {

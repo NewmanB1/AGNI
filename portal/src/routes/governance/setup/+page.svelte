@@ -1,36 +1,60 @@
 <script>
-  import { hubApi } from '$lib/api';
+  import { hubApiStore } from '$lib/api';
   import { onMount } from 'svelte';
+
+  const api = $derived($hubApiStore);
 
   const TEACHING_MODES = ['socratic', 'didactic', 'guided_discovery', 'narrative', 'constructivist', 'direct'];
 
   let policy = {
     utuTargets: [],
     allowedTeachingModes: [],
+    allowedProtocols: [],
+    minProtocol: undefined,
+    maxProtocol: undefined,
+    failureModeHints: false,
     minDifficulty: 3,
     maxDifficulty: 5,
     requireUtu: false,
     requireTeachingMode: false
   };
 
+  let utuConstants = {};
   let loading = true;
   let saving = false;
   let error = '';
   let success = '';
   let hubConnected = false;
 
+  const spineIds = $derived((utuConstants.spineIds || []).length ? utuConstants.spineIds : ['MAC-2', 'SCI-1', 'SCI-4', 'SOC-1']);
+  const protocols = $derived((utuConstants.protocols || []).length ? utuConstants.protocols : [
+    { id: 1, name: 'Transmission', short: 'P1' },
+    { id: 2, name: 'Guided Construction', short: 'P2' },
+    { id: 3, name: 'Apprenticeship', short: 'P3' },
+    { id: 4, name: 'Dev. Sequencing', short: 'P4' },
+    { id: 5, name: 'Meaning Activation', short: 'P5' }
+  ]);
+
   onMount(async () => {
     loading = true;
     error = '';
-    if (hubApi.baseUrl) {
+    if (api.baseUrl) {
       try {
-        const p = await hubApi.getGovernancePolicy();
+        const [p, utu] = await Promise.all([
+          api.getGovernancePolicy(),
+          api.getUtuConstants().catch(() => ({}))
+        ]);
         hubConnected = true;
+        if (utu && typeof utu === 'object') utuConstants = utu;
         if (p && typeof p === 'object') {
           const q = p;
           policy = {
             utuTargets: Array.isArray(q.utuTargets) ? q.utuTargets : [],
             allowedTeachingModes: Array.isArray(q.allowedTeachingModes) ? q.allowedTeachingModes : [],
+            allowedProtocols: Array.isArray(q.allowedProtocols) ? q.allowedProtocols : [],
+            minProtocol: typeof q.minProtocol === 'number' ? q.minProtocol : undefined,
+            maxProtocol: typeof q.maxProtocol === 'number' ? q.maxProtocol : undefined,
+            failureModeHints: Boolean(q.failureModeHints),
             minDifficulty: typeof q.minDifficulty === 'number' ? q.minDifficulty : 3,
             maxDifficulty: typeof q.maxDifficulty === 'number' ? q.maxDifficulty : 5,
             requireUtu: Boolean(q.requireUtu),
@@ -41,7 +65,7 @@
         error = 'Could not load policy: ' + (e instanceof Error ? e.message : String(e));
       }
     } else {
-      error = 'Hub not connected. Set VITE_HUB_URL to use governance wizards.';
+      error = 'Configure hub URL in Settings to use governance wizards.';
     }
     loading = false;
   });
@@ -49,7 +73,7 @@
   function addUtuTarget() {
     policy = {
       ...policy,
-      utuTargets: [...policy.utuTargets, { class: '', band: 1 }]
+      utuTargets: [...policy.utuTargets, { class: spineIds[0] || '', band: 1 }]
     };
   }
 
@@ -58,6 +82,15 @@
       ...policy,
       utuTargets: policy.utuTargets.filter((_, idx) => idx !== i)
     };
+  }
+
+  function toggleProtocol(id) {
+    const idx = policy.allowedProtocols.indexOf(id);
+    if (idx >= 0) {
+      policy = { ...policy, allowedProtocols: policy.allowedProtocols.filter(n => n !== id) };
+    } else {
+      policy = { ...policy, allowedProtocols: [...policy.allowedProtocols, id].sort((a, b) => a - b) };
+    }
   }
 
   function toggleMode(mode) {
@@ -76,7 +109,7 @@
   }
 
   async function save() {
-    if (!hubApi.baseUrl) {
+    if (!api.baseUrl) {
       error = 'Hub not connected.';
       return;
     }
@@ -84,7 +117,7 @@
     error = '';
     success = '';
     try {
-      await hubApi.putGovernancePolicy(policy);
+      await api.putGovernancePolicy(policy);
       success = 'Policy saved.';
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
@@ -93,8 +126,8 @@
   }
 </script>
 
-<h1>Governance Policy (G1)</h1>
-<p class="subtitle">Configure UTU targets, allowed teaching modes, and difficulty bounds.</p>
+<h1>Governance Policy (G1 / U4)</h1>
+<p class="subtitle">Configure UTU targets (Spine + Band), Protocol bounds, teaching modes, and difficulty.</p>
 
 {#if loading}
   <p>Loading policy…</p>
@@ -112,15 +145,47 @@
     {/if}
 
     <h2>UTU Targets</h2>
-    <p class="hint">Target classes and bands for cohort coverage (e.g. MAC-2 Band 4).</p>
+    <p class="hint">Target Spine IDs and bands for cohort coverage (e.g. MAC-2 Band 4).</p>
     {#each policy.utuTargets as target, i}
       <div class="row">
-        <input type="text" bind:value={target.class} placeholder="e.g. MAC-2" />
-        <input type="number" bind:value={target.band} min="1" max="10" placeholder="Band" />
+        <select bind:value={target.class} class="spine-picker">
+          {#each spineIds as sid}
+            <option value={sid}>{sid}</option>
+          {/each}
+        </select>
+        <input type="number" bind:value={target.band} min="1" max="6" placeholder="Band" class="band-input" />
         <button type="button" class="small" on:click={() => removeUtuTarget(i)}>Remove</button>
       </div>
     {/each}
     <button type="button" class="secondary" on:click={addUtuTarget}>+ Add UTU target</button>
+
+    <h2>Protocol Targets</h2>
+    <p class="hint">Allow protocols (P1–P5). E.g. P1, P2, P3 for rigor. Or set min/max bounds.</p>
+    <div class="checkbox-grid">
+      {#each protocols as p}
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            checked={policy.allowedProtocols.includes(p.id)}
+            on:change={() => toggleProtocol(p.id)}
+          />
+          {p.short} — {p.name}
+        </label>
+      {/each}
+    </div>
+    <div class="row protocol-bounds">
+      <label>
+        Min Protocol <input type="number" bind:value={policy.minProtocol} min="1" max="5" placeholder="—" />
+      </label>
+      <label>
+        Max Protocol <input type="number" bind:value={policy.maxProtocol} min="1" max="5" placeholder="—" />
+      </label>
+      <span class="hint-inline">Leave empty to use allowed list above.</span>
+    </div>
+    <label class="checkbox-label">
+      <input type="checkbox" bind:checked={policy.failureModeHints} />
+      Include failure-mode hints when protocol check fails
+    </label>
 
     <h2>Allowed Teaching Modes</h2>
     <p class="hint">Select modes permitted for lessons. Leave empty to allow all.</p>
@@ -194,13 +259,33 @@
     margin-bottom: 0.5rem;
   }
 
-  .row input {
-    flex: 1;
+  .row input,
+  .row select {
     padding: 0.5rem;
     background: #1f2b4e;
     color: var(--text);
     border: 1px solid var(--border);
     border-radius: 6px;
+  }
+
+  .spine-picker {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .band-input {
+    width: 5rem;
+    flex: none;
+  }
+
+  .protocol-bounds {
+    flex-wrap: wrap;
+  }
+
+  .protocol-bounds .hint-inline {
+    font-size: 0.85rem;
+    opacity: 0.7;
+    margin-left: 0.5rem;
   }
 
   .checkbox-grid {

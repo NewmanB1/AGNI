@@ -12,6 +12,21 @@ const crypto = require('crypto');
 const https = require('https');
 const http = require('http');
 
+// ── Hub config bootstrap (F1) ───────────────────────────────────────────────
+(function loadHubConfig() {
+  const cfgPath = path.join(__dirname, '../data/hub_config.json');
+  if (fs.existsSync(cfgPath)) {
+    try {
+      const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+      if (cfg.dataDir) process.env.AGNI_DATA_DIR = cfg.dataDir;
+      if (cfg.hubId) process.env.AGNI_HUB_ID = cfg.hubId;
+      if (cfg.homeUrl) process.env.AGNI_HOME_URL = cfg.homeUrl;
+      if (cfg.usbPath) process.env.AGNI_USB_PATH = cfg.usbPath;
+      if (cfg.syncTransport) process.env.AGNI_SYNC_TRANSPORT = cfg.syncTransport;
+    } catch (e) { /* ignore */ }
+  }
+})();
+
 // ── Configuration ──────────────────────────────────────────────────────────
 const DATA_DIR = process.env.AGNI_DATA_DIR || path.join(__dirname, '../data');
 const EVENTS_DIR = path.join(DATA_DIR, 'events');
@@ -21,7 +36,7 @@ const SYNC_STATE = path.join(DATA_DIR, 'sync_state.json');
 const SYNC_LOG = path.join(DATA_DIR, 'sync.log');
 
 const args = parseArgs(process.argv.slice(2));
-const TRANSPORT = args['transport'] || 'starlink';
+const TRANSPORT = args['transport'] || process.env.AGNI_SYNC_TRANSPORT || 'starlink';
 const HOME_URL = (args['home-url'] || process.env.AGNI_HOME_URL || '').replace(/\/$/, '');
 const USB_PATH = args['usb-path'] || process.env.AGNI_USB_PATH || '/mnt/usb/agni-sync';
 const HUB_ID = process.env.AGNI_HUB_ID || 'hub-local';

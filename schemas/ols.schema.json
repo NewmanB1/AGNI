@@ -85,11 +85,13 @@
         },
         "utu": {
           "type": "object",
-          "description": "UTU label for governance and discovery.",
+          "description": "UTU label (3D coordinate): Spine, Band, Protocol. See docs/specs/utu-architecture.md.",
           "additionalProperties": false,
           "properties": {
-            "class": { "type": "string" },
-            "band": { "type": "integer", "minimum": 1 }
+            "class": { "type": "string", "description": "Spine ID (e.g. MAC-2, SCI-1, SOC-3). Canonical: MAC-1..8, SCI-1..7, SOC-1..7." },
+            "spineId": { "type": "string", "description": "Alias for class. Spine ID for the lesson target." },
+            "band": { "type": "integer", "minimum": 1, "maximum": 6, "description": "Developmental band B1-B6." },
+            "protocol": { "type": "integer", "minimum": 1, "maximum": 5, "description": "Pedagogical protocol P1-P5: 1=Transmission, 2=Guided Construction, 3=Apprenticeship, 4=Dev. Sequencing, 5=Meaning Activation." }
           }
         },
         "teaching_mode": {
@@ -201,7 +203,8 @@
         },
         "type": {
           "type": "string",
-          "enum": ["instruction", "hardware_trigger", "quiz"]
+          "enum": ["instruction", "hardware_trigger", "quiz", "completion"],
+          "description": "instruction: text/content; hardware_trigger: sensor gate; quiz: question with answers; completion: lesson-complete screen."
         },
         "content": { "type": "string" },
         "sensor": { "type": "string" },
