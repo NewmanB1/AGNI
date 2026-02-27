@@ -46,6 +46,9 @@
 
   var DEV_MODE = !!(global.LESSON_DATA._devMode);
 
+  // i18n — use global.AGNI_I18N.t() if the i18n module is loaded, else identity
+  var t = (global.AGNI_I18N && global.AGNI_I18N.t) ? global.AGNI_I18N.t : function (key) { return key; };
+
   // Refreshed at each call site after loadDependencies() resolves.
   var S = global.AGNI_SHARED || {};
 
@@ -53,6 +56,66 @@
   var steps     = lesson.steps || [];
   var history   = [];
   var stepIndex = 0;
+
+  // ── Step outcome tracking & probe collection ──
+  var stepOutcomes  = [];
+  var probeResults  = [];
+  var lessonStartMs = Date.now();
+  var stepEntryMs   = Date.now();
+  var LESSON_ID     = (lesson.meta && lesson.meta.identifier) || lesson.id || 'unknown';
+  var CHECKPOINT_KEY = 'agni_ckpt_' + LESSON_ID;
+
+  function recordStepOutcome(step, passed, attempts, skipped) {
+    var w = typeof step.weight === 'number' ? step.weight : _defaultWeight(step.type);
+    stepOutcomes.push({
+      stepId:      step.id,
+      type:        step.type || 'content',
+      weight:      w,
+      passed:      !!passed,
+      skipped:     !!skipped,
+      attempts:    attempts || 1,
+      maxAttempts: step.max_attempts || 1,
+      durationMs:  Date.now() - stepEntryMs
+    });
+  }
+
+  function _defaultWeight(type) {
+    if (type === 'quiz' || type === 'hardware_trigger' || type === 'gate') return 1;
+    if (type === 'instruction' || type === 'completion') return 0;
+    return 0.5;
+  }
+
+  // ── Checkpoint save/resume (localStorage) ──
+  function saveCheckpoint() {
+    try {
+      var data = {
+        stepIndex: stepIndex,
+        stepId: steps[stepIndex] ? steps[stepIndex].id : null,
+        stepOutcomes: stepOutcomes,
+        probeResults: probeResults,
+        savedAt: Date.now()
+      };
+      localStorage.setItem(CHECKPOINT_KEY, JSON.stringify(data));
+    } catch (e) { /* localStorage may be unavailable */ }
+  }
+
+  function loadCheckpoint() {
+    try {
+      var raw = localStorage.getItem(CHECKPOINT_KEY);
+      if (!raw) return null;
+      var data = JSON.parse(raw);
+      // Expire checkpoints older than 24 hours
+      if (data.savedAt && (Date.now() - data.savedAt) > 86400000) {
+        clearCheckpoint();
+        return null;
+      }
+      return data;
+    } catch (e) { return null; }
+  }
+
+  function clearCheckpoint() {
+    try { localStorage.removeItem(CHECKPOINT_KEY); } catch (e) {}
+  }
 
   /** Parse ISO 8601 duration (e.g. PT2M, PT30S) to milliseconds. Phase 5 retry_delay. */
   function parseDurationMs(str) {
@@ -267,6 +330,7 @@
 
   /**
    * Render a gate redirect notice pointing the student to a prerequisite lesson.
+   * Now includes a clickable link to the prerequisite lesson on the hub.
    * @param {object} gate  must have gate.on_fail
    */
   function renderGateRedirect(gate) {
@@ -277,8 +341,36 @@
     container.className = 'gate-redirect';
 
     var msg = document.createElement('p');
-    msg.textContent = 'Please complete the prerequisite lesson first: ' + prereqId;
+    msg.textContent = 'You need to complete a prerequisite lesson first:';
     container.appendChild(msg);
+
+    // Build a link to the prerequisite lesson on the same hub
+    var hubBase = (lesson._hubUrl || '').replace(/\/$/, '');
+    if (!hubBase) {
+      try { hubBase = global.location.protocol + '//' + global.location.host; } catch (e) {}
+    }
+
+    if (hubBase && prereqId) {
+      var link = document.createElement('a');
+      link.href = hubBase + '/lessons/' + encodeURIComponent(prereqId);
+      link.className = 'btn btn-primary';
+      link.style.display = 'inline-block';
+      link.style.marginTop = '1rem';
+      link.textContent = 'Go to: ' + prereqId;
+      container.appendChild(link);
+    } else {
+      var idEl = document.createElement('p');
+      idEl.style.fontWeight = 'bold';
+      idEl.textContent = prereqId;
+      container.appendChild(idEl);
+    }
+
+    var backMsg = document.createElement('p');
+    backMsg.style.marginTop = '1rem';
+    backMsg.style.opacity = '0.8';
+    backMsg.style.fontSize = '0.9rem';
+    backMsg.textContent = 'After completing the prerequisite, return to this lesson to continue.';
+    container.appendChild(backMsg);
 
     app.innerHTML = '';
     app.appendChild(container);
@@ -402,6 +494,108 @@
    * @param  {object}          gate
    * @returns {Promise<string>}     id of the next step to route to
    */
+  /**
+   * Render a manual verification gate: the student enters a teacher-provided
+   * verification code to proceed. Teachers can generate codes from the hub.
+   */
+  function renderManualVerification(gate, callback) {
+    var app = document.getElementById('app');
+    app.innerHTML = '';
+
+    var container = document.createElement('div');
+    container.className = 'step step-gate gate-manual';
+
+    var title = document.createElement('h2');
+    title.textContent = gate.question || 'Teacher Verification Required';
+    container.appendChild(title);
+
+    var desc = document.createElement('p');
+    desc.textContent = 'Ask your teacher to verify your work. Enter the verification code they give you.';
+    container.appendChild(desc);
+
+    var inputRow = document.createElement('div');
+    inputRow.style.cssText = 'display:flex;gap:0.5rem;margin:1rem 0;';
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'gate-input';
+    input.placeholder = 'Enter code\u2026';
+    input.style.cssText = 'padding:0.6rem;font-size:1.2rem;text-align:center;letter-spacing:0.2em;text-transform:uppercase;background:#1f2b4e;color:#fff;border:1px solid var(--border,#3a3a5a);border-radius:6px;flex:1;max-width:200px;';
+    inputRow.appendChild(input);
+
+    var verifyBtn = document.createElement('button');
+    verifyBtn.className = 'btn btn-primary';
+    verifyBtn.textContent = 'Verify';
+    inputRow.appendChild(verifyBtn);
+
+    container.appendChild(inputRow);
+
+    var feedback = document.createElement('p');
+    feedback.className = 'gate-feedback';
+    container.appendChild(feedback);
+
+    app.appendChild(container);
+    input.focus();
+
+    var expected = (gate.expected_answer || '').toUpperCase().trim();
+    var retryDelayMs = parseDurationMs(gate.retry_delay);
+    var maxAttempts = (gate.max_attempts > 0) ? gate.max_attempts : 5;
+    var attempts = 0;
+    var waitingRetry = false;
+
+    function check() {
+      if (waitingRetry) return;
+      var val = input.value.toUpperCase().trim();
+      if (!val) return;
+      if (val === expected || (!expected && val.length >= 4)) {
+        feedback.textContent = 'Verified!';
+        feedback.style.color = '#4ade80';
+        input.disabled = true;
+        verifyBtn.disabled = true;
+        setTimeout(function () { callback('pass'); }, 800);
+      } else {
+        attempts++;
+        if (attempts >= maxAttempts) {
+          feedback.textContent = 'Maximum attempts reached. Ask your teacher for help.';
+          feedback.style.color = '#ff5252';
+          input.disabled = true;
+          verifyBtn.disabled = true;
+          return;
+        }
+        var remaining = maxAttempts - attempts;
+        feedback.textContent = 'Code not recognized (' + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining)';
+        feedback.style.color = '#ff5252';
+        input.value = '';
+
+        if (retryDelayMs > 0) {
+          waitingRetry = true;
+          verifyBtn.disabled = true;
+          input.disabled = true;
+          var deadline = Date.now() + retryDelayMs;
+          (function updateWait() {
+            var left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+            if (left <= 0) {
+              waitingRetry = false;
+              verifyBtn.disabled = false;
+              input.disabled = false;
+              input.focus();
+              return;
+            }
+            feedback.textContent = 'Wait ' + left + 's before trying again.';
+            setTimeout(updateWait, 500);
+          })();
+        } else {
+          input.focus();
+        }
+      }
+    }
+
+    verifyBtn.onclick = check;
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') check();
+    });
+  }
+
   function evaluateGate(gate) {
     return new Promise(function (resolve) {
       if (gate.type === 'quiz') {
@@ -410,8 +604,14 @@
             resolve(gate.on_pass || steps[stepIndex + 1].id);
           } else {
             renderGateRedirect(gate);
-            // Promise is intentionally left pending — the redirect is terminal
-            // for this session. The student must navigate away.
+          }
+        });
+      } else if (gate.type === 'manual_verification') {
+        renderManualVerification(gate, function (result) {
+          if (result === 'pass') {
+            resolve(gate.on_pass || steps[stepIndex + 1].id);
+          } else {
+            renderGateRedirect(gate);
           }
         });
       } else {
@@ -422,11 +622,354 @@
 
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SECTION 3 — Step rendering
+  // SECTION 2a — Accessibility preferences (read from localStorage)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  var a11y = (function loadA11y() {
+    var defaults = { fontScale: 1, highContrast: false, reducedMotion: false, hapticIntensity: 1 };
+    try {
+      var fs = localStorage.getItem('agni_font_scale');
+      var hc = localStorage.getItem('agni_high_contrast');
+      var rm = localStorage.getItem('agni_reduced_motion');
+      var hi = localStorage.getItem('agni_haptic_intensity');
+      return {
+        fontScale:       fs !== null ? Math.max(0.8, Math.min(1.5, parseFloat(fs))) : 1,
+        highContrast:    hc === 'true',
+        reducedMotion:   rm === 'true',
+        hapticIntensity: hi !== null ? Math.max(0, Math.min(1, parseFloat(hi))) : 1
+      };
+    } catch (e) { return defaults; }
+  })();
+
+  function applyAccessibility() {
+    var root = document.documentElement;
+    if (a11y.fontScale !== 1) {
+      root.style.fontSize = (a11y.fontScale * 100) + '%';
+    }
+    if (a11y.highContrast) {
+      root.classList.add('agni-high-contrast');
+    }
+    if (a11y.reducedMotion) {
+      root.classList.add('agni-reduced-motion');
+    }
+
+    if (!document.getElementById('agni-a11y-style')) {
+      var style = document.createElement('style');
+      style.id = 'agni-a11y-style';
+      style.textContent =
+        '.agni-high-contrast { --bg: #000; --text: #fff; --accent: #ffff00; }' +
+        '.agni-high-contrast .step-content { color: #fff !important; }' +
+        '.agni-high-contrast .quiz-option { border: 2px solid #fff !important; color: #fff !important; }' +
+        '.agni-high-contrast .btn { border: 2px solid #fff !important; }' +
+        '.agni-reduced-motion * { transition: none !important; animation: none !important; }' +
+        /* Sensor gauge */
+        '.sensor-gauge { margin: 1.5rem 0; text-align: center; }' +
+        '.gauge-label { font-size: 0.85em; opacity: 0.7; margin-bottom: 0.3rem; }' +
+        '.gauge-track { position: relative; height: 1.5rem; background: #1e293b; border-radius: 0.75rem; overflow: visible; }' +
+        '.gauge-fill { height: 100%; width: 0%; border-radius: 0.75rem; background: var(--accent, #00e676); transition: width 0.1s; }' +
+        '.gauge-threshold { position: absolute; top: -2px; bottom: -2px; width: 3px; background: #fff; border-radius: 1px; }' +
+        '.gauge-value { font-size: 1.25rem; font-weight: bold; margin-top: 0.25rem; }' +
+        '.hw-hint { opacity: 0.7; font-style: italic; }' +
+        '.hw-status { font-size: 0.9em; margin-top: 1rem; }' +
+        /* Completion screen */
+        '.completion-icon { font-size: 3rem; color: #4ade80; margin-bottom: 0.5rem; }' +
+        '.completion-title { margin-bottom: 0.5rem; }' +
+        '.skills-earned { margin: 1rem 0; text-align: left; }' +
+        '.skills-earned h3 { font-size: 0.95em; opacity: 0.7; }' +
+        '.skills-earned ul { padding-left: 1.2em; }' +
+        '.skills-earned li { margin: 0.25rem 0; }' +
+        '.score-breakdown { margin-top: 0.5rem; opacity: 0.8; }' +
+        '.pace-summary { margin: 0.5rem 0; font-size: 0.9em; }' +
+        '.next-lesson-actions { display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; }' +
+        '.step-progress { font-size: 0.8em; opacity: 0.6; margin-bottom: 0.5rem; }' +
+        '.step-hint-nudge { margin-top: 1rem; padding: 0.75rem; background: rgba(251,191,36,0.1); border: 1px solid #fbbf24; border-radius: 8px; font-size: 0.9em; }' +
+        '.hint-skip { font-size: 0.8em; padding: 0.3rem 0.6rem; }';
+      document.head.appendChild(style);
+    }
+  }
+
+  function addAriaToElement(el, role, label) {
+    if (role) el.setAttribute('role', role);
+    if (label) el.setAttribute('aria-label', label);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 2b — Hardware trigger step rendering (sensor + threshold + gauge)
   // ═══════════════════════════════════════════════════════════════════════════
 
   /**
-   * Render the lesson-complete screen.
+   * Render a hardware_trigger step: show content, display a live sensor gauge,
+   * subscribe to sensor data, and evaluate the threshold expression.
+   */
+  function renderHardwareTriggerStep(step) {
+    var app = document.getElementById('app');
+    app.innerHTML = '';
+    S = global.AGNI_SHARED;
+
+    var container = document.createElement('div');
+    container.className = 'step step-hardware-trigger';
+
+    if (step.htmlContent) {
+      var contentDiv = document.createElement('div');
+      contentDiv.className = 'step-content';
+      contentDiv.innerHTML = step.htmlContent;
+      container.appendChild(contentDiv);
+    }
+
+    if (step.feedback) {
+      var hint = document.createElement('p');
+      hint.className = 'hw-hint';
+      hint.textContent = step.feedback;
+      container.appendChild(hint);
+    }
+
+    // Sensor gauge visualization
+    var gaugeContainer = document.createElement('div');
+    gaugeContainer.className = 'sensor-gauge';
+    addAriaToElement(gaugeContainer, 'meter', 'Sensor reading');
+
+    var gaugeLabel = document.createElement('div');
+    gaugeLabel.className = 'gauge-label';
+    gaugeLabel.textContent = step.sensor || 'accel.total';
+    gaugeContainer.appendChild(gaugeLabel);
+
+    var gaugeTrack = document.createElement('div');
+    gaugeTrack.className = 'gauge-track';
+    var gaugeFill = document.createElement('div');
+    gaugeFill.className = 'gauge-fill';
+    gaugeTrack.appendChild(gaugeFill);
+
+    // Threshold marker on the gauge
+    var thresholdMarker = document.createElement('div');
+    thresholdMarker.className = 'gauge-threshold';
+    gaugeTrack.appendChild(thresholdMarker);
+
+    gaugeContainer.appendChild(gaugeTrack);
+
+    var gaugeValue = document.createElement('div');
+    gaugeValue.className = 'gauge-value';
+    gaugeValue.textContent = '0.0';
+    gaugeContainer.appendChild(gaugeValue);
+
+    container.appendChild(gaugeContainer);
+
+    // Status message
+    var statusEl = document.createElement('p');
+    statusEl.className = 'hw-status';
+    statusEl.textContent = t('waiting_sensor');
+    addAriaToElement(statusEl, 'status', 'Sensor status');
+    statusEl.setAttribute('aria-live', 'polite');
+    container.appendChild(statusEl);
+
+    app.appendChild(container);
+
+    // Parse the threshold to extract target value for the gauge
+    var thresholdStr = step.threshold || '';
+    var primarySensor = step.sensor || 'accel.total';
+    var targetValue = 10; // default max for gauge
+    try {
+      var numMatch = thresholdStr.match(/([\d.]+)g?\b/);
+      if (numMatch) {
+        targetValue = parseFloat(numMatch[1]);
+        if (/g/i.test(thresholdStr)) targetValue *= 9.81;
+      }
+    } catch (e) {}
+    var gaugeMax = targetValue * 1.5;
+
+    // Position threshold marker
+    var markerPct = Math.min(100, (targetValue / gaugeMax) * 100);
+    thresholdMarker.style.left = markerPct + '%';
+
+    // Subscribe to sensor updates for live gauge
+    var cancelWatch = null;
+    if (S.thresholdEvaluator && thresholdStr) {
+      var _triggerCancel = null;
+
+      var unsub = S.subscribeToSensor(primarySensor, function (reading) {
+        var val = reading.value;
+        var pct = Math.min(100, Math.max(0, (val / gaugeMax) * 100));
+        gaugeFill.style.width = pct + '%';
+        gaugeFill.style.background = (val >= targetValue) ? '#4ade80' : 'var(--accent, #00e676)';
+        gaugeValue.textContent = val.toFixed(1);
+      });
+
+      _triggerCancel = S.thresholdEvaluator.watch(thresholdStr, primarySensor, function () {
+        unsub();
+        statusEl.textContent = t('threshold_met');
+        statusEl.style.color = '#4ade80';
+        gaugeFill.style.background = '#4ade80';
+        gaugeFill.style.width = '100%';
+        recordStepOutcome(step, true, 1, false);
+
+        // Haptic feedback
+        if (a11y.hapticIntensity > 0 && navigator.vibrate) {
+          navigator.vibrate(Math.round(200 * a11y.hapticIntensity));
+        }
+
+        setTimeout(function () {
+          if (step.on_success) {
+            routeStep(resolveDirective(step.on_success));
+          } else {
+            nextStep();
+          }
+        }, 1000);
+      });
+
+      cancelWatch = function () {
+        unsub();
+        if (_triggerCancel) _triggerCancel();
+      };
+    } else {
+      // No threshold — just show content and a Next button
+      statusEl.textContent = 'Sensor interaction (no threshold configured)';
+      var skipBtn = document.createElement('button');
+      skipBtn.className = 'btn btn-primary';
+      skipBtn.textContent = 'Continue';
+      skipBtn.onclick = function () {
+        recordStepOutcome(step, true, 1, false);
+        nextStep();
+      };
+      container.appendChild(skipBtn);
+    }
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 2c — Quiz step rendering (multiple choice with formative feedback)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Render a quiz step with multiple-choice answers, formative feedback,
+   * and probe result collection for the LMS engine.
+   *
+   * @param {object} step  Must have answer_options (string[]) and correct_index (number).
+   *                       Optional: feedback.correct, feedback.incorrect, feedback.hint
+   */
+  function renderQuizStep(step) {
+    var app = document.getElementById('app');
+    app.innerHTML = '';
+
+    var container = document.createElement('div');
+    container.className = 'step step-quiz';
+
+    if (step.htmlContent) {
+      var contentDiv = document.createElement('div');
+      contentDiv.className = 'step-content';
+      contentDiv.innerHTML = step.htmlContent;
+      container.appendChild(contentDiv);
+    }
+
+    var options    = step.answer_options || [];
+    var correctIdx = typeof step.correct_index === 'number' ? step.correct_index : -1;
+    var maxAtt     = (step.max_attempts > 0) ? step.max_attempts : 2;
+    var fb         = step.feedback || {};
+    var attempts   = 0;
+
+    var optionsDiv = document.createElement('div');
+    optionsDiv.className = 'quiz-options';
+
+    options.forEach(function (opt, idx) {
+      var btn = document.createElement('button');
+      btn.className = 'quiz-option';
+      btn.textContent = (typeof opt === 'string') ? opt : (opt.text || opt.label || '');
+      btn.setAttribute('data-idx', idx);
+      btn.onclick = function () { handleAnswer(idx); };
+      optionsDiv.appendChild(btn);
+    });
+
+    container.appendChild(optionsDiv);
+
+    var feedbackEl = document.createElement('div');
+    feedbackEl.className = 'quiz-feedback';
+    container.appendChild(feedbackEl);
+
+    app.appendChild(container);
+
+    function handleAnswer(selectedIdx) {
+      var correct = (selectedIdx === correctIdx);
+      attempts++;
+
+      probeResults.push({
+        probeId:       step.id,
+        correct:       correct,
+        selectedIndex: selectedIdx,
+        attempt:       attempts
+      });
+
+      var optBtns = optionsDiv.querySelectorAll('.quiz-option');
+      optBtns.forEach(function (btn) { btn.disabled = true; });
+      if (correctIdx >= 0 && correctIdx < optBtns.length) {
+        optBtns[correctIdx].classList.add('quiz-correct');
+      }
+      if (!correct && selectedIdx >= 0 && selectedIdx < optBtns.length) {
+        optBtns[selectedIdx].classList.add('quiz-incorrect');
+      }
+
+      if (correct) {
+        feedbackEl.innerHTML = '<p class="fb-correct">' +
+          (fb.correct || 'Correct!') + '</p>';
+        recordStepOutcome(step, true, attempts, false);
+        setTimeout(function () {
+          if (step.on_success) {
+            routeStep(resolveDirective(step.on_success));
+          } else {
+            nextStep();
+          }
+        }, 1200);
+      } else if (attempts >= maxAtt) {
+        var correctText = (correctIdx >= 0 && correctIdx < options.length)
+          ? (typeof options[correctIdx] === 'string' ? options[correctIdx] : options[correctIdx].text || '')
+          : '';
+        feedbackEl.innerHTML = '<p class="fb-incorrect">' +
+          (fb.incorrect || ('The correct answer was: ' + correctText)) + '</p>';
+        recordStepOutcome(step, false, attempts, false);
+
+        var continueBtn = document.createElement('button');
+        continueBtn.className = 'btn btn-primary';
+        continueBtn.textContent = 'Continue';
+        continueBtn.onclick = function () {
+          if (step.on_fail) {
+            routeStep(resolveDirective(step.on_fail));
+          } else {
+            nextStep();
+          }
+        };
+        feedbackEl.appendChild(continueBtn);
+      } else {
+        var remaining = maxAtt - attempts;
+        feedbackEl.innerHTML = '<p class="fb-hint">' +
+          (fb.hint || ('Not quite \u2014 try again. (' + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining)')) + '</p>';
+        // Re-enable unselected options for retry
+        optBtns.forEach(function (btn, i) {
+          if (i !== selectedIdx) {
+            btn.disabled = false;
+            btn.classList.remove('quiz-correct', 'quiz-incorrect');
+          }
+        });
+      }
+    }
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 3 — Step rendering
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // ── expected_duration pace tracking ──
+  var expectedDurationMs = 0;
+  try {
+    var ed = (lesson.meta && lesson.meta.expected_duration) || '';
+    expectedDurationMs = parseDurationMs(ed);
+  } catch (e) {}
+
+  function getPaceRatio() {
+    if (expectedDurationMs <= 0) return null;
+    var elapsed = Date.now() - lessonStartMs;
+    return elapsed / expectedDurationMs;
+  }
+
+  /**
+   * Render the lesson-complete screen with skill summary, pace, and next-lesson flow.
    */
   function renderCompletion() {
     var app = document.getElementById('app');
@@ -434,23 +977,130 @@
 
     var container = document.createElement('div');
     container.className = 'completion-screen';
+    addAriaToElement(container, 'main', 'Lesson completion');
 
-    var msg = document.createElement('p');
-    msg.textContent = (lesson.meta && lesson.meta.completion_message) || 'Lesson complete!';
+    var checkmark = document.createElement('div');
+    checkmark.className = 'completion-icon';
+    checkmark.textContent = '\u2714';
+    container.appendChild(checkmark);
+
+    var msg = document.createElement('h2');
+    msg.className = 'completion-title';
+    msg.textContent = (lesson.meta && lesson.meta.completion_message) || t('lesson_complete');
     container.appendChild(msg);
 
     app.appendChild(container);
+
+    clearCheckpoint();
+
+    // Pace summary
+    var pace = getPaceRatio();
+    if (pace !== null) {
+      var paceEl = document.createElement('p');
+      paceEl.className = 'pace-summary';
+      if (pace < 0.8) {
+        paceEl.textContent = t('pace_fast');
+        paceEl.style.color = '#4ade80';
+      } else if (pace <= 1.2) {
+        paceEl.textContent = t('pace_ontime');
+        paceEl.style.color = '#60a5fa';
+      } else {
+        paceEl.textContent = t('pace_slow');
+        paceEl.style.color = '#fbbf24';
+      }
+      container.appendChild(paceEl);
+    }
+
+    // Skills provided summary
+    var provides = (lesson.ontology && lesson.ontology.provides) || [];
+    if (provides.length > 0) {
+      var skillsDiv = document.createElement('div');
+      skillsDiv.className = 'skills-earned';
+      var skillTitle = document.createElement('h3');
+      skillTitle.textContent = t('skills_practised');
+      skillsDiv.appendChild(skillTitle);
+      var skillList = document.createElement('ul');
+      provides.forEach(function (p) {
+        var li = document.createElement('li');
+        li.textContent = p.skill + (p.declaredLevel ? ' (level ' + p.declaredLevel + ')' : '');
+        skillList.appendChild(li);
+      });
+      skillsDiv.appendChild(skillList);
+      container.appendChild(skillsDiv);
+    }
+
+    // Step score breakdown
+    var passed = 0;
+    var total  = 0;
+    stepOutcomes.forEach(function (o) {
+      if (o.type !== 'instruction' && o.type !== 'completion') {
+        total++;
+        if (o.passed) passed++;
+      }
+    });
+    if (total > 0) {
+      var scoreDiv = document.createElement('p');
+      scoreDiv.className = 'score-breakdown';
+      scoreDiv.textContent = t('steps_passed', { passed: passed, total: total });
+      container.appendChild(scoreDiv);
+    }
+
+    // Record completion via telemetry
+    var totalDuration = Date.now() - lessonStartMs;
+    if (global.AGNI_TELEMETRY && global.AGNI_TELEMETRY.record) {
+      global.AGNI_TELEMETRY.record(lesson, stepOutcomes, totalDuration, probeResults)
+        .then(function (result) {
+          if (DEV_MODE) console.log('[PLAYER] Telemetry recorded, mastery:', result.mastery);
+          var masteryEl = document.createElement('p');
+          masteryEl.className = 'mastery-score';
+          masteryEl.textContent = 'Score: ' + Math.round(result.mastery * 100) + '%';
+          container.appendChild(masteryEl);
+        })
+        .catch(function (err) {
+          if (DEV_MODE) console.warn('[PLAYER] Telemetry record failed:', err);
+        });
+    }
+
+    // Next-lesson link (if pseudoId available, redirect back to portal launcher)
+    try {
+      var params = new URLSearchParams(global.location.search || '');
+      var pseudoId = params.get('pseudoId');
+      var hubBase  = params.get('hub') || '';
+      if (pseudoId) {
+        var nextDiv = document.createElement('div');
+        nextDiv.className = 'next-lesson-actions';
+        nextDiv.style.marginTop = '1.5rem';
+
+        var nextBtn = document.createElement('button');
+        nextBtn.className = 'btn btn-primary';
+        nextBtn.textContent = t('next_lesson');
+        nextBtn.onclick = function () {
+          var portalUrl = hubBase
+            ? hubBase.replace(/\/$/, '') + '/learn?pseudoId=' + encodeURIComponent(pseudoId)
+            : '/learn?pseudoId=' + encodeURIComponent(pseudoId);
+          global.location.href = portalUrl;
+        };
+        nextDiv.appendChild(nextBtn);
+
+        var homeBtn = document.createElement('button');
+        homeBtn.className = 'btn btn-secondary';
+        homeBtn.style.marginLeft = '0.75rem';
+        homeBtn.textContent = t('back_dashboard');
+        homeBtn.onclick = function () {
+          var portalUrl = hubBase
+            ? hubBase.replace(/\/$/, '') + '/learn/progress?pseudoId=' + encodeURIComponent(pseudoId)
+            : '/learn/progress?pseudoId=' + encodeURIComponent(pseudoId);
+          global.location.href = portalUrl;
+        };
+        nextDiv.appendChild(homeBtn);
+
+        container.appendChild(nextDiv);
+      }
+    } catch (e) {}
   }
 
   /**
    * Render a step into #app.
-   *
-   * FIX (v1.9.3): container is appended to app *before* mountStepVisual() so
-   * the SVG factory receives a live DOM node. Previously specContainer was
-   * detached at mount time, causing getBoundingClientRect() to return zeroes.
-   *
-   * FIX (v1.9.3): completion-type steps delegate entirely to renderCompletion()
-   * and skip the app.appendChild() that was immediately discarded anyway.
    *
    * @param {object} step
    */
@@ -458,23 +1108,79 @@
     S = global.AGNI_SHARED;
     var app = document.getElementById('app');
 
-    if (S.destroyStepVisual)      S.destroyStepVisual();
-    if (S.clearSensorSubscriptions) S.clearSensorSubscriptions();
+    stepEntryMs = Date.now();
 
-    // completion steps delegate entirely — no container needed
+    if (S.destroyStepVisual)        S.destroyStepVisual();
+    if (S.clearSensorSubscriptions) S.clearSensorSubscriptions();
+    clearStepHintTimer();
+
+    // Pace indicator (non-intrusive top bar)
+    updatePaceIndicator();
+
+    // completion steps delegate entirely
     if (step.type === 'completion') {
       renderCompletion();
       return;
     }
 
+    // quiz steps use the dedicated multiple-choice renderer
+    if (step.type === 'quiz' && step.answer_options) {
+      renderQuizStep(step);
+      return;
+    }
+
+    // hardware_trigger steps use the sensor + gauge renderer
+    if (step.type === 'hardware_trigger') {
+      renderHardwareTriggerStep(step);
+      return;
+    }
+
+    // Record instruction/content steps as auto-passed
+    if (step.type === 'instruction' || (!step.type && !step.spec)) {
+      recordStepOutcome(step, true, 1, false);
+    }
+
     var container = document.createElement('div');
     container.className = 'step step-' + (step.type || 'content');
+    addAriaToElement(container, 'region', step.title || step.id);
+
+    // Step progress counter
+    var progressEl = document.createElement('div');
+    progressEl.className = 'step-progress';
+    progressEl.textContent = t('step_of', { current: stepIndex + 1, total: steps.length });
+    container.appendChild(progressEl);
 
     if (step.htmlContent) {
       var contentDiv = document.createElement('div');
       contentDiv.className = 'step-content';
       contentDiv.innerHTML = step.htmlContent;
       container.appendChild(contentDiv);
+
+      // Multi-modal: offer TTS for text-heavy instruction steps
+      if ('speechSynthesis' in global && step.htmlContent.length > 80) {
+        var readAloudBtn = document.createElement('button');
+        readAloudBtn.className = 'btn btn-secondary multimodal-btn';
+        readAloudBtn.textContent = '\u{1F50A} Read Aloud';
+        readAloudBtn.style.cssText = 'font-size:0.8em;margin-top:0.3rem;';
+        var speaking = false;
+        readAloudBtn.onclick = function () {
+          if (speaking) {
+            global.speechSynthesis.cancel();
+            readAloudBtn.textContent = '\u{1F50A} Read Aloud';
+            speaking = false;
+          } else {
+            var text = contentDiv.textContent || '';
+            var utt = new SpeechSynthesisUtterance(text);
+            utt.lang = (lesson.meta && lesson.meta.language) || 'en';
+            utt.rate = parseFloat(localStorage.getItem('agni_speech_rate') || '1');
+            utt.onend = function () { readAloudBtn.textContent = '\u{1F50A} Read Aloud'; speaking = false; };
+            global.speechSynthesis.speak(utt);
+            readAloudBtn.textContent = '\u23F9 Stop Reading';
+            speaking = true;
+          }
+        };
+        container.appendChild(readAloudBtn);
+      }
     }
 
     var specContainer = null;
@@ -484,7 +1190,6 @@
       container.appendChild(specContainer);
     }
 
-    // FIX: append to live DOM before mounting so factories can query layout.
     app.innerHTML = '';
     app.appendChild(container);
 
@@ -497,6 +1202,68 @@
           console.error('[PLAYER] Visual mount failed:', step.id, err);
         });
     }
+
+    startStepHintTimer(step, container);
+  }
+
+  // ── Per-step adaptive hint timer ──
+  var _stepHintTimer = null;
+
+  function startStepHintTimer(step, container) {
+    clearStepHintTimer();
+    var stepExpected = step.expected_duration ? parseDurationMs(step.expected_duration) : 0;
+    if (stepExpected <= 0) return;
+    var threshold = stepExpected * 2.5;
+
+    _stepHintTimer = setTimeout(function () {
+      if (!container || !container.parentNode) return;
+      var existing = container.querySelector('.step-hint-nudge');
+      if (existing) return;
+      var hintEl = document.createElement('div');
+      hintEl.className = 'step-hint-nudge';
+      addAriaToElement(hintEl, 'alert', 'Hint');
+      hintEl.setAttribute('aria-live', 'polite');
+
+      var hintText = step.feedback && step.feedback.hint
+        ? step.feedback.hint
+        : (step.type === 'quiz' ? 'Take your time \u2014 try eliminating options you know are wrong.'
+          : 'Need help? Try re-reading the content above, or skip ahead if you\'re stuck.');
+      hintEl.innerHTML = '<strong>Hint:</strong> ' + hintText;
+
+      var skipBtn = document.createElement('button');
+      skipBtn.className = 'btn btn-secondary hint-skip';
+      skipBtn.textContent = 'Skip this step';
+      skipBtn.style.marginTop = '0.5rem';
+      skipBtn.onclick = function () {
+        recordStepOutcome(step, false, 0, true);
+        if (step.on_fail) {
+          routeStep(resolveDirective(step.on_fail));
+        } else {
+          nextStep();
+        }
+      };
+      hintEl.appendChild(skipBtn);
+      container.appendChild(hintEl);
+    }, threshold);
+  }
+
+  function clearStepHintTimer() {
+    if (_stepHintTimer) { clearTimeout(_stepHintTimer); _stepHintTimer = null; }
+  }
+
+  function updatePaceIndicator() {
+    if (expectedDurationMs <= 0) return;
+    var el = document.getElementById('agni-pace-bar');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'agni-pace-bar';
+      el.style.cssText = 'position:fixed;top:0;left:0;height:3px;z-index:9999;transition:width 0.3s;';
+      document.body.appendChild(el);
+    }
+    var pct = Math.min(100, (stepIndex / steps.length) * 100);
+    var pace = getPaceRatio();
+    el.style.width = pct + '%';
+    el.style.background = (pace !== null && pace > 1.2) ? '#fbbf24' : '#4ade80';
   }
 
 
@@ -522,8 +1289,6 @@
     var step = steps[idx];
 
     if (step.type === 'redirect') {
-      // FIX (v1.9.3): normalise through resolveDirective() so skip_to: and
-      // other prefixes are stripped, matching all other routing paths.
       var directive = resolveDirective(step.directive);
       renderGateRedirect({ on_fail: directive });
       return;
@@ -531,6 +1296,7 @@
 
     stepIndex = idx;
     history.push(targetId);
+    saveCheckpoint();
     renderStep(step);
 
     if (step.type === 'gate') {
@@ -540,7 +1306,85 @@
     }
   }
 
+  /**
+   * Evaluate a step's condition/next_if for adaptive intra-lesson branching.
+   * Schema: condition (string expression), next_if { pass: stepId, fail: stepId }
+   *
+   * Condition format: "score >= 0.8", "attempts < 3", "probes_correct > 2"
+   * Built-in variables: score, attempts, probes_correct, probes_total, pace, step_time_s
+   */
+  function evaluateCondition(step) {
+    if (!step.condition || !step.next_if) return null;
+
+    var passed = 0; var total = 0;
+    stepOutcomes.forEach(function (o) {
+      if (o.type !== 'instruction' && o.type !== 'completion') {
+        total++;
+        if (o.passed) passed++;
+      }
+    });
+    var probesCorrect = 0; var probesTotal = 0;
+    probeResults.forEach(function (p) {
+      probesTotal++;
+      if (p.correct) probesCorrect++;
+    });
+    var pace = getPaceRatio() || 1;
+    var stepTimeS = (Date.now() - stepEntryMs) / 1000;
+    var score = total > 0 ? passed / total : 0;
+
+    var vars = {
+      score: score,
+      attempts: total,
+      probes_correct: probesCorrect,
+      probes_total: probesTotal,
+      pace: pace,
+      step_time_s: stepTimeS
+    };
+
+    try {
+      var condStr = step.condition;
+      var match = condStr.match(/^(\w+)\s*(>=|<=|==|!=|>|<)\s*([\d.]+)$/);
+      if (!match) return null;
+      var varName = match[1];
+      var op = match[2];
+      var threshold = parseFloat(match[3]);
+      var val = vars[varName];
+      if (val === undefined) return null;
+
+      var result = false;
+      switch (op) {
+        case '>':  result = val > threshold;  break;
+        case '<':  result = val < threshold;  break;
+        case '>=': result = val >= threshold; break;
+        case '<=': result = val <= threshold; break;
+        case '==': result = val === threshold; break;
+        case '!=': result = val !== threshold; break;
+      }
+
+      return result ? (step.next_if.pass || null) : (step.next_if.fail || null);
+    } catch (e) {
+      if (DEV_MODE) console.warn('[PLAYER] condition evaluation failed:', e);
+      return null;
+    }
+  }
+
   function nextStep() {
+    var currentStep = steps[stepIndex];
+    if (currentStep) {
+      // Condition/next_if adaptive branching (expression-based)
+      var branchTarget = evaluateCondition(currentStep);
+      if (branchTarget) {
+        routeStep(branchTarget);
+        return;
+      }
+
+      // on_success routing: instruction and content steps always "pass",
+      // so on_success acts as a non-linear "next" override.
+      if (currentStep.on_success) {
+        routeStep(resolveDirective(currentStep.on_success));
+        return;
+      }
+    }
     if (stepIndex + 1 < steps.length) {
       routeStep(steps[stepIndex + 1].id);
     }
@@ -560,7 +1404,7 @@
       el = document.createElement('div');
       el.id        = 'sensor-warning';
       el.className = 'sensor-warning';
-      el.textContent = 'Motion sensor unavailable \u2014 some interactions may not work.';
+      el.textContent = t('sensor_unavailable');
       document.body.insertBefore(el, document.getElementById('app'));
     }
     el.style.display = 'block';
@@ -573,7 +1417,7 @@
 
       var btn = document.createElement('button');
       btn.className  = 'btn btn-primary';
-      btn.textContent = 'Enable Motion Sensors';
+      btn.textContent = t('enable_sensors');
       btn.onclick    = function () {
         document.body.removeChild(overlay);
         resolve();
@@ -591,8 +1435,7 @@
     app.innerHTML = '';
     var msg = document.createElement('div');
     msg.className  = 'integrity-error';
-    msg.textContent = 'This lesson file could not be verified for your device. '
-      + 'Please re-download from your learning hub.';
+    msg.textContent = t('integrity_error');
     app.appendChild(msg);
   }
 
@@ -655,6 +1498,7 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   function initPlayer() {
+    applyAccessibility();
     if (DEV_MODE) console.log('[PLAYER] initPlayer()', lesson.meta && lesson.meta.title);
 
     var loader = global.AGNI_LOADER;
@@ -681,19 +1525,74 @@
         var loading = document.getElementById('loading');
         if (loading) loading.style.display = 'none';
 
-        if (steps.length > 0) {
-          routeStep(steps[0].id);
-        } else {
+        if (steps.length === 0) {
           console.error('[PLAYER] Lesson has no steps');
+          return;
         }
+
+        // Check for a saved checkpoint and offer resume
+        var checkpoint = loadCheckpoint();
+        if (checkpoint && checkpoint.stepId) {
+          var ckptIdx = -1;
+          for (var i = 0; i < steps.length; i++) {
+            if (steps[i].id === checkpoint.stepId) { ckptIdx = i; break; }
+          }
+          if (ckptIdx > 0) {
+            stepOutcomes = checkpoint.stepOutcomes || [];
+            probeResults = checkpoint.probeResults || [];
+            showResumePrompt(checkpoint.stepId, ckptIdx);
+            return;
+          }
+        }
+
+        routeStep(steps[0].id);
       })
       .catch(function (err) {
         if (err && err.message !== '__integrity_fail__') {
           console.error('[PLAYER] Init failed:', err);
           var loading = document.getElementById('loading');
-          if (loading) loading.textContent = 'Failed to load lesson. Please try again.';
+          if (loading) loading.textContent = t('loading_failed');
         }
       });
+  }
+
+  /**
+   * Show a prompt letting the student resume from a checkpoint or start over.
+   */
+  function showResumePrompt(stepId, ckptIdx) {
+    var app = document.getElementById('app');
+    app.innerHTML = '';
+
+    var container = document.createElement('div');
+    container.className = 'resume-prompt';
+
+    var title = document.createElement('h2');
+    title.textContent = t('resume_title');
+    container.appendChild(title);
+
+    var msg = document.createElement('p');
+    msg.textContent = t('resume_msg', { step: ckptIdx + 1, total: steps.length });
+    container.appendChild(msg);
+
+    var resumeBtn = document.createElement('button');
+    resumeBtn.className = 'btn btn-primary';
+    resumeBtn.textContent = t('resume_btn');
+    resumeBtn.onclick = function () { routeStep(stepId); };
+    container.appendChild(resumeBtn);
+
+    var restartBtn = document.createElement('button');
+    restartBtn.className = 'btn btn-secondary';
+    restartBtn.style.marginLeft = '0.75rem';
+    restartBtn.textContent = t('restart_btn');
+    restartBtn.onclick = function () {
+      clearCheckpoint();
+      stepOutcomes = [];
+      probeResults = [];
+      routeStep(steps[0].id);
+    };
+    container.appendChild(restartBtn);
+
+    app.appendChild(container);
   }
 
   if (document.readyState === 'loading') {

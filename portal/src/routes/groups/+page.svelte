@@ -1,6 +1,7 @@
 <script>
   import { hubApiStore } from '$lib/api';
   import { onMount } from 'svelte';
+  import { getStudentName, hasNickname } from '$lib/studentNames';
 
   const api = $derived($hubApiStore);
 
@@ -146,7 +147,8 @@
           {#each roster as pseudoId}
             <label class="checkbox-row">
               <input type="checkbox" checked={selectedStudentIds.includes(pseudoId)} onchange={() => toggleStudent(pseudoId)} />
-              {pseudoId}
+              <span>{getStudentName(pseudoId)}</span>
+              {#if hasNickname(pseudoId)}<span class="pseudo-small">({pseudoId})</span>{/if}
             </label>
           {/each}
         </div>
@@ -173,7 +175,7 @@
           <li>
             <strong>{g.name}</strong> — {g.studentIds?.length ?? 0} student(s)
             {#if g.studentIds?.length}
-              <span class="ids">{g.studentIds.join(', ')}</span>
+              <span class="ids">{g.studentIds.map(id => getStudentName(id)).join(', ')}</span>
             {/if}
             <button class="small" onclick={() => openEdit(g)}>Edit</button>
             {#if g.studentIds?.length}
@@ -196,7 +198,8 @@
           {#each roster as pseudoId}
             <label class="checkbox-row">
               <input type="checkbox" checked={editSelectedIds.includes(pseudoId)} onchange={() => toggleEditStudent(pseudoId)} />
-              {pseudoId}
+              <span>{getStudentName(pseudoId)}</span>
+              {#if hasNickname(pseudoId)}<span class="pseudo-small">({pseudoId})</span>{/if}
             </label>
           {/each}
         </div>
@@ -277,6 +280,11 @@
     align-items: center;
     gap: 0.5rem;
     cursor: pointer;
+  }
+
+  .pseudo-small {
+    font-size: 0.8rem;
+    opacity: 0.5;
   }
 
   .checkbox-row input {

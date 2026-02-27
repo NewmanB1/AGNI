@@ -66,6 +66,7 @@ const CURRICULUM_GRAPH      = path.join(DATA_DIR, 'curriculum.json');
 const OVERRIDES_PATH       = path.join(DATA_DIR, 'recommendation_overrides.json');
 const GROUPS_PATH          = path.join(DATA_DIR, 'groups.json');
 const PARENT_LINKS_PATH    = path.join(DATA_DIR, 'parent-links.json');
+const REVIEW_SCHEDULE_PATH = path.join(DATA_DIR, 'review_schedule.json');
 const APPROVED_CATALOG     = process.env.AGNI_APPROVED_CATALOG || path.join(DATA_DIR, 'approved_catalog.json');
 
 const PORT = parseInt(process.env.AGNI_THETA_PORT || '8082', 10);
@@ -628,6 +629,22 @@ function readBody(req) {
   });
 }
 
+/**
+ * Parse JSON body from request and pass the result to a handler.
+ * Eliminates the repeated readBody → JSON.parse → try/catch boilerplate.
+ * The handler receives (payload, sendResponse) and can throw freely.
+ */
+function handleJsonBody(req, sendResponse, handler) {
+  readBody(req).then(body => {
+    try {
+      const payload = JSON.parse(body || '{}');
+      handler(payload);
+    } catch (err) {
+      sendResponse(500, { error: err.message || 'Internal error' });
+    }
+  }).catch(err => sendResponse(500, { error: err.message }));
+}
+
 function startApi(port) {
   const listenPort = (typeof port === 'number' && port >= 0) ? port : PORT;
   const server = http.createServer((req, res) => {
@@ -657,7 +674,7 @@ function startApi(port) {
       urlPath === '/api/governance/catalog/import' ||
       urlPath === '/api/author/validate' || urlPath === '/api/author/preview' || urlPath === '/api/author/save' ||
       urlPath === '/api/parent/invite' || urlPath === '/api/parent/link' ||
-      urlPath === '/api/admin/sync-test';
+      urlPath === '/api/admin/sync-test' || urlPath === '/api/telemetry';
     const isPutRoute = urlPath === '/api/governance/policy' || urlPath === '/api/admin/config' || urlPath === '/api/groups';
     if (req.method !== 'GET' && !(req.method === 'POST' && isPostRoute) && !(req.method === 'PUT' && isPutRoute)) {
       return sendResponse(405, { error: 'Method not allowed' });
@@ -712,32 +729,27 @@ function startApi(port) {
 
     // POST /api/theta/override — set or clear teacher recommendation override (Phase 3 / Sprint G)
     if (req.method === 'POST' && urlPath === '/api/theta/override') {
-      readBody(req).then(body => {
-        try {
-          const payload = JSON.parse(body || '{}');
-          const pseudoId = payload.pseudoId;
-          const lessonId = payload.lessonId !== undefined ? payload.lessonId : null;
-          if (!pseudoId || typeof pseudoId !== 'string') {
-            return sendResponse(400, { error: 'pseudoId required' });
-          }
-          const overrides = loadOverrides();
-          if (lessonId === null || lessonId === '') {
-            delete overrides[pseudoId];
-            saveOverrides(overrides);
-            return sendResponse(200, { ok: true, override: null });
-          }
-          const eligible = getLessonsSortedByTheta(pseudoId);
-          const inList = eligible.some(l => l.lessonId === lessonId);
-          if (!inList) {
-            return sendResponse(400, { error: 'lessonId not in eligible list for this student', lessonId });
-          }
-          overrides[pseudoId] = { lessonId: String(lessonId) };
-          saveOverrides(overrides);
-          return sendResponse(200, { ok: true, override: lessonId });
-        } catch (err) {
-          return sendResponse(500, { error: err.message });
+      handleJsonBody(req, sendResponse, (payload) => {
+        const pseudoId = payload.pseudoId;
+        const lessonId = payload.lessonId !== undefined ? payload.lessonId : null;
+        if (!pseudoId || typeof pseudoId !== 'string') {
+          return sendResponse(400, { error: 'pseudoId required' });
         }
-      }).catch(err => sendResponse(500, { error: err.message }));
+        const overrides = loadOverrides();
+        if (lessonId === null || lessonId === '') {
+          delete overrides[pseudoId];
+          saveOverrides(overrides);
+          return sendResponse(200, { ok: true, override: null });
+        }
+        const eligible = getLessonsSortedByTheta(pseudoId);
+        const inList = eligible.some(l => l.lessonId === lessonId);
+        if (!inList) {
+          return sendResponse(400, { error: 'lessonId not in eligible list for this student', lessonId });
+        }
+        overrides[pseudoId] = { lessonId: String(lessonId) };
+        saveOverrides(overrides);
+        return sendResponse(200, { ok: true, override: lessonId });
+      });
       return;
     }
 
@@ -748,42 +760,32 @@ function startApi(port) {
         return sendResponse(200, data);
       }
       if (req.method === 'POST') {
-        readBody(req).then(body => {
-          try {
-            const payload = JSON.parse(body || '{}');
-            const name = payload.name && String(payload.name).trim();
-            if (!name) return sendResponse(400, { error: 'name required' });
-            const studentIds = Array.isArray(payload.studentIds) ? payload.studentIds.filter(s => typeof s === 'string') : [];
-            const data = loadGroups();
-            const id = generateGroupId();
-            const group = { id, name, studentIds };
-            data.groups.push(group);
-            saveGroups(data);
-            return sendResponse(200, { ok: true, group });
-          } catch (err) {
-            return sendResponse(500, { error: err.message });
-          }
-        }).catch(err => sendResponse(500, { error: err.message }));
+        handleJsonBody(req, sendResponse, (payload) => {
+          const name = payload.name && String(payload.name).trim();
+          if (!name) return sendResponse(400, { error: 'name required' });
+          const studentIds = Array.isArray(payload.studentIds) ? payload.studentIds.filter(s => typeof s === 'string') : [];
+          const data = loadGroups();
+          const id = generateGroupId();
+          const group = { id, name, studentIds };
+          data.groups.push(group);
+          saveGroups(data);
+          return sendResponse(200, { ok: true, group });
+        });
         return;
       }
       if (req.method === 'PUT') {
-        readBody(req).then(body => {
-          try {
-            const payload = JSON.parse(body || '{}');
-            const id = payload.id && String(payload.id);
-            if (!id) return sendResponse(400, { error: 'id required' });
-            const data = loadGroups();
-            const idx = data.groups.findIndex(g => g.id === id);
-            if (idx < 0) return sendResponse(404, { error: 'group not found', id });
-            const existing = data.groups[idx];
-            if (payload.name !== undefined) existing.name = String(payload.name).trim() || existing.name;
-            if (payload.studentIds !== undefined) existing.studentIds = Array.isArray(payload.studentIds) ? payload.studentIds.filter(s => typeof s === 'string') : existing.studentIds;
-            saveGroups(data);
-            return sendResponse(200, { ok: true, group: existing });
-          } catch (err) {
-            return sendResponse(500, { error: err.message });
-          }
-        }).catch(err => sendResponse(500, { error: err.message }));
+        handleJsonBody(req, sendResponse, (payload) => {
+          const id = payload.id && String(payload.id);
+          if (!id) return sendResponse(400, { error: 'id required' });
+          const data = loadGroups();
+          const idx = data.groups.findIndex(g => g.id === id);
+          if (idx < 0) return sendResponse(404, { error: 'group not found', id });
+          const existing = data.groups[idx];
+          if (payload.name !== undefined) existing.name = String(payload.name).trim() || existing.name;
+          if (payload.studentIds !== undefined) existing.studentIds = Array.isArray(payload.studentIds) ? payload.studentIds.filter(s => typeof s === 'string') : existing.studentIds;
+          saveGroups(data);
+          return sendResponse(200, { ok: true, group: existing });
+        });
         return;
       }
     }
@@ -792,34 +794,29 @@ function startApi(port) {
     const assignMatch = urlPath.match(/^\/api\/groups\/(.+)\/assign$/);
     if (req.method === 'POST' && assignMatch) {
       const groupId = assignMatch[1];
-      readBody(req).then(body => {
-        try {
-          const payload = JSON.parse(body || '{}');
-          const lessonId = payload.lessonId && String(payload.lessonId);
-          if (!lessonId) return sendResponse(400, { error: 'lessonId required' });
-          const data = loadGroups();
-          const group = data.groups.find(g => g.id === groupId);
-          if (!group) return sendResponse(404, { error: 'group not found', id: groupId });
-          const studentIds = group.studentIds || [];
-          const overrides = loadOverrides();
-          const assigned = [];
-          const skipped = [];
-          for (const pseudoId of studentIds) {
-            const eligible = getLessonsSortedByTheta(pseudoId);
-            const inList = eligible.some(l => l.lessonId === lessonId);
-            if (inList) {
-              overrides[pseudoId] = { lessonId };
-              assigned.push(pseudoId);
-            } else {
-              skipped.push(pseudoId);
-            }
+      handleJsonBody(req, sendResponse, (payload) => {
+        const lessonId = payload.lessonId && String(payload.lessonId);
+        if (!lessonId) return sendResponse(400, { error: 'lessonId required' });
+        const data = loadGroups();
+        const group = data.groups.find(g => g.id === groupId);
+        if (!group) return sendResponse(404, { error: 'group not found', id: groupId });
+        const studentIds = group.studentIds || [];
+        const overrides = loadOverrides();
+        const assigned = [];
+        const skipped = [];
+        for (const pseudoId of studentIds) {
+          const eligible = getLessonsSortedByTheta(pseudoId);
+          const inList = eligible.some(l => l.lessonId === lessonId);
+          if (inList) {
+            overrides[pseudoId] = { lessonId };
+            assigned.push(pseudoId);
+          } else {
+            skipped.push(pseudoId);
           }
-          saveOverrides(overrides);
-          return sendResponse(200, { ok: true, lessonId, assigned: assigned.length, skipped: skipped.length, assignedIds: assigned, skippedIds: skipped });
-        } catch (err) {
-          return sendResponse(500, { error: err.message });
         }
-      }).catch(err => sendResponse(500, { error: err.message }));
+        saveOverrides(overrides);
+        return sendResponse(200, { ok: true, lessonId, assigned: assigned.length, skipped: skipped.length, assignedIds: assigned, skippedIds: skipped });
+      });
       return;
     }
 
@@ -867,18 +864,13 @@ function startApi(port) {
       if (!lmsEngine.isAvailable || !lmsEngine.isAvailable()) {
         return sendResponse(503, { error: 'LMS engine not available' });
       }
-      readBody(req).then(body => {
-        try {
-          const payload = JSON.parse(body);
-          if (!payload.studentId || !payload.lessonId || !Array.isArray(payload.probeResults)) {
-            return sendResponse(400, { error: 'studentId, lessonId, probeResults required' });
-          }
-          lmsEngine.recordObservation(payload.studentId, payload.lessonId, payload.probeResults);
-          sendResponse(200, { ok: true });
-        } catch (err) {
-          sendResponse(500, { error: err.message });
+      handleJsonBody(req, sendResponse, (payload) => {
+        if (!payload.studentId || !payload.lessonId || !Array.isArray(payload.probeResults)) {
+          return sendResponse(400, { error: 'studentId, lessonId, probeResults required' });
         }
-      }).catch(err => sendResponse(500, { error: err.message }));
+        lmsEngine.recordObservation(payload.studentId, payload.lessonId, payload.probeResults);
+        sendResponse(200, { ok: true });
+      });
       return;
     }
 
@@ -905,18 +897,13 @@ function startApi(port) {
       if (!lmsEngine.isAvailable || !lmsEngine.isAvailable()) {
         return sendResponse(503, { error: 'LMS engine not available' });
       }
-      readBody(req).then(body => {
-        try {
-          const remote = JSON.parse(body);
-          if (!remote.mean || !remote.precision || typeof remote.sampleSize !== 'number') {
-            return sendResponse(400, { error: 'mean, precision, sampleSize required' });
-          }
-          lmsEngine.mergeRemoteSummary(remote);
-          sendResponse(200, { ok: true, status: lmsEngine.getStatus() });
-        } catch (err) {
-          sendResponse(500, { error: err.message });
+      handleJsonBody(req, sendResponse, (remote) => {
+        if (!remote.mean || !remote.precision || typeof remote.sampleSize !== 'number') {
+          return sendResponse(400, { error: 'mean, precision, sampleSize required' });
         }
-      }).catch(err => sendResponse(500, { error: err.message }));
+        lmsEngine.mergeRemoteSummary(remote);
+        sendResponse(200, { ok: true, status: lmsEngine.getStatus() });
+      });
       return;
     }
 
@@ -953,30 +940,21 @@ function startApi(port) {
     }
 
     if (req.method === 'POST' && urlPath === '/api/governance/compliance') {
-      readBody(req).then(body => {
-        try {
-          const sidecar = JSON.parse(body);
-          const result = governanceService.evaluateLessonCompliance(sidecar);
-          sendResponse(200, result);
-        } catch (err) {
-          sendResponse(500, { error: err.message });
-        }
-      }).catch(err => sendResponse(500, { error: err.message }));
+      handleJsonBody(req, sendResponse, (sidecar) => {
+        const policy = governanceService.loadPolicy();
+        const result = governanceService.evaluateLessonCompliance(sidecar, policy);
+        sendResponse(200, result);
+      });
       return;
     }
 
     // PUT /api/governance/policy — save policy (configuration wizard G1)
     if (req.method === 'PUT' && urlPath === '/api/governance/policy') {
-      readBody(req).then(body => {
-        try {
-          const policy = JSON.parse(body || '{}');
-          const result = governanceService.savePolicy(policy);
-          if (result.ok) sendResponse(200, { ok: true });
-          else sendResponse(400, { error: result.error });
-        } catch (err) {
-          sendResponse(500, { error: err.message });
-        }
-      }).catch(err => sendResponse(500, { error: err.message }));
+      handleJsonBody(req, sendResponse, (policy) => {
+        const result = governanceService.savePolicy(policy);
+        if (result.ok) sendResponse(200, { ok: true });
+        else sendResponse(400, { error: result.error });
+      });
       return;
     }
 
@@ -1013,9 +991,8 @@ function startApi(port) {
 
     // POST /api/admin/sync-test — test sync transport connection (F2)
     if (req.method === 'POST' && urlPath === '/api/admin/sync-test') {
-      readBody(req).then(body => {
-        try {
-          const { transport, homeUrl, usbPath } = JSON.parse(body || '{}');
+      handleJsonBody(req, sendResponse, (payload) => {
+          const { transport, homeUrl, usbPath } = payload;
           const t = transport || 'starlink';
           if (t === 'usb') {
             const p = usbPath || '/mnt/usb/agni-sync';
@@ -1047,27 +1024,19 @@ function startApi(port) {
           r.on('error', (e) => sendResponse(200, { ok: false, message: 'Connection failed: ' + e.message }));
           r.on('timeout', () => { r.destroy(); sendResponse(200, { ok: false, message: 'Connection timeout.' }); });
           r.end();
-        } catch (err) {
-          sendResponse(500, { error: err.message });
-        }
-      }).catch(err => sendResponse(500, { error: err.message }));
+      });
       return;
     }
 
     // PUT /api/admin/config — write hub config (A1). Restart hub for changes to take effect.
     if (req.method === 'PUT' && urlPath === '/api/admin/config') {
-      readBody(req).then(body => {
-        try {
-          const cfg = JSON.parse(body || '{}');
-          const cfgPath = path.join(__dirname, '../data/hub_config.json');
-          const dir = path.dirname(cfgPath);
-          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-          fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2));
-          return sendResponse(200, { ok: true, message: 'Config saved. Restart hub for changes to take effect.' });
-        } catch (err) {
-          return sendResponse(500, { error: err.message });
-        }
-      }).catch(err => sendResponse(500, { error: err.message }));
+      handleJsonBody(req, sendResponse, (cfg) => {
+        const cfgPath = path.join(__dirname, '../data/hub_config.json');
+        const dir = path.dirname(cfgPath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2));
+        return sendResponse(200, { ok: true, message: 'Config saved. Restart hub for changes to take effect.' });
+      });
       return;
     }
 
@@ -1083,43 +1052,33 @@ function startApi(port) {
 
     // POST /api/governance/catalog — add/remove lesson IDs
     if (req.method === 'POST' && urlPath === '/api/governance/catalog') {
-      readBody(req).then(body => {
-        try {
-          const payload = JSON.parse(body || '{}');
-          const result = governanceService.updateCatalog(payload);
-          if (result.ok) {
-            thetaCache.clear();
-            sendResponse(200, { ok: true, catalog: result.catalog });
-          } else {
-            sendResponse(400, { error: result.error });
-          }
-        } catch (err) {
-          sendResponse(500, { error: err.message });
+      handleJsonBody(req, sendResponse, (payload) => {
+        const result = governanceService.updateCatalog(payload);
+        if (result.ok) {
+          thetaCache.clear();
+          sendResponse(200, { ok: true, catalog: result.catalog });
+        } else {
+          sendResponse(400, { error: result.error });
         }
-      }).catch(err => sendResponse(500, { error: err.message }));
+      });
       return;
     }
 
     // POST /api/governance/catalog/import — import from another authority (strategy: replace | merge | add-only)
     if (req.method === 'POST' && urlPath === '/api/governance/catalog/import') {
-      readBody(req).then(body => {
-        try {
-          const payload = JSON.parse(body || '{}');
-          const { catalog: imported, strategy } = payload;
-          if (!imported || !strategy) {
-            return sendResponse(400, { error: 'catalog and strategy required' });
-          }
-          const result = governanceService.importCatalog(imported, strategy);
-          if (result.ok) {
-            thetaCache.clear();
-            sendResponse(200, { ok: true, catalog: result.catalog });
-          } else {
-            sendResponse(400, { error: result.error });
-          }
-        } catch (err) {
-          sendResponse(500, { error: err.message });
+      handleJsonBody(req, sendResponse, (payload) => {
+        const { catalog: imported, strategy } = payload;
+        if (!imported || !strategy) {
+          return sendResponse(400, { error: 'catalog and strategy required' });
         }
-      }).catch(err => sendResponse(500, { error: err.message }));
+        const result = governanceService.importCatalog(imported, strategy);
+        if (result.ok) {
+          thetaCache.clear();
+          sendResponse(200, { ok: true, catalog: result.catalog });
+        } else {
+          sendResponse(400, { error: result.error });
+        }
+      });
       return;
     }
 
@@ -1127,66 +1086,56 @@ function startApi(port) {
 
     // POST /api/parent/invite — teacher creates invite code for a student
     if (req.method === 'POST' && urlPath === '/api/parent/invite') {
-      readBody(req).then(body => {
-        try {
-          const payload = JSON.parse(body || '{}');
-          const pseudoId = payload.pseudoId && String(payload.pseudoId);
-          if (!pseudoId) return sendResponse(400, { error: 'pseudoId required' });
-          const mastery = loadMasterySummary();
-          if (!mastery.students || !mastery.students[pseudoId]) {
-            return sendResponse(404, { error: 'Student not found', pseudoId });
-          }
-          const data = loadParentLinks();
-          const existing = data.invites.find(inv => inv.pseudoId === pseudoId && !inv.used);
-          if (existing) {
-            return sendResponse(200, { code: existing.code, pseudoId, existing: true });
-          }
-          const code = generateInviteCode();
-          data.invites.push({
-            code,
-            pseudoId,
-            createdAt: new Date().toISOString(),
-            used: false
-          });
-          saveParentLinks(data);
-          return sendResponse(200, { code, pseudoId, existing: false });
-        } catch (err) {
-          return sendResponse(500, { error: err.message });
+      handleJsonBody(req, sendResponse, (payload) => {
+        const pseudoId = payload.pseudoId && String(payload.pseudoId);
+        if (!pseudoId) return sendResponse(400, { error: 'pseudoId required' });
+        const mastery = loadMasterySummary();
+        if (!mastery.students || !mastery.students[pseudoId]) {
+          return sendResponse(404, { error: 'Student not found', pseudoId });
         }
-      }).catch(err => sendResponse(500, { error: err.message }));
+        const data = loadParentLinks();
+        const existing = data.invites.find(inv => inv.pseudoId === pseudoId && !inv.used);
+        if (existing) {
+          return sendResponse(200, { code: existing.code, pseudoId, existing: true });
+        }
+        const code = generateInviteCode();
+        data.invites.push({
+          code,
+          pseudoId,
+          createdAt: new Date().toISOString(),
+          used: false
+        });
+        saveParentLinks(data);
+        return sendResponse(200, { code, pseudoId, existing: false });
+      });
       return;
     }
 
     // POST /api/parent/link — parent redeems invite code to link to child
     if (req.method === 'POST' && urlPath === '/api/parent/link') {
-      readBody(req).then(body => {
-        try {
-          const payload = JSON.parse(body || '{}');
-          const code = payload.code && String(payload.code).trim().toUpperCase();
-          const parentId = payload.parentId && String(payload.parentId).trim();
-          if (!code) return sendResponse(400, { error: 'code required' });
-          if (!parentId) return sendResponse(400, { error: 'parentId required' });
-          const data = loadParentLinks();
-          const invite = data.invites.find(inv => inv.code === code && !inv.used);
-          if (!invite) return sendResponse(404, { error: 'Invalid or expired invite code' });
-          const alreadyLinked = data.links.find(l => l.parentId === parentId && l.pseudoId === invite.pseudoId);
-          if (alreadyLinked) {
-            return sendResponse(200, { ok: true, pseudoId: invite.pseudoId, alreadyLinked: true });
-          }
-          invite.used = true;
-          invite.usedAt = new Date().toISOString();
-          invite.usedBy = parentId;
-          data.links.push({
-            parentId,
-            pseudoId: invite.pseudoId,
-            linkedAt: new Date().toISOString()
-          });
-          saveParentLinks(data);
-          return sendResponse(200, { ok: true, pseudoId: invite.pseudoId, alreadyLinked: false });
-        } catch (err) {
-          return sendResponse(500, { error: err.message });
+      handleJsonBody(req, sendResponse, (payload) => {
+        const code = payload.code && String(payload.code).trim().toUpperCase();
+        const parentId = payload.parentId && String(payload.parentId).trim();
+        if (!code) return sendResponse(400, { error: 'code required' });
+        if (!parentId) return sendResponse(400, { error: 'parentId required' });
+        const data = loadParentLinks();
+        const invite = data.invites.find(inv => inv.code === code && !inv.used);
+        if (!invite) return sendResponse(404, { error: 'Invalid or expired invite code' });
+        const alreadyLinked = data.links.find(l => l.parentId === parentId && l.pseudoId === invite.pseudoId);
+        if (alreadyLinked) {
+          return sendResponse(200, { ok: true, pseudoId: invite.pseudoId, alreadyLinked: true });
         }
-      }).catch(err => sendResponse(500, { error: err.message }));
+        invite.used = true;
+        invite.usedAt = new Date().toISOString();
+        invite.usedBy = parentId;
+        data.links.push({
+          parentId,
+          pseudoId: invite.pseudoId,
+          linkedAt: new Date().toISOString()
+        });
+        saveParentLinks(data);
+        return sendResponse(200, { ok: true, pseudoId: invite.pseudoId, alreadyLinked: false });
+      });
       return;
     }
 
@@ -1247,9 +1196,7 @@ function startApi(port) {
           if (parsed.error) return sendResponse(400, { error: parsed.error });
           const result = authorService.validateForAuthor(parsed.lessonData);
           sendResponse(200, { valid: result.valid, errors: result.errors || [], warnings: result.warnings || [] });
-        } catch (err) {
-          sendResponse(500, { error: err.message });
-        }
+        } catch (err) { sendResponse(500, { error: err.message }); }
       }).catch(err => sendResponse(500, { error: err.message }));
       return;
     }
@@ -1282,6 +1229,356 @@ function startApi(port) {
           })
           .catch(err => sendResponse(500, { error: err.message }));
       }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
+
+    // ── GET /api/step-analytics — per-step breakdown across students for a lesson ──
+    if (req.method === 'GET' && urlPath === '/api/step-analytics') {
+      const lessonId = qs.lessonId;
+      if (!lessonId) return sendResponse(400, { error: 'lessonId required' });
+      try {
+        // Aggregate step-level data from telemetry events stored in mastery summary
+        const telPath = path.join(DATA_DIR, 'telemetry_events.json');
+        const telData = loadJSON(telPath, { events: [] });
+        const events = (telData.events || []).filter(e => e.lessonId === lessonId);
+
+        const stepMap = {};
+        for (const ev of events) {
+          for (const s of (ev.steps || [])) {
+            if (!stepMap[s.stepId]) {
+              stepMap[s.stepId] = { stepId: s.stepId, type: s.type, weight: s.weight, totalScore: 0, totalDurationMs: 0, totalAttempts: 0, passCount: 0, skipCount: 0, count: 0 };
+            }
+            const sm = stepMap[s.stepId];
+            sm.totalScore += s.score || 0;
+            sm.totalDurationMs += s.durationMs || 0;
+            sm.totalAttempts += s.attempts || 0;
+            sm.passCount += s.passed ? 1 : 0;
+            sm.skipCount += s.skipped ? 1 : 0;
+            sm.count++;
+          }
+        }
+
+        const analytics = Object.values(stepMap).map(sm => ({
+          stepId: sm.stepId, type: sm.type, weight: sm.weight,
+          avgScore: sm.count > 0 ? Math.round((sm.totalScore / sm.count) * 100) / 100 : 0,
+          avgDurationMs: sm.count > 0 ? Math.round(sm.totalDurationMs / sm.count) : 0,
+          avgAttempts: sm.count > 0 ? Math.round((sm.totalAttempts / sm.count) * 10) / 10 : 0,
+          passRate: sm.count > 0 ? Math.round((sm.passCount / sm.count) * 100) : 0,
+          skipRate: sm.count > 0 ? Math.round((sm.skipCount / sm.count) * 100) : 0,
+          sampleSize: sm.count
+        }));
+
+        return sendResponse(200, { lessonId, steps: analytics, totalEvents: events.length });
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    // ── GET /api/mastery-history — mastery snapshots over time for a student ──
+    if (req.method === 'GET' && urlPath === '/api/mastery-history') {
+      const pseudoId = qs.pseudoId;
+      if (!pseudoId) return sendResponse(400, { error: 'pseudoId required' });
+      try {
+        const telPath = path.join(DATA_DIR, 'telemetry_events.json');
+        const telData = loadJSON(telPath, { events: [] });
+        const events = (telData.events || []).filter(e => e.pseudoId === pseudoId)
+          .sort((a, b) => new Date(a.completedAt) - new Date(b.completedAt));
+
+        const snapshots = [];
+        let runningMastery = 0;
+        let lessonCount = 0;
+        const mastered = new Set();
+        const index = loadLessonIndex();
+        const totalLessons = index.length || 1;
+
+        for (const ev of events) {
+          lessonCount++;
+          runningMastery += ev.mastery || 0;
+          if ((ev.mastery || 0) >= 0.6) mastered.add(ev.lessonId);
+
+          snapshots.push({
+            date: ev.completedAt,
+            lessonId: ev.lessonId,
+            mastery: ev.mastery || 0,
+            runningAvgMastery: Math.round((runningMastery / lessonCount) * 100) / 100,
+            masteredCount: mastered.size,
+            masteryPct: Math.round((mastered.size / totalLessons) * 100)
+          });
+        }
+
+        return sendResponse(200, { pseudoId, snapshots, totalLessons });
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    // ── GET /api/skill-graph — skill prerequisite graph for visualization ──
+    if (req.method === 'GET' && urlPath === '/api/skill-graph') {
+      try {
+        const index = loadLessonIndex();
+        const mastery = loadMasterySummary();
+        const pseudoId = qs.pseudoId || '';
+        const studentSkills = (mastery.students && mastery.students[pseudoId]) || {};
+
+        const nodes = new Map();
+        const edges = [];
+
+        for (const lesson of index) {
+          const ont = lesson.ontology || {};
+          const provides = ont.provides || [];
+          const requires = ont.requires || [];
+
+          for (const p of provides) {
+            if (!nodes.has(p.skill)) {
+              nodes.set(p.skill, { id: p.skill, level: p.level || 1, mastery: studentSkills[p.skill] || 0, lessonIds: [] });
+            }
+            nodes.get(p.skill).lessonIds.push(lesson.identifier || lesson.slug);
+          }
+
+          for (const r of requires) {
+            if (!nodes.has(r.skill)) {
+              nodes.set(r.skill, { id: r.skill, level: r.level || 1, mastery: studentSkills[r.skill] || 0, lessonIds: [] });
+            }
+            for (const p of provides) {
+              edges.push({ from: r.skill, to: p.skill, lessonId: lesson.identifier || lesson.slug });
+            }
+          }
+        }
+
+        return sendResponse(200, { nodes: [...nodes.values()], edges, totalSkills: nodes.size });
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    // ── GET /api/reviews — spaced repetition review schedule for a student ──
+    if (req.method === 'GET' && urlPath === '/api/reviews') {
+      const pseudoId = qs.pseudoId;
+      if (!pseudoId) return sendResponse(400, { error: 'pseudoId required' });
+      try {
+        const schedule = loadJSON(REVIEW_SCHEDULE_PATH, { students: {} });
+        const studentReviews = schedule.students[pseudoId] || {};
+        const now = Date.now();
+        const due = [];
+        const upcoming = [];
+        for (const lessonId of Object.keys(studentReviews)) {
+          const entry = studentReviews[lessonId];
+          if (entry.nextReviewAt <= now) {
+            due.push({ lessonId, ...entry, overdue: true });
+          } else {
+            upcoming.push({ lessonId, ...entry, overdue: false });
+          }
+        }
+        due.sort((a, b) => a.nextReviewAt - b.nextReviewAt);
+        upcoming.sort((a, b) => a.nextReviewAt - b.nextReviewAt);
+        return sendResponse(200, { pseudoId, due, upcoming, total: due.length + upcoming.length });
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    // ── GET /api/streaks — learning streak data for gamification ──
+    if (req.method === 'GET' && urlPath === '/api/streaks') {
+      const pseudoId = qs.pseudoId;
+      if (!pseudoId) return sendResponse(400, { error: 'pseudoId required' });
+      try {
+        const schedule = loadJSON(REVIEW_SCHEDULE_PATH, { students: {} });
+        const mastery = loadMasterySummary();
+        const studentSkills = mastery.students && mastery.students[pseudoId] ? mastery.students[pseudoId] : {};
+        const studentReviews = schedule.students && schedule.students[pseudoId] ? schedule.students[pseudoId] : {};
+
+        // Collect all unique completion dates from review schedule
+        const dates = new Set();
+        for (const lid of Object.keys(studentReviews)) {
+          const entry = studentReviews[lid];
+          if (entry.lastReviewAt) {
+            dates.add(new Date(entry.lastReviewAt).toISOString().slice(0, 10));
+          }
+        }
+        const sortedDates = [...dates].sort();
+        const today = new Date().toISOString().slice(0, 10);
+        const todayCount = sortedDates.filter(d => d === today).length || (Object.keys(studentReviews).length > 0 ? 0 : 0);
+
+        // Calculate streak
+        let currentStreak = 0;
+        let longestStreak = 0;
+        let tempStreak = 0;
+        const dateSet = new Set(sortedDates);
+        const checkDate = new Date();
+        // Walk backwards from today
+        for (let i = 0; i < 365; i++) {
+          const d = checkDate.toISOString().slice(0, 10);
+          if (dateSet.has(d)) {
+            tempStreak++;
+            if (i === 0 || currentStreak > 0) currentStreak = tempStreak;
+          } else {
+            if (tempStreak > longestStreak) longestStreak = tempStreak;
+            if (i > 0 && currentStreak > 0) break;
+            tempStreak = 0;
+          }
+          checkDate.setDate(checkDate.getDate() - 1);
+        }
+        if (tempStreak > longestStreak) longestStreak = tempStreak;
+
+        const dailyGoal = 1;
+        const completionsToday = sortedDates.filter(d => d === today).length;
+        return sendResponse(200, {
+          currentStreak,
+          longestStreak,
+          totalSessions: sortedDates.length,
+          todayCount: completionsToday,
+          dailyGoal,
+          goalMet: completionsToday >= dailyGoal,
+          dates: sortedDates
+        });
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    // ── GET /api/collab/stats — collaborative learning awareness ──
+    if (req.method === 'GET' && urlPath === '/api/collab/stats') {
+      try {
+        const lessonIds = (qs.lessonIds || '').split(',').filter(Boolean);
+        const mastery = loadMasterySummary();
+        const students = mastery.students || {};
+        const stats = {};
+
+        for (const lid of lessonIds) {
+          let completedCount = 0;
+          let activeCount = 0;
+          for (const pid of Object.keys(students)) {
+            const skills = students[pid] || {};
+            const index = loadLessonIndex();
+            const lesson = index.find(l => l.identifier === lid || l.slug === lid);
+            if (!lesson) continue;
+            const provides = (lesson.ontology && lesson.ontology.provides) || [];
+            const hasAllSkills = provides.length > 0 && provides.every(p => (skills[p.skill] || 0) >= 0.6);
+            if (hasAllSkills) completedCount++;
+            else if (provides.some(p => (skills[p.skill] || 0) > 0)) activeCount++;
+          }
+          stats[lid] = { activeCount, completedCount };
+        }
+
+        return sendResponse(200, { stats });
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    // ── POST /api/telemetry — receive completion events, update mastery, feed LMS engine ──
+    if (req.method === 'POST' && urlPath === '/api/telemetry') {
+      handleJsonBody(req, sendResponse, (payload) => {
+          const events = Array.isArray(payload.events) ? payload.events : [];
+          if (events.length === 0) return sendResponse(200, { accepted: [] });
+
+          const mastery = loadMasterySummary();
+          if (!mastery.students) mastery.students = {};
+          const accepted = [];
+
+          for (const event of events) {
+            const pseudoId = event.pseudoId;
+            const lessonId = event.lessonId;
+            if (!pseudoId || !lessonId) continue;
+
+            if (!mastery.students[pseudoId]) mastery.students[pseudoId] = {};
+            const studentSkills = mastery.students[pseudoId];
+
+            // Update skill mastery levels from evidenced skill levels
+            const provided = event.skillsProvided || [];
+            for (const sp of provided) {
+              if (!sp.skill) continue;
+              const evidenced = typeof sp.evidencedLevel === 'number' ? sp.evidencedLevel : (sp.declaredLevel || 1) * (event.mastery || 0);
+              studentSkills[sp.skill] = Math.max(studentSkills[sp.skill] || 0, Math.round(evidenced * 1000) / 1000);
+            }
+
+            // Feed probe results into LMS engine for Rasch + bandit updates
+            if (lmsEngine.isAvailable && lmsEngine.isAvailable()) {
+              let probeResults = event.probeResults;
+              if (!probeResults || probeResults.length === 0) {
+                // Convert step outcomes to implicit probes
+                probeResults = (event.steps || [])
+                  .filter(s => s.type !== 'instruction' && s.type !== 'completion')
+                  .map(s => ({ probeId: s.stepId || lessonId + '_' + s.type, correct: !!s.passed }));
+              }
+              if (probeResults.length > 0) {
+                try {
+                  lmsEngine.recordObservation(pseudoId, lessonId, probeResults);
+                } catch (e) {
+                  console.warn('[THETA] LMS observation failed for', pseudoId, ':', e.message);
+                }
+              }
+            }
+
+            accepted.push(event.eventId || lessonId);
+          }
+
+          // Update spaced repetition review schedule (SM-2 variant)
+          try {
+            const schedule = loadJSON(REVIEW_SCHEDULE_PATH, { students: {} });
+            for (const event of events) {
+              const pid = event.pseudoId;
+              const lid = event.lessonId;
+              if (!pid || !lid) continue;
+              if (!schedule.students[pid]) schedule.students[pid] = {};
+              const existing = schedule.students[pid][lid] || { interval: 1, easeFactor: 2.5, repetition: 0 };
+              const quality = Math.round((event.mastery || 0) * 5); // 0-5 quality rating
+              let ef = existing.easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+              if (ef < 1.3) ef = 1.3;
+              let interval, rep;
+              if (quality < 3) {
+                rep = 0;
+                interval = 1;
+              } else {
+                rep = existing.repetition + 1;
+                if (rep === 1) interval = 1;
+                else if (rep === 2) interval = 6;
+                else interval = Math.round(existing.interval * ef);
+              }
+              schedule.students[pid][lid] = {
+                interval,
+                easeFactor: Math.round(ef * 100) / 100,
+                repetition: rep,
+                lastReviewAt: Date.now(),
+                nextReviewAt: Date.now() + interval * 86400000,
+                quality
+              };
+            }
+            fs.mkdirSync(path.dirname(REVIEW_SCHEDULE_PATH), { recursive: true });
+            fs.writeFileSync(REVIEW_SCHEDULE_PATH, JSON.stringify(schedule, null, 2));
+          } catch (e) {
+            console.warn('[THETA] Review schedule update failed:', e.message);
+          }
+
+          // Persist updated mastery summary
+          try {
+            fs.mkdirSync(path.dirname(MASTERY_SUMMARY), { recursive: true });
+            fs.writeFileSync(MASTERY_SUMMARY, JSON.stringify(mastery, null, 2));
+            thetaCache.clear();
+          } catch (e) {
+            console.warn('[THETA] Failed to write mastery summary:', e.message);
+          }
+
+          // Persist telemetry events for step-analytics and mastery-history
+          try {
+            const telPath = path.join(DATA_DIR, 'telemetry_events.json');
+            const telData = loadJSON(telPath, { events: [] });
+            for (const event of events) {
+              telData.events.push({
+                eventId: event.eventId, pseudoId: event.pseudoId, lessonId: event.lessonId,
+                mastery: event.mastery, steps: event.steps || [], completedAt: event.completedAt,
+                durationMs: event.durationMs, skillsProvided: event.skillsProvided
+              });
+            }
+            // Cap at 10000 events to avoid unbounded growth
+            if (telData.events.length > 10000) telData.events = telData.events.slice(-10000);
+            fs.writeFileSync(telPath, JSON.stringify(telData, null, 2));
+          } catch (e) {
+            console.warn('[THETA] Telemetry event persistence failed:', e.message);
+          }
+
+          return sendResponse(200, { accepted, processed: events.length });
+      });
       return;
     }
 

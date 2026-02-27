@@ -1,9 +1,16 @@
 <script>
   import { hubUrlStore, setHubUrl, testConnection } from '$lib/api';
+  import { currentLang, setLanguage } from '$lib/i18n';
 
   let hubUrl = $state('');
   let testing = $state(false);
   let testResult = $state(/** @type {{ ok: boolean; message?: string } | null} */ (null));
+  let selectedLang = $state($currentLang);
+
+  function changeLang(code) {
+    selectedLang = code;
+    setLanguage(code);
+  }
 
   $effect(() => {
     hubUrl = $hubUrlStore;
@@ -35,10 +42,10 @@
   </label>
 
   <div class="actions">
-    <button on:click={onTest} disabled={testing || !hubUrl.trim()}>
+    <button onclick={onTest} disabled={testing || !hubUrl.trim()}>
       {testing ? 'Testing…' : 'Test Connection'}
     </button>
-    <button class="primary" on:click={onSave} disabled={!hubUrl.trim()}>
+    <button class="primary" onclick={onSave} disabled={!hubUrl.trim()}>
       Save
     </button>
   </div>
@@ -51,6 +58,21 @@
     Example: <code>http://localhost:8082</code> when running <code>node hub-tools/theta.js</code> locally.
     VITE_HUB_URL (build-time) is used if you have not saved a URL.
   </p>
+</div>
+
+<div class="card" style="margin-top: 1.5rem; max-width: 500px;">
+  <h2>Language</h2>
+  <p>Select your preferred language for the portal and lesson player.</p>
+  <div class="lang-picker">
+    {#each ['en', 'es', 'sw', 'fr'] as code}
+      <button
+        class="lang-btn"
+        class:active={selectedLang === code}
+        onclick={() => changeLang(code)}>
+        {{ en: 'English', es: 'Español', sw: 'Kiswahili', fr: 'Français' }[code]}
+      </button>
+    {/each}
+  </div>
 </div>
 
 <div class="card" style="margin-top: 1.5rem; max-width: 500px;">
@@ -120,4 +142,10 @@
   }
   h2 { margin-top: 0; margin-bottom: 0.5rem; }
   .a11y-link { color: var(--accent); }
+  .lang-picker { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+  .lang-btn {
+    padding: 0.4rem 0.8rem; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--text); cursor: pointer; font-size: 0.9rem;
+  }
+  .lang-btn.active { background: var(--accent); color: #1a1a2e; font-weight: 600; border-color: var(--accent); }
 </style>

@@ -113,6 +113,9 @@ function sortLessons(availableLessons, userLog, graphWeights) {
         userAffinities[tag] = calculateFeatureAffinity(tag, userLog);
     });
 
+    // 2b. VARK profile for modality-aware selection
+    const studentVark = buildStudentVarkProfile(userLog);
+
     // 3. Score Every Candidate Lesson
     const scoredLessons = availableLessons.map(lesson => {
         
@@ -179,11 +182,21 @@ function sortLessons(availableLessons, userLog, graphWeights) {
             styleBonus = totalAffinity / lessonFeatures.length;
         }
 
-        // --- D. Final Theta Calculation ---
-        // θ = Base - (Graph * W) - (Style * W)
+        // --- D. VARK Alignment ---
+        const lessonVark = lesson.inferredFeatures ? lesson.inferredFeatures.vark : null;
+        const varkBonus = varkAlignmentBonus(studentVark, lessonVark);
+
+        // --- E. Bloom's Progression ---
+        const lessonBlooms = lesson.inferredFeatures ? lesson.inferredFeatures.bloomsCeiling : 0;
+        const bloomsBonus = bloomsProgressionBonus(lessonBlooms, userLog);
+
+        // --- F. Final Theta Calculation ---
+        // θ = Base - (Graph * W) - (Style * W) - VARK - Blooms
         let theta = baseCost 
             - (graphDiscount * CONFIG.WEIGHT_GRAPH) 
-            - (styleBonus * CONFIG.WEIGHT_STYLE);
+            - (styleBonus * CONFIG.WEIGHT_STYLE)
+            - varkBonus
+            - bloomsBonus;
 
         // Clamp logic
         if (theta < CONFIG.MIN_THETA) theta = CONFIG.MIN_THETA;
@@ -195,12 +208,16 @@ function sortLessons(availableLessons, userLog, graphWeights) {
                 components: {
                     base: parseFloat(baseCost.toFixed(2)),
                     graphDiscount: parseFloat(graphDiscount.toFixed(2)),
-                    styleBonus: parseFloat(styleBonus.toFixed(2))
+                    styleBonus: parseFloat(styleBonus.toFixed(2)),
+                    varkBonus: parseFloat(varkBonus.toFixed(2)),
+                    bloomsBonus: parseFloat(bloomsBonus.toFixed(2))
                 },
                 debug: {
                     features: lessonFeatures,
                     affinity: styleBonus > 0.1 ? 'High Match' : (styleBonus < -0.1 ? 'Mismatch' : 'Neutral'),
-                    strongestEdge: strongestEdge
+                    strongestEdge: strongestEdge,
+                    bloomsCeiling: lessonBlooms,
+                    vark: lessonVark
                 }
             }
         };
@@ -211,13 +228,187 @@ function sortLessons(availableLessons, userLog, graphWeights) {
 }
 
 // ============================================================================
+// VARK-Aware Selection
+// ============================================================================
+
+/**
+ * Build a student VARK profile from their performance history.
+ * Tracks which modality (visual/auditory/readWrite/kinesthetic) the student
+ * performs best in, weighted by score and pace.
+ *
+ * @param {Array} userLog - Performance history with lesson VARK profiles
+ * @returns {{ visual: number, auditory: number, readWrite: number, kinesthetic: number }}
+ */
+function buildStudentVarkProfile(userLog) {
+    const profile = { visual: 0, auditory: 0, readWrite: 0, kinesthetic: 0 };
+    const counts  = { visual: 0, auditory: 0, readWrite: 0, kinesthetic: 0 };
+
+    userLog.forEach(entry => {
+        const vark = entry.vark;
+        if (!vark) return;
+        const score = entry.score || 0;
+        const weight = score > CONFIG.MASTERY_THRESHOLD ? score : score * 0.5;
+
+        for (const dim of ['visual', 'auditory', 'readWrite', 'kinesthetic']) {
+            if (vark[dim] > 0) {
+                profile[dim] += weight * vark[dim];
+                counts[dim] += vark[dim];
+            }
+        }
+    });
+
+    const result = {};
+    for (const dim of ['visual', 'auditory', 'readWrite', 'kinesthetic']) {
+        result[dim] = counts[dim] > 0 ? profile[dim] / counts[dim] : 0;
+    }
+    return result;
+}
+
+/**
+ * Calculate VARK alignment bonus: how well a lesson's VARK profile
+ * matches the student's strongest modalities.
+ *
+ * @param {{ visual, auditory, readWrite, kinesthetic }} studentVark
+ * @param {{ visual, auditory, readWrite, kinesthetic }} lessonVark
+ * @returns {number} Bonus in [-0.15, +0.15]
+ */
+function varkAlignmentBonus(studentVark, lessonVark) {
+    if (!studentVark || !lessonVark) return 0;
+
+    const dims = ['visual', 'auditory', 'readWrite', 'kinesthetic'];
+    const sTotal = dims.reduce((s, d) => s + (studentVark[d] || 0), 0);
+    const lTotal = dims.reduce((s, d) => s + (lessonVark[d] || 0), 0);
+    if (sTotal === 0 || lTotal === 0) return 0;
+
+    let dotProduct = 0;
+    dims.forEach(d => {
+        const sNorm = (studentVark[d] || 0) / sTotal;
+        const lNorm = (lessonVark[d] || 0) / lTotal;
+        dotProduct += sNorm * lNorm;
+    });
+
+    // dotProduct ranges [0, 1]; map to [-0.05, +0.15]
+    return (dotProduct - 0.25) * 0.2;
+}
+
+// ============================================================================
+// Bloom's Taxonomy Progression
+// ============================================================================
+
+/**
+ * Calculate a Bloom's progression bonus that encourages students
+ * to advance up the taxonomy over time.
+ *
+ * @param {number} lessonBloomsCeiling - The lesson's Bloom's ceiling (1-6)
+ * @param {Array} userLog - Performance history
+ * @returns {number} Bonus in [-0.1, +0.1]
+ */
+function bloomsProgressionBonus(lessonBloomsCeiling, userLog) {
+    if (!lessonBloomsCeiling || userLog.length === 0) return 0;
+
+    // Find the student's current average Bloom's level from mastered lessons
+    let totalBlooms = 0;
+    let countBlooms = 0;
+    userLog.forEach(entry => {
+        if ((entry.score || 0) >= CONFIG.MASTERY_THRESHOLD && entry.bloomsCeiling) {
+            totalBlooms += entry.bloomsCeiling;
+            countBlooms++;
+        }
+    });
+
+    if (countBlooms === 0) return 0;
+    const avgBlooms = totalBlooms / countBlooms;
+
+    // Ideal next lesson is one level above current average (stretch zone)
+    const idealNext = Math.min(6, avgBlooms + 1);
+    const distance = Math.abs(lessonBloomsCeiling - idealNext);
+
+    // Close to ideal = bonus; far = penalty
+    if (distance <= 0.5) return 0.1;
+    if (distance <= 1.0) return 0.05;
+    if (distance <= 2.0) return 0;
+    return -0.05;
+}
+
+// ============================================================================
+// Teaching Mode + UTU Coordinate Filtering
+// ============================================================================
+
+/**
+ * Filter and re-weight lessons based on teaching_mode and UTU spine alignment.
+ *
+ * @param {Array} scoredLessons - Output from sortLessons (with _score.theta)
+ * @param {object} opts
+ *   teachingMode: 'socratic' | 'didactic' | 'guided_discovery' | 'narrative' | 'constructivist' | 'direct' | null
+ *   utuSpine:     target UTU spine id to align to (e.g. "K-PHY-1") or null
+ *   utuProtocol:  target protocol (e.g. "ke-phys-p1") or null
+ * @returns {Array} Re-ordered lessons
+ */
+function applyTeachingModeFilter(scoredLessons, opts) {
+    opts = opts || {};
+    const mode = opts.teachingMode;
+    const spine = opts.utuSpine;
+    const protocol = opts.utuProtocol;
+
+    if (!mode && !spine && !protocol) return scoredLessons;
+
+    return scoredLessons.map(lesson => {
+        let bonus = 0;
+
+        if (mode && lesson.teaching_mode) {
+            if (lesson.teaching_mode === mode) {
+                bonus += 0.15;
+            } else {
+                // Partial credit for related modes in the OLS vocabulary:
+                // socratic ~ guided_discovery, didactic ~ direct, constructivist ~ narrative
+                const RELATED = {
+                    socratic: ['guided_discovery'],
+                    guided_discovery: ['socratic', 'constructivist'],
+                    didactic: ['direct'],
+                    direct: ['didactic'],
+                    constructivist: ['narrative', 'guided_discovery'],
+                    narrative: ['constructivist']
+                };
+                const related = RELATED[mode] || [];
+                if (related.indexOf(lesson.teaching_mode) !== -1) bonus += 0.05;
+                else bonus -= 0.05;
+            }
+        }
+
+        if (spine && lesson.ontology) {
+            const provides = lesson.ontology.provides || [];
+            const requires = lesson.ontology.requires || [];
+            const allSkills = [...provides, ...requires];
+            const hasSpine = allSkills.some(s => s.skill && s.skill.startsWith(spine));
+            if (hasSpine) bonus += 0.1;
+        }
+
+        if (protocol && lesson.utu_protocol) {
+            if (lesson.utu_protocol === protocol) bonus += 0.08;
+        }
+
+        const adjustedTheta = Math.max(CONFIG.MIN_THETA, lesson._score.theta - bonus);
+        return {
+            ...lesson,
+            _score: {
+                ...lesson._score,
+                theta: parseFloat(adjustedTheta.toFixed(3)),
+                components: {
+                    ...lesson._score.components,
+                    teachingModeBonus: parseFloat(bonus.toFixed(2))
+                }
+            }
+        };
+    }).sort((a, b) => a._score.theta - b._score.theta);
+}
+
+// ============================================================================
 // Exports
 // ============================================================================
 
 // Support both Node.js (CommonJS) and Browser (Global)
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { sortLessons, calculateFeatureAffinity };
+    module.exports = { sortLessons, calculateFeatureAffinity, applyTeachingModeFilter, buildStudentVarkProfile, varkAlignmentBonus, bloomsProgressionBonus };
 } else {
-    // In browser, attach to window namespace
-    window.AGNI_NAVIGATOR = { sortLessons, calculateFeatureAffinity };
+    window.AGNI_NAVIGATOR = { sortLessons, calculateFeatureAffinity, applyTeachingModeFilter, buildStudentVarkProfile, varkAlignmentBonus, bloomsProgressionBonus };
 }

@@ -63,19 +63,22 @@
 
   let thresholdErrors = $state({});
 
+  function nextStepId() {
+    let max = 0;
+    for (const s of steps) {
+      const m = (s.id || '').match(/^step_(\d+)$/);
+      if (m) max = Math.max(max, parseInt(m[1]));
+    }
+    return `step_${max + 1}`;
+  }
+
   function newStep() {
-    const idx = steps.length + 1;
-    steps = [...steps, {
-      id: `step_${idx}`,
-      type: 'instruction',
-      content: ''
-    }];
+    steps = [...steps, { id: nextStepId(), type: 'instruction', content: '' }];
     onchange();
   }
 
   function newStepOfType(type) {
-    const idx = steps.length + 1;
-    const base = { id: `step_${idx}`, type, content: '' };
+    const base = { id: nextStepId(), type, content: '' };
     if (type === 'hardware_trigger') {
       base.sensor = '';
       base.threshold = '';
@@ -173,6 +176,41 @@
   }
 
   let showAddMenu = $state(false);
+
+  let dragIdx = $state(null);
+  let dragOverIdx = $state(null);
+
+  function onDragStart(e, i) {
+    dragIdx = i;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(i));
+  }
+
+  function onDragOver(e, i) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    dragOverIdx = i;
+  }
+
+  function onDragLeave() {
+    dragOverIdx = null;
+  }
+
+  function onDragEnd() {
+    dragIdx = null;
+    dragOverIdx = null;
+  }
+
+  function onDrop(e, i) {
+    e.preventDefault();
+    if (dragIdx == null || dragIdx === i) { onDragEnd(); return; }
+    const arr = [...steps];
+    const [moved] = arr.splice(dragIdx, 1);
+    arr.splice(i, 0, moved);
+    steps = arr;
+    onDragEnd();
+    onchange();
+  }
 </script>
 
 <section class="step-editor">
@@ -197,8 +235,20 @@
   {/if}
 
   {#each steps as step, i (step.id + '-' + i)}
-    <div class="step-card" class:hw={step.type === 'hardware_trigger'} class:quiz={step.type === 'quiz'} class:completion={step.type === 'completion'}>
+    <div class="step-card"
+         class:hw={step.type === 'hardware_trigger'}
+         class:quiz={step.type === 'quiz'}
+         class:completion={step.type === 'completion'}
+         class:drag-over={dragOverIdx === i && dragIdx !== i}
+         class:dragging={dragIdx === i}
+         draggable="true"
+         ondragstart={(e) => onDragStart(e, i)}
+         ondragover={(e) => onDragOver(e, i)}
+         ondragleave={onDragLeave}
+         ondragend={onDragEnd}
+         ondrop={(e) => onDrop(e, i)}>
       <div class="step-toolbar">
+        <span class="drag-handle" title="Drag to reorder">⠿</span>
         <span class="step-num">#{i + 1}</span>
         <span class="step-type-badge" class:hw-badge={step.type === 'hardware_trigger'} class:quiz-badge={step.type === 'quiz'} class:comp-badge={step.type === 'completion'}>
           {STEP_TYPES.find(t => t.value === step.type)?.label || step.type}
@@ -390,10 +440,13 @@
     padding: 0.75rem 1rem;
     margin-bottom: 0.75rem;
     background: rgba(31,43,78,0.5);
+    transition: opacity 0.15s, border-color 0.15s;
   }
   .step-card.hw { border-left: 3px solid #ff9800; }
   .step-card.quiz { border-left: 3px solid #42a5f5; }
   .step-card.completion { border-left: 3px solid #66bb6a; }
+  .step-card.drag-over { border-color: var(--accent); background: rgba(0,230,118,0.06); }
+  .step-card.dragging { opacity: 0.4; }
 
   .step-toolbar {
     display: flex;
@@ -403,6 +456,11 @@
     padding-bottom: 0.5rem;
     border-bottom: 1px solid rgba(255,255,255,0.06);
   }
+  .drag-handle {
+    cursor: grab; font-size: 1.1rem; opacity: 0.4; user-select: none;
+    letter-spacing: -1px; padding-right: 0.15rem;
+  }
+  .drag-handle:hover { opacity: 0.8; }
   .step-num { font-weight: bold; opacity: 0.7; min-width: 2rem; }
   .step-type-badge {
     font-size: 0.8rem;

@@ -158,6 +158,33 @@ export interface LessonListResponse {
   total: number;
 }
 
+export interface ReviewEntry {
+  lessonId: string;
+  interval: number;
+  easeFactor: number;
+  repetition: number;
+  lastReviewAt: number;
+  nextReviewAt: number;
+  quality: number;
+  overdue: boolean;
+}
+
+export interface ReviewScheduleResponse {
+  pseudoId: string;
+  due: ReviewEntry[];
+  upcoming: ReviewEntry[];
+  total: number;
+}
+
+export interface StepAnalytics {
+  stepId: string;
+  type: string;
+  passed: boolean;
+  attempts: number;
+  durationMs: number;
+  skipped: boolean;
+}
+
 export interface ParentChildProgress {
   pseudoId: string;
   linkedAt: string;
@@ -233,8 +260,39 @@ export function createHubApi(baseUrl: string) {
       return get<ThetaAllResponse>('api/theta/all');
     },
 
+    getReviews(pseudoId: string): Promise<ReviewScheduleResponse> {
+      return get<ReviewScheduleResponse>(`api/reviews?pseudoId=${encodeURIComponent(pseudoId)}`);
+    },
+
     getThetaGraph(): Promise<GraphWeightsResponse> {
       return get<GraphWeightsResponse>('api/theta/graph');
+    },
+
+    /** @deprecated Use getLessons() instead. */
+    getLessonIndex(filters?: { utu?: string; spine?: string; teaching_mode?: string }): Promise<LessonListResponse> {
+      return this.getLessons(filters);
+    },
+
+    getStreaks(pseudoId: string): Promise<{ currentStreak: number; longestStreak: number; totalSessions: number; todayCount: number; dailyGoal: number; goalMet: boolean; dates: string[] }> {
+      return get<any>(`api/streaks?pseudoId=${encodeURIComponent(pseudoId)}`);
+    },
+
+    getCollabStats(lessonIds: string[]): Promise<{ stats: Record<string, { activeCount: number; completedCount: number }> }> {
+      const ids = lessonIds.join(',');
+      return get<any>(`api/collab/stats?lessonIds=${encodeURIComponent(ids)}`);
+    },
+
+    getStepAnalytics(lessonId: string): Promise<{ lessonId: string; steps: any[]; totalEvents: number }> {
+      return get<any>(`api/step-analytics?lessonId=${encodeURIComponent(lessonId)}`);
+    },
+
+    getMasteryHistory(pseudoId: string): Promise<{ pseudoId: string; snapshots: any[]; totalLessons: number }> {
+      return get<any>(`api/mastery-history?pseudoId=${encodeURIComponent(pseudoId)}`);
+    },
+
+    getSkillGraph(pseudoId?: string): Promise<{ nodes: any[]; edges: any[]; totalSkills: number }> {
+      const qs = pseudoId ? `?pseudoId=${encodeURIComponent(pseudoId)}` : '';
+      return get<any>(`api/skill-graph${qs}`);
     },
 
     /** Phase 3: set or clear teacher recommendation override. */
@@ -306,6 +364,11 @@ export function createHubApi(baseUrl: string) {
     /** GET /api/author/load/:slug (E9): load saved YAML lesson for round-trip editing. */
     async getAuthorLesson(slug: string): Promise<{ slug: string; lessonData: Record<string, unknown> }> {
       return get<{ slug: string; lessonData: Record<string, unknown> }>(`api/author/load/${encodeURIComponent(slug)}`);
+    },
+
+    /** POST /api/author/validate: run schema + structure validation without saving. */
+    async postAuthorValidate(lesson: unknown): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+      return post<{ valid: boolean; errors: string[]; warnings: string[] }>('api/author/validate', lesson);
     },
 
     /** POST /api/author/preview (E4): compile lesson and return IR + sidecar for preview. */

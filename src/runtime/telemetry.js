@@ -173,9 +173,20 @@
 
   function _getPseudoId() {
     if (_pseudoId) return Promise.resolve(_pseudoId);
+
+    // Check URL parameter first — set by the portal student launcher so the
+    // same pseudoId is shared between the portal and the lesson player.
+    try {
+      var params = new URLSearchParams(global.location.search || '');
+      var fromUrl = params.get('pseudoId');
+      if (fromUrl) {
+        _pseudoId = fromUrl;
+        return _dbPut(STORE_META, 'pseudoId', fromUrl).then(function () { return fromUrl; });
+      }
+    } catch (e) { /* location not available */ }
+
     return _dbGet(STORE_META, 'pseudoId').then(function (stored) {
       if (stored) { _pseudoId = stored; return stored; }
-      // Generate a new random ID: "px-" + 8 random hex chars
       var id = 'px-' + Array.from(
         global.crypto
           ? global.crypto.getRandomValues(new Uint8Array(4))
@@ -255,9 +266,10 @@
    * @param {object} lessonData     window.LESSON_DATA
    * @param {object[]} stepOutcomes Array of step outcome objects (see computeMastery)
    * @param {number} totalDurationMs Total time spent in lesson
+   * @param {object[]} [probeResults] Optional probe results for LMS engine: [{ probeId, correct }]
    * @returns {Promise<{ eventId, mastery }>}
    */
-  function record(lessonData, stepOutcomes, totalDurationMs) {
+  function record(lessonData, stepOutcomes, totalDurationMs, probeResults) {
     var meta    = lessonData.meta || {};
     var ont     = lessonData.ontology || {};
     var computed = computeMastery(stepOutcomes);
@@ -293,6 +305,8 @@
         mastery:       computed.mastery,
         steps:         computed.stepScores,
         durationMs:    Math.round(totalDurationMs || 0),
+        // Probe results for LMS engine (Rasch + bandit)
+        probeResults:  Array.isArray(probeResults) ? probeResults : [],
         // Metadata
         completedAt:   new Date().toISOString(),
         flushed:       false
