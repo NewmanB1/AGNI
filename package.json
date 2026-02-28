@@ -31,10 +31,7 @@
   },
   "dependencies": {
     "ajv": "^8.18.0",
-<<<<<<< Updated upstream
     "ajv-formats": "^3.0.1",
-=======
->>>>>>> Stashed changes
     "js-yaml": "^4.1.0",
     "katex": "^0.16.33",
     "rehype-katex": "7.0.0",
