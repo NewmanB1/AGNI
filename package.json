@@ -74,7 +74,7 @@
     "test:contract": "node tests/contract-hub-api.js",
     "test:graph": "node tests/graph-verification-test.js",
     "test:all": "node --test tests/unit/*.test.js && node tests/contract-hub-api.js && node tests/graph-verification-test.js",
-    "codegen:validate-schemas": "node scripts/codegen-validate-schemas.js"
+    "codegen:validate-schemas": "node scripts/codegen-validate-schemas.js",
     "dev:vite": "vite --port 5173"
   }
 }
