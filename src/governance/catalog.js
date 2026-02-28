@@ -5,6 +5,7 @@
 
 var fs   = require('fs');
 var path = require('path');
+var log  = require('../utils/logger').createLogger('governance');
 
 var schemaPath = path.join(__dirname, '../../schemas', 'approved-catalog.schema.json');
 var Ajv;
@@ -68,12 +69,12 @@ function loadCatalog(filePath) {
     var catalog = JSON.parse(raw);
     var result = validateCatalog(catalog);
     if (!result.valid) {
-      console.warn('[GOVERNANCE] Catalog failed schema validation:', result.errors.join('; '));
+      log.warn('Catalog failed schema validation', { errors: result.errors });
       return { lessonIds: [] };
     }
     return catalog;
   } catch (err) {
-    console.warn('[GOVERNANCE] Failed to load catalog from', p, ':', err.message);
+    log.warn('Failed to load catalog', { filePath: p, error: err.message });
     return { lessonIds: [] };
   }
 }

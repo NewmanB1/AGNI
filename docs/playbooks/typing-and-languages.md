@@ -16,7 +16,7 @@ The engine has numerical and stateful logic (Rasch, embeddings, bandit) where ty
 
 - When adding or changing **engine** APIs (e.g. `applyObservation`, `LMSState`), update `src/types/index.d.ts` and the engine `.ts` files; run `npm run build:engine`.
 - When changing **IR or sidecar** shapes, update `src/types/index.d.ts` (LessonIR, LessonSidecar, etc.) and the compiler/sidecar code. See `docs/playbooks/compiler.md`.
-- CI runs `npm run build:engine` so engine TypeScript must compile. Optionally run `npm run typecheck` if the root Tsconfig.json is set up for the rest of the repo.
+- CI runs `npm run build:engine` so engine TypeScript must compile. Optionally run `npm run typecheck` if the root tsconfig.json is set up for the rest of the repo.
 
 ## Single place for shared types
 

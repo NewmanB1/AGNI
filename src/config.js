@@ -81,33 +81,25 @@ function _getProcessor() {
 async function _buildProcessor() {
   // Dynamic imports: these are ESM-only packages (unified ecosystem v10+).
   // We use dynamic import() so this CommonJS file can consume them.
-  var unified        = (await import('unified')).unified;
-  var remarkParse    = (await import('remark-parse')).default;
-  var remarkMath     = (await import('remark-math')).default;
-  var remarkRehype   = (await import('remark-rehype')).default;
-  var rehypeKatex    = (await import('rehype-katex')).default;
+  var unified         = (await import('unified')).unified;
+  var remarkParse     = (await import('remark-parse')).default;
+  var remarkMath      = (await import('remark-math')).default;
+  var remarkRehype    = (await import('remark-rehype')).default;
+  var rehypeKatex     = (await import('rehype-katex')).default;
   var rehypeStringify = (await import('rehype-stringify')).default;
 
+  // remarkRehype WITHOUT allowDangerousHtml: raw HTML in lesson YAML
+  // (e.g. <script>) is escaped, preventing XSS from untrusted lessons.
+  // rehypeStringify WITH allowDangerousHtml: lets rehype-katex's
+  // internally-generated raw hast nodes through. These are safe because
+  // they originate from KaTeX rendering math expressions, not user input.
   var processor = unified()
     .use(remarkParse)
     .use(remarkMath)
-    .use(remarkRehype, {
-      // Pass raw HTML from lesson YAML through to the output.
-      // Lesson authors are trusted — the YAML is compiled on the hub,
-      // not submitted by end users. Without this, HTML like <strong>
-      // in step content would be escaped rather than rendered.
-      allowDangerousHtml: true
-    })
+    .use(remarkRehype)
     .use(rehypeKatex, {
-      // Render to HTML rather than MathML. Android 4–6 WebView has no
-      // MathML support. KaTeX HTML output uses spans and CSS which work
-      // on all target browsers including iOS 9 Safari.
       output: 'html',
-      // A bad LaTeX expression renders as red error text rather than
-      // throwing an exception that aborts the lesson build. The author
-      // sees the error in the compiled lesson and can fix the YAML.
       throwOnError: false,
-      // errorColor is the colour used for broken LaTeX in the output.
       errorColor: '#ff6b35'
     })
     .use(rehypeStringify, {

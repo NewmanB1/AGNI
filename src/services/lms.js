@@ -7,25 +7,17 @@
 
 var path = require('path');
 
+var { createLogger } = require('../utils/logger');
+var log = createLogger('lms-service');
+
 var ENGINE_PATH = path.join(__dirname, '../engine/index.js');
 var engine = null;
 
 try {
   engine = require(ENGINE_PATH);
-  // Best-effort early status log; callers can also use getStatus().
-  if (engine && typeof engine.getStatus === 'function') {
-    try {
-      var status = engine.getStatus();
-      console.log('[LMS-SERVICE] Engine loaded:', JSON.stringify(status));
-    } catch (_) {
-      console.log('[LMS-SERVICE] Engine loaded (status unavailable)');
-    }
-  }
+  log.info('Engine module loaded (state deferred until first use)');
 } catch (err) {
-  console.warn(
-    '[LMS-SERVICE] Engine not available:', err.message,
-    '\n[LMS-SERVICE] Degraded mode: theta scheduling active, bandit selection disabled'
-  );
+  log.warn('Engine not available — degraded mode: theta scheduling active, bandit selection disabled', { error: err.message });
 }
 
 function isAvailable() {
@@ -87,6 +79,10 @@ function getDropoutBottlenecks(minSample) {
   return requireEngine().getDropoutBottlenecks(minSample);
 }
 
+function persistState() {
+  return requireEngine().persistState();
+}
+
 module.exports = {
   isAvailable:            isAvailable,
   getStatus:              getStatus,
@@ -100,6 +96,7 @@ module.exports = {
   exportTransitionTable:  exportTransitionTable,
   getStudentLessonHistory: getStudentLessonHistory,
   getFlowBottlenecks:     getFlowBottlenecks,
-  getDropoutBottlenecks:  getDropoutBottlenecks
+  getDropoutBottlenecks:  getDropoutBottlenecks,
+  persistState:           persistState
 };
 

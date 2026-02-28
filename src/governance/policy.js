@@ -8,6 +8,7 @@
 
 var fs = require('fs');
 var path = require('path');
+var log = require('../utils/logger').createLogger('governance');
 
 var schemaPath = path.join(__dirname, '../../schemas', 'governance-policy.schema.json');
 var Ajv;
@@ -67,12 +68,12 @@ function loadPolicy(filePath) {
     var policy = JSON.parse(raw);
     var result = validatePolicy(policy);
     if (!result.valid) {
-      console.warn('[GOVERNANCE] Policy file failed schema validation:', result.errors.join('; '));
+      log.warn('Policy file failed schema validation', { errors: result.errors });
       return {};
     }
     return policy;
   } catch (err) {
-    console.warn('[GOVERNANCE] Failed to load policy from', filePath, ':', err.message);
+    log.warn('Failed to load policy', { filePath, error: err.message });
     return {};
   }
 }

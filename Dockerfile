@@ -28,6 +28,6 @@ USER agni
 EXPOSE 8082 8081 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:8082/api/theta?pseudoId=healthcheck || exit 1
+  CMD wget -qO- http://localhost:8082/health || exit 1
 
 CMD [ "node", "src/cli.js" ]

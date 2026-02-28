@@ -133,7 +133,14 @@ async function loginCreator({ email, password }) {
 function validateSession(token) {
   if (!token) return null;
   const sessions = loadJson(SESSIONS_PATH, { sessions: [] });
-  const session = sessions.sessions.find(s => s.token === token && new Date(s.expiresAt).getTime() > Date.now());
+  const now = Date.now();
+  const tokenBuf = Buffer.from(String(token));
+  const session = sessions.sessions.find(s => {
+    if (new Date(s.expiresAt).getTime() <= now) return false;
+    const sBuf = Buffer.from(String(s.token));
+    if (tokenBuf.length !== sBuf.length) return false;
+    return crypto.timingSafeEqual(tokenBuf, sBuf);
+  });
   if (!session) return null;
 
   const data = loadCreators();
@@ -147,7 +154,12 @@ function validateSession(token) {
 function destroySession(token) {
   if (!token) return;
   const sessions = loadJson(SESSIONS_PATH, { sessions: [] });
-  sessions.sessions = sessions.sessions.filter(s => s.token !== token);
+  const tokenBuf = Buffer.from(String(token));
+  sessions.sessions = sessions.sessions.filter(s => {
+    const sBuf = Buffer.from(String(s.token));
+    if (tokenBuf.length !== sBuf.length) return true;
+    return !crypto.timingSafeEqual(tokenBuf, sBuf);
+  });
   saveJson(SESSIONS_PATH, sessions);
 }
 
@@ -197,22 +209,36 @@ function generatePseudoId() {
   return 'px-' + bytes.toString('hex');
 }
 
-function hashPin(pin) {
+function hashPinLegacy(pin) {
   if (!pin) return null;
   return crypto.createHash('sha256').update(String(pin)).digest('hex');
+}
+
+async function hashPin(pin) {
+  if (!pin) return { hash: null, salt: null };
+  const salt = randomHex(16);
+  const hash = await hashPassword(String(pin), salt);
+  return { hash, salt };
+}
+
+async function verifyPinHash(pin, hash, salt) {
+  const computed = await hashPassword(String(pin), salt);
+  return crypto.timingSafeEqual(Buffer.from(computed, 'hex'), Buffer.from(hash, 'hex'));
 }
 
 /**
  * Create a student account (teacher creates on behalf of student).
  * No email or ID required — just an optional display name and PIN.
  */
-function createStudent({ displayName, pin, createdBy } = {}) {
+async function createStudent({ displayName, pin, createdBy } = {}) {
   const data = loadStudents();
   const pseudoId = generatePseudoId();
+  const { hash, salt } = await hashPin(pin);
   const student = {
     pseudoId,
     displayName: (displayName || '').trim() || null,
-    pinHash: hashPin(pin),
+    pinHash: hash,
+    pinSalt: salt,
     createdAt: new Date().toISOString(),
     createdBy: createdBy || null,
     transferToken: null,
@@ -228,7 +254,7 @@ function createStudent({ displayName, pin, createdBy } = {}) {
  * Bulk-create student accounts (teacher creates a class roster).
  * @param {{ names: string[], pin?: string, createdBy?: string }} opts
  */
-function createStudentsBulk({ names, pin, createdBy } = {}) {
+async function createStudentsBulk({ names, pin, createdBy } = {}) {
   if (!Array.isArray(names) || names.length === 0) {
     return { error: 'At least one name is required' };
   }
@@ -236,10 +262,12 @@ function createStudentsBulk({ names, pin, createdBy } = {}) {
   const created = [];
   for (const name of names) {
     const pseudoId = generatePseudoId();
+    const { hash, salt } = await hashPin(pin);
     const student = {
       pseudoId,
       displayName: (name || '').trim() || null,
-      pinHash: hashPin(pin),
+      pinHash: hash,
+      pinSalt: salt,
       createdAt: new Date().toISOString(),
       createdBy: createdBy || null,
       transferToken: null,
@@ -266,12 +294,17 @@ function getStudent(pseudoId) {
 }
 
 /** Update a student's display name or PIN. */
-function updateStudent(pseudoId, updates) {
+async function updateStudent(pseudoId, updates) {
   const data = loadStudents();
   const student = data.students.find(s => s.pseudoId === pseudoId);
   if (!student) return { error: 'Student not found' };
   if (updates.displayName !== undefined) student.displayName = updates.displayName;
-  if (updates.pin !== undefined) student.pinHash = hashPin(updates.pin);
+  if (updates.pin !== undefined) {
+    const { hash, salt } = await hashPin(updates.pin);
+    student.pinHash = hash;
+    student.pinSalt = salt;
+    delete student.pin;
+  }
   if (updates.active !== undefined) student.active = !!updates.active;
   saveStudents(data);
   return { ok: true, student };
@@ -316,18 +349,41 @@ function claimTransferToken(token) {
 
 /**
  * Verify a student's PIN (for device-local auth on shared devices).
+ * Supports three formats and migrates legacy ones to scrypt on success:
+ *   1. scrypt (pinHash + pinSalt) — current
+ *   2. SHA-256 (pinHash, no pinSalt) — legacy v1
+ *   3. plaintext (pin field) — legacy v0
  */
-function verifyStudentPin(pseudoId, pin) {
+async function verifyStudentPin(pseudoId, pin) {
   const data = loadStudents();
   const student = data.students.find(s => s.pseudoId === pseudoId);
   if (!student) return { error: 'Student not found' };
-  // Support both legacy plaintext pins and new hashed pins
+
   if (!student.pinHash && !student.pin) return { ok: true, verified: true };
-  if (student.pinHash) {
-    if (hashPin(pin) !== student.pinHash) return { ok: false, verified: false };
-  } else if (String(student.pin) !== String(pin)) {
-    return { ok: false, verified: false };
+
+  let verified = false;
+  let needsMigration = false;
+
+  if (student.pinHash && student.pinSalt) {
+    verified = await verifyPinHash(pin, student.pinHash, student.pinSalt);
+  } else if (student.pinHash) {
+    verified = hashPinLegacy(pin) === student.pinHash;
+    needsMigration = verified;
+  } else if (student.pin) {
+    verified = String(student.pin) === String(pin);
+    needsMigration = verified;
   }
+
+  if (!verified) return { ok: false, verified: false };
+
+  if (needsMigration) {
+    const { hash, salt } = await hashPin(pin);
+    student.pinHash = hash;
+    student.pinSalt = salt;
+    delete student.pin;
+    saveStudents(data);
+  }
+
   return { ok: true, verified: true };
 }
 

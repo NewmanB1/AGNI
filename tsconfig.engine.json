@@ -1,5 +1,5 @@
 {
-  "extends": "./Tsconfig.json",
+  "extends": "./tsconfig.json",
   "compilerOptions": {
     "rootDir": "src/engine",
     "outDir": "src/engine",

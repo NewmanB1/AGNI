@@ -1,0 +1,14 @@
+{
+  "students": {
+    "test-student": {
+      "lesson-1": {
+        "interval": 35476875,
+        "easeFactor": 2.5,
+        "repetition": 19,
+        "lastReviewAt": 1772304841930,
+        "nextReviewAt": 3066974304841930,
+        "quality": 4
+      }
+    }
+  }
+}

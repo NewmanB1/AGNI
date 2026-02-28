@@ -11,6 +11,7 @@ const path = require('path');
 const crypto = require('crypto');
 const https = require('https');
 const http = require('http');
+const { createLogger } = require('../src/utils/logger');
 
 // ── Hub config bootstrap (F1) ───────────────────────────────────────────────
 const { loadHubConfig } = require('../src/utils/hub-config');
@@ -94,7 +95,7 @@ function loadUnsynced() {
   files.forEach(file => {
     const content = fs.readFileSync(path.join(EVENTS_DIR, file), 'utf8');
     content.split('\n').filter(l => l.trim()).forEach(line => {
-      try { events.push(JSON.parse(line)); } catch (e) {}
+      try { events.push(JSON.parse(line)); } catch (e) { log.warn('Skipping malformed NDJSON line', { file, error: e.message }); }
     });
   });
 
@@ -141,7 +142,7 @@ function sendViaStarlink(pkg) {
   const url = new URL(HOME_URL + '/api/hub-sync');
   const lib = url.protocol === 'https:' ? https : http;
 
-  _log(`Sending ${pkg.eventCount} event(s) to ${url.href}`);
+  log.info('Sending events via Starlink', { count: pkg.eventCount, url: url.href });
 
   return new Promise((resolve, reject) => {
     const options = {
@@ -190,7 +191,7 @@ function sendViaUsb(pkg) {
   const dest = path.join(USB_PATH, filename);
   fs.writeFileSync(dest, JSON.stringify(pkg, null, 2));
 
-  _log(`Package written to USB: ${dest} (${pkg.eventCount} events)`);
+  log.info('Package written to USB', { dest, count: pkg.eventCount });
   return Promise.resolve({ accepted: pkg.eventCount, packageFile: dest });
 }
 
@@ -199,13 +200,13 @@ function sendViaUsb(pkg) {
 // ═══════════════════════════════════════════════════════════════════════════
 function importInbound(filePath) {
   if (!fs.existsSync(filePath)) {
-    _log(`ERROR: import file not found: ${filePath}`);
+    log.error('Import file not found', { filePath });
     return false;
   }
 
   const stats = fs.statSync(filePath);
   if (stats.size > 10 * 1024 * 1024) {  // cap at ~10 MB
-    _log(`ERROR: inbound file too large (${Math.round(stats.size / 1024 / 1024)} MB)`);
+    log.error('Inbound file too large', { sizeMB: Math.round(stats.size / 1024 / 1024) });
     return false;
   }
 
@@ -213,7 +214,7 @@ function importInbound(filePath) {
   try {
     incoming = JSON.parse(fs.readFileSync(filePath, 'utf8'));
   } catch (e) {
-    _log(`ERROR: could not parse inbound file: ${e.message}`);
+    log.error('Could not parse inbound file', { error: e.message });
     return false;
   }
 
@@ -225,7 +226,7 @@ function importInbound(filePath) {
     }
     const merged = { ...existing, ...incoming.costs };
     fs.writeFileSync(BASE_COSTS, JSON.stringify(merged, null, 2));
-    _log(`BaseCosts: ${Object.keys(incoming.costs).length} skill(s) updated, total now ${Object.keys(merged).length}`);
+    log.info('BaseCosts updated', { updated: Object.keys(incoming.costs).length, total: Object.keys(merged).length });
   }
 
   // 2. Regional / higher-level graph weights
@@ -234,21 +235,21 @@ function importInbound(filePath) {
     const level = incoming.graph_weights.level;
     const levelPath = path.join(DATA_DIR, `graph_weights_${level}.json`);
     fs.writeFileSync(levelPath, JSON.stringify(incoming.graph_weights, null, 2));
-    _log(`Stored ${level} graph_weights: ${levelPath} (${incoming.graph_weights.edges.length} edges)`);
+    log.info('Stored graph weights', { level, path: levelPath, edges: incoming.graph_weights.edges.length });
   }
 
   // 3. Jurisdictional Curriculum Overrides
   if (incoming.curriculum?.graph && typeof incoming.curriculum.graph === 'object') {
     const dest = path.join(DATA_DIR, 'curriculum.json');
     fs.writeFileSync(dest, JSON.stringify(incoming.curriculum, null, 2));
-    _log(`Jurisdictional curriculum imported (${Object.keys(incoming.curriculum.graph).length} skills defined)`);
+    log.info('Jurisdictional curriculum imported', { skills: Object.keys(incoming.curriculum.graph).length });
   }
 
   // 4. Governance Student Schedules
   if (incoming.schedules?.students && typeof incoming.schedules.students === 'object') {
     const dest = path.join(DATA_DIR, 'schedules.json');
     fs.writeFileSync(dest, JSON.stringify(incoming.schedules, null, 2));
-    _log(`Student schedules imported (${Object.keys(incoming.schedules.students).length} students)`);
+    log.info('Student schedules imported', { students: Object.keys(incoming.schedules.students).length });
   }
 
   return true;
@@ -259,7 +260,7 @@ function importInbound(filePath) {
 // ═══════════════════════════════════════════════════════════════════════════
 async function runSync() {
   if (IMPORT_FILE) {
-    _log(`Importing inbound update from: ${IMPORT_FILE}`);
+    log.info('Importing inbound update', { file: IMPORT_FILE });
     const success = importInbound(IMPORT_FILE);
     if (!success) process.exitCode = 1;
     return;
@@ -267,18 +268,18 @@ async function runSync() {
 
   const { events, files } = loadUnsynced();
   if (!events.length) {
-    _log('No new events to sync.');
+    log.info('No new events to sync');
     return;
   }
 
-  _log(`Preparing ${events.length} event(s) from ${files.length} file(s)...`);
+  log.info('Preparing sync package', { events: events.length, files: files.length });
   const pkg = buildPackage(events);
 
   const cohortMsg = pkg.discovered_cohort
     ? `cohort ${pkg.discovered_cohort}`
     : 'cohort not yet discovered';
 
-  _log(`Package ${pkg.packageId}: ${pkg.cohortSize} student(s), ${cohortMsg}`);
+  log.info('Package ready', { packageId: pkg.packageId, students: pkg.cohortSize, cohort: pkg.discovered_cohort || 'not yet discovered' });
 
   let result;
   try {
@@ -286,7 +287,7 @@ async function runSync() {
       ? await sendViaUsb(pkg)
       : await sendViaStarlink(pkg);
   } catch (err) {
-    _log(`SYNC FAILED: ${err.message}`);
+    log.error('Sync failed', { error: err.message });
     process.exitCode = 1;
     return;
   }
@@ -297,17 +298,13 @@ async function runSync() {
   state.lastPackageId = pkg.packageId;
   saveSyncState(state);
 
-  _log(`Sync complete: ${result.accepted || pkg.eventCount} event(s) accepted.`);
+  log.info('Sync complete', { accepted: result.accepted || pkg.eventCount });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 9. Helpers
 // ═══════════════════════════════════════════════════════════════════════════
-function _log(msg) {
-  const line = new Date().toISOString() + ' ' + msg;
-  console.log('[SYNC]', msg);
-  try { fs.appendFileSync(SYNC_LOG, line + '\n'); } catch (e) {}
-}
+const log = createLogger('sync', { logFile: SYNC_LOG });
 
 function parseArgs(argv) {
   const result = {};
@@ -331,7 +328,7 @@ function parseArgs(argv) {
 // ═══════════════════════════════════════════════════════════════════════════
 if (require.main === module) {
   runSync().catch(err => {
-    _log(`Fatal: ${err.message}`);
+    log.error('Fatal error', { error: err.message });
     process.exit(1);
   });
 }

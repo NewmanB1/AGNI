@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const crypto = require('crypto');
+const { createLogger } = require('../src/utils/logger');
 
 // ── Hub config bootstrap (F1) ───────────────────────────────────────────────
 const { loadHubConfig } = require('../src/utils/hub-config');
@@ -38,11 +39,7 @@ function ensureDirs() {
 // ═══════════════════════════════════════════════════════════════════════════
 // 1. Asynchronous SD Card Logging & Buffering
 // ═══════════════════════════════════════════════════════════════════════════
-function _log(msg) {
-  const line = `${new Date().toISOString()} ${msg}\n`;
-  console.log('[SENTRY]', msg);
-  fs.appendFile(SENTRY_LOG, line, () => {}); // Async, non-blocking
-}
+const log = createLogger('sentry', { logFile: SENTRY_LOG });
 
 let eventBuffer = [];
 function todayFile() { return path.join(EVENTS_DIR, new Date().toISOString().slice(0, 10) + '.ndjson'); }
@@ -57,7 +54,7 @@ setInterval(() => {
   const toWrite = eventBuffer.join('\n') + '\n';
   eventBuffer = []; 
   fs.appendFile(todayFile(), toWrite, 'utf8', (err) => {
-    if (err) _log(`File write error: ${err.message}`);
+    if (err) log.error('File write error', { error: err.message });
   });
 }, 30000);
 
@@ -103,14 +100,14 @@ function startReceiver() {
 
           appendEvents(valid);
           _eventsSinceLastAnalysis += valid.length;
-          _log(`Received ${valid.length} event(s).`);
+          log.info('Events received', { count: valid.length });
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ accepted: valid.map(e => e.eventId) }));
 
           if (_eventsSinceLastAnalysis >= ANALYSE_AFTER_N && Date.now() - lastAnalysisAttempt > MIN_MS_BETWEEN_ANALYSIS) {
             lastAnalysisAttempt = Date.now();
-            setImmediate(() => runAnalysis().catch(e => _log(`Analysis error: ${e.message}`)));
+            setImmediate(() => runAnalysis().catch(e => log.error('Analysis error', { error: e.message })));
           }
         } catch (e) { res.writeHead(400); res.end(); }
       });
@@ -118,7 +115,7 @@ function startReceiver() {
     }
     res.writeHead(404); res.end();
   });
-  server.listen(PORT, '0.0.0.0', () => _log(`Receiver listening on port ${PORT}`));
+  server.listen(PORT, '0.0.0.0', () => log.info('Receiver listening', { port: PORT }));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -144,7 +141,7 @@ function _computeConfidence(chiSquare, n, nMin) {
 }
 
 async function runAnalysis() {
-  _log('Starting O(1) Incremental Analysis...');
+  log.info('Starting O(1) Incremental Analysis');
   _eventsSinceLastAnalysis = 0;
 
   const state = loadJSON(SENTRY_STATE, { cursors: {} });
@@ -202,11 +199,11 @@ async function runAnalysis() {
 
         state.cursors[file] = i + 1;
         eventsProcessed++;
-      } catch (e) {} // Skip bad JSON
+      } catch (e) { log.warn('Skipping malformed event', { file, error: e.message }); }
     }
   });
 
-  if (eventsProcessed === 0) { _log('No new events to process.'); return; }
+  if (eventsProcessed === 0) { log.info('No new events to process'); return; }
 
   // Save State
   fs.writeFileSync(SENTRY_STATE, JSON.stringify(state, null, 2));
@@ -220,7 +217,7 @@ async function runAnalysis() {
     vector: allSkills.map(s => (skills[s] || 0) >= MASTERY_THRESHOLD ? 1 : 0)
   }));
 
-  if (vectors.length < 20) { _log('Cohort too small for graph building.'); return; }
+  if (vectors.length < 20) { log.info('Cohort too small for graph building', { size: vectors.length }); return; }
 
   const clusters = [];
   vectors.forEach(({ pseudoId, vector }) => {
@@ -301,12 +298,12 @@ async function runAnalysis() {
   };
 
   fs.writeFileSync(GRAPH_WEIGHTS, JSON.stringify(gw, null, 2));
-  _log(`Analysis done. Processed ${eventsProcessed} new events. Generated ${edges.length} edges.`);
+  log.info('Analysis complete', { eventsProcessed, edges: edges.length });
 }
 
 if (require.main === module) {
   ensureDirs();
   startReceiver();
-  runAnalysis().catch(e => _log(`Startup error: ${e.message}`));
-  setInterval(() => runAnalysis().catch(e => _log(`Scheduled error: ${e.message}`)), MIN_MS_BETWEEN_ANALYSIS);
+  runAnalysis().catch(e => log.error('Startup analysis error', { error: e.message }));
+  setInterval(() => runAnalysis().catch(e => log.error('Scheduled analysis error', { error: e.message })), MIN_MS_BETWEEN_ANALYSIS);
 }

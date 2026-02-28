@@ -38,6 +38,7 @@ var thompson = require('./thompson');
 var federation = require('./federation');
 var math = require('./math');
 var migrations = require('./migrations');
+var log = require('../utils/logger').createLogger('lms-engine');
 // ── Paths ─────────────────────────────────────────────────────────────────────
 var DATA_DIR = process.env.AGNI_DATA_DIR || path.join(__dirname, '../../data');
 var STATE_PATH = path.join(DATA_DIR, 'lms_state.json');
@@ -91,7 +92,7 @@ function buildDefaultState() {
  */
 function loadState() {
     if (!fs.existsSync(STATE_PATH)) {
-        console.log('[LMS] No state file found — starting fresh');
+        log.info('No state file found — starting fresh');
         return buildDefaultState();
     }
     try {
@@ -100,19 +101,19 @@ function loadState() {
         var migratedResult = migrations.migrateLMSState(parsed, { embeddingDim: DEFAULT_EMBEDDING_DIM });
         var state = migratedResult.state;
         if (migratedResult.migrated) {
-            console.log('[LMS] State repaired (schema migration applied) — saving');
+            log.info('State repaired (schema migration applied) — saving');
             saveState(state);
         }
-        console.log('[LMS] State loaded:', STATE_PATH, '— students:', Object.keys(state.rasch.students).length, 'lessons:', Object.keys(state.embedding.lessons).length, 'observations:', state.bandit.observationCount);
+        log.info('State loaded', { path: STATE_PATH, students: Object.keys(state.rasch.students).length, lessons: Object.keys(state.embedding.lessons).length, observations: state.bandit.observationCount });
         return state;
     }
     catch (err) {
         var msg = err instanceof Error ? err.message : String(err);
-        console.error('[LMS] Failed to parse state file:', msg, '— starting fresh. Corrupted file preserved at:', STATE_PATH + '.bak');
+        log.error('Failed to parse state file — starting fresh', { error: msg, backup: STATE_PATH + '.bak' });
         try {
             fs.copyFileSync(STATE_PATH, STATE_PATH + '.bak');
         }
-        catch (_) { }
+        catch (backupErr) { log.error('Failed to backup corrupted state file', { error: backupErr.message }); }
         return buildDefaultState();
     }
 }
@@ -132,11 +133,15 @@ function saveState(state) {
     catch (err) {
         var msg = err instanceof Error ? err.message : String(err);
         // Do not re-throw — a save failure should not crash the hub API call
-        console.error('[LMS] Failed to save state:', msg);
+        log.error('Failed to save state', { error: msg });
     }
 }
-// ── Module-level state (loaded once at require() time) ────────────────────────
-var _state = loadState();
+// ── Module-level state (lazy-loaded on first access) ──────────────────────────
+var _state = null;
+function getState() {
+    if (!_state) _state = loadState();
+    return _state;
+}
 // ═══════════════════════════════════════════════════════════════════════════
 // Lesson seeding
 // ═══════════════════════════════════════════════════════════════════════════
@@ -154,11 +159,11 @@ var _state = loadState();
  * @param {string} skill       primary skill from ontology.provides[0].skill
  */
 function seedLesson(lessonId, difficulty, skill) {
-    embeddings.ensureLessonVector(_state, lessonId);
-    if (!_state.rasch.probes[lessonId]) {
-        // Map 1–5 difficulty to logit scale: difficulty 3 = 0 logits (average)
-        var logitDifficulty = (difficulty - 3) * 1; // [1,5] → [−2,+2]
-        _state.rasch.probes[lessonId] = {
+    var state = getState();
+    embeddings.ensureLessonVector(state, lessonId);
+    if (!state.rasch.probes[lessonId]) {
+        var logitDifficulty = (difficulty - 3) * 1;
+        state.rasch.probes[lessonId] = {
             difficulty: logitDifficulty,
             skill: skill
         };
@@ -171,17 +176,18 @@ function seedLesson(lessonId, difficulty, skill) {
  * @param {{ lessonId: string, difficulty: number, skill: string }[]} lessons
  */
 function seedLessons(lessons) {
+    var state = getState();
     var seeded = 0;
     for (var i = 0; i < lessons.length; i++) {
         var entry = lessons[i];
-        var wasNew = !_state.embedding.lessons[entry.lessonId];
+        var wasNew = !state.embedding.lessons[entry.lessonId];
         seedLesson(entry.lessonId, entry.difficulty, entry.skill);
         if (wasNew)
             seeded++;
     }
     if (seeded > 0) {
-        saveState(_state);
-        console.log('[LMS] Seeded', seeded, 'new lesson(s)');
+        saveState(state);
+        log.info('Seeded new lessons', { count: seeded });
     }
 }
 // ═══════════════════════════════════════════════════════════════════════════
@@ -205,9 +211,8 @@ function seedLessons(lessons) {
 function selectBestLesson(studentId, candidates) {
     if (!candidates || candidates.length === 0)
         return null;
-    // Temporarily restrict embedding.lessons to the candidate set so that
-    // selectLesson() only scores lessons theta has deemed eligible.
-    var fullLessons = _state.embedding.lessons;
+    var state = getState();
+    var fullLessons = state.embedding.lessons;
     var filteredLessons = {};
     for (var i = 0; i < candidates.length; i++) {
         var id = candidates[i];
@@ -215,14 +220,13 @@ function selectBestLesson(studentId, candidates) {
             filteredLessons[id] = fullLessons[id];
         }
         else {
-            // Candidate not yet in embedding — initialize on the fly
-            embeddings.ensureLessonVector(_state, id);
-            filteredLessons[id] = _state.embedding.lessons[id];
+            embeddings.ensureLessonVector(state, id);
+            filteredLessons[id] = state.embedding.lessons[id];
         }
     }
-    _state.embedding.lessons = filteredLessons;
-    var selected = thompson.selectLesson(_state, studentId);
-    _state.embedding.lessons = fullLessons;
+    state.embedding.lessons = filteredLessons;
+    var selected = thompson.selectLesson(state, studentId);
+    state.embedding.lessons = fullLessons;
     return selected;
 }
 /**
@@ -250,7 +254,7 @@ function applyObservation(state, observation) {
  * @param {{ probeId: string, correct: boolean }[]} probeResults
  */
 function recordObservation(studentId, lessonId, probeResults) {
-    _state = applyObservation(_state, { studentId, lessonId, probeResults });
+    _state = applyObservation(getState(), { studentId, lessonId, probeResults });
     saveState(_state);
 }
 /**
@@ -260,15 +264,16 @@ function recordObservation(studentId, lessonId, probeResults) {
  * @returns {{ ability: number, variance: number }|null}
  */
 function getStudentAbility(studentId) {
-    return _state.rasch.students[studentId] || null;
+    return getState().rasch.students[studentId] || null;
 }
 /**
  * Export bandit summary for federation sync with a regional hub.
  * @returns {import('../types').BanditSummary}
  */
 function exportBanditSummary() {
-    thompson.ensureBanditInitialized(_state);
-    return federation.getBanditSummary(_state);
+    var state = getState();
+    thompson.ensureBanditInitialized(state);
+    return federation.getBanditSummary(state);
 }
 /**
  * Merge a remote bandit summary into the local state.
@@ -281,14 +286,15 @@ function exportBanditSummary() {
  * @param {import('../types').BanditSummary} remote
  */
 function mergeRemoteSummary(remote) {
-    thompson.ensureBanditInitialized(_state);
-    var local = federation.getBanditSummary(_state);
+    var state = getState();
+    thompson.ensureBanditInitialized(state);
+    var local = federation.getBanditSummary(state);
     var merged = federation.mergeBanditSummaries(local, remote);
-    _state.bandit.A = merged.precision;
-    _state.bandit.b = math.matVec(merged.precision, merged.mean);
-    _state.bandit.observationCount = merged.sampleSize;
-    saveState(_state);
-    console.log('[LMS] Remote summary merged — total observations:', merged.sampleSize);
+    state.bandit.A = merged.precision;
+    state.bandit.b = math.matVec(merged.precision, merged.mean);
+    state.bandit.observationCount = merged.sampleSize;
+    saveState(state);
+    log.info('Remote summary merged', { totalObservations: merged.sampleSize });
 }
 /**
  * Reload state from disk. Used when the state file has been modified
@@ -303,15 +309,19 @@ function reloadState() {
  * @returns {object}
  */
 function getStatus() {
+    var state = getState();
     return {
-        students: Object.keys(_state.rasch.students).length,
-        lessons: Object.keys(_state.embedding.lessons).length,
-        probes: Object.keys(_state.rasch.probes).length,
-        observations: _state.bandit.observationCount,
-        embeddingDim: _state.embedding.dim,
-        featureDim: _state.bandit.featureDim,
+        students: Object.keys(state.rasch.students).length,
+        lessons: Object.keys(state.embedding.lessons).length,
+        probes: Object.keys(state.rasch.probes).length,
+        observations: state.bandit.observationCount,
+        embeddingDim: state.embedding.dim,
+        featureDim: state.bandit.featureDim,
         statePath: STATE_PATH
     };
+}
+function persistState() {
+    if (_state) saveState(_state);
 }
 module.exports = {
     seedLessons,
@@ -322,6 +332,7 @@ module.exports = {
     exportBanditSummary,
     mergeRemoteSummary,
     reloadState,
+    persistState,
     getStatus
 };
 //# sourceMappingURL=index.js.map

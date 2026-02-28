@@ -154,34 +154,35 @@ describe('creator admin', () => {
 describe('student accounts', () => {
   let studentId;
 
-  it('createStudent returns a new student', () => {
-    const r = accounts.createStudent({ displayName: 'Charlie', pin: '1234' });
+  it('createStudent returns a new student', async () => {
+    const r = await accounts.createStudent({ displayName: 'Charlie', pin: '1234' });
     assert.ok(r.ok);
     assert.ok(r.student.pseudoId.startsWith('px-'));
     assert.equal(r.student.displayName, 'Charlie');
-    assert.ok(r.student.pinHash); // PIN is now hashed
+    assert.ok(r.student.pinHash);
+    assert.ok(r.student.pinSalt);
     assert.equal(r.student.active, true);
     studentId = r.student.pseudoId;
   });
 
-  it('createStudent works with no arguments', () => {
-    const r = accounts.createStudent();
+  it('createStudent works with no arguments', async () => {
+    const r = await accounts.createStudent();
     assert.ok(r.ok);
     assert.ok(r.student.pseudoId.startsWith('px-'));
     assert.equal(r.student.displayName, null);
     assert.equal(r.student.pinHash, null);
   });
 
-  it('createStudentsBulk creates multiple students', () => {
-    const r = accounts.createStudentsBulk({ names: ['Dana', 'Eve', 'Frank'], pin: '0000' });
+  it('createStudentsBulk creates multiple students', async () => {
+    const r = await accounts.createStudentsBulk({ names: ['Dana', 'Eve', 'Frank'], pin: '0000' });
     assert.ok(r.ok);
     assert.equal(r.count, 3);
     assert.equal(r.students.length, 3);
     assert.equal(r.students[0].displayName, 'Dana');
   });
 
-  it('createStudentsBulk rejects empty names', () => {
-    const r = accounts.createStudentsBulk({ names: [] });
+  it('createStudentsBulk rejects empty names', async () => {
+    const r = await accounts.createStudentsBulk({ names: [] });
     assert.ok(r.error);
   });
 
@@ -200,15 +201,16 @@ describe('student accounts', () => {
     assert.equal(accounts.getStudent('px-nonexistent'), null);
   });
 
-  it('updateStudent modifies name and pin', () => {
-    const r = accounts.updateStudent(studentId, { displayName: 'Charles', pin: '5678' });
+  it('updateStudent modifies name and pin', async () => {
+    const r = await accounts.updateStudent(studentId, { displayName: 'Charles', pin: '5678' });
     assert.ok(r.ok);
     assert.equal(r.student.displayName, 'Charles');
-    assert.ok(r.student.pinHash); // PIN is hashed
+    assert.ok(r.student.pinHash);
+    assert.ok(r.student.pinSalt);
   });
 
-  it('updateStudent can deactivate', () => {
-    const r = accounts.updateStudent(studentId, { active: false });
+  it('updateStudent can deactivate', async () => {
+    const r = await accounts.updateStudent(studentId, { active: false });
     assert.ok(r.ok);
     assert.equal(r.student.active, false);
   });
@@ -220,8 +222,8 @@ describe('transfer tokens', () => {
   let studentId;
   let transferCode;
 
-  before(() => {
-    const r = accounts.createStudent({ displayName: 'Transfer Test' });
+  before(async () => {
+    const r = await accounts.createStudent({ displayName: 'Transfer Test' });
     studentId = r.student.pseudoId;
   });
 
@@ -263,30 +265,30 @@ describe('transfer tokens', () => {
 describe('verifyStudentPin', () => {
   let studentId;
 
-  before(() => {
-    const r = accounts.createStudent({ displayName: 'Pin Test', pin: '9999' });
+  before(async () => {
+    const r = await accounts.createStudent({ displayName: 'Pin Test', pin: '9999' });
     studentId = r.student.pseudoId;
   });
 
-  it('returns verified for correct PIN', () => {
-    const r = accounts.verifyStudentPin(studentId, '9999');
+  it('returns verified for correct PIN', async () => {
+    const r = await accounts.verifyStudentPin(studentId, '9999');
     assert.ok(r.ok);
     assert.ok(r.verified);
   });
 
-  it('returns not verified for wrong PIN', () => {
-    const r = accounts.verifyStudentPin(studentId, '0000');
+  it('returns not verified for wrong PIN', async () => {
+    const r = await accounts.verifyStudentPin(studentId, '0000');
     assert.ok(!r.verified);
   });
 
-  it('returns verified for student with no PIN', () => {
-    const s = accounts.createStudent({ displayName: 'No Pin' });
-    const r = accounts.verifyStudentPin(s.student.pseudoId, 'anything');
+  it('returns verified for student with no PIN', async () => {
+    const s = await accounts.createStudent({ displayName: 'No Pin' });
+    const r = await accounts.verifyStudentPin(s.student.pseudoId, 'anything');
     assert.ok(r.verified);
   });
 
-  it('returns error for unknown student', () => {
-    const r = accounts.verifyStudentPin('px-ghost', '1234');
+  it('returns error for unknown student', async () => {
+    const r = await accounts.verifyStudentPin('px-ghost', '1234');
     assert.ok(r.error);
   });
 });
