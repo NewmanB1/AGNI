@@ -46,7 +46,6 @@
     "src/runtime/table-renderer.js"
   ],
   "ignoreDependencies": [
-    "express",
     "remark-html",
     "ajv-formats",
     "remark-rehype",

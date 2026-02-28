@@ -1,13 +1,36 @@
 /* portal/src/app.css - global AGNI theme */
 
+/* ── Theme tokens ──────────────────────────────────────────────────────────── */
 :root {
   --bg: #1a1a2e;
   --card: #16213e;
   --accent: #00e676;
   --text: #e0e0e0;
   --border: #2a2a4a;
+  --input-bg: #1f2b4e;
+  --success: #4ade80;
+  --warning: #ffaa00;
+  --danger: #ff5252;
+  --muted: #666;
 }
 
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f5f5f5;
+    --card: #ffffff;
+    --accent: #00c853;
+    --text: #1a1a2e;
+    --border: #ddd;
+    --input-bg: #f0f0f0;
+    --success: #2e7d32;
+    --warning: #ef6c00;
+    --danger: #c62828;
+    --muted: #999;
+  }
+  h1, h2, h3 { color: #1a1a2e; }
+}
+
+/* ── Reset ─────────────────────────────────────────────────────────────────── */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -26,6 +49,7 @@ h1, h2, h3 {
   color: #ffffff;
 }
 
+/* ── Shared card ───────────────────────────────────────────────────────────── */
 .card {
   background: var(--card);
   border-radius: 12px;
@@ -34,11 +58,144 @@ h1, h2, h3 {
   border: 1px solid var(--border);
 }
 
+/* ── Links ─────────────────────────────────────────────────────────────────── */
 a {
   color: var(--accent);
   text-decoration: none;
 }
-
 a:hover {
   text-decoration: underline;
+}
+
+/* ── Shared button styles ──────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.95rem;
+  background: var(--card);
+  color: var(--text);
+  transition: background 0.15s, transform 0.1s;
+}
+.btn:hover { background: var(--border); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:active { transform: scale(0.97); }
+
+.btn-primary {
+  background: var(--accent);
+  color: #1a1a2e;
+  border-color: var(--accent);
+}
+.btn-primary:hover { opacity: 0.9; background: var(--accent); }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.btn-secondary:hover { background: rgba(0, 230, 118, 0.1); }
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+.btn-danger:hover { opacity: 0.9; }
+
+.btn-sm { padding: 0.3rem 0.7rem; font-size: 0.85rem; }
+
+/* ── Shared input styles ───────────────────────────────────────────────────── */
+.input, input[type="text"], input[type="email"], input[type="password"],
+input[type="url"], input[type="number"], input[type="search"], select, textarea {
+  padding: 0.6rem 0.8rem;
+  background: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  width: 100%;
+}
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: var(--accent);
+}
+
+/* ── Shared status boxes ───────────────────────────────────────────────────── */
+.warning-box {
+  border-color: var(--warning);
+  background: rgba(255, 170, 0, 0.08);
+}
+.error-box {
+  border-color: var(--danger);
+  background: rgba(255, 82, 82, 0.08);
+  color: var(--danger);
+}
+.success-box {
+  border-color: var(--success);
+  background: rgba(74, 222, 128, 0.08);
+}
+
+/* ── Status dots ───────────────────────────────────────────────────────────── */
+.status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.status-dot[data-status="on-track"] { background: var(--success); }
+.status-dot[data-status="moderate"] { background: var(--warning); }
+.status-dot[data-status="struggling"] { background: var(--danger); }
+.status-dot[data-status="unknown"] { background: var(--muted); }
+
+/* ── Accessible focus ──────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Skip-to-content ───────────────────────────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: #1a1a2e;
+  border-radius: 0 0 6px 6px;
+  z-index: 10000;
+  font-weight: bold;
+  text-decoration: none;
+}
+.skip-link:focus {
+  top: 0;
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Responsive breakpoints ────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  body { font-size: 0.9rem; }
+  .card { padding: 1rem; }
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.25rem; }
+}
+
+@media (max-width: 480px) {
+  body { font-size: 0.85rem; }
+  .card { padding: 0.75rem; margin: 0.5rem 0; }
+  .btn { padding: 0.5rem 0.8rem; font-size: 0.85rem; }
 }

@@ -1,3 +1,41 @@
 dist/
 node_modules/
 .vs/
+
+# Environment files
+.env
+.env.*
+!.env.example
+agni.env
+
+# Sensitive data files (contain password hashes, session tokens, PINs)
+data/creator_accounts.json
+data/sessions.json
+data/student_accounts.json
+
+# Cryptographic keys
+*.pem
+*.key
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Test output
+coverage/
+test-output.txt
+temp.json
+
+# Build artifacts
+serve/

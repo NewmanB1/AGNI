@@ -198,6 +198,129 @@ export interface ParentChildProgress {
   currentOverride: string | null;
 }
 
+export interface StreakResponse {
+  currentStreak: number;
+  longestStreak: number;
+  totalSessions: number;
+  todayCount: number;
+  dailyGoal: number;
+  goalMet: boolean;
+  dates: string[];
+}
+
+export interface LearningPath {
+  id: string;
+  name: string;
+  description: string;
+  skills: string[];
+  createdAt?: string;
+  createdBy?: string;
+  progress?: { completed: number; total: number; pct: number };
+}
+
+export interface LearningPathsResponse {
+  paths: LearningPath[];
+}
+
+export interface LearningPathDetail extends LearningPath {
+  steps: Array<{
+    skill: string;
+    mastered: boolean;
+    masteryLevel: number;
+    suggestedLesson: { lessonId: string; slug: string; title: string; difficulty: number } | null;
+  }>;
+  progress: { completed: number; total: number; pct: number };
+}
+
+export interface DiagnosticProbe {
+  probeId: string;
+  skill: string;
+  difficulty: number;
+  question: string;
+  type: string;
+  options: string[];
+}
+
+export interface DiagnosticProbesResponse {
+  probes: DiagnosticProbe[];
+}
+
+export interface DiagnosticResult {
+  ok: boolean;
+  ability: number;
+  skillsBootstrapped: number;
+}
+
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  earned: boolean;
+}
+
+export interface BadgesResponse {
+  pseudoId: string;
+  badges: Badge[];
+  stats: { lessons: number; skills: number; longestStreak: number; totalSkills: number };
+}
+
+export interface CollabStatsResponse {
+  stats: Record<string, { activeCount: number; completedCount: number }>;
+}
+
+export interface StepAnalyticsEntry {
+  stepId: string;
+  type: string;
+  weight: number;
+  avgScore: number;
+  avgDurationMs: number;
+  avgAttempts: number;
+  passRate: number;
+  skipRate: number;
+  sampleSize: number;
+}
+
+export interface StepAnalyticsResponse {
+  lessonId: string;
+  steps: StepAnalyticsEntry[];
+  totalEvents: number;
+}
+
+export interface MasterySnapshot {
+  date: string;
+  lessonId: string;
+  mastery: number;
+  runningAvgMastery: number;
+  masteredCount: number;
+  masteryPct: number;
+}
+
+export interface MasteryHistoryResponse {
+  pseudoId: string;
+  snapshots: MasterySnapshot[];
+  totalLessons: number;
+}
+
+export interface SkillGraphNode {
+  id: string;
+  level: number;
+  mastery: number;
+  lessonIds: string[];
+}
+
+export interface SkillGraphEdge {
+  from: string;
+  to: string;
+  lessonId: string;
+}
+
+export interface SkillGraphResponse {
+  nodes: SkillGraphNode[];
+  edges: SkillGraphEdge[];
+  totalSkills: number;
+}
+
 // ─── Client ─────────────────────────────────────────────────────────────────
 
 function ensureTrailingSlash(base: string): string {
@@ -302,56 +425,56 @@ export function createHubApi(baseUrl: string) {
       return this.getLessons(filters);
     },
 
-    getStreaks(pseudoId: string): Promise<{ currentStreak: number; longestStreak: number; totalSessions: number; todayCount: number; dailyGoal: number; goalMet: boolean; dates: string[] }> {
-      return get<any>(`api/streaks?pseudoId=${encodeURIComponent(pseudoId)}`);
+    getStreaks(pseudoId: string): Promise<StreakResponse> {
+      return get<StreakResponse>(`api/streaks?pseudoId=${encodeURIComponent(pseudoId)}`);
     },
 
-    getLearningPaths(pseudoId?: string): Promise<{ paths: Array<{ id: string; name: string; description: string; skills: string[]; progress?: { completed: number; total: number; pct: number } }> }> {
+    getLearningPaths(pseudoId?: string): Promise<LearningPathsResponse> {
       const qs = pseudoId ? `?pseudoId=${encodeURIComponent(pseudoId)}` : '';
-      return get<any>(`api/learning-paths${qs}`);
+      return get<LearningPathsResponse>(`api/learning-paths${qs}`);
     },
 
-    getLearningPath(id: string, pseudoId?: string): Promise<any> {
+    getLearningPath(id: string, pseudoId?: string): Promise<LearningPathDetail> {
       const qs = pseudoId ? `?pseudoId=${encodeURIComponent(pseudoId)}` : '';
-      return get<any>(`api/learning-paths/${encodeURIComponent(id)}${qs}`);
+      return get<LearningPathDetail>(`api/learning-paths/${encodeURIComponent(id)}${qs}`);
     },
 
-    postLearningPath(body: { name: string; description?: string; skills: string[] }): Promise<{ ok: boolean; path: any }> {
-      return post<any>('api/learning-paths', body);
+    postLearningPath(body: { name: string; description?: string; skills: string[] }): Promise<{ ok: boolean; path: LearningPath }> {
+      return post<{ ok: boolean; path: LearningPath }>('api/learning-paths', body);
     },
 
-    putLearningPath(body: { id: string; name?: string; description?: string; skills?: string[] }): Promise<{ ok: boolean; path: any }> {
-      return put<any>('api/learning-paths', body);
+    putLearningPath(body: { id: string; name?: string; description?: string; skills?: string[] }): Promise<{ ok: boolean; path: LearningPath }> {
+      return put<{ ok: boolean; path: LearningPath }>('api/learning-paths', body);
     },
 
-    getDiagnosticProbes(): Promise<{ probes: Array<{ probeId: string; skill: string; difficulty: number; question: string; type: string; options: string[] }> }> {
-      return get<any>('api/diagnostic');
+    getDiagnosticProbes(): Promise<DiagnosticProbesResponse> {
+      return get<DiagnosticProbesResponse>('api/diagnostic');
     },
 
-    postDiagnostic(pseudoId: string, responses: Array<{ probeId: string; skill: string; difficulty: number; answer: number }>): Promise<{ ok: boolean; ability: number; skillsBootstrapped: number }> {
-      return post<any>('api/diagnostic', { pseudoId, responses });
+    postDiagnostic(pseudoId: string, responses: Array<{ probeId: string; skill: string; difficulty: number; answer: number }>): Promise<DiagnosticResult> {
+      return post<DiagnosticResult>('api/diagnostic', { pseudoId, responses });
     },
 
-    getBadges(pseudoId: string): Promise<{ pseudoId: string; badges: Array<{ id: string; name: string; description: string; icon: string; earned: boolean }>; stats: { lessons: number; skills: number; longestStreak: number; totalSkills: number } }> {
-      return get<any>(`api/badges?pseudoId=${encodeURIComponent(pseudoId)}`);
+    getBadges(pseudoId: string): Promise<BadgesResponse> {
+      return get<BadgesResponse>(`api/badges?pseudoId=${encodeURIComponent(pseudoId)}`);
     },
 
-    getCollabStats(lessonIds: string[]): Promise<{ stats: Record<string, { activeCount: number; completedCount: number }> }> {
+    getCollabStats(lessonIds: string[]): Promise<CollabStatsResponse> {
       const ids = lessonIds.join(',');
-      return get<any>(`api/collab/stats?lessonIds=${encodeURIComponent(ids)}`);
+      return get<CollabStatsResponse>(`api/collab/stats?lessonIds=${encodeURIComponent(ids)}`);
     },
 
-    getStepAnalytics(lessonId: string): Promise<{ lessonId: string; steps: any[]; totalEvents: number }> {
-      return get<any>(`api/step-analytics?lessonId=${encodeURIComponent(lessonId)}`);
+    getStepAnalytics(lessonId: string): Promise<StepAnalyticsResponse> {
+      return get<StepAnalyticsResponse>(`api/step-analytics?lessonId=${encodeURIComponent(lessonId)}`);
     },
 
-    getMasteryHistory(pseudoId: string): Promise<{ pseudoId: string; snapshots: any[]; totalLessons: number }> {
-      return get<any>(`api/mastery-history?pseudoId=${encodeURIComponent(pseudoId)}`);
+    getMasteryHistory(pseudoId: string): Promise<MasteryHistoryResponse> {
+      return get<MasteryHistoryResponse>(`api/mastery-history?pseudoId=${encodeURIComponent(pseudoId)}`);
     },
 
-    getSkillGraph(pseudoId?: string): Promise<{ nodes: any[]; edges: any[]; totalSkills: number }> {
+    getSkillGraph(pseudoId?: string): Promise<SkillGraphResponse> {
       const qs = pseudoId ? `?pseudoId=${encodeURIComponent(pseudoId)}` : '';
-      return get<any>(`api/skill-graph${qs}`);
+      return get<SkillGraphResponse>(`api/skill-graph${qs}`);
     },
 
     /** Phase 3: set or clear teacher recommendation override. */

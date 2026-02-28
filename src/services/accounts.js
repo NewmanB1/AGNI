@@ -30,15 +30,7 @@ const TRANSFER_TTL_MS = 48 * 60 * 60 * 1000; // 48h
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function loadJson(filepath, fallback) {
-  if (!fs.existsSync(filepath)) return fallback;
-  try { return JSON.parse(fs.readFileSync(filepath, 'utf8')); }
-  catch { return fallback; }
-}
-function saveJson(filepath, data) {
-  fs.mkdirSync(path.dirname(filepath), { recursive: true });
-  fs.writeFileSync(filepath, JSON.stringify(data, null, 2), 'utf8');
-}
+const { loadJSON: loadJson, saveJSON: saveJson } = require('../utils/json-store');
 
 function hashPassword(password, salt) {
   return new Promise((resolve, reject) => {
@@ -205,6 +197,11 @@ function generatePseudoId() {
   return 'px-' + bytes.toString('hex');
 }
 
+function hashPin(pin) {
+  if (!pin) return null;
+  return crypto.createHash('sha256').update(String(pin)).digest('hex');
+}
+
 /**
  * Create a student account (teacher creates on behalf of student).
  * No email or ID required — just an optional display name and PIN.
@@ -215,7 +212,7 @@ function createStudent({ displayName, pin, createdBy } = {}) {
   const student = {
     pseudoId,
     displayName: (displayName || '').trim() || null,
-    pin: pin || null,
+    pinHash: hashPin(pin),
     createdAt: new Date().toISOString(),
     createdBy: createdBy || null,
     transferToken: null,
@@ -242,7 +239,7 @@ function createStudentsBulk({ names, pin, createdBy } = {}) {
     const student = {
       pseudoId,
       displayName: (name || '').trim() || null,
-      pin: pin || null,
+      pinHash: hashPin(pin),
       createdAt: new Date().toISOString(),
       createdBy: createdBy || null,
       transferToken: null,
@@ -274,7 +271,7 @@ function updateStudent(pseudoId, updates) {
   const student = data.students.find(s => s.pseudoId === pseudoId);
   if (!student) return { error: 'Student not found' };
   if (updates.displayName !== undefined) student.displayName = updates.displayName;
-  if (updates.pin !== undefined) student.pin = updates.pin;
+  if (updates.pin !== undefined) student.pinHash = hashPin(updates.pin);
   if (updates.active !== undefined) student.active = !!updates.active;
   saveStudents(data);
   return { ok: true, student };
@@ -324,8 +321,13 @@ function verifyStudentPin(pseudoId, pin) {
   const data = loadStudents();
   const student = data.students.find(s => s.pseudoId === pseudoId);
   if (!student) return { error: 'Student not found' };
-  if (!student.pin) return { ok: true, verified: true };
-  if (String(student.pin) !== String(pin)) return { ok: false, verified: false };
+  // Support both legacy plaintext pins and new hashed pins
+  if (!student.pinHash && !student.pin) return { ok: true, verified: true };
+  if (student.pinHash) {
+    if (hashPin(pin) !== student.pinHash) return { ok: false, verified: false };
+  } else if (String(student.pin) !== String(pin)) {
+    return { ok: false, verified: false };
+  }
   return { ok: true, verified: true };
 }
 

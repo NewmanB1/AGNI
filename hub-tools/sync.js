@@ -13,19 +13,8 @@ const https = require('https');
 const http = require('http');
 
 // ── Hub config bootstrap (F1) ───────────────────────────────────────────────
-(function loadHubConfig() {
-  const cfgPath = path.join(__dirname, '../data/hub_config.json');
-  if (fs.existsSync(cfgPath)) {
-    try {
-      const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
-      if (cfg.dataDir) process.env.AGNI_DATA_DIR = cfg.dataDir;
-      if (cfg.hubId) process.env.AGNI_HUB_ID = cfg.hubId;
-      if (cfg.homeUrl) process.env.AGNI_HOME_URL = cfg.homeUrl;
-      if (cfg.usbPath) process.env.AGNI_USB_PATH = cfg.usbPath;
-      if (cfg.syncTransport) process.env.AGNI_SYNC_TRANSPORT = cfg.syncTransport;
-    } catch (e) { /* ignore */ }
-  }
-})();
+const { loadHubConfig } = require('../src/utils/hub-config');
+loadHubConfig(path.join(__dirname, '../data'));
 
 // ── Configuration ──────────────────────────────────────────────────────────
 const DATA_DIR = process.env.AGNI_DATA_DIR || path.join(__dirname, '../data');

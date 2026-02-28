@@ -1,7 +1,7 @@
 // src/runtime/player.js
 // AGNI / OLS Runtime – Android 6.0 Marshmallow compatible + emulator support
 
-window.DEV_MODE = true;  // TODO: make this configurable via build flag / env
+window.DEV_MODE = (typeof __AGNI_DEV__ !== 'undefined') ? __AGNI_DEV__ : false;
 
 const IS_OLD_ANDROID = /Android [456]\./.test(navigator.userAgent) ||
                        /Android 6\.0/.test(navigator.userAgent);

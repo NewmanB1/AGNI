@@ -8,16 +8,8 @@ const http = require('http');
 const crypto = require('crypto');
 
 // ── Hub config bootstrap (F1) ───────────────────────────────────────────────
-(function loadHubConfig() {
-  const cfgPath = path.join(__dirname, '../data/hub_config.json');
-  if (fs.existsSync(cfgPath)) {
-    try {
-      const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
-      if (cfg.dataDir) process.env.AGNI_DATA_DIR = cfg.dataDir;
-      if (cfg.sentryPort != null) process.env.AGNI_SENTRY_PORT = String(cfg.sentryPort);
-    } catch (e) { /* ignore */ }
-  }
-})();
+const { loadHubConfig } = require('../src/utils/hub-config');
+loadHubConfig(path.join(__dirname, '../data'));
 
 // ── Configuration ──────────────────────────────────────────────────────────
 const DATA_DIR = process.env.AGNI_DATA_DIR || path.join(__dirname, '../data');
@@ -132,10 +124,7 @@ function startReceiver() {
 // ═══════════════════════════════════════════════════════════════════════════
 // 3. O(1) Memory Graph Engine & Analysis
 // ═══════════════════════════════════════════════════════════════════════════
-function loadJSON(fp, fallback) {
-  try { return fs.existsSync(fp) ? JSON.parse(fs.readFileSync(fp, 'utf8')) : fallback; } 
-  catch { return fallback; }
-}
+const { loadJSON } = require('../src/utils/json-store');
 
 function jaccardSimilarity(a, centroid) {
   let intersection = 0, union = 0;

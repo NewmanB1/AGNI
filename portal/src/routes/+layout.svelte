@@ -23,6 +23,7 @@
   const isParent = $derived($page.url.pathname.startsWith('/parent'));
 
   let reviewBadge = $state(0);
+  let mobileMenuOpen = $state(false);
 
   async function checkReviews() {
     try {
@@ -32,8 +33,8 @@
       reviewBadge = (reviews.due || []).length;
 
       if (reviewBadge > 0 && 'Notification' in window && Notification.permission === 'granted') {
-        new Notification('AGNI: Reviews Due', {
-          body: `You have ${reviewBadge} lesson review(s) due. Open the Learn tab to review.`,
+        new Notification(tr('notification.reviews_title'), {
+          body: tr('notification.reviews_body', { count: reviewBadge }),
           tag: 'agni-review-reminder'
         });
       }
@@ -49,28 +50,38 @@
   });
 </script>
 
+<a href="#main-content" class="skip-link">Skip to content</a>
+
 <header class="app-header" role="banner">
   <a href="/" class="logo">AGNI Portal</a>
-  <nav aria-label="Main navigation">
-    <a href="/">Home</a>
-    <a href="/learn" class:active={isLearn}>
+  <button
+    class="mobile-menu-toggle"
+    aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+    aria-expanded={mobileMenuOpen}
+    onclick={() => mobileMenuOpen = !mobileMenuOpen}
+  >
+    <span class="hamburger" class:open={mobileMenuOpen}></span>
+  </button>
+  <nav aria-label="Main navigation" class:mobile-open={mobileMenuOpen}>
+    <a href="/" onclick={() => mobileMenuOpen = false}>Home</a>
+    <a href="/learn" class:active={isLearn} onclick={() => mobileMenuOpen = false}>
       {tr('nav.learn')}
       {#if reviewBadge > 0}<span class="review-badge" aria-label="{reviewBadge} reviews due">{reviewBadge}</span>{/if}
     </a>
-    <a href="/hub" class:active={isHub}>{tr('nav.hub')}</a>
-    <a href="/groups" class:active={isGroups}>{tr('nav.groups')}</a>
-    <a href="/students" class:active={isStudents}>{tr('nav.students')}</a>
-    <a href="/author/login" class:active={isAuthor}>Author</a>
-    <a href="/parent/dashboard" class:active={isParent}>Parent</a>
-    <a href="/governance/setup" class:active={isGovernance}>{tr('nav.governance')}</a>
-    <a href="/admin/hub" class:active={isAdmin}>Admin</a>
-    <a href="/settings" class:active={isSettings}>{tr('nav.settings')}</a>
+    <a href="/hub" class:active={isHub} onclick={() => mobileMenuOpen = false}>{tr('nav.hub')}</a>
+    <a href="/groups" class:active={isGroups} onclick={() => mobileMenuOpen = false}>{tr('nav.groups')}</a>
+    <a href="/students" class:active={isStudents} onclick={() => mobileMenuOpen = false}>{tr('nav.students')}</a>
+    <a href="/author/login" class:active={isAuthor} onclick={() => mobileMenuOpen = false}>{tr('nav.author')}</a>
+    <a href="/parent/dashboard" class:active={isParent} onclick={() => mobileMenuOpen = false}>{tr('nav.parent')}</a>
+    <a href="/governance/setup" class:active={isGovernance} onclick={() => mobileMenuOpen = false}>{tr('nav.governance')}</a>
+    <a href="/admin/hub" class:active={isAdmin} onclick={() => mobileMenuOpen = false}>{tr('nav.admin')}</a>
+    <a href="/settings" class:active={isSettings} onclick={() => mobileMenuOpen = false}>{tr('nav.settings')}</a>
   </nav>
 </header>
 
 <HubSetupPrompt />
 
-<main>
+<main id="main-content">
   <slot />
 </main>
 
@@ -82,6 +93,7 @@
     padding: 0.5rem 1rem;
     margin-bottom: 1rem;
     border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
   }
 
   .logo {
@@ -89,6 +101,37 @@
     color: var(--accent);
     text-decoration: none;
   }
+
+  .mobile-menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+  }
+
+  .hamburger {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: var(--text);
+    position: relative;
+    transition: background 0.2s;
+  }
+  .hamburger::before, .hamburger::after {
+    content: '';
+    position: absolute;
+    width: 24px;
+    height: 2px;
+    background: var(--text);
+    left: 0;
+    transition: transform 0.2s;
+  }
+  .hamburger::before { top: -7px; }
+  .hamburger::after { top: 7px; }
+  .hamburger.open { background: transparent; }
+  .hamburger.open::before { transform: rotate(45deg); top: 0; }
+  .hamburger.open::after { transform: rotate(-45deg); top: 0; }
 
   .app-header nav {
     display: flex;
@@ -120,8 +163,27 @@
   .review-badge {
     display: inline-flex; align-items: center; justify-content: center;
     min-width: 18px; height: 18px; padding: 0 4px;
-    background: #ff5252; color: #fff; border-radius: 9px;
+    background: var(--danger); color: #fff; border-radius: 9px;
     font-size: 0.7rem; font-weight: bold; margin-left: 3px;
     vertical-align: super;
+  }
+
+  @media (max-width: 768px) {
+    .mobile-menu-toggle { display: block; }
+
+    .app-header nav {
+      display: none;
+      width: 100%;
+      flex-direction: column;
+      gap: 0;
+      padding-top: 0.5rem;
+    }
+
+    .app-header nav.mobile-open { display: flex; }
+
+    .app-header nav a {
+      padding: 0.6rem 0.5rem;
+      border-top: 1px solid var(--border);
+    }
   }
 </style>

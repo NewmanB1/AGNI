@@ -23,31 +23,8 @@ const http = require('http');
 const zlib = require('zlib');
 
 // -- Hub config bootstrap (A1) ------------------------------------------------
-// Load data/hub_config.json if present; apply to process.env before any module reads paths/ports.
-(function loadHubConfig() {
-  const cfgPath = path.join(__dirname, '../data/hub_config.json');
-  if (fs.existsSync(cfgPath)) {
-    try {
-      const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
-      if (cfg.dataDir) process.env.AGNI_DATA_DIR = cfg.dataDir;
-      if (cfg.serveDir) process.env.AGNI_SERVE_DIR = cfg.serveDir;
-      if (cfg.thetaPort != null) process.env.AGNI_THETA_PORT = String(cfg.thetaPort);
-      if (cfg.approvedCatalog) process.env.AGNI_APPROVED_CATALOG = cfg.approvedCatalog;
-      if (cfg.minLocalSample != null) process.env.AGNI_MIN_LOCAL_SAMPLE = String(cfg.minLocalSample);
-      if (cfg.minLocalEdges != null) process.env.AGNI_MIN_LOCAL_EDGES = String(cfg.minLocalEdges);
-      if (cfg.yamlDir) process.env.AGNI_YAML_DIR = cfg.yamlDir;
-      if (cfg.factoryDir) process.env.AGNI_FACTORY_DIR = cfg.factoryDir;
-      if (cfg.katexDir) process.env.AGNI_KATEX_DIR = cfg.katexDir;
-      if (cfg.servePort != null) process.env.AGNI_SERVE_PORT = String(cfg.servePort);
-      if (cfg.cacheMax != null) process.env.AGNI_CACHE_MAX = String(cfg.cacheMax);
-      if (cfg.hubId) process.env.AGNI_HUB_ID = cfg.hubId;
-      if (cfg.homeUrl) process.env.AGNI_HOME_URL = cfg.homeUrl;
-      if (cfg.usbPath) process.env.AGNI_USB_PATH = cfg.usbPath;
-      if (cfg.sentryPort != null) process.env.AGNI_SENTRY_PORT = String(cfg.sentryPort);
-      if (cfg.syncTransport) process.env.AGNI_SYNC_TRANSPORT = cfg.syncTransport;
-    } catch (e) { /* ignore */ }
-  }
-})();
+const { loadHubConfig } = require('../src/utils/hub-config');
+loadHubConfig(path.join(__dirname, '../data'));
 
 const lmsService = require('../src/services/lms');
 const governanceService = require('../src/services/governance');
@@ -109,16 +86,13 @@ const sharedCache = {
   eligibleMtime:   0
 };
 
-// -- Helpers -----------------------------------------------------------------
-function getFileMtime(filePath) {
-  try { if (fs.existsSync(filePath)) return fs.statSync(filePath).mtimeMs; } catch {}
-  return 0;
-}
+// -- Shared utilities --------------------------------------------------------
+const { loadJSON, saveJSON, getFileMtime } = require('../src/utils/json-store');
+const { createLogger } = require('../src/utils/logger');
+const { readBody, handleJsonBody, createResponseSender, extractBearerToken, safeErrorMessage, checkAuthRateLimit, generateRequestId } = require('../src/utils/http-helpers');
+const { computeStreaks, collectReviewDates } = require('../src/utils/streak');
 
-function loadJSON(filePath, fallback = {}) {
-  if (!fs.existsSync(filePath)) return fallback;
-  try { return JSON.parse(fs.readFileSync(filePath, 'utf8')); } catch (e) { return fallback; }
-}
+const log = createLogger('theta');
 
 // -- Effective Graph Selection -----------------------------------------------
 function getEffectiveGraphWeights() {
@@ -629,51 +603,24 @@ function rebuildLessonIndex() {
 // -- HTTP API with Gzip -------------------------------------------------------
 
 /**
- * Read the full request body as a string. Returns a Promise<string>.
- * Used by POST routes that need a JSON body.
+ * Require admin authentication for sensitive routes.
+ * Returns the creator profile or sends 401 and returns null.
  */
-function readBody(req) {
-  return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', chunk => { body += chunk; });
-    req.on('end',  () => resolve(body));
-    req.on('error', reject);
-  });
-}
-
-/**
- * Parse JSON body from request and pass the result to a handler.
- * Eliminates the repeated readBody → JSON.parse → try/catch boilerplate.
- * The handler receives (payload, sendResponse) and can throw freely.
- */
-function handleJsonBody(req, sendResponse, handler) {
-  readBody(req).then(body => {
-    try {
-      const payload = JSON.parse(body || '{}');
-      handler(payload);
-    } catch (err) {
-      sendResponse(500, { error: err.message || 'Internal error' });
-    }
-  }).catch(err => sendResponse(500, { error: err.message }));
+function requireAdmin(req, qs, sendResponse) {
+  const token = extractBearerToken(req, qs);
+  const creator = accountsService.validateSession(token);
+  if (!creator) {
+    sendResponse(401, { error: 'Authentication required' });
+    return null;
+  }
+  return creator;
 }
 
 function startApi(port) {
   const listenPort = (typeof port === 'number' && port >= 0) ? port : PORT;
   const server = http.createServer((req, res) => {
-    const sendResponse = (statusCode, payload) => {
-      const jsonStr = JSON.stringify(payload);
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Content-Type', 'application/json');
-
-      if (req.headers['accept-encoding']?.includes('gzip') && jsonStr.length > 1000) {
-        res.setHeader('Content-Encoding', 'gzip');
-        res.writeHead(statusCode);
-        res.end(zlib.gzipSync(Buffer.from(jsonStr)));
-      } else {
-        res.writeHead(statusCode);
-        res.end(jsonStr);
-      }
-    };
+    const requestId = generateRequestId();
+    const sendResponse = createResponseSender(req, res, { requestId });
 
     const [urlPath, queryStr] = req.url.split('?');
     const qs = Object.fromEntries(new URLSearchParams(queryStr || ''));
@@ -874,7 +821,7 @@ function startApi(port) {
           candidates: candidates.length
         });
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -948,7 +895,7 @@ function startApi(port) {
           recentLessons: history
         });
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -967,7 +914,7 @@ function startApi(port) {
           dropoutBottlenecks: lmsEngine.getDropoutBottlenecks(minSample)
         });
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -979,7 +926,7 @@ function startApi(port) {
         const report = governanceService.aggregateCohortCoverage(lessonIndex, masterySummary);
         return sendResponse(200, report);
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -988,7 +935,7 @@ function startApi(port) {
         const policy = governanceService.loadPolicy();
         return sendResponse(200, policy || {});
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -999,7 +946,7 @@ function startApi(port) {
         const utu = loadJSON(utuPath, { protocols: [], spineIds: [], spines: {}, bands: [] });
         return sendResponse(200, utu);
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -1012,8 +959,9 @@ function startApi(port) {
       return;
     }
 
-    // PUT /api/governance/policy — save policy (configuration wizard G1)
+    // PUT /api/governance/policy — save policy (auth required)
     if (req.method === 'PUT' && urlPath === '/api/governance/policy') {
+      if (!requireAdmin(req, qs, sendResponse)) return;
       handleJsonBody(req, sendResponse, (policy) => {
         const result = governanceService.savePolicy(policy);
         if (result.ok) sendResponse(200, { ok: true });
@@ -1029,12 +977,13 @@ function startApi(port) {
         const isFirstRun = !fs.existsSync(cfgPath);
         return sendResponse(200, { isFirstRun });
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
-    // GET /api/admin/config — read hub config (A1)
+    // GET /api/admin/config — read hub config (auth required)
     if (req.method === 'GET' && urlPath === '/api/admin/config') {
+      if (!requireAdmin(req, qs, sendResponse)) return;
       try {
         const cfgPath = path.join(__dirname, '../data/hub_config.json');
         const cfg = loadJSON(cfgPath, {});
@@ -1049,7 +998,7 @@ function startApi(port) {
         };
         return sendResponse(200, effective);
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -1092,13 +1041,15 @@ function startApi(port) {
       return;
     }
 
-    // PUT /api/admin/config — write hub config (A1). Restart hub for changes to take effect.
+    // PUT /api/admin/config — write hub config (auth required)
     if (req.method === 'PUT' && urlPath === '/api/admin/config') {
+      if (!requireAdmin(req, qs, sendResponse)) return;
       handleJsonBody(req, sendResponse, (cfg) => {
+        if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) {
+          return sendResponse(400, { error: 'Config must be a JSON object' });
+        }
         const cfgPath = path.join(__dirname, '../data/hub_config.json');
-        const dir = path.dirname(cfgPath);
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2));
+        saveJSON(cfgPath, cfg);
         return sendResponse(200, { ok: true, message: 'Config saved. Restart hub for changes to take effect.' });
       });
       return;
@@ -1110,12 +1061,13 @@ function startApi(port) {
         const catalog = governanceService.loadCatalog();
         return sendResponse(200, catalog || { lessonIds: [] });
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
-    // POST /api/governance/catalog — add/remove lesson IDs
+    // POST /api/governance/catalog — add/remove lesson IDs (auth required)
     if (req.method === 'POST' && urlPath === '/api/governance/catalog') {
+      if (!requireAdmin(req, qs, sendResponse)) return;
       handleJsonBody(req, sendResponse, (payload) => {
         const result = governanceService.updateCatalog(payload);
         if (result.ok) {
@@ -1128,8 +1080,9 @@ function startApi(port) {
       return;
     }
 
-    // POST /api/governance/catalog/import — import from another authority (strategy: replace | merge | add-only)
+    // POST /api/governance/catalog/import — import from another authority (auth required)
     if (req.method === 'POST' && urlPath === '/api/governance/catalog/import') {
+      if (!requireAdmin(req, qs, sendResponse)) return;
       handleJsonBody(req, sendResponse, (payload) => {
         const { catalog: imported, strategy } = payload;
         if (!imported || !strategy) {
@@ -1260,8 +1213,8 @@ function startApi(port) {
           if (parsed.error) return sendResponse(400, { error: parsed.error });
           const result = authorService.validateForAuthor(parsed.lessonData);
           sendResponse(200, { valid: result.valid, errors: result.errors || [], warnings: result.warnings || [] });
-        } catch (err) { sendResponse(500, { error: err.message }); }
-      }).catch(err => sendResponse(500, { error: err.message }));
+        } catch (err) { sendResponse(500, { error: safeErrorMessage(err) }); }
+      }).catch(err => sendResponse(500, { error: safeErrorMessage(err) }));
       return;
     }
 
@@ -1287,9 +1240,9 @@ function startApi(port) {
           if (result.compiled != null) resp.compiled = result.compiled;
           sendResponse(200, resp);
         } catch (err) {
-          sendResponse(500, { error: err.message });
+          sendResponse(500, { error: safeErrorMessage(err) });
         }
-      }).catch(err => sendResponse(500, { error: err.message }));
+      }).catch(err => sendResponse(500, { error: safeErrorMessage(err) }));
       return;
     }
 
@@ -1312,8 +1265,8 @@ function startApi(port) {
             if (result.error) return sendResponse(400, { error: result.error });
             sendResponse(200, { ir: result.ir, sidecar: result.sidecar });
           })
-          .catch(err => sendResponse(500, { error: err.message }));
-      }).catch(err => sendResponse(500, { error: err.message }));
+          .catch(err => sendResponse(500, { error: safeErrorMessage(err) }));
+      }).catch(err => sendResponse(500, { error: safeErrorMessage(err) }));
       return;
     }
 
@@ -1355,7 +1308,7 @@ function startApi(port) {
 
         return sendResponse(200, { lessonId, steps: analytics, totalEvents: events.length });
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -1393,7 +1346,7 @@ function startApi(port) {
 
         return sendResponse(200, { pseudoId, snapshots, totalLessons });
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -1432,7 +1385,7 @@ function startApi(port) {
 
         return sendResponse(200, { nodes: [...nodes.values()], edges, totalSkills: nodes.size });
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -1458,7 +1411,7 @@ function startApi(port) {
         upcoming.sort((a, b) => a.nextReviewAt - b.nextReviewAt);
         return sendResponse(200, { pseudoId, due, upcoming, total: due.length + upcoming.length });
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -1468,42 +1421,11 @@ function startApi(port) {
       if (!pseudoId) return sendResponse(400, { error: 'pseudoId required' });
       try {
         const schedule = loadJSON(REVIEW_SCHEDULE_PATH, { students: {} });
-        const mastery = loadMasterySummary();
-        const studentSkills = mastery.students && mastery.students[pseudoId] ? mastery.students[pseudoId] : {};
         const studentReviews = schedule.students && schedule.students[pseudoId] ? schedule.students[pseudoId] : {};
 
-        // Collect all unique completion dates from review schedule
-        const dates = new Set();
-        for (const lid of Object.keys(studentReviews)) {
-          const entry = studentReviews[lid];
-          if (entry.lastReviewAt) {
-            dates.add(new Date(entry.lastReviewAt).toISOString().slice(0, 10));
-          }
-        }
-        const sortedDates = [...dates].sort();
+        const sortedDates = collectReviewDates(studentReviews);
         const today = new Date().toISOString().slice(0, 10);
-        const todayCount = sortedDates.filter(d => d === today).length || (Object.keys(studentReviews).length > 0 ? 0 : 0);
-
-        // Calculate streak
-        let currentStreak = 0;
-        let longestStreak = 0;
-        let tempStreak = 0;
-        const dateSet = new Set(sortedDates);
-        const checkDate = new Date();
-        // Walk backwards from today
-        for (let i = 0; i < 365; i++) {
-          const d = checkDate.toISOString().slice(0, 10);
-          if (dateSet.has(d)) {
-            tempStreak++;
-            if (i === 0 || currentStreak > 0) currentStreak = tempStreak;
-          } else {
-            if (tempStreak > longestStreak) longestStreak = tempStreak;
-            if (i > 0 && currentStreak > 0) break;
-            tempStreak = 0;
-          }
-          checkDate.setDate(checkDate.getDate() - 1);
-        }
-        if (tempStreak > longestStreak) longestStreak = tempStreak;
+        const { currentStreak, longestStreak } = computeStreaks(sortedDates);
 
         const dailyGoal = 1;
         const completionsToday = sortedDates.filter(d => d === today).length;
@@ -1517,7 +1439,7 @@ function startApi(port) {
           dates: sortedDates
         });
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -1540,23 +1462,9 @@ function startApi(port) {
         const studentReviews = (schedule.students && schedule.students[pseudoId]) || {};
         const lessonCount = Object.keys(studentReviews).length;
 
-        // Streak data
-        const dates = new Set();
-        for (const lid of Object.keys(studentReviews)) {
-          if (studentReviews[lid].lastReviewAt) dates.add(new Date(studentReviews[lid].lastReviewAt).toISOString().slice(0, 10));
-        }
-        const sortedDates = [...dates].sort();
-        let longestStreak = 0;
-        let tempStreak = 0;
-        const dateSet = new Set(sortedDates);
-        const checkDate = new Date();
-        for (let i = 0; i < 365; i++) {
-          const d = checkDate.toISOString().slice(0, 10);
-          if (dateSet.has(d)) { tempStreak++; }
-          else { if (tempStreak > longestStreak) longestStreak = tempStreak; tempStreak = 0; }
-          checkDate.setDate(checkDate.getDate() - 1);
-        }
-        if (tempStreak > longestStreak) longestStreak = tempStreak;
+        // Streak data (using shared module)
+        const sortedDates = collectReviewDates(studentReviews);
+        const { longestStreak } = computeStreaks(sortedDates);
 
         const badges = [];
         const defs = [
@@ -1577,7 +1485,7 @@ function startApi(port) {
         }
         return sendResponse(200, { pseudoId, badges, stats: { lessons: lessonCount, skills: skillCount, longestStreak, totalSkills: totalSkills.size } });
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -1612,7 +1520,7 @@ function startApi(port) {
         }
         return sendResponse(200, { probes });
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -1693,7 +1601,7 @@ function startApi(port) {
         }
         return sendResponse(200, data);
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -1730,7 +1638,7 @@ function startApi(port) {
         const completed = steps.filter(s => s.mastered).length;
         return sendResponse(200, { ...lp, steps, progress: { completed, total: steps.length, pct: steps.length > 0 ? Math.round((completed / steps.length) * 100) : 0 } });
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -1795,7 +1703,7 @@ function startApi(port) {
 
         return sendResponse(200, { stats });
       } catch (err) {
-        return sendResponse(500, { error: err.message });
+        return sendResponse(500, { error: safeErrorMessage(err) });
       }
     }
 
@@ -1917,58 +1825,58 @@ function startApi(port) {
 
     // ── Account management routes ───────────────────────────────────────────
 
-    function extractCreatorToken() {
-      const authHeader = req.headers['authorization'] || '';
-      if (authHeader.startsWith('Bearer ')) return authHeader.slice(7);
-      return qs.token || null;
-    }
-
-    // POST /api/auth/register — creator registration
+    // POST /api/auth/register — creator registration (rate-limited)
     if (req.method === 'POST' && urlPath === '/api/auth/register') {
-      readBody(req).then(async body => {
+      const clientIp = req.socket.remoteAddress || 'unknown';
+      if (checkAuthRateLimit('register:' + clientIp, sendResponse)) return;
+      handleJsonBody(req, sendResponse, async (payload) => {
         try {
-          const result = await accountsService.registerCreator(body);
+          const result = await accountsService.registerCreator(payload);
           if (result.error) return sendResponse(400, result);
           return sendResponse(201, result);
-        } catch (e) { return sendResponse(500, { error: e.message }); }
+        } catch (e) { return sendResponse(500, { error: safeErrorMessage(e) }); }
       });
       return;
     }
 
-    // POST /api/auth/login — creator login
+    // POST /api/auth/login — creator login (rate-limited)
     if (req.method === 'POST' && urlPath === '/api/auth/login') {
-      readBody(req).then(async body => {
+      const clientIp = req.socket.remoteAddress || 'unknown';
+      if (checkAuthRateLimit('login:' + clientIp, sendResponse)) return;
+      handleJsonBody(req, sendResponse, async (payload) => {
         try {
-          const result = await accountsService.loginCreator(body);
+          const result = await accountsService.loginCreator(payload);
           if (result.error) return sendResponse(401, result);
           return sendResponse(200, result);
-        } catch (e) { return sendResponse(500, { error: e.message }); }
+        } catch (e) { return sendResponse(500, { error: safeErrorMessage(e) }); }
       });
       return;
     }
 
     // GET /api/auth/me — validate session, return creator profile
     if (req.method === 'GET' && urlPath === '/api/auth/me') {
-      const creator = accountsService.validateSession(extractCreatorToken());
+      const creator = accountsService.validateSession(extractBearerToken(req, qs));
       if (!creator) return sendResponse(401, { error: 'Not authenticated' });
       return sendResponse(200, { creator });
     }
 
     // POST /api/auth/logout — destroy session
     if (req.method === 'POST' && urlPath === '/api/auth/logout') {
-      accountsService.destroySession(extractCreatorToken());
+      accountsService.destroySession(extractBearerToken(req, qs));
       return sendResponse(200, { ok: true });
     }
 
-    // GET /api/accounts/creators — admin: list all creator accounts
+    // GET /api/accounts/creators — admin: list all creator accounts (auth required)
     if (req.method === 'GET' && urlPath === '/api/accounts/creators') {
+      if (!requireAdmin(req, qs, sendResponse)) return;
       return sendResponse(200, { creators: accountsService.listCreators() });
     }
 
-    // PUT /api/accounts/creator/approve — admin: approve or revoke a creator
+    // PUT /api/accounts/creator/approve — admin: approve or revoke a creator (auth required)
     if (req.method === 'PUT' && urlPath === '/api/accounts/creator/approve') {
-      readBody(req).then(body => {
-        const result = accountsService.setCreatorApproval(body.creatorId, body.approved);
+      if (!requireAdmin(req, qs, sendResponse)) return;
+      handleJsonBody(req, sendResponse, (payload) => {
+        const result = accountsService.setCreatorApproval(payload.creatorId, payload.approved);
         if (result.error) return sendResponse(404, result);
         return sendResponse(200, result);
       });
@@ -1977,12 +1885,12 @@ function startApi(port) {
 
     // POST /api/accounts/student — create a single student account
     if (req.method === 'POST' && urlPath === '/api/accounts/student') {
-      readBody(req).then(body => {
-        const creator = accountsService.validateSession(extractCreatorToken());
+      handleJsonBody(req, sendResponse, (payload) => {
+        const creator = accountsService.validateSession(extractBearerToken(req, qs));
         const result = accountsService.createStudent({
-          displayName: body.displayName,
-          pin: body.pin,
-          createdBy: creator ? creator.id : body.createdBy || null
+          displayName: payload.displayName,
+          pin: payload.pin,
+          createdBy: creator ? creator.id : payload.createdBy || null
         });
         return sendResponse(201, result);
       });
@@ -1991,12 +1899,12 @@ function startApi(port) {
 
     // POST /api/accounts/students/bulk — bulk-create student accounts
     if (req.method === 'POST' && urlPath === '/api/accounts/students/bulk') {
-      readBody(req).then(body => {
-        const creator = accountsService.validateSession(extractCreatorToken());
+      handleJsonBody(req, sendResponse, (payload) => {
+        const creator = accountsService.validateSession(extractBearerToken(req, qs));
         const result = accountsService.createStudentsBulk({
-          names: body.names,
-          pin: body.pin,
-          createdBy: creator ? creator.id : body.createdBy || null
+          names: payload.names,
+          pin: payload.pin,
+          createdBy: creator ? creator.id : payload.createdBy || null
         });
         if (result.error) return sendResponse(400, result);
         return sendResponse(201, result);
@@ -2011,9 +1919,9 @@ function startApi(port) {
 
     // PUT /api/accounts/student — update student name/pin/active
     if (req.method === 'PUT' && urlPath === '/api/accounts/student') {
-      readBody(req).then(body => {
-        if (!body.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
-        const result = accountsService.updateStudent(body.pseudoId, body);
+      handleJsonBody(req, sendResponse, (payload) => {
+        if (!payload.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
+        const result = accountsService.updateStudent(payload.pseudoId, payload);
         if (result.error) return sendResponse(404, result);
         return sendResponse(200, result);
       });
@@ -2022,9 +1930,9 @@ function startApi(port) {
 
     // POST /api/accounts/student/transfer-token — generate transfer code
     if (req.method === 'POST' && urlPath === '/api/accounts/student/transfer-token') {
-      readBody(req).then(body => {
-        if (!body.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
-        const result = accountsService.generateTransferToken(body.pseudoId);
+      handleJsonBody(req, sendResponse, (payload) => {
+        if (!payload.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
+        const result = accountsService.generateTransferToken(payload.pseudoId);
         if (result.error) return sendResponse(404, result);
         return sendResponse(200, result);
       });
@@ -2033,9 +1941,9 @@ function startApi(port) {
 
     // POST /api/accounts/student/claim — claim transfer token on new device
     if (req.method === 'POST' && urlPath === '/api/accounts/student/claim') {
-      readBody(req).then(body => {
-        if (!body.token) return sendResponse(400, { error: 'token required' });
-        const result = accountsService.claimTransferToken(body.token);
+      handleJsonBody(req, sendResponse, (payload) => {
+        if (!payload.token) return sendResponse(400, { error: 'token required' });
+        const result = accountsService.claimTransferToken(payload.token);
         if (result.error) return sendResponse(400, result);
         return sendResponse(200, result);
       });
@@ -2044,9 +1952,9 @@ function startApi(port) {
 
     // POST /api/accounts/student/verify-pin — verify student PIN
     if (req.method === 'POST' && urlPath === '/api/accounts/student/verify-pin') {
-      readBody(req).then(body => {
-        if (!body.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
-        const result = accountsService.verifyStudentPin(body.pseudoId, body.pin);
+      handleJsonBody(req, sendResponse, (payload) => {
+        if (!payload.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
+        const result = accountsService.verifyStudentPin(payload.pseudoId, payload.pin);
         if (result.error) return sendResponse(404, result);
         return sendResponse(200, result);
       });
@@ -2065,11 +1973,11 @@ function startApi(port) {
 
     // POST /api/chain/verify — verify a lesson's chain integrity
     if (req.method === 'POST' && urlPath === '/api/chain/verify') {
-      readBody(req).then(body => {
-        if (!body.slug) return sendResponse(400, { error: 'slug required' });
-        const chainResult = lessonChain.verifyChain(body.slug);
-        if (body.lessonData) {
-          const contentResult = lessonChain.verifyContentHash(body.lessonData);
+      handleJsonBody(req, sendResponse, (payload) => {
+        if (!payload.slug) return sendResponse(400, { error: 'slug required' });
+        const chainResult = lessonChain.verifyChain(payload.slug);
+        if (payload.lessonData) {
+          const contentResult = lessonChain.verifyContentHash(payload.lessonData);
           return sendResponse(200, { chain: chainResult, content: contentResult });
         }
         return sendResponse(200, { chain: chainResult });
