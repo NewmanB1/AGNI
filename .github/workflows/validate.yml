@@ -6,12 +6,16 @@ on:
       - 'lessons/**'
       - 'schemas/**'
       - 'fixtures/**'
+      - 'src/**'
+      - 'tests/**'
       - 'package.json'
   pull_request:
     paths:
       - 'lessons/**'
       - 'schemas/**'
       - 'fixtures/**'
+      - 'src/**'
+      - 'tests/**'
       - 'package.json'
   workflow_dispatch:
 jobs:
@@ -32,6 +36,21 @@ jobs:
         run: npm run codegen:validate-schemas
       - name: Build LMS engine (TypeScript)
         run: npm run build:engine
+      - name: Run unit tests with coverage
+        run: |
+          npm run test:coverage 2>&1 | tee test-output.txt
+          # Extract line coverage percentage and enforce minimum threshold
+          LINE_COV=$(grep 'all files' test-output.txt | awk '{print $3}' | head -1)
+          echo "Line coverage: $LINE_COV%"
+          if [ -n "$LINE_COV" ]; then
+            THRESHOLD=85
+            if [ "$(echo "$LINE_COV < $THRESHOLD" | bc -l)" = "1" ]; then
+              echo "FAIL: Line coverage $LINE_COV% is below threshold of $THRESHOLD%"
+              exit 1
+            fi
+            echo "PASS: Line coverage $LINE_COV% meets threshold of $THRESHOLD%"
+          fi
+          rm -f test-output.txt
       - name: Validate all OLS lesson files
         run: |
           echo "🔍 Validating all .yaml lessons..."

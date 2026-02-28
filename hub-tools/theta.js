@@ -52,6 +52,8 @@ const zlib = require('zlib');
 const lmsService = require('../src/services/lms');
 const governanceService = require('../src/services/governance');
 const authorService = require('../src/services/author');
+const accountsService = require('../src/services/accounts');
+const lessonChain = require('../src/services/lessonChain');
 
 // -- Paths -------------------------------------------------------------------
 const DATA_DIR              = process.env.AGNI_DATA_DIR  || path.join(__dirname, '../data');
@@ -67,6 +69,7 @@ const OVERRIDES_PATH       = path.join(DATA_DIR, 'recommendation_overrides.json'
 const GROUPS_PATH          = path.join(DATA_DIR, 'groups.json');
 const PARENT_LINKS_PATH    = path.join(DATA_DIR, 'parent-links.json');
 const REVIEW_SCHEDULE_PATH = path.join(DATA_DIR, 'review_schedule.json');
+const LEARNING_PATHS_PATH  = path.join(DATA_DIR, 'learning_paths.json');
 const APPROVED_CATALOG     = process.env.AGNI_APPROVED_CATALOG || path.join(DATA_DIR, 'approved_catalog.json');
 
 const PORT = parseInt(process.env.AGNI_THETA_PORT || '8082', 10);
@@ -270,6 +273,11 @@ function computeLessonTheta(lesson, pseudoId, baseCosts, masterySummary, graphWe
     residualFactor:  Math.round(repResidual * 1000) / 1000,
     transferBenefit: Math.round((1 - repResidual) * 1000) / 1000,
     alreadyMastered,
+    difficulty:     lesson.difficulty || 2,
+    description:    lesson.description || '',
+    is_group:       !!lesson.is_group,
+    teaching_mode:  lesson.teaching_mode || null,
+    subject:        (lesson.utu && lesson.utu.class) || '',
     skillsProvided: lesson.skillsProvided || [],
     skillsRequired: lesson.skillsRequired || []
   };
@@ -521,12 +529,15 @@ function rebuildLessonIndex() {
           lessonId:         sidecar.identifier  || entry.identifier || entry.slug,
           slug:             sidecar.slug         || entry.slug,
           title:            sidecar.title        || entry.title || '',
+          description:      sidecar.description  || entry.description || '',
           difficulty:       sidecar.difficulty   || entry.difficulty || 2,
           language:         sidecar.language     || entry.language  || 'en',
           compiledAt:       sidecar.compiledAt   || null,
           metadata_source:  sidecar.metadata_source || 'inferred',
           utu:              sidecar.utu || null,
           teaching_mode:    sidecar.teaching_mode || null,
+          is_group:         !!(sidecar.is_group || entry.is_group),
+          subject:          (sidecar.utu && sidecar.utu.class) || entry.subject || '',
           skillsProvided:   (sidecar.ontology && sidecar.ontology.provides) || [],
           skillsRequired:   (sidecar.ontology && sidecar.ontology.requires
             ? sidecar.ontology.requires.map(r => typeof r === 'string' ? r : r.skill)
@@ -571,6 +582,7 @@ function rebuildLessonIndex() {
       title:            entry.title || '',
       difficulty:       entry.difficulty || 2,
       language:         entry.language   || 'en',
+      is_group:         !!(entry.is_group),
       compiledAt:       null,
       metadata_source:  'unknown',
       skillsProvided:   skillsProvided,
@@ -674,9 +686,17 @@ function startApi(port) {
       urlPath === '/api/governance/catalog/import' ||
       urlPath === '/api/author/validate' || urlPath === '/api/author/preview' || urlPath === '/api/author/save' ||
       urlPath === '/api/parent/invite' || urlPath === '/api/parent/link' ||
-      urlPath === '/api/admin/sync-test' || urlPath === '/api/telemetry';
-    const isPutRoute = urlPath === '/api/governance/policy' || urlPath === '/api/admin/config' || urlPath === '/api/groups';
-    if (req.method !== 'GET' && !(req.method === 'POST' && isPostRoute) && !(req.method === 'PUT' && isPutRoute)) {
+      urlPath === '/api/admin/sync-test' || urlPath === '/api/telemetry' ||
+      urlPath === '/api/diagnostic' || urlPath === '/api/learning-paths' ||
+      urlPath === '/api/auth/register' || urlPath === '/api/auth/login' || urlPath === '/api/auth/logout' ||
+      urlPath === '/api/accounts/student' || urlPath === '/api/accounts/students/bulk' ||
+      urlPath === '/api/accounts/student/transfer-token' || urlPath === '/api/accounts/student/claim' ||
+      urlPath === '/api/accounts/student/verify-pin' ||
+      urlPath === '/api/chain/verify';
+    const isPutRoute = urlPath === '/api/governance/policy' || urlPath === '/api/admin/config' || urlPath === '/api/groups' || urlPath === '/api/learning-paths' ||
+      urlPath === '/api/accounts/student' || urlPath === '/api/accounts/creator/approve';
+    const isDeleteRoute = urlPath.startsWith('/api/author/delete/');
+    if (req.method !== 'GET' && !(req.method === 'POST' && isPostRoute) && !(req.method === 'PUT' && isPutRoute) && !(req.method === 'DELETE' && isDeleteRoute)) {
       return sendResponse(405, { error: 'Method not allowed' });
     }
 
@@ -723,6 +743,10 @@ function startApi(port) {
       if (qs.teaching_mode) {
         const modeFilter = qs.teaching_mode.toLowerCase();
         index = index.filter(l => String(l.teaching_mode || '').toLowerCase() === modeFilter);
+      }
+      if (qs.is_group !== undefined) {
+        const wantGroup = qs.is_group === 'true' || qs.is_group === '1';
+        index = index.filter(l => !!l.is_group === wantGroup);
       }
       return sendResponse(200, { lessons: index, savedSlugs, total: index.length });
     }
@@ -905,6 +929,46 @@ function startApi(port) {
         sendResponse(200, { ok: true, status: lmsEngine.getStatus() });
       });
       return;
+    }
+
+    // GET /api/lms/transitions?pseudoId=<id>
+    // Returns the Markov transition table and student's recent history for
+    // client-side enhanced lesson sorting (sortLessonsEnhanced).
+    if (req.method === 'GET' && urlPath === '/api/lms/transitions') {
+      if (!lmsEngine.isAvailable || !lmsEngine.isAvailable()) {
+        return sendResponse(503, { error: 'LMS engine not available' });
+      }
+      try {
+        const table = lmsEngine.exportTransitionTable();
+        const history = qs.pseudoId
+          ? lmsEngine.getStudentLessonHistory(qs.pseudoId)
+          : [];
+        return sendResponse(200, {
+          transitionTable: table,
+          recentLessons: history
+        });
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    // GET /api/lms/bottlenecks?topK=10&minSample=5
+    // Returns curriculum bottleneck analysis: flow bottlenecks (stationary
+    // distribution) and dropout bottlenecks (high-dropout lessons).
+    if (req.method === 'GET' && urlPath === '/api/lms/bottlenecks') {
+      if (!lmsEngine.isAvailable || !lmsEngine.isAvailable()) {
+        return sendResponse(503, { error: 'LMS engine not available' });
+      }
+      try {
+        const topK = parseInt(qs.topK || '10', 10);
+        const minSample = parseInt(qs.minSample || '5', 10);
+        return sendResponse(200, {
+          flowBottlenecks: lmsEngine.getFlowBottlenecks(topK),
+          dropoutBottlenecks: lmsEngine.getDropoutBottlenecks(minSample)
+        });
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
     }
 
     // ── Governance routes (Phase 7) ─────────────────────────────────────────
@@ -1203,18 +1267,39 @@ function startApi(port) {
 
     // POST /api/author/save — validate + write YAML to data/yaml/<slug>.yaml (S1)
     if (req.method === 'POST' && urlPath === '/api/author/save') {
-      readBody(req).then(body => {
+      readBody(req).then(async (body) => {
         try {
           const parsed = authorService.parseAuthorBody(body);
           if (parsed.error) return sendResponse(400, { error: parsed.error });
           const yamlDir = process.env.AGNI_YAML_DIR || path.join(DATA_DIR, 'yaml');
-          const result = authorService.saveLesson(parsed.lessonData, yamlDir);
+          const compileFlag = parsed.lessonData && parsed.lessonData._compile;
+          if (parsed.lessonData) delete parsed.lessonData._compile;
+          const result = await authorService.saveLesson(parsed.lessonData, yamlDir, { compile: !!compileFlag });
           if (result.error) return sendResponse(400, { error: result.error });
-          sendResponse(200, { ok: true, slug: result.slug, path: result.path, warnings: result.warnings || [] });
+
+          // Record lesson authorship for accountability
+          const creatorId = parsed.lessonData?.meta?.creator_id;
+          if (creatorId && result.slug) {
+            accountsService.recordLessonAuthored(creatorId, result.slug);
+          }
+
+          const resp = { ok: true, slug: result.slug, path: result.path, warnings: result.warnings || [] };
+          if (result.compiled != null) resp.compiled = result.compiled;
+          sendResponse(200, resp);
         } catch (err) {
           sendResponse(500, { error: err.message });
         }
       }).catch(err => sendResponse(500, { error: err.message }));
+      return;
+    }
+
+    // DELETE /api/author/delete/:slug — remove saved lesson and compiled artifacts
+    if (req.method === 'DELETE' && urlPath.startsWith('/api/author/delete/')) {
+      const deleteSlug = decodeURIComponent(urlPath.replace('/api/author/delete/', ''));
+      const yamlDir = process.env.AGNI_YAML_DIR || path.join(DATA_DIR, 'yaml');
+      const result = authorService.deleteLesson(deleteSlug, yamlDir);
+      if (result.error) return sendResponse(404, { error: result.error });
+      sendResponse(200, { ok: true, deleted: result.deleted });
       return;
     }
 
@@ -1436,6 +1521,254 @@ function startApi(port) {
       }
     }
 
+    // ── GET /api/badges — achievement badges computed from telemetry ──
+    if (req.method === 'GET' && urlPath === '/api/badges') {
+      const pseudoId = qs.pseudoId;
+      if (!pseudoId) return sendResponse(400, { error: 'pseudoId required' });
+      try {
+        const mastery = loadMasterySummary();
+        const studentSkills = (mastery.students && mastery.students[pseudoId]) || {};
+        const skillCount = Object.keys(studentSkills).filter(k => studentSkills[k] >= 0.6).length;
+        const totalSkills = new Set();
+        const index = loadLessonIndex();
+        for (const l of index) {
+          for (const p of (l.skillsProvided || [])) totalSkills.add(p.skill);
+        }
+
+        // Count lessons mastered
+        const schedule = loadJSON(REVIEW_SCHEDULE_PATH, { students: {} });
+        const studentReviews = (schedule.students && schedule.students[pseudoId]) || {};
+        const lessonCount = Object.keys(studentReviews).length;
+
+        // Streak data
+        const dates = new Set();
+        for (const lid of Object.keys(studentReviews)) {
+          if (studentReviews[lid].lastReviewAt) dates.add(new Date(studentReviews[lid].lastReviewAt).toISOString().slice(0, 10));
+        }
+        const sortedDates = [...dates].sort();
+        let longestStreak = 0;
+        let tempStreak = 0;
+        const dateSet = new Set(sortedDates);
+        const checkDate = new Date();
+        for (let i = 0; i < 365; i++) {
+          const d = checkDate.toISOString().slice(0, 10);
+          if (dateSet.has(d)) { tempStreak++; }
+          else { if (tempStreak > longestStreak) longestStreak = tempStreak; tempStreak = 0; }
+          checkDate.setDate(checkDate.getDate() - 1);
+        }
+        if (tempStreak > longestStreak) longestStreak = tempStreak;
+
+        const badges = [];
+        const defs = [
+          { id: 'first_lesson', name: 'First Step', desc: 'Complete your first lesson', icon: '\u{1F31F}', check: () => lessonCount >= 1 },
+          { id: 'five_lessons', name: 'Getting Started', desc: 'Complete 5 lessons', icon: '\u{1F4DA}', check: () => lessonCount >= 5 },
+          { id: 'ten_lessons', name: 'Dedicated Learner', desc: 'Complete 10 lessons', icon: '\u{1F3C6}', check: () => lessonCount >= 10 },
+          { id: 'twentyfive_lessons', name: 'Knowledge Seeker', desc: 'Complete 25 lessons', icon: '\u{1F48E}', check: () => lessonCount >= 25 },
+          { id: 'first_skill', name: 'Skill Unlocked', desc: 'Master your first skill', icon: '\u{1F511}', check: () => skillCount >= 1 },
+          { id: 'five_skills', name: 'Multi-Skilled', desc: 'Master 5 skills', icon: '\u{2B50}', check: () => skillCount >= 5 },
+          { id: 'ten_skills', name: 'Skill Master', desc: 'Master 10 skills', icon: '\u{1F451}', check: () => skillCount >= 10 },
+          { id: 'streak_3', name: 'On a Roll', desc: '3-day learning streak', icon: '\u{1F525}', check: () => longestStreak >= 3 },
+          { id: 'streak_7', name: 'Week Warrior', desc: '7-day learning streak', icon: '\u{26A1}', check: () => longestStreak >= 7 },
+          { id: 'streak_30', name: 'Unstoppable', desc: '30-day learning streak', icon: '\u{1F680}', check: () => longestStreak >= 30 },
+          { id: 'all_skills', name: 'Completionist', desc: 'Master every skill', icon: '\u{1F396}', check: () => totalSkills.size > 0 && skillCount >= totalSkills.size }
+        ];
+        for (const def of defs) {
+          badges.push({ id: def.id, name: def.name, description: def.desc, icon: def.icon, earned: def.check() });
+        }
+        return sendResponse(200, { pseudoId, badges, stats: { lessons: lessonCount, skills: skillCount, longestStreak, totalSkills: totalSkills.size } });
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    // ── GET /api/diagnostic — placement assessment probes ──
+    if (req.method === 'GET' && urlPath === '/api/diagnostic') {
+      try {
+        const index = loadLessonIndex();
+        // Select 8 probe-style questions spanning difficulty levels 1-5.
+        // Each probe is derived from a lesson's primary skill at its difficulty.
+        const probes = [];
+        const seen = new Set();
+        const sorted = [...index]
+          .filter(l => l.skillsProvided && l.skillsProvided.length > 0)
+          .sort((a, b) => (a.difficulty || 2) - (b.difficulty || 2));
+
+        for (const diff of [1, 2, 2, 3, 3, 4, 4, 5]) {
+          const candidates = sorted.filter(l =>
+            Math.round(l.difficulty || 2) === diff && !seen.has(l.skillsProvided[0].skill)
+          );
+          if (candidates.length > 0) {
+            const pick = candidates[Math.floor(Math.random() * candidates.length)];
+            seen.add(pick.skillsProvided[0].skill);
+            probes.push({
+              probeId: pick.lessonId + '_diag',
+              skill: pick.skillsProvided[0].skill,
+              difficulty: pick.difficulty || 2,
+              question: 'Do you already know: ' + pick.skillsProvided[0].skill + '?',
+              type: 'self_assess',
+              options: ['No experience', 'Some experience', 'Confident']
+            });
+          }
+        }
+        return sendResponse(200, { probes });
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    // ── POST /api/diagnostic — submit placement results, bootstrap ability ──
+    if (req.method === 'POST' && urlPath === '/api/diagnostic') {
+      handleJsonBody(req, sendResponse, (payload) => {
+        const pseudoId = payload.pseudoId;
+        const responses = payload.responses || [];
+        if (!pseudoId) return sendResponse(400, { error: 'pseudoId required' });
+
+        const mastery = loadMasterySummary();
+        if (!mastery.students) mastery.students = {};
+        if (!mastery.students[pseudoId]) mastery.students[pseudoId] = {};
+        const studentSkills = mastery.students[pseudoId];
+
+        let totalDifficulty = 0;
+        let correctCount = 0;
+        for (const r of responses) {
+          // self_assess: 0=no, 1=some, 2=confident → maps to mastery 0, 0.4, 0.8
+          const selfLevel = typeof r.answer === 'number' ? r.answer : 0;
+          const evidenced = selfLevel === 2 ? 0.8 : (selfLevel === 1 ? 0.4 : 0);
+          if (r.skill && evidenced > 0) {
+            studentSkills[r.skill] = Math.max(studentSkills[r.skill] || 0, evidenced);
+            correctCount++;
+          }
+          totalDifficulty += r.difficulty || 2;
+        }
+
+        // Bootstrap ability from difficulty-weighted average
+        const bootstrapAbility = responses.length > 0
+          ? Math.round(((correctCount / responses.length) * (totalDifficulty / responses.length)) * 100) / 100
+          : 0;
+
+        fs.writeFileSync(MASTERY_SUMMARY, JSON.stringify(mastery, null, 2));
+
+        // Feed into LMS engine if available
+        if (lmsEngine.isAvailable && lmsEngine.isAvailable()) {
+          try {
+            const probeResults = responses
+              .filter(r => r.skill)
+              .map(r => ({ probeId: r.probeId || r.skill, correct: (r.answer || 0) >= 1 }));
+            if (probeResults.length > 0) {
+              lmsEngine.recordObservation(pseudoId, 'diagnostic', probeResults);
+            }
+          } catch (e) { /* non-critical */ }
+        }
+
+        // Mark diagnostic as completed
+        try {
+          const diagPath = path.join(DATA_DIR, 'diagnostic_status.json');
+          const status = loadJSON(diagPath, {});
+          status[pseudoId] = { completedAt: new Date().toISOString(), ability: bootstrapAbility };
+          fs.writeFileSync(diagPath, JSON.stringify(status, null, 2));
+        } catch (e) { /* non-critical */ }
+
+        return sendResponse(200, { ok: true, ability: bootstrapAbility, skillsBootstrapped: Object.keys(studentSkills).length });
+      });
+      return;
+    }
+
+    // ── GET /api/learning-paths — list all skill-based learning paths ──
+    if (req.method === 'GET' && urlPath === '/api/learning-paths') {
+      try {
+        const data = loadJSON(LEARNING_PATHS_PATH, { paths: [] });
+        const pseudoId = qs.pseudoId || '';
+
+        // Enrich with student progress if pseudoId provided
+        if (pseudoId) {
+          const mastery = loadMasterySummary();
+          const studentSkills = (mastery.students && mastery.students[pseudoId]) || {};
+          for (const p of data.paths) {
+            let completed = 0;
+            for (const skill of (p.skills || [])) {
+              if ((studentSkills[skill] || 0) >= MASTERY_THRESHOLD) completed++;
+            }
+            p.progress = { completed, total: (p.skills || []).length, pct: (p.skills || []).length > 0 ? Math.round((completed / p.skills.length) * 100) : 0 };
+          }
+        }
+        return sendResponse(200, data);
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    // ── GET /api/learning-paths/:id — single path with per-skill lesson suggestions ──
+    if (req.method === 'GET' && urlPath.startsWith('/api/learning-paths/') && urlPath.split('/').length === 4) {
+      const pathId = decodeURIComponent(urlPath.split('/')[3]);
+      try {
+        const data = loadJSON(LEARNING_PATHS_PATH, { paths: [] });
+        const lp = data.paths.find(p => p.id === pathId);
+        if (!lp) return sendResponse(404, { error: 'Path not found' });
+
+        const pseudoId = qs.pseudoId || '';
+        const index = loadLessonIndex();
+        const mastery = loadMasterySummary();
+        const studentSkills = (mastery.students && mastery.students[pseudoId]) || {};
+
+        const steps = (lp.skills || []).map(skill => {
+          const mastered = (studentSkills[skill] || 0) >= MASTERY_THRESHOLD;
+          // Find best lesson for this skill
+          const candidates = index.filter(l =>
+            (l.skillsProvided || []).some(sp => sp.skill === skill)
+          );
+          const bestLesson = candidates.length > 0
+            ? candidates.sort((a, b) => (a.difficulty || 2) - (b.difficulty || 2))[0]
+            : null;
+          return {
+            skill,
+            mastered,
+            masteryLevel: studentSkills[skill] || 0,
+            suggestedLesson: bestLesson ? { lessonId: bestLesson.lessonId, slug: bestLesson.slug, title: bestLesson.title, difficulty: bestLesson.difficulty || 2 } : null
+          };
+        });
+
+        const completed = steps.filter(s => s.mastered).length;
+        return sendResponse(200, { ...lp, steps, progress: { completed, total: steps.length, pct: steps.length > 0 ? Math.round((completed / steps.length) * 100) : 0 } });
+      } catch (err) {
+        return sendResponse(500, { error: err.message });
+      }
+    }
+
+    // ── POST /api/learning-paths — create a new learning path ──
+    if (req.method === 'POST' && urlPath === '/api/learning-paths') {
+      handleJsonBody(req, sendResponse, (payload) => {
+        const data = loadJSON(LEARNING_PATHS_PATH, { paths: [] });
+        const id = payload.id || 'path-' + Date.now();
+        const newPath = {
+          id,
+          name: payload.name || 'Untitled Path',
+          description: payload.description || '',
+          skills: Array.isArray(payload.skills) ? payload.skills : [],
+          createdAt: new Date().toISOString(),
+          createdBy: payload.createdBy || 'teacher'
+        };
+        data.paths.push(newPath);
+        fs.writeFileSync(LEARNING_PATHS_PATH, JSON.stringify(data, null, 2));
+        return sendResponse(200, { ok: true, path: newPath });
+      });
+      return;
+    }
+
+    // ── PUT /api/learning-paths — update a learning path ──
+    if (req.method === 'PUT' && urlPath === '/api/learning-paths') {
+      handleJsonBody(req, sendResponse, (payload) => {
+        const data = loadJSON(LEARNING_PATHS_PATH, { paths: [] });
+        const idx = data.paths.findIndex(p => p.id === payload.id);
+        if (idx === -1) return sendResponse(404, { error: 'Path not found' });
+        if (payload.name) data.paths[idx].name = payload.name;
+        if (payload.description !== undefined) data.paths[idx].description = payload.description;
+        if (Array.isArray(payload.skills)) data.paths[idx].skills = payload.skills;
+        fs.writeFileSync(LEARNING_PATHS_PATH, JSON.stringify(data, null, 2));
+        return sendResponse(200, { ok: true, path: data.paths[idx] });
+      });
+      return;
+    }
+
     // ── GET /api/collab/stats — collaborative learning awareness ──
     if (req.method === 'GET' && urlPath === '/api/collab/stats') {
       try {
@@ -1580,6 +1913,188 @@ function startApi(port) {
           return sendResponse(200, { accepted, processed: events.length });
       });
       return;
+    }
+
+    // ── Account management routes ───────────────────────────────────────────
+
+    function extractCreatorToken() {
+      const authHeader = req.headers['authorization'] || '';
+      if (authHeader.startsWith('Bearer ')) return authHeader.slice(7);
+      return qs.token || null;
+    }
+
+    // POST /api/auth/register — creator registration
+    if (req.method === 'POST' && urlPath === '/api/auth/register') {
+      readBody(req).then(async body => {
+        try {
+          const result = await accountsService.registerCreator(body);
+          if (result.error) return sendResponse(400, result);
+          return sendResponse(201, result);
+        } catch (e) { return sendResponse(500, { error: e.message }); }
+      });
+      return;
+    }
+
+    // POST /api/auth/login — creator login
+    if (req.method === 'POST' && urlPath === '/api/auth/login') {
+      readBody(req).then(async body => {
+        try {
+          const result = await accountsService.loginCreator(body);
+          if (result.error) return sendResponse(401, result);
+          return sendResponse(200, result);
+        } catch (e) { return sendResponse(500, { error: e.message }); }
+      });
+      return;
+    }
+
+    // GET /api/auth/me — validate session, return creator profile
+    if (req.method === 'GET' && urlPath === '/api/auth/me') {
+      const creator = accountsService.validateSession(extractCreatorToken());
+      if (!creator) return sendResponse(401, { error: 'Not authenticated' });
+      return sendResponse(200, { creator });
+    }
+
+    // POST /api/auth/logout — destroy session
+    if (req.method === 'POST' && urlPath === '/api/auth/logout') {
+      accountsService.destroySession(extractCreatorToken());
+      return sendResponse(200, { ok: true });
+    }
+
+    // GET /api/accounts/creators — admin: list all creator accounts
+    if (req.method === 'GET' && urlPath === '/api/accounts/creators') {
+      return sendResponse(200, { creators: accountsService.listCreators() });
+    }
+
+    // PUT /api/accounts/creator/approve — admin: approve or revoke a creator
+    if (req.method === 'PUT' && urlPath === '/api/accounts/creator/approve') {
+      readBody(req).then(body => {
+        const result = accountsService.setCreatorApproval(body.creatorId, body.approved);
+        if (result.error) return sendResponse(404, result);
+        return sendResponse(200, result);
+      });
+      return;
+    }
+
+    // POST /api/accounts/student — create a single student account
+    if (req.method === 'POST' && urlPath === '/api/accounts/student') {
+      readBody(req).then(body => {
+        const creator = accountsService.validateSession(extractCreatorToken());
+        const result = accountsService.createStudent({
+          displayName: body.displayName,
+          pin: body.pin,
+          createdBy: creator ? creator.id : body.createdBy || null
+        });
+        return sendResponse(201, result);
+      });
+      return;
+    }
+
+    // POST /api/accounts/students/bulk — bulk-create student accounts
+    if (req.method === 'POST' && urlPath === '/api/accounts/students/bulk') {
+      readBody(req).then(body => {
+        const creator = accountsService.validateSession(extractCreatorToken());
+        const result = accountsService.createStudentsBulk({
+          names: body.names,
+          pin: body.pin,
+          createdBy: creator ? creator.id : body.createdBy || null
+        });
+        if (result.error) return sendResponse(400, result);
+        return sendResponse(201, result);
+      });
+      return;
+    }
+
+    // GET /api/accounts/students — list all student accounts
+    if (req.method === 'GET' && urlPath === '/api/accounts/students') {
+      return sendResponse(200, { students: accountsService.listStudents() });
+    }
+
+    // PUT /api/accounts/student — update student name/pin/active
+    if (req.method === 'PUT' && urlPath === '/api/accounts/student') {
+      readBody(req).then(body => {
+        if (!body.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
+        const result = accountsService.updateStudent(body.pseudoId, body);
+        if (result.error) return sendResponse(404, result);
+        return sendResponse(200, result);
+      });
+      return;
+    }
+
+    // POST /api/accounts/student/transfer-token — generate transfer code
+    if (req.method === 'POST' && urlPath === '/api/accounts/student/transfer-token') {
+      readBody(req).then(body => {
+        if (!body.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
+        const result = accountsService.generateTransferToken(body.pseudoId);
+        if (result.error) return sendResponse(404, result);
+        return sendResponse(200, result);
+      });
+      return;
+    }
+
+    // POST /api/accounts/student/claim — claim transfer token on new device
+    if (req.method === 'POST' && urlPath === '/api/accounts/student/claim') {
+      readBody(req).then(body => {
+        if (!body.token) return sendResponse(400, { error: 'token required' });
+        const result = accountsService.claimTransferToken(body.token);
+        if (result.error) return sendResponse(400, result);
+        return sendResponse(200, result);
+      });
+      return;
+    }
+
+    // POST /api/accounts/student/verify-pin — verify student PIN
+    if (req.method === 'POST' && urlPath === '/api/accounts/student/verify-pin') {
+      readBody(req).then(body => {
+        if (!body.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
+        const result = accountsService.verifyStudentPin(body.pseudoId, body.pin);
+        if (result.error) return sendResponse(404, result);
+        return sendResponse(200, result);
+      });
+      return;
+    }
+
+    // ── Lesson chain / immutability routes ─────────────────────────────────
+
+    // GET /api/chain/:slug — get the hash chain for a lesson
+    const chainMatch = urlPath.match(/^\/api\/chain\/(.+)$/);
+    if (req.method === 'GET' && chainMatch && !urlPath.includes('/verify')) {
+      const chainSlug = decodeURIComponent(chainMatch[1]);
+      const chain = lessonChain.loadChain(chainSlug);
+      return sendResponse(200, chain);
+    }
+
+    // POST /api/chain/verify — verify a lesson's chain integrity
+    if (req.method === 'POST' && urlPath === '/api/chain/verify') {
+      readBody(req).then(body => {
+        if (!body.slug) return sendResponse(400, { error: 'slug required' });
+        const chainResult = lessonChain.verifyChain(body.slug);
+        if (body.lessonData) {
+          const contentResult = lessonChain.verifyContentHash(body.lessonData);
+          return sendResponse(200, { chain: chainResult, content: contentResult });
+        }
+        return sendResponse(200, { chain: chainResult });
+      });
+      return;
+    }
+
+    // GET /api/fork-check?slug=<slug> — check if a lesson's license permits forking
+    if (req.method === 'GET' && urlPath === '/api/fork-check') {
+      if (!qs.slug) return sendResponse(400, { error: 'slug query param required' });
+      const yamlDir = process.env.AGNI_YAML_DIR || path.join(DATA_DIR, 'yaml');
+      const loaded = authorService.loadLesson(qs.slug, yamlDir);
+      if (loaded.error) return sendResponse(404, { error: loaded.error });
+      const meta = loaded.lessonData.meta || loaded.lessonData;
+      const license = meta.license || '';
+      const permission = lessonChain.checkForkPermission(license);
+      const inherited = lessonChain.inheritedForkLicense(license);
+      return sendResponse(200, {
+        slug: qs.slug,
+        license,
+        ...permission,
+        inheritedLicense: inherited,
+        sourceUri: meta.uri || null,
+        sourceHash: meta.content_hash || null
+      });
     }
 
     sendResponse(404, { error: 'Not found' });

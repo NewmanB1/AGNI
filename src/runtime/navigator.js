@@ -1,7 +1,7 @@
 // src/runtime/navigator.js
 
 /**
- * AGNI Adaptive Navigation Engine v2.0
+ * AGNI Adaptive Navigation Engine v2.1
  * 
  * This module calculates the "Marginal Learning Cost" (Theta / θ) for a list of lessons.
  * It orders content based on two factors:
@@ -9,7 +9,19 @@
  * 2. The Local Learner Profile (Pedagogical Fit & Learning Style)
  * 
  * Environment: Isomorphic (Node.js & Browser)
+ * Browser target: Chrome 49+ (Android Marshmallow). No optional chaining,
+ * no flatMap, no object spread syntax.
  */
+
+// Polyfill-free helpers for Chrome 49 compatibility
+function _assign(target) {
+    for (var i = 1; i < arguments.length; i++) {
+        var src = arguments[i];
+        if (src) { for (var k in src) { if (src.hasOwnProperty(k)) target[k] = src[k]; } }
+    }
+    return target;
+}
+function _getOpt(obj, key) { return obj ? obj[key] : undefined; }
 
 // ============================================================================
 // Constants & Configuration
@@ -107,7 +119,9 @@ function sortLessons(availableLessons, userLog, graphWeights) {
 
     // 2. Build User Pedagogical Profile (The "Fingerprint")
     // Pre-calculate affinities for every feature tag found in their history.
-    const allUserFeatures = new Set(userLog.flatMap(l => l.features || []));
+    const allUserFeatures = new Set(userLog.reduce(function(acc, l) {
+        return acc.concat(l.features || []);
+    }, []));
     const userAffinities = {};
     allUserFeatures.forEach(tag => {
         userAffinities[tag] = calculateFeatureAffinity(tag, userLog);
@@ -129,10 +143,9 @@ function sortLessons(availableLessons, userLog, graphWeights) {
         let graphDiscount = 0.0;
         let strongestEdge = null;
 
-        const targetSkills = [
-            ...(lesson.ontology?.requires || []).map(r => r.skill),
-            ...(lesson.ontology?.provides || []).map(p => p.skill)
-        ];
+        const ont = lesson.ontology || {};
+        const targetSkills = (ont.requires || []).map(r => r.skill)
+            .concat((ont.provides || []).map(p => p.skill));
 
         if (graphWeights && Array.isArray(graphWeights.edges)) {
             targetSkills.forEach(target => {
@@ -201,8 +214,7 @@ function sortLessons(availableLessons, userLog, graphWeights) {
         // Clamp logic
         if (theta < CONFIG.MIN_THETA) theta = CONFIG.MIN_THETA;
 
-        return {
-            ...lesson,
+        return _assign({}, lesson, {
             _score: {
                 theta: parseFloat(theta.toFixed(3)),
                 components: {
@@ -220,7 +232,7 @@ function sortLessons(availableLessons, userLog, graphWeights) {
                     vark: lessonVark
                 }
             }
-        };
+        });
     });
 
     // 4. Sort Ascending (Lowest Theta = Best)
@@ -378,7 +390,7 @@ function applyTeachingModeFilter(scoredLessons, opts) {
         if (spine && lesson.ontology) {
             const provides = lesson.ontology.provides || [];
             const requires = lesson.ontology.requires || [];
-            const allSkills = [...provides, ...requires];
+            const allSkills = provides.concat(requires);
             const hasSpine = allSkills.some(s => s.skill && s.skill.startsWith(spine));
             if (hasSpine) bonus += 0.1;
         }
@@ -388,17 +400,183 @@ function applyTeachingModeFilter(scoredLessons, opts) {
         }
 
         const adjustedTheta = Math.max(CONFIG.MIN_THETA, lesson._score.theta - bonus);
-        return {
-            ...lesson,
-            _score: {
-                ...lesson._score,
+        return _assign({}, lesson, {
+            _score: _assign({}, lesson._score, {
                 theta: parseFloat(adjustedTheta.toFixed(3)),
-                components: {
-                    ...lesson._score.components,
+                components: _assign({}, lesson._score.components, {
                     teachingModeBonus: parseFloat(bonus.toFixed(2))
-                }
+                })
+            })
+        });
+    }).sort((a, b) => a._score.theta - b._score.theta);
+}
+
+// ============================================================================
+// Markov Transition Model (client-side)
+// ============================================================================
+
+/**
+ * Lightweight client-side Markov transition scoring.
+ *
+ * Given the student's recent lesson history and a transition table
+ * (precomputed on the hub and shipped to the client), score each
+ * candidate lesson by how well it fits the student's learning path.
+ *
+ * @param {Array} candidates - Lesson meta objects
+ * @param {string[]} recentLessons - Student's recently completed lesson IDs (most recent last)
+ * @param {Object} transitionTable - { fromId: { toId: { prob: number, avgGain: number } } }
+ * @returns {Object.<string, { prob: number, quality: number }>}
+ */
+function scoreMarkovTransitions(candidates, recentLessons, transitionTable) {
+    if (!transitionTable || !recentLessons || recentLessons.length === 0) return {};
+
+    const RECENCY_DECAY = 0.7;
+    const scores = {};
+
+    candidates.forEach(lesson => {
+        const lid = lesson.identifier || _getOpt(lesson.meta, 'identifier') || '';
+        let totalWeight = 0;
+        let weightedProb = 0;
+        let weightedGain = 0;
+
+        for (let i = recentLessons.length - 1; i >= 0; i--) {
+            const stepsBack = recentLessons.length - 1 - i;
+            const recency = Math.pow(RECENCY_DECAY, stepsBack);
+            const from = recentLessons[i];
+            const edges = transitionTable[from];
+            if (!edges || !edges[lid]) continue;
+
+            weightedProb += recency * edges[lid].prob;
+            weightedGain += recency * edges[lid].avgGain;
+            totalWeight += recency;
+        }
+
+        if (totalWeight > 0) {
+            scores[lid] = {
+                prob: weightedProb / totalWeight,
+                quality: weightedGain / totalWeight
+            };
+        }
+    });
+
+    return scores;
+}
+
+// ============================================================================
+// PageRank Authority (client-side)
+// ============================================================================
+
+/**
+ * Lightweight PageRank computation for the client.
+ *
+ * Operates on a pre-built adjacency list (shipped from the hub).
+ * Returns a lesson authority map where higher = more important gateway.
+ *
+ * @param {string[]} nodes - All lesson IDs in the graph
+ * @param {Object.<string, string[]>} edges - Adjacency list (outgoing)
+ * @param {object} [opts]
+ * @param {number} [opts.damping=0.85]
+ * @param {number} [opts.maxIter=50]
+ * @returns {Object.<string, number>}
+ */
+function computeClientPageRank(nodes, edges, opts) {
+    opts = opts || {};
+    const d = opts.damping || 0.85;
+    const maxIter = opts.maxIter || 50;
+    const N = nodes.length;
+    if (N === 0) return {};
+
+    const idx = {};
+    nodes.forEach((n, i) => { idx[n] = i; });
+
+    let rank = new Array(N).fill(1.0 / N);
+
+    for (let iter = 0; iter < maxIter; iter++) {
+        const next = new Array(N).fill((1 - d) / N);
+
+        for (let s = 0; s < N; s++) {
+            const outs = edges[nodes[s]] || [];
+            if (outs.length === 0) {
+                const share = d * rank[s] / N;
+                for (let dn = 0; dn < N; dn++) next[dn] += share;
+            } else {
+                const w = d * rank[s] / outs.length;
+                outs.forEach(dst => {
+                    if (idx[dst] !== undefined) next[idx[dst]] += w;
+                });
             }
-        };
+        }
+
+        let diff = 0;
+        for (let c = 0; c < N; c++) diff += Math.abs(next[c] - rank[c]);
+        rank = next;
+        if (diff < 1e-6) break;
+    }
+
+    const result = {};
+    nodes.forEach((n, i) => { result[n] = rank[i]; });
+    return result;
+}
+
+/**
+ * Enhanced lesson sorting that incorporates Markov transitions and PageRank.
+ *
+ * Wraps sortLessons with two additional signals:
+ *   - Markov transition quality: lessons that historically lead to good outcomes
+ *   - PageRank authority: gateway lessons that unlock the most downstream content
+ *
+ * @param {Array} availableLessons
+ * @param {Array} userLog
+ * @param {Object} graphWeights
+ * @param {object} [sequenceData]  Optional data from the hub for Markov/PageRank
+ *   transitionTable: { fromId: { toId: { prob, avgGain } } }
+ *   recentLessons:   string[] of recently completed lesson IDs
+ *   pageRankGraph:   { nodes: string[], edges: { id: string[] } }
+ * @returns {Array} Sorted lessons with enhanced scoring
+ */
+function sortLessonsEnhanced(availableLessons, userLog, graphWeights, sequenceData) {
+    const baseSorted = sortLessons(availableLessons, userLog, graphWeights);
+    if (!sequenceData) return baseSorted;
+
+    const MARKOV_WEIGHT = 0.12;
+    const PAGERANK_WEIGHT = 0.08;
+
+    const markovScores = sequenceData.transitionTable
+        ? scoreMarkovTransitions(baseSorted, sequenceData.recentLessons || [], sequenceData.transitionTable)
+        : {};
+
+    let prScores = {};
+    if (sequenceData.pageRankGraph) {
+        const prg = sequenceData.pageRankGraph;
+        prScores = computeClientPageRank(prg.nodes || [], prg.edges || {});
+    }
+
+    const prValues = Object.values(prScores);
+    const prMin = prValues.length > 0 ? Math.min(...prValues) : 0;
+    const prMax = prValues.length > 0 ? Math.max(...prValues) : 0;
+    const prRange = prMax - prMin;
+
+    return baseSorted.map(lesson => {
+        const lid = lesson.identifier || _getOpt(lesson.meta, 'identifier') || '';
+        const ms = markovScores[lid] || { prob: 0, quality: 0 };
+        const pr = prScores[lid] || 0;
+        const prNorm = prRange > 0 ? (pr - prMin) / prRange : 0;
+
+        const markovBonus = MARKOV_WEIGHT * (ms.prob + ms.quality);
+        const prBonus = PAGERANK_WEIGHT * prNorm;
+        const totalBonus = markovBonus + prBonus;
+
+        const adjustedTheta = Math.max(CONFIG.MIN_THETA, lesson._score.theta - totalBonus);
+
+        return _assign({}, lesson, {
+            _score: _assign({}, lesson._score, {
+                theta: parseFloat(adjustedTheta.toFixed(3)),
+                components: _assign({}, lesson._score.components, {
+                    markovBonus: parseFloat(markovBonus.toFixed(3)),
+                    pageRankBonus: parseFloat(prBonus.toFixed(3))
+                })
+            })
+        });
     }).sort((a, b) => a._score.theta - b._score.theta);
 }
 
@@ -408,7 +586,27 @@ function applyTeachingModeFilter(scoredLessons, opts) {
 
 // Support both Node.js (CommonJS) and Browser (Global)
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { sortLessons, calculateFeatureAffinity, applyTeachingModeFilter, buildStudentVarkProfile, varkAlignmentBonus, bloomsProgressionBonus };
+    module.exports = {
+        sortLessons,
+        sortLessonsEnhanced,
+        calculateFeatureAffinity,
+        applyTeachingModeFilter,
+        buildStudentVarkProfile,
+        varkAlignmentBonus,
+        bloomsProgressionBonus,
+        scoreMarkovTransitions,
+        computeClientPageRank
+    };
 } else {
-    window.AGNI_NAVIGATOR = { sortLessons, calculateFeatureAffinity, applyTeachingModeFilter, buildStudentVarkProfile, varkAlignmentBonus, bloomsProgressionBonus };
+    window.AGNI_NAVIGATOR = {
+        sortLessons,
+        sortLessonsEnhanced,
+        calculateFeatureAffinity,
+        applyTeachingModeFilter,
+        buildStudentVarkProfile,
+        varkAlignmentBonus,
+        bloomsProgressionBonus,
+        scoreMarkovTransitions,
+        computeClientPageRank
+    };
 }

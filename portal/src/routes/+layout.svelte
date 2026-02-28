@@ -6,6 +6,7 @@
   import { hubApiStore } from '$lib/api';
   import { t } from '$lib/i18n';
   import { getPseudoId } from '$lib/pseudoId';
+  import { restoreCreatorSession } from '$lib/creatorAuth';
   import { onMount } from 'svelte';
 
   const tr = $derived($t);
@@ -41,7 +42,7 @@
 
   onMount(() => {
     checkReviews();
-    // Request notification permission proactively
+    restoreCreatorSession();
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
@@ -59,7 +60,7 @@
     <a href="/hub" class:active={isHub}>{tr('nav.hub')}</a>
     <a href="/groups" class:active={isGroups}>{tr('nav.groups')}</a>
     <a href="/students" class:active={isStudents}>{tr('nav.students')}</a>
-    <a href="/author/new" class:active={isAuthor}>Author</a>
+    <a href="/author/login" class:active={isAuthor}>Author</a>
     <a href="/parent/dashboard" class:active={isParent}>Parent</a>
     <a href="/governance/setup" class:active={isGovernance}>{tr('nav.governance')}</a>
     <a href="/admin/hub" class:active={isAdmin}>Admin</a>

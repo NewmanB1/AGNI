@@ -17,6 +17,7 @@ export interface ThetaLessonEntry {
   residualFactor: number;
   transferBenefit: number;
   alreadyMastered: boolean;
+  is_group?: boolean;
   skillsProvided: Array<{ skill: string; declaredLevel?: number }>;
   skillsRequired: string[];
 }
@@ -78,6 +79,7 @@ export interface LessonSidecar {
   title: string;
   language: string;
   difficulty: number;
+  is_group?: boolean;
   utu?: { class?: string; band?: number };
   teaching_mode?: string;
   compiledAt?: string;
@@ -141,6 +143,7 @@ export interface LessonIndexEntry {
   title: string;
   difficulty: number;
   language: string;
+  is_group?: boolean;
   compiledAt?: string | null;
   metadata_source?: string;
   utu?: { class?: string; band?: number } | null;
@@ -249,6 +252,32 @@ export function createHubApi(baseUrl: string) {
     return parseJson<T>(res);
   }
 
+  function authHeaders(): Record<string, string> {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('agni_creator_token') : null;
+    const h: Record<string, string> = { 'Content-Type': 'application/json', Accept: 'application/json' };
+    if (token) h['Authorization'] = `Bearer ${token}`;
+    return h;
+  }
+
+  async function authGet<T>(apiPath: string): Promise<T> {
+    const res = await fetch(base + apiPath.replace(/^\//, ''), { method: 'GET', headers: authHeaders() });
+    return parseJson<T>(res);
+  }
+
+  async function authPost<T>(apiPath: string, body: unknown): Promise<T> {
+    const res = await fetch(base + apiPath.replace(/^\//, ''), {
+      method: 'POST', headers: authHeaders(), body: JSON.stringify(body)
+    });
+    return parseJson<T>(res);
+  }
+
+  async function authPut<T>(apiPath: string, body: unknown): Promise<T> {
+    const res = await fetch(base + apiPath.replace(/^\//, ''), {
+      method: 'PUT', headers: authHeaders(), body: JSON.stringify(body)
+    });
+    return parseJson<T>(res);
+  }
+
   return {
     baseUrl: base || undefined,
 
@@ -275,6 +304,36 @@ export function createHubApi(baseUrl: string) {
 
     getStreaks(pseudoId: string): Promise<{ currentStreak: number; longestStreak: number; totalSessions: number; todayCount: number; dailyGoal: number; goalMet: boolean; dates: string[] }> {
       return get<any>(`api/streaks?pseudoId=${encodeURIComponent(pseudoId)}`);
+    },
+
+    getLearningPaths(pseudoId?: string): Promise<{ paths: Array<{ id: string; name: string; description: string; skills: string[]; progress?: { completed: number; total: number; pct: number } }> }> {
+      const qs = pseudoId ? `?pseudoId=${encodeURIComponent(pseudoId)}` : '';
+      return get<any>(`api/learning-paths${qs}`);
+    },
+
+    getLearningPath(id: string, pseudoId?: string): Promise<any> {
+      const qs = pseudoId ? `?pseudoId=${encodeURIComponent(pseudoId)}` : '';
+      return get<any>(`api/learning-paths/${encodeURIComponent(id)}${qs}`);
+    },
+
+    postLearningPath(body: { name: string; description?: string; skills: string[] }): Promise<{ ok: boolean; path: any }> {
+      return post<any>('api/learning-paths', body);
+    },
+
+    putLearningPath(body: { id: string; name?: string; description?: string; skills?: string[] }): Promise<{ ok: boolean; path: any }> {
+      return put<any>('api/learning-paths', body);
+    },
+
+    getDiagnosticProbes(): Promise<{ probes: Array<{ probeId: string; skill: string; difficulty: number; question: string; type: string; options: string[] }> }> {
+      return get<any>('api/diagnostic');
+    },
+
+    postDiagnostic(pseudoId: string, responses: Array<{ probeId: string; skill: string; difficulty: number; answer: number }>): Promise<{ ok: boolean; ability: number; skillsBootstrapped: number }> {
+      return post<any>('api/diagnostic', { pseudoId, responses });
+    },
+
+    getBadges(pseudoId: string): Promise<{ pseudoId: string; badges: Array<{ id: string; name: string; description: string; icon: string; earned: boolean }>; stats: { lessons: number; skills: number; longestStreak: number; totalSkills: number } }> {
+      return get<any>(`api/badges?pseudoId=${encodeURIComponent(pseudoId)}`);
     },
 
     getCollabStats(lessonIds: string[]): Promise<{ stats: Record<string, { activeCount: number; completedCount: number }> }> {
@@ -352,11 +411,12 @@ export function createHubApi(baseUrl: string) {
     },
 
     /** GET /api/lessons (S2): lesson index with optional filters. */
-    getLessons(filters?: { utu?: string; spine?: string; teaching_mode?: string }): Promise<LessonListResponse> {
+    getLessons(filters?: { utu?: string; spine?: string; teaching_mode?: string; is_group?: boolean }): Promise<LessonListResponse> {
       const params = new URLSearchParams();
       if (filters?.utu) params.set('utu', filters.utu);
       if (filters?.spine) params.set('spine', filters.spine);
       if (filters?.teaching_mode) params.set('teaching_mode', filters.teaching_mode);
+      if (filters?.is_group !== undefined) params.set('is_group', String(filters.is_group));
       const qs = params.toString();
       return get<LessonListResponse>('api/lessons' + (qs ? '?' + qs : ''));
     },
@@ -376,9 +436,17 @@ export function createHubApi(baseUrl: string) {
       return post<{ ir: unknown; sidecar: unknown }>('api/author/preview', lesson);
     },
 
-    /** POST /api/author/save (S1): validate + write lesson YAML to hub storage. */
-    async postAuthorSave(lesson: unknown): Promise<{ ok: boolean; slug: string; path: string; warnings: string[] }> {
-      return post<{ ok: boolean; slug: string; path: string; warnings: string[] }>('api/author/save', lesson);
+    /** POST /api/author/save (S1): validate + write lesson YAML to hub storage. compile option triggers IR generation. */
+    async postAuthorSave(lesson: unknown, opts?: { compile?: boolean }): Promise<{ ok: boolean; slug: string; path: string; compiled?: boolean; warnings: string[]; uri?: string; contentHash?: string; parentHash?: string | null }> {
+      const payload = opts?.compile ? { ...lesson as Record<string, unknown>, _compile: true } : lesson;
+      return post<{ ok: boolean; slug: string; path: string; compiled?: boolean; warnings: string[]; uri?: string; contentHash?: string; parentHash?: string | null }>('api/author/save', payload);
+    },
+
+    /** DELETE /api/author/delete/:slug: remove a saved lesson and its compiled artifacts. */
+    async deleteAuthorLesson(slug: string): Promise<{ ok: boolean; deleted: string[] }> {
+      const res = await fetch(`${base}api/author/delete/${encodeURIComponent(slug)}`, { method: 'DELETE', headers: authHeaders() });
+      if (!res.ok) { const e = await res.json().catch(() => ({ error: res.statusText })); throw new Error((e as { error: string }).error || res.statusText); }
+      return res.json() as Promise<{ ok: boolean; deleted: string[] }>;
     },
 
     /** Planned: GET /api/governance/report. Throws if endpoint not implemented. */
@@ -439,8 +507,129 @@ export function createHubApi(baseUrl: string) {
     /** PUT /api/admin/config (A1: Hub setup wizard). */
     async putAdminConfig(config: HubConfig): Promise<{ ok: boolean; message?: string }> {
       return put<{ ok: boolean; message?: string }>('api/admin/config', config);
+    },
+
+    // ── Account management ────────────────────────────────────────────────
+
+    registerCreator(body: { name: string; email: string; password: string }): Promise<{ ok: boolean; creator: CreatorAccount }> {
+      return post('api/auth/register', body);
+    },
+
+    loginCreator(body: { email: string; password: string }): Promise<{ ok: boolean; token: string; creator: CreatorAccount }> {
+      return post('api/auth/login', body);
+    },
+
+    getCreatorSession(): Promise<{ creator: CreatorAccount }> {
+      return authGet('api/auth/me');
+    },
+
+    logoutCreator(): Promise<{ ok: boolean }> {
+      return authPost('api/auth/logout', {});
+    },
+
+    getCreators(): Promise<{ creators: CreatorAccount[] }> {
+      return get('api/accounts/creators');
+    },
+
+    setCreatorApproval(creatorId: string, approved: boolean): Promise<{ ok: boolean; creatorId: string; approved: boolean }> {
+      return authPut('api/accounts/creator/approve', { creatorId, approved });
+    },
+
+    createStudent(body: { displayName?: string; pin?: string }): Promise<{ ok: boolean; student: StudentAccount }> {
+      return authPost('api/accounts/student', body);
+    },
+
+    createStudentsBulk(body: { names: string[]; pin?: string }): Promise<{ ok: boolean; students: StudentAccount[]; count: number }> {
+      return authPost('api/accounts/students/bulk', body);
+    },
+
+    getStudentAccounts(): Promise<{ students: StudentAccount[] }> {
+      return get('api/accounts/students');
+    },
+
+    updateStudent(pseudoId: string, updates: Partial<StudentAccount>): Promise<{ ok: boolean; student: StudentAccount }> {
+      return authPut('api/accounts/student', { pseudoId, ...updates });
+    },
+
+    generateTransferToken(pseudoId: string): Promise<{ ok: boolean; pseudoId: string; token: string; expiresAt: string }> {
+      return authPost('api/accounts/student/transfer-token', { pseudoId });
+    },
+
+    claimTransferToken(token: string): Promise<{ ok: boolean; pseudoId: string; displayName: string | null }> {
+      return post('api/accounts/student/claim', { token });
+    },
+
+    verifyStudentPin(pseudoId: string, pin: string): Promise<{ ok: boolean; verified: boolean }> {
+      return post('api/accounts/student/verify-pin', { pseudoId, pin });
+    },
+
+    // ── Lesson chain / immutability ─────────────────────────────────────────
+
+    getLessonChain(slug: string): Promise<{ slug: string; versions: ChainVersion[] }> {
+      return get(`api/chain/${encodeURIComponent(slug)}`);
+    },
+
+    verifyChain(slug: string, lessonData?: unknown): Promise<{ chain: ChainVerification; content?: ContentVerification }> {
+      return post('api/chain/verify', { slug, lessonData });
+    },
+
+    checkForkPermission(slug: string): Promise<ForkPermission> {
+      return get(`api/fork-check?slug=${encodeURIComponent(slug)}`);
     }
   };
+}
+
+export interface ChainVersion {
+  version: number;
+  contentHash: string;
+  parentHash: string | null;
+  creatorId: string | null;
+  uri: string | null;
+  timestamp: string;
+}
+
+export interface ChainVerification {
+  valid: boolean;
+  errors: string[];
+  versions: number;
+}
+
+export interface ContentVerification {
+  valid: boolean;
+  computed: string;
+  claimed: string;
+}
+
+export interface ForkPermission {
+  slug: string;
+  license: string;
+  allowed: boolean;
+  reason?: string;
+  nonCommercial?: boolean;
+  inheritedLicense: string | null;
+  sourceUri: string | null;
+  sourceHash: string | null;
+}
+
+export interface CreatorAccount {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  approved: boolean;
+  createdAt: string;
+  lessonsAuthored: string[];
+}
+
+export interface StudentAccount {
+  pseudoId: string;
+  displayName: string | null;
+  pin: string | null;
+  createdAt: string;
+  createdBy: string | null;
+  transferToken: string | null;
+  transferExpiresAt: string | null;
+  active: boolean;
 }
 
 export interface HubConfig {

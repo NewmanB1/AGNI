@@ -162,10 +162,15 @@ function buildLessonSidecar(ir) {
     title:          meta.title    || ir.title        || '',
     language:       meta.language || ir.language     || 'en',
     difficulty:     ir.inferredFeatures.difficulty   || meta.difficulty || 2,
+    uri:            meta.uri || undefined,
+    content_hash:   meta.content_hash || undefined,
+    parent_hash:    meta.parent_hash || undefined,
+    creator_id:     meta.creator_id || undefined,
 
     // ── Governance / pedagogy (for reporting and compliance) ───────────────────
     utu:            meta.utu || undefined,
     teaching_mode:  meta.teaching_mode || ir.teaching_mode || undefined,
+    is_group:       !!(meta.is_group),
 
     // ── Compiler stamps ───────────────────────────────────────────────────────
     compiledAt:     ir._compiledAt,

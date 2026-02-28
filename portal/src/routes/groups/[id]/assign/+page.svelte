@@ -16,11 +16,14 @@
   let error = $state('');
   let success = $state('');
   let hubConnected = $state(false);
+  let groupOnlyFilter = $state(false);
 
   const lessonEligibility = $derived.by(() => {
     if (!group || lessons.length === 0) return [];
     const studentIds = group.studentIds || [];
-    return lessons.map(l => {
+    let filtered = lessons;
+    if (groupOnlyFilter) filtered = filtered.filter(l => l.is_group);
+    return filtered.map(l => {
       const eligibleFor = studentIds.filter(id => {
         const set = eligibilityMap[id];
         return set && set.has(l.lessonId);
@@ -144,12 +147,17 @@
       Lessons are sorted by eligibility across all group members. The override will be set for every member for whom the lesson is theta-eligible.
     </p>
 
+    <label class="filter-toggle">
+      <input type="checkbox" bind:checked={groupOnlyFilter} />
+      Show only group/collaborative lessons
+    </label>
+
     <label class="block">
       Lesson
       <select bind:value={selectedLessonId}>
         {#each lessonEligibility as l}
           <option value={l.lessonId}>
-            {l.title} ({l.slug}) · θ={l.theta} — eligible for {l.eligibleCount}/{l.totalStudents}
+            {l.is_group ? '👥 ' : ''}{l.title} ({l.slug}) · θ={l.theta} — eligible for {l.eligibleCount}/{l.totalStudents}
           </option>
         {/each}
       </select>
@@ -213,6 +221,12 @@
     padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: bold;
   }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .filter-toggle {
+    display: flex; align-items: center; gap: 0.4rem;
+    font-size: 0.9rem; cursor: pointer; margin-bottom: 0.5rem;
+  }
+  .filter-toggle input[type="checkbox"] { accent-color: var(--accent); }
 
   .success-msg { color: #4ade80; margin-top: 1rem; }
   .warning-box, .error-box { border-color: #ff6b6b; }

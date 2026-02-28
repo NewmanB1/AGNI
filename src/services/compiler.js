@@ -34,7 +34,7 @@ function parseLessonFromString(rawYaml) {
     return { error: 'Raw YAML must be a string' };
   }
   try {
-    var lessonData = yaml.load(rawYaml.trim());
+    var lessonData = yaml.load(rawYaml.trim(), { schema: yaml.JSON_SCHEMA });
     return { lessonData: lessonData };
   } catch (err) {
     return { error: (err && err.message) ? err.message : String(err) };
@@ -49,7 +49,7 @@ function parseLessonFromString(rawYaml) {
  */
 function parseLessonYaml(inputPath) {
   var raw = fs.readFileSync(inputPath, 'utf8');
-  var lessonData = yaml.load(raw);
+  var lessonData = yaml.load(raw, { schema: yaml.JSON_SCHEMA });
   return { lessonData: lessonData, raw: raw };
 }
 

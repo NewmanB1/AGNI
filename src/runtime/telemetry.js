@@ -1,5 +1,5 @@
 // src/runtime/telemetry.js
-// AGNI Telemetry  v1.7.0
+// AGNI Telemetry  v1.8.0
 //
 // Runs on the student's edge device (browser).
 // Records lesson completion events and flushes them to the village hub
@@ -211,6 +211,16 @@
    *                                            durationMs }
    * @returns {{ mastery: number, stepScores: object[] }}
    */
+  /**
+   * Compute weighted mastery score M in [0, 1] for a completed lesson.
+   *
+   * Scoring improvements (v1.8.0):
+   *   - Gentler decay: sqrt-based curve instead of linear.
+   *     With maxAttempts=2, a second-attempt pass scores ~0.71 instead of 0.50.
+   *   - Skipped steps use half weight so one skipped step doesn't tank the score.
+   *   - Failed steps (exhausted attempts without passing) score 0.15 partial credit
+   *     to reward the attempt rather than treating it identically to a skip.
+   */
   function computeMastery(stepOutcomes) {
     var totalWeight  = 0;
     var weightedSum  = 0;
@@ -218,31 +228,30 @@
 
     stepOutcomes.forEach(function (step) {
       var w = typeof step.weight === 'number' ? step.weight : 0;
-      totalWeight += w;
 
       var s;
       if (step.type === 'instruction' || step.type === 'completion') {
-        // These steps have no pass/fail — always score 1.0
         s = 1.0;
+        totalWeight += w;
       } else if (step.skipped) {
-        // Skipped via on_fail without passing
         s = 0.0;
+        totalWeight += w * 0.5;
       } else if (step.passed) {
-        // Passed: score decays with attempt count
-        // First attempt = 1.0, each retry costs (1 / maxAttempts)
         var maxAtt = step.maxAttempts || 1;
         var att    = Math.max(1, step.attempts || 1);
-        s = Math.max(0, (maxAtt - (att - 1)) / maxAtt);
+        s = Math.max(0.25, Math.sqrt((maxAtt - (att - 1)) / maxAtt));
+        totalWeight += w;
       } else {
-        s = 0.0;
+        s = 0.15;
+        totalWeight += w;
       }
 
-      weightedSum += w * s;
+      weightedSum += (step.skipped ? w * 0.5 : w) * s;
       stepScores.push({
         stepId:    step.stepId,
         type:      step.type,
         weight:    w,
-        score:     s,
+        score:     Math.round(s * 1000) / 1000,
         passed:    !!step.passed,
         skipped:   !!step.skipped,
         attempts:  step.attempts || 0,
@@ -422,10 +431,10 @@
   };
 
   if (global.AGNI_SHARED && global.AGNI_SHARED.registerModule) {
-    global.AGNI_SHARED.registerModule('telemetry', '1.7.0');
+    global.AGNI_SHARED.registerModule('telemetry', '1.8.0');
   }
 
   var DEV_MODE = !!(global.LESSON_DATA && global.LESSON_DATA._devMode);
-  if (DEV_MODE) console.log('[TELEMETRY] telemetry.js v1.7.0 loaded');
+  if (DEV_MODE) console.log('[TELEMETRY] telemetry.js v1.8.0 loaded');
 
 }(window));

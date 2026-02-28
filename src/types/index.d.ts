@@ -21,6 +21,8 @@ export interface LessonMeta {
   utu?: UTULabel;
   /** Author-declared teaching mode (e.g. socratic, didactic, guided_discovery). */
   teaching_mode?: string;
+  /** Whether this lesson is designed for group/collaborative work. */
+  is_group?: boolean;
   // Additional author-defined metadata is allowed.
   [key: string]: unknown;
 }
@@ -125,6 +127,7 @@ export interface LessonSidecar {
   // Governance / pedagogy (for reporting and compliance)
   utu?: UTULabel;
   teaching_mode?: string;
+  is_group?: boolean;
 
   // Compiler stamps
   compiledAt: string;
@@ -198,10 +201,35 @@ export interface BanditState {
   observationCount: number;
 }
 
+export interface MarkovTransitionEdge {
+  count: number;
+  totalGain: number;
+  avgGain: number;
+}
+
+export interface MarkovDropoutEntry {
+  count: number;
+  totalStudents: number;
+}
+
+export interface MarkovCooldownEntry {
+  timestamp: number;
+  gain: number;
+}
+
+export interface MarkovState {
+  transitions: Record<string, Record<string, MarkovTransitionEdge>>;
+  bigrams: Record<string, Record<string, MarkovTransitionEdge>>;
+  studentHistory: Record<string, string[]>;
+  dropouts: Record<string, MarkovDropoutEntry>;
+  cooldowns: Record<string, Record<string, MarkovCooldownEntry>>;
+}
+
 export interface LMSState {
   rasch: RaschState;
   embedding: EmbeddingState;
   bandit: BanditState;
+  markov?: MarkovState;
 }
 
 export interface BanditSummary {

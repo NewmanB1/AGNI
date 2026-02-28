@@ -81,7 +81,21 @@
         "content_hash": {
           "type": "string",
           "pattern": "^sha256:[a-f0-9]{64}$",
-          "description": "SHA-256 hash of the steps array (JSON-serialized, sorted keys). Allows integrity verification without full signature infrastructure."
+          "description": "SHA-256 of canonical lesson content (meta + steps, sorted keys). Computed on save; forms the basis of the immutability chain."
+        },
+        "parent_hash": {
+          "type": ["string", "null"],
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "description": "Content hash of the previous version of this lesson. Null for the first version. Forms a hash chain for immutability verification."
+        },
+        "uri": {
+          "type": "string",
+          "pattern": "^agni:[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+$",
+          "description": "Canonical lesson URI: agni:<creator_id>/<slug>. Auto-generated from creator ID and slug; not set by hand."
+        },
+        "creator_id": {
+          "type": "string",
+          "description": "ID of the creator account that authored this lesson. Set automatically on save."
         },
         "utu": {
           "type": "object",
@@ -98,6 +112,11 @@
           "type": "string",
           "description": "Author-declared teaching mode.",
           "enum": ["socratic", "didactic", "guided_discovery", "narrative", "constructivist", "direct"]
+        },
+        "is_group": {
+          "type": "boolean",
+          "description": "Whether this lesson is designed for group/collaborative work. When true, teachers can assign it to student groups.",
+          "default": false
         }
       }
     },

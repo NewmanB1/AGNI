@@ -9,6 +9,8 @@ var governance     = require('./governance');
 var author         = require('./author');
 var lessonAssembly = require('./lessonAssembly');
 var lessonSchema    = require('./lessonSchema');
+var accounts       = require('./accounts');
+var lessonChain    = require('./lessonChain');
 
 module.exports = {
   compiler:       compiler,
@@ -16,5 +18,7 @@ module.exports = {
   governance:     governance,
   author:         author,
   lessonAssembly: lessonAssembly,
-  lessonSchema:   lessonSchema
+  lessonSchema:   lessonSchema,
+  accounts:       accounts,
+  lessonChain:    lessonChain
 };

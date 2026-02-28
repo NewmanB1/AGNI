@@ -41,6 +41,8 @@ var thompson    = require('./thompson');
 var federation  = require('./federation');
 var math        = require('./math');
 var migrations  = require('./migrations');
+var markov      = require('./markov');
+var pagerank    = require('./pagerank');
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 var DATA_DIR       = process.env.AGNI_DATA_DIR || path.join(__dirname, '../../data');
@@ -88,6 +90,10 @@ function buildDefaultState(): LMSState {
       featureDim:       dim * 2,  // featureDim === embeddingDim * 2 (enforced)
       forgetting:       DEFAULT_FORGETTING,
       observationCount: 0
+    },
+    markov: {
+      transitions:    {},
+      studentHistory: {}
     }
   };
 }
@@ -204,22 +210,42 @@ function seedLessons(lessons: Array<{ lessonId: string; difficulty: number; skil
 // Core API
 // ═══════════════════════════════════════════════════════════════════════════
 
+// ── Markov + PageRank signal weights ─────────────────────────────────────────
+// These control how much influence the new signals have relative to the
+// Thompson Sampling bandit. They are intentionally conservative so the
+// bandit remains the primary selector and these act as tie-breakers.
+var MARKOV_TRANSITION_WEIGHT  = parseFloat(process.env.AGNI_MARKOV_WEIGHT   || '0.15');
+var PAGERANK_WEIGHT           = parseFloat(process.env.AGNI_PAGERANK_WEIGHT || '0.10');
+
 /**
  * Select the best lesson for a student from a theta-eligible candidate set.
  *
  * theta.js calls this after computing its BFS-eligible candidate list.
- * The engine picks among those candidates using Thompson Sampling —
- * it never sees ineligible lessons and never overrides prerequisite rules.
+ * The engine picks among those candidates using a composite score:
  *
- * Cold start: if the student has no observations, the Thompson sample is
- * drawn from the weak prior, producing near-uniform random selection —
- * equivalent to a random baseline until enough observations accumulate.
+ *   score = thompsonScore
+ *           + MARKOV_WEIGHT  * (transitionProb + transitionQuality)
+ *           + PAGERANK_WEIGHT * combinedPageRankScore
+ *
+ * Thompson Sampling remains the primary signal. Markov transition quality
+ * answers "do students who take this lesson next tend to learn well?" and
+ * PageRank answers "is this lesson a gateway that unlocks many future paths?"
+ *
+ * Cold start: when no transition history exists, Markov and PageRank
+ * contribute zero, falling back to pure Thompson Sampling (which itself
+ * falls back to near-uniform random with a weak prior).
  *
  * @param {string}   studentId
  * @param {string[]} candidates  lessonIds already filtered by theta BFS
+ * @param {Object.<string, { requires?: string[], provides?: string[] }>} [ontologyMap]
+ *   Optional per-lesson ontology for richer PageRank. Passed from theta.js catalog.
  * @returns {string|null}
  */
-function selectBestLesson(studentId: string, candidates: string[]): string | null {
+function selectBestLesson(
+  studentId: string,
+  candidates: string[],
+  ontologyMap?: Record<string, { requires?: string[]; provides?: string[] }>
+): string | null {
   if (!candidates || candidates.length === 0) return null;
 
   // Temporarily restrict embedding.lessons to the candidate set so that
@@ -232,23 +258,97 @@ function selectBestLesson(studentId: string, candidates: string[]): string | nul
     if (fullLessons[id]) {
       filteredLessons[id] = fullLessons[id];
     } else {
-      // Candidate not yet in embedding — initialize on the fly
       embeddings.ensureLessonVector(_state, id);
       filteredLessons[id] = _state.embedding.lessons[id];
     }
   }
 
+  // ── Thompson Sampling scores (primary signal) ──────────────────────────
   _state.embedding.lessons = filteredLessons;
-  var selected = thompson.selectLesson(_state, studentId);
+  thompson.ensureBanditInitialized(_state);
+
+  var thetaSample = sampleThetaForScoring(_state);
+  var studentVec = embeddings.ensureStudentVector(_state, studentId);
+
+  var thompsonScores: Record<string, number> = {};
+  for (var ti = 0; ti < candidates.length; ti++) {
+    var cid = candidates[ti];
+    var lessonVec = embeddings.ensureLessonVector(_state, cid);
+    var x = studentVec.concat(lessonVec);
+    thompsonScores[cid] = math.dot(thetaSample, x);
+  }
   _state.embedding.lessons = fullLessons;
 
-  return selected;
+  // ── Markov transition scores (with bigrams, dropout, cooldown) ──────
+  var markovScores: Record<string, any> = {};
+  for (var mi = 0; mi < candidates.length; mi++) {
+    markovScores[candidates[mi]] = markov.scoreCandidate(_state, studentId, candidates[mi]);
+  }
+
+  // ── PageRank scores (cached, quality-weighted) ─────────────────────
+  var pagerankScores: Record<string, { combinedScore: number }> = {};
+  try {
+    pagerankScores = pagerank.scoreCandidates(_state, studentId, candidates, ontologyMap);
+  } catch (_) {
+    // PageRank is an enhancement; if it fails, fall through gracefully
+  }
+
+  // ── Composite scoring ──────────────────────────────────────────────────
+  var bestId: string | null = null;
+  var bestScore = -Infinity;
+  var BIGRAM_WEIGHT = 0.10;
+  var DROPOUT_PENALTY_WEIGHT = 0.20;
+  var COOLDOWN_PENALTY_WEIGHT = 0.30;
+
+  for (var ci = 0; ci < candidates.length; ci++) {
+    var lid = candidates[ci];
+
+    var ts = thompsonScores[lid] || 0;
+    var ms = markovScores[lid] || {
+      transitionProb: 0, transitionQuality: 0,
+      bigramProb: 0, bigramQuality: 0,
+      dropoutPenalty: 0, cooldownPenalty: 0
+    };
+    var ps = pagerankScores[lid] || { combinedScore: 0 };
+
+    var firstOrderSignal = ms.transitionProb + ms.transitionQuality;
+    var bigramSignal = ms.bigramProb + ms.bigramQuality;
+
+    var composite = ts
+      + MARKOV_TRANSITION_WEIGHT * firstOrderSignal
+      + BIGRAM_WEIGHT * bigramSignal
+      + PAGERANK_WEIGHT * ps.combinedScore
+      - DROPOUT_PENALTY_WEIGHT * ms.dropoutPenalty
+      - COOLDOWN_PENALTY_WEIGHT * ms.cooldownPenalty;
+
+    if (composite > bestScore) {
+      bestScore = composite;
+      bestId = lid;
+    }
+  }
+
+  return bestId;
+}
+
+/**
+ * Sample a θ vector from the Thompson posterior for composite scoring.
+ * Extracted so selectBestLesson can score all candidates against one sample.
+ */
+function sampleThetaForScoring(state: LMSState): number[] {
+  thompson.ensureBanditInitialized(state);
+  var Ainv = math.invertSPD(state.bandit.A);
+  var mean = math.matVec(Ainv, state.bandit.b);
+  var L = math.cholesky(Ainv);
+  var z: number[] = [];
+  for (var i = 0; i < mean.length; i++) z.push(math.randn());
+  var noise = math.matVec(L, z);
+  return mean.map(function (m: number, idx: number) { return m + noise[idx]; });
 }
 
 /**
  * Pure core: (state, observation) → newState. No I/O.
  * Reference implementation: use this to test LMS behaviour without the filesystem.
- * Mutating helpers (rasch, embeddings, thompson) run on a deep clone so input state is unchanged.
+ * Mutating helpers (rasch, embeddings, thompson, markov) run on a deep clone so input state is unchanged.
  *
  * @param {LMSState} state
  * @param {LMSObservation} observation
@@ -259,6 +359,7 @@ function applyObservation(state: LMSState, observation: LMSObservation): LMSStat
   var gain = rasch.updateAbility(next, observation.studentId, observation.probeResults);
   embeddings.updateEmbedding(next, observation.studentId, observation.lessonId, gain);
   thompson.updateBandit(next, observation.studentId, observation.lessonId, gain);
+  markov.recordTransition(next, observation.studentId, observation.lessonId, gain);
   return next;
 }
 
@@ -335,17 +436,58 @@ function reloadState() {
  * @returns {object}
  */
 function getStatus() {
+  var markovState = _state.markov || { transitions: {}, studentHistory: {} };
   return {
-    students:     Object.keys(_state.rasch.students).length,
-    lessons:      Object.keys(_state.embedding.lessons).length,
-    probes:       Object.keys(_state.rasch.probes).length,
-    observations: _state.bandit.observationCount,
-    embeddingDim: _state.embedding.dim,
-    featureDim:   _state.bandit.featureDim,
-    statePath:    STATE_PATH
+    students:       Object.keys(_state.rasch.students).length,
+    lessons:        Object.keys(_state.embedding.lessons).length,
+    probes:         Object.keys(_state.rasch.probes).length,
+    observations:   _state.bandit.observationCount,
+    embeddingDim:   _state.embedding.dim,
+    featureDim:     _state.bandit.featureDim,
+    statePath:      STATE_PATH,
+    markovEdges:    Object.keys(markovState.transitions).length,
+    trackedPaths:   Object.keys(markovState.studentHistory).length
   };
 }
 
+
+/**
+ * Export the Markov transition table for shipping to the client-side navigator.
+ * Contains probability and average gain per (from → to) edge.
+ * @returns {Object}
+ */
+function exportTransitionTable() {
+  return markov.exportTransitionTable(_state);
+}
+
+/**
+ * Get the student's recent lesson history for client-side Markov scoring.
+ * @param {string} studentId
+ * @returns {string[]}
+ */
+function getStudentLessonHistory(studentId: string): string[] {
+  return markov.getStudentHistory(_state, studentId);
+}
+
+/**
+ * Identify curriculum flow bottlenecks using stationary distribution analysis.
+ * Lessons where students "get stuck" — high stationary probability, low
+ * outgoing transitions, low learning gain.
+ * @param {number} [topK=10]
+ * @returns {Array}
+ */
+function getFlowBottlenecks(topK?: number) {
+  return pagerank.identifyFlowBottlenecks(_state, topK);
+}
+
+/**
+ * Get dropout bottlenecks: lessons with the highest dropout rates.
+ * @param {number} [minSample=5]
+ * @returns {Array}
+ */
+function getDropoutBottlenecks(minSample?: number) {
+  return markov.findBottlenecks(_state, minSample);
+}
 
 module.exports = {
   seedLessons,
@@ -356,5 +498,9 @@ module.exports = {
   exportBanditSummary,
   mergeRemoteSummary,
   reloadState,
-  getStatus
+  getStatus,
+  exportTransitionTable,
+  getStudentLessonHistory,
+  getFlowBottlenecks,
+  getDropoutBottlenecks
 };

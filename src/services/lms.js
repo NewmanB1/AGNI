@@ -67,14 +67,39 @@ function reloadState() {
   return requireEngine().reloadState();
 }
 
+function getStudentAbility(studentId) {
+  return requireEngine().getStudentAbility(studentId);
+}
+
+function exportTransitionTable() {
+  return requireEngine().exportTransitionTable();
+}
+
+function getStudentLessonHistory(studentId) {
+  return requireEngine().getStudentLessonHistory(studentId);
+}
+
+function getFlowBottlenecks(topK) {
+  return requireEngine().getFlowBottlenecks(topK);
+}
+
+function getDropoutBottlenecks(minSample) {
+  return requireEngine().getDropoutBottlenecks(minSample);
+}
+
 module.exports = {
-  isAvailable:        isAvailable,
-  getStatus:          getStatus,
-  seedLessons:        seedLessons,
-  selectBestLesson:   selectBestLesson,
-  recordObservation:  recordObservation,
-  exportBanditSummary: exportBanditSummary,
-  mergeRemoteSummary: mergeRemoteSummary,
-  reloadState:        reloadState
+  isAvailable:            isAvailable,
+  getStatus:              getStatus,
+  seedLessons:            seedLessons,
+  selectBestLesson:       selectBestLesson,
+  recordObservation:      recordObservation,
+  exportBanditSummary:    exportBanditSummary,
+  mergeRemoteSummary:     mergeRemoteSummary,
+  reloadState:            reloadState,
+  getStudentAbility:      getStudentAbility,
+  exportTransitionTable:  exportTransitionTable,
+  getStudentLessonHistory: getStudentLessonHistory,
+  getFlowBottlenecks:     getFlowBottlenecks,
+  getDropoutBottlenecks:  getDropoutBottlenecks
 };
 

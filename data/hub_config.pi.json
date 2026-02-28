@@ -1,0 +1,36 @@
+{
+  "_comment": "AGNI hub configuration optimized for Raspberry Pi village server (60 students, Android Marshmallow edge devices)",
+
+  "dataDir": "/opt/agni/data",
+  "serveDir": "/opt/agni/serve",
+  "yamlDir": "/opt/agni/lessons",
+  "factoryDir": "/opt/agni/serve/factories",
+  "katexDir": "/opt/agni/serve/katex",
+  "thetaPort": 8082,
+  "servePort": 8080,
+
+  "hubId": "village-pi-01",
+
+  "_engine_notes": [
+    "AGNI_EMBEDDING_DIM=8: Halves the default (16) to reduce matrix sizes.",
+    "  - Bandit A matrix: 16x16 instead of 32x32 (4x less memory and compute).",
+    "  - Cholesky inversion: O(16^3)=4096 vs O(32^3)=32768 FLOPs per selection.",
+    "  - Embedding vectors: 8 floats per student/lesson instead of 16.",
+    "",
+    "AGNI_FORGETTING=0.96: Slightly more aggressive forgetting for small cohorts.",
+    "  With 60 students, the bandit accumulates evidence slowly, so faster",
+    "  forgetting keeps the model responsive to changing student performance.",
+    "",
+    "Memory budget for 60 students, 200 lessons:",
+    "  Rasch students: 60 × 16 bytes = 960 B",
+    "  Rasch probes: 200 × 24 bytes = 4.8 KB",
+    "  Embeddings (students): 60 × 8 × 8 = 3.8 KB",
+    "  Embeddings (lessons): 200 × 8 × 8 = 12.8 KB",
+    "  Bandit A (16×16): 2 KB",
+    "  Bandit b (16): 128 B",
+    "  Markov transitions (sparse): ~50 KB typical",
+    "  Markov history (60 students × 10): ~5 KB",
+    "  Total LMS state: ~80 KB on disk, ~200 KB in memory",
+    "  Total Node.js process: ~30-50 MB RSS (Pi 3B+ has 1 GB)"
+  ]
+}

@@ -1,5 +1,5 @@
 // src/runtime/player.js
-// AGNI Lesson Player  v1.9.3
+// AGNI Lesson Player  v2.0.0
 //
 // Lesson state machine. Evaluates gates, renders steps, routes navigation.
 // Depends on: shared-runtime.js (AGNI_SHARED), sensor-bridge.js,
@@ -65,6 +65,69 @@
   var LESSON_ID     = (lesson.meta && lesson.meta.identifier) || lesson.id || 'unknown';
   var CHECKPOINT_KEY = 'agni_ckpt_' + LESSON_ID;
 
+  // ── Frustration detection state ──
+  var _frustration = {
+    consecutiveSkips: 0,
+    consecutiveFails: 0,
+    lastAnswerMs: 0,
+    rapidRetries: 0,
+    nudgeShown: false
+  };
+
+  function _trackFrustrationOutcome(passed, skipped) {
+    if (skipped) {
+      _frustration.consecutiveSkips++;
+      _frustration.consecutiveFails = 0;
+    } else if (!passed) {
+      _frustration.consecutiveFails++;
+      _frustration.consecutiveSkips = 0;
+    } else {
+      _frustration.consecutiveSkips = 0;
+      _frustration.consecutiveFails = 0;
+      _frustration.rapidRetries = 0;
+      _frustration.nudgeShown = false;
+    }
+  }
+
+  function _trackFrustrationRetry() {
+    var now = Date.now();
+    if (_frustration.lastAnswerMs && (now - _frustration.lastAnswerMs) < 2000) {
+      _frustration.rapidRetries++;
+    } else {
+      _frustration.rapidRetries = Math.max(0, _frustration.rapidRetries - 1);
+    }
+    _frustration.lastAnswerMs = now;
+  }
+
+  function _shouldShowFrustrationNudge() {
+    if (_frustration.nudgeShown) return false;
+    return _frustration.consecutiveSkips >= 2 ||
+           _frustration.consecutiveFails >= 3 ||
+           _frustration.rapidRetries >= 4;
+  }
+
+  function _showFrustrationNudge(container) {
+    if (!container || !container.parentNode) return;
+    _frustration.nudgeShown = true;
+    var nudge = document.createElement('div');
+    nudge.className = 'frustration-nudge';
+    nudge.setAttribute('aria-live', 'polite');
+    var messages = [
+      'This is a tough section \u2014 you\u2019re doing great for sticking with it!',
+      'It\u2019s okay to find this challenging. Try a different approach or take a short break.',
+      'Learning takes time. Every attempt helps, even when it doesn\u2019t feel like it.'
+    ];
+    var msg = messages[Math.floor(Math.random() * messages.length)];
+    nudge.innerHTML = '<strong>\u{1F4AA}</strong> ' + msg;
+    var dismissBtn = document.createElement('button');
+    dismissBtn.className = 'btn btn-secondary';
+    dismissBtn.style.cssText = 'font-size:0.8em;margin-top:0.5rem;';
+    dismissBtn.textContent = 'Got it';
+    dismissBtn.onclick = function () { nudge.remove(); };
+    nudge.appendChild(dismissBtn);
+    container.appendChild(nudge);
+  }
+
   function recordStepOutcome(step, passed, attempts, skipped) {
     var w = typeof step.weight === 'number' ? step.weight : _defaultWeight(step.type);
     stepOutcomes.push({
@@ -77,6 +140,7 @@
       maxAttempts: step.max_attempts || 1,
       durationMs:  Date.now() - stepEntryMs
     });
+    _trackFrustrationOutcome(passed, skipped);
   }
 
   function _defaultWeight(type) {
@@ -560,6 +624,12 @@
           feedback.style.color = '#ff5252';
           input.disabled = true;
           verifyBtn.disabled = true;
+          var escapeBtn = document.createElement('button');
+          escapeBtn.className = 'btn btn-secondary';
+          escapeBtn.style.marginTop = '0.75rem';
+          escapeBtn.textContent = 'Continue without verification';
+          escapeBtn.onclick = function () { callback('fail'); };
+          container.appendChild(escapeBtn);
           return;
         }
         var remaining = maxAttempts - attempts;
@@ -596,12 +666,20 @@
     });
   }
 
+  function _safeNextStepId(gate) {
+    if (gate.on_pass) return gate.on_pass;
+    return (stepIndex + 1 < steps.length) ? steps[stepIndex + 1].id : null;
+  }
+
   function evaluateGate(gate) {
     return new Promise(function (resolve) {
+      var nextId = _safeNextStepId(gate);
+      if (!nextId) { renderCompletion(); return; }
+
       if (gate.type === 'quiz') {
         renderGateQuiz(gate, function (result) {
           if (result === 'pass') {
-            resolve(gate.on_pass || steps[stepIndex + 1].id);
+            resolve(nextId);
           } else {
             renderGateRedirect(gate);
           }
@@ -609,13 +687,13 @@
       } else if (gate.type === 'manual_verification') {
         renderManualVerification(gate, function (result) {
           if (result === 'pass') {
-            resolve(gate.on_pass || steps[stepIndex + 1].id);
+            resolve(nextId);
           } else {
             renderGateRedirect(gate);
           }
         });
       } else {
-        resolve(gate.on_pass || steps[stepIndex + 1].id);
+        resolve(nextId);
       }
     });
   }
@@ -683,7 +761,27 @@
         '.next-lesson-actions { display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; }' +
         '.step-progress { font-size: 0.8em; opacity: 0.6; margin-bottom: 0.5rem; }' +
         '.step-hint-nudge { margin-top: 1rem; padding: 0.75rem; background: rgba(251,191,36,0.1); border: 1px solid #fbbf24; border-radius: 8px; font-size: 0.9em; }' +
-        '.hint-skip { font-size: 0.8em; padding: 0.3rem 0.6rem; }';
+        '.hint-tier-1 { border-color: #60a5fa; background: rgba(96,165,250,0.08); }' +
+        '.hint-tier-2 { border-color: #fbbf24; background: rgba(251,191,36,0.1); }' +
+        '.hint-tier-3 { border-color: #ff6b6b; background: rgba(255,107,107,0.1); }' +
+        '.hint-skip { font-size: 0.8em; padding: 0.3rem 0.6rem; }' +
+        /* Completion review */
+        '.completion-excellent .completion-icon { font-size: 4rem; }' +
+        '.mastery-ring { text-align: center; margin: 1rem 0; }' +
+        '.mastery-pct { display: block; font-size: 2.5rem; font-weight: bold; color: var(--accent, #4ade80); }' +
+        '.mastery-label { display: block; font-size: 0.8rem; opacity: 0.6; }' +
+        '.completion-review { margin: 1.5rem 0; }' +
+        '.review-toggle { width: 100%; text-align: center; }' +
+        '.review-list { margin-top: 0.75rem; }' +
+        '.review-step { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.5rem; border-radius: 6px; margin-bottom: 0.25rem; font-size: 0.9em; }' +
+        '.review-passed { background: rgba(74,222,128,0.1); }' +
+        '.review-failed { background: rgba(255,107,107,0.1); }' +
+        '.review-skipped { background: rgba(255,255,255,0.05); opacity: 0.7; }' +
+        '.review-icon { min-width: 1.2em; text-align: center; }' +
+        '.review-label { flex: 1; }' +
+        '.review-detail { font-size: 0.85em; opacity: 0.7; }' +
+        /* Frustration nudge */
+        '.frustration-nudge { margin-top: 1rem; padding: 0.75rem; background: rgba(96,165,250,0.1); border: 1px solid #60a5fa; border-radius: 8px; font-size: 0.9em; }';
       document.head.appendChild(style);
     }
   }
@@ -888,6 +986,7 @@
     function handleAnswer(selectedIdx) {
       var correct = (selectedIdx === correctIdx);
       attempts++;
+      _trackFrustrationRetry();
 
       probeResults.push({
         probeId:       step.id,
@@ -937,15 +1036,19 @@
         feedbackEl.appendChild(continueBtn);
       } else {
         var remaining = maxAtt - attempts;
-        feedbackEl.innerHTML = '<p class="fb-hint">' +
-          (fb.hint || ('Not quite \u2014 try again. (' + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining)')) + '</p>';
-        // Re-enable unselected options for retry
+        var hintTexts = Array.isArray(fb.hints) ? fb.hints : [];
+        var attemptHint = hintTexts[attempts - 1] || fb.hint || '';
+        var retryMsg = attemptHint
+          ? attemptHint + ' (' + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining)'
+          : 'Not quite \u2014 try again. (' + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining)';
+        feedbackEl.innerHTML = '<p class="fb-hint">' + retryMsg + '</p>';
         optBtns.forEach(function (btn, i) {
           if (i !== selectedIdx) {
             btn.disabled = false;
             btn.classList.remove('quiz-correct', 'quiz-incorrect');
           }
         });
+        if (_shouldShowFrustrationNudge()) _showFrustrationNudge(container);
       }
     }
   }
@@ -969,7 +1072,7 @@
   }
 
   /**
-   * Render the lesson-complete screen with skill summary, pace, and next-lesson flow.
+   * Render the lesson-complete screen with step review, skill summary, retry, and next-lesson flow.
    */
   function renderCompletion() {
     var app = document.getElementById('app');
@@ -979,19 +1082,42 @@
     container.className = 'completion-screen';
     addAriaToElement(container, 'main', 'Lesson completion');
 
+    clearCheckpoint();
+
+    // Compute mastery synchronously for immediate display
+    var computedMastery = null;
+    if (global.AGNI_TELEMETRY && global.AGNI_TELEMETRY.computeMastery) {
+      computedMastery = global.AGNI_TELEMETRY.computeMastery(stepOutcomes);
+    }
+    var masteryPct = computedMastery ? Math.round(computedMastery.mastery * 100) : null;
+
+    // Celebration tier
+    var tier = masteryPct >= 90 ? 'excellent' : (masteryPct >= 70 ? 'good' : 'complete');
+    var icons = { excellent: '\u2B50', good: '\u2714', complete: '\u2714' };
+    var titles = {
+      excellent: t('completion_excellent') || 'Excellent work!',
+      good: t('completion_good') || 'Well done!',
+      complete: (lesson.meta && lesson.meta.completion_message) || t('lesson_complete')
+    };
+
     var checkmark = document.createElement('div');
-    checkmark.className = 'completion-icon';
-    checkmark.textContent = '\u2714';
+    checkmark.className = 'completion-icon completion-' + tier;
+    checkmark.textContent = icons[tier];
     container.appendChild(checkmark);
 
     var msg = document.createElement('h2');
     msg.className = 'completion-title';
-    msg.textContent = (lesson.meta && lesson.meta.completion_message) || t('lesson_complete');
+    msg.textContent = titles[tier];
     container.appendChild(msg);
 
-    app.appendChild(container);
-
-    clearCheckpoint();
+    // Mastery score (prominent)
+    if (masteryPct !== null) {
+      var masteryEl = document.createElement('div');
+      masteryEl.className = 'mastery-ring';
+      masteryEl.innerHTML = '<span class="mastery-pct">' + masteryPct + '%</span>' +
+        '<span class="mastery-label">' + t('mastery_label') + '</span>';
+      container.appendChild(masteryEl);
+    }
 
     // Pace summary
     var pace = getPaceRatio();
@@ -1009,6 +1135,54 @@
         paceEl.style.color = '#fbbf24';
       }
       container.appendChild(paceEl);
+    }
+
+    // Step-by-step review
+    var reviewable = stepOutcomes.filter(function (o) {
+      return o.type !== 'instruction' && o.type !== 'completion';
+    });
+    if (reviewable.length > 0) {
+      var reviewSection = document.createElement('div');
+      reviewSection.className = 'completion-review';
+
+      var reviewToggle = document.createElement('button');
+      reviewToggle.className = 'btn btn-secondary review-toggle';
+      reviewToggle.textContent = t('review_steps') || 'Review your answers';
+      var reviewList = document.createElement('div');
+      reviewList.className = 'review-list';
+      reviewList.style.display = 'none';
+
+      reviewable.forEach(function (outcome) {
+        var step = null;
+        for (var i = 0; i < steps.length; i++) {
+          if (steps[i].id === outcome.stepId) { step = steps[i]; break; }
+        }
+        var item = document.createElement('div');
+        var status = outcome.skipped ? 'skipped' : (outcome.passed ? 'passed' : 'failed');
+        item.className = 'review-step review-' + status;
+
+        var icon = outcome.skipped ? '\u23ED' : (outcome.passed ? '\u2714' : '\u2718');
+        var label = (step && step.title) || outcome.stepId;
+        item.innerHTML = '<span class="review-icon">' + icon + '</span>' +
+          '<span class="review-label">' + label + '</span>' +
+          '<span class="review-detail">' +
+            (outcome.skipped ? t('skipped') : (outcome.passed
+              ? (outcome.attempts > 1 ? t('passed_attempts', { n: outcome.attempts }) : t('passed_first'))
+              : t('not_passed'))) +
+          '</span>';
+        reviewList.appendChild(item);
+      });
+
+      reviewToggle.onclick = function () {
+        var visible = reviewList.style.display !== 'none';
+        reviewList.style.display = visible ? 'none' : 'block';
+        reviewToggle.textContent = visible
+          ? (t('review_steps') || 'Review your answers')
+          : (t('hide_review') || 'Hide review');
+      };
+      reviewSection.appendChild(reviewToggle);
+      reviewSection.appendChild(reviewList);
+      container.appendChild(reviewSection);
     }
 
     // Skills provided summary
@@ -1029,48 +1203,29 @@
       container.appendChild(skillsDiv);
     }
 
-    // Step score breakdown
-    var passed = 0;
-    var total  = 0;
-    stepOutcomes.forEach(function (o) {
-      if (o.type !== 'instruction' && o.type !== 'completion') {
-        total++;
-        if (o.passed) passed++;
-      }
-    });
-    if (total > 0) {
-      var scoreDiv = document.createElement('p');
-      scoreDiv.className = 'score-breakdown';
-      scoreDiv.textContent = t('steps_passed', { passed: passed, total: total });
-      container.appendChild(scoreDiv);
-    }
+    // Action buttons: Retry + Next + Dashboard
+    var actionsDiv = document.createElement('div');
+    actionsDiv.className = 'next-lesson-actions';
+    actionsDiv.style.marginTop = '1.5rem';
 
-    // Record completion via telemetry
-    var totalDuration = Date.now() - lessonStartMs;
-    if (global.AGNI_TELEMETRY && global.AGNI_TELEMETRY.record) {
-      global.AGNI_TELEMETRY.record(lesson, stepOutcomes, totalDuration, probeResults)
-        .then(function (result) {
-          if (DEV_MODE) console.log('[PLAYER] Telemetry recorded, mastery:', result.mastery);
-          var masteryEl = document.createElement('p');
-          masteryEl.className = 'mastery-score';
-          masteryEl.textContent = 'Score: ' + Math.round(result.mastery * 100) + '%';
-          container.appendChild(masteryEl);
-        })
-        .catch(function (err) {
-          if (DEV_MODE) console.warn('[PLAYER] Telemetry record failed:', err);
-        });
-    }
+    var retryBtn = document.createElement('button');
+    retryBtn.className = 'btn btn-secondary';
+    retryBtn.textContent = t('retry_lesson') || 'Retry Lesson';
+    retryBtn.onclick = function () {
+      clearCheckpoint();
+      stepOutcomes = [];
+      probeResults = [];
+      stepIndex = 0;
+      lessonStartMs = Date.now();
+      routeStep(steps[0].id);
+    };
+    actionsDiv.appendChild(retryBtn);
 
-    // Next-lesson link (if pseudoId available, redirect back to portal launcher)
     try {
       var params = new URLSearchParams(global.location.search || '');
       var pseudoId = params.get('pseudoId');
       var hubBase  = params.get('hub') || '';
       if (pseudoId) {
-        var nextDiv = document.createElement('div');
-        nextDiv.className = 'next-lesson-actions';
-        nextDiv.style.marginTop = '1.5rem';
-
         var nextBtn = document.createElement('button');
         nextBtn.className = 'btn btn-primary';
         nextBtn.textContent = t('next_lesson');
@@ -1080,11 +1235,10 @@
             : '/learn?pseudoId=' + encodeURIComponent(pseudoId);
           global.location.href = portalUrl;
         };
-        nextDiv.appendChild(nextBtn);
+        actionsDiv.appendChild(nextBtn);
 
         var homeBtn = document.createElement('button');
         homeBtn.className = 'btn btn-secondary';
-        homeBtn.style.marginLeft = '0.75rem';
         homeBtn.textContent = t('back_dashboard');
         homeBtn.onclick = function () {
           var portalUrl = hubBase
@@ -1092,11 +1246,21 @@
             : '/learn/progress?pseudoId=' + encodeURIComponent(pseudoId);
           global.location.href = portalUrl;
         };
-        nextDiv.appendChild(homeBtn);
-
-        container.appendChild(nextDiv);
+        actionsDiv.appendChild(homeBtn);
       }
     } catch (e) {}
+    container.appendChild(actionsDiv);
+
+    app.appendChild(container);
+
+    // Record completion via telemetry (async, non-blocking)
+    var totalDuration = Date.now() - lessonStartMs;
+    if (global.AGNI_TELEMETRY && global.AGNI_TELEMETRY.record) {
+      global.AGNI_TELEMETRY.record(lesson, stepOutcomes, totalDuration, probeResults)
+        .catch(function (err) {
+          if (DEV_MODE) console.warn('[PLAYER] Telemetry record failed:', err);
+        });
+    }
   }
 
   /**
@@ -1111,6 +1275,10 @@
     stepEntryMs = Date.now();
 
     if (S.destroyStepVisual)        S.destroyStepVisual();
+    if (S.currentStageHandle && S.currentStageHandle.stage) {
+      try { S.currentStageHandle.stage.destroy(); } catch (_) {}
+      S.currentStageHandle = null;
+    }
     if (S.clearSensorSubscriptions) S.clearSensorSubscriptions();
     clearStepHintTimer();
 
@@ -1135,8 +1303,8 @@
       return;
     }
 
-    // Record instruction/content steps as auto-passed
-    if (step.type === 'instruction' || (!step.type && !step.spec)) {
+    // Record instruction/content/svg steps as auto-passed
+    if (step.type === 'instruction' || step.type === 'svg' || (!step.type && !step.spec)) {
       recordStepOutcome(step, true, 1, false);
     }
 
@@ -1183,8 +1351,17 @@
       }
     }
 
+    // SVG factory visual — uses cached factories via AGNI_SVG.Registry.fromSpec()
+    var svgContainer = null;
+    var svgSpec = step.svg_spec || step.spec;
+    if (svgSpec && svgSpec.factory) {
+      svgContainer = document.createElement('div');
+      svgContainer.className = 'step-visual svg-visual';
+      container.appendChild(svgContainer);
+    }
+
     var specContainer = null;
-    if (step.spec) {
+    if (step.spec && !svgSpec) {
       specContainer = document.createElement('div');
       specContainer.className = 'step-visual';
       container.appendChild(specContainer);
@@ -1192,6 +1369,27 @@
 
     app.innerHTML = '';
     app.appendChild(container);
+
+    if (svgContainer && svgSpec) {
+      try {
+        var SVG = global.AGNI_SVG;
+        if (SVG && SVG.fromSpec) {
+          var handle = SVG.fromSpec(svgSpec, svgContainer);
+          if (handle && handle.stage) {
+            S.currentStageHandle = handle;
+          }
+          if (DEV_MODE) console.log('[PLAYER] SVG factory rendered:', svgSpec.factory);
+        } else {
+          svgContainer.innerHTML = '<p style="color:#fcc419;font-size:0.9em;">' +
+            'SVG factory "' + svgSpec.factory + '" not available — check factory cache.</p>';
+          console.warn('[PLAYER] AGNI_SVG.fromSpec not available for step:', step.id);
+        }
+      } catch (err) {
+        console.error('[PLAYER] SVG render failed:', step.id, err);
+        svgContainer.innerHTML = '<p style="color:#ff6b6b;font-size:0.9em;">SVG render error: ' +
+          (err.message || err) + '</p>';
+      }
+    }
 
     if (specContainer && step.spec) {
       S.mountStepVisual(specContainer, step.spec)
@@ -1206,33 +1404,60 @@
     startStepHintTimer(step, container);
   }
 
-  // ── Per-step adaptive hint timer ──
-  var _stepHintTimer = null;
+  // ── Per-step adaptive hint timer (multi-tier) ──
+  var _stepHintTimers = [];
 
   function startStepHintTimer(step, container) {
     clearStepHintTimer();
     var stepExpected = step.expected_duration ? parseDurationMs(step.expected_duration) : 0;
     if (stepExpected <= 0) return;
-    var threshold = stepExpected * 2.5;
 
-    _stepHintTimer = setTimeout(function () {
+    var hints = Array.isArray(step.hints) ? step.hints : [];
+    var fallbackHint = (step.feedback && step.feedback.hint) || '';
+
+    // Tier 1 — gentle nudge at 1.5x
+    _stepHintTimers.push(setTimeout(function () {
       if (!container || !container.parentNode) return;
-      var existing = container.querySelector('.step-hint-nudge');
-      if (existing) return;
-      var hintEl = document.createElement('div');
-      hintEl.className = 'step-hint-nudge';
-      addAriaToElement(hintEl, 'alert', 'Hint');
-      hintEl.setAttribute('aria-live', 'polite');
+      if (container.querySelector('.hint-tier-1')) return;
+      var el = document.createElement('div');
+      el.className = 'step-hint-nudge hint-tier-1';
+      el.setAttribute('aria-live', 'polite');
+      el.innerHTML = '<strong>' + t('hint_nudge') + '</strong> ' +
+        (hints[0] || (step.type === 'quiz'
+          ? 'Take your time \u2014 try eliminating options you know are wrong.'
+          : 'Need help? Try re-reading the content above.'));
+      container.appendChild(el);
+    }, stepExpected * 1.5));
 
-      var hintText = step.feedback && step.feedback.hint
-        ? step.feedback.hint
-        : (step.type === 'quiz' ? 'Take your time \u2014 try eliminating options you know are wrong.'
-          : 'Need help? Try re-reading the content above, or skip ahead if you\'re stuck.');
-      hintEl.innerHTML = '<strong>Hint:</strong> ' + hintText;
+    // Tier 2 — specific hint at 2.5x
+    _stepHintTimers.push(setTimeout(function () {
+      if (!container || !container.parentNode) return;
+      if (container.querySelector('.hint-tier-2')) return;
+      var prev = container.querySelector('.hint-tier-1');
+      if (prev) prev.style.display = 'none';
+      var el = document.createElement('div');
+      el.className = 'step-hint-nudge hint-tier-2';
+      el.setAttribute('aria-live', 'polite');
+      el.innerHTML = '<strong>' + t('hint_label') + '</strong> ' +
+        (hints[1] || fallbackHint || 'Look carefully at the question \u2014 what information narrows down the answer?');
+      container.appendChild(el);
+    }, stepExpected * 2.5));
 
+    // Tier 3 — strong hint + skip at 4x
+    _stepHintTimers.push(setTimeout(function () {
+      if (!container || !container.parentNode) return;
+      if (container.querySelector('.hint-tier-3')) return;
+      var prev2 = container.querySelector('.hint-tier-2');
+      if (prev2) prev2.style.display = 'none';
+      var el = document.createElement('div');
+      el.className = 'step-hint-nudge hint-tier-3';
+      addAriaToElement(el, 'alert', 'Hint');
+      el.setAttribute('aria-live', 'polite');
+      el.innerHTML = '<strong>' + t('hint_strong') + '</strong> ' +
+        (hints[2] || fallbackHint || 'This is a tough one. You can skip ahead if you\u2019re stuck.');
       var skipBtn = document.createElement('button');
       skipBtn.className = 'btn btn-secondary hint-skip';
-      skipBtn.textContent = 'Skip this step';
+      skipBtn.textContent = t('skip_step');
       skipBtn.style.marginTop = '0.5rem';
       skipBtn.onclick = function () {
         recordStepOutcome(step, false, 0, true);
@@ -1242,13 +1467,14 @@
           nextStep();
         }
       };
-      hintEl.appendChild(skipBtn);
-      container.appendChild(hintEl);
-    }, threshold);
+      el.appendChild(skipBtn);
+      container.appendChild(el);
+    }, stepExpected * 4));
   }
 
   function clearStepHintTimer() {
-    if (_stepHintTimer) { clearTimeout(_stepHintTimer); _stepHintTimer = null; }
+    _stepHintTimers.forEach(function (t) { clearTimeout(t); });
+    _stepHintTimers = [];
   }
 
   function updatePaceIndicator() {
@@ -1283,7 +1509,13 @@
 
     if (idx === -1) {
       console.error('[PLAYER] routeStep: unknown step id:', targetId);
-      return;
+      if (stepIndex + 1 < steps.length) {
+        console.warn('[PLAYER] Falling back to next sequential step');
+        idx = stepIndex + 1;
+      } else {
+        renderCompletion();
+        return;
+      }
     }
 
     var step = steps[idx];

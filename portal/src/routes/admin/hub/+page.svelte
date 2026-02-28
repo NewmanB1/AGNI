@@ -125,6 +125,14 @@
   }
 </script>
 
+<nav class="admin-nav">
+  <a href="/admin/hub" class="active">Hub Setup</a>
+  <a href="/admin/accounts">Accounts</a>
+  <a href="/admin/onboarding">Onboarding</a>
+  <a href="/admin/sync">Sync</a>
+  <a href="/admin/deploy">Deploy</a>
+</nav>
+
 <h1>Hub Setup (A1)</h1>
 <p class="subtitle">Configure data paths, ports, and cache. Save to hub or download env/hub_config.json.</p>
 
@@ -208,6 +216,24 @@
 {/if}
 
 <style>
+  .admin-nav {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border, #333);
+  }
+  .admin-nav a {
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    text-decoration: none;
+    color: var(--text-muted, #888);
+    font-size: 0.85rem;
+  }
+  .admin-nav a.active, .admin-nav a:hover {
+    color: var(--accent, #4fc3f7);
+    background: rgba(79,195,247,0.08);
+  }
   .subtitle {
     opacity: 0.9;
     margin-bottom: 1.5rem;

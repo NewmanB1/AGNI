@@ -166,10 +166,28 @@ function migrateLMSState(raw, opts) {
     observationCount: observationCount
   };
 
+  // ── Markov ────────────────────────────────────────────────────────────────
+  var markov = ensureObject(root.markov);
+  var markovTransitions = ensureObject(markov.transitions);
+  var markovHistory = ensureObject(markov.studentHistory);
+
+  Object.keys(markovHistory).forEach(function (sid) {
+    if (!Array.isArray(markovHistory[sid])) {
+      markovHistory[sid] = [];
+      migrated = true;
+    }
+  });
+
+  var markovState = {
+    transitions: markovTransitions,
+    studentHistory: markovHistory
+  };
+
   var state = {
     rasch: raschState,
     embedding: embeddingState,
-    bandit: banditState
+    bandit: banditState,
+    markov: markovState
   };
 
   return { state: state, migrated: migrated };

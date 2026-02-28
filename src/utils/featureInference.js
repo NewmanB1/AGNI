@@ -124,6 +124,7 @@ function inferFeatures(lessonData) {
   var allContent = steps.map(function (s) {
     return [s.content, s.title, s.label, s.feedback,
             JSON.stringify(s.spec || ''),
+            JSON.stringify(s.svg_spec || ''),
             JSON.stringify(s.threshold || '')
            ].filter(Boolean).join(' ');
   }).join(' ');
@@ -261,9 +262,9 @@ function inferFeatures(lessonData) {
 function _collectSpecFactoryIds(steps) {
   var seen = {};
   var ids  = [];
-  steps.forEach(function (step) {
-    if (!step.spec) return;
-    var spec = step.spec;
+
+  function collectFromSpec(spec) {
+    if (!spec) return;
     if (spec.factory && runtimeManifest.getFileForFactoryId(spec.factory)) {
       if (!seen[spec.factory]) { ids.push(spec.factory); seen[spec.factory] = true; }
     }
@@ -276,6 +277,11 @@ function _collectSpecFactoryIds(steps) {
         }
       });
     }
+  }
+
+  steps.forEach(function (step) {
+    collectFromSpec(step.spec);
+    collectFromSpec(step.svg_spec);
   });
   return ids;
 }

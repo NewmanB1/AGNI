@@ -24,8 +24,32 @@
   let streakDays = $state(0);
   let goalMet = $state(false);
   let collabStats = $state(/** @type {Record<string, {activeCount:number;completedCount:number}>} */ ({}));
+  let badges = $state(/** @type {Array<{id:string;name:string;description:string;icon:string;earned:boolean}>} */ ([]));
 
-  const unmastered = $derived(lessons.filter(l => !l.alreadyMastered));
+  // ── Diagnostic placement assessment ──
+  let showDiagnostic = $state(false);
+  let diagnosticProbes = $state(/** @type {Array<{probeId:string;skill:string;difficulty:number;question:string;type:string;options:string[]}>} */ ([]));
+  let diagnosticAnswers = $state(/** @type {Record<string, number>} */ ({}));
+  let diagnosticStep = $state(0);
+  let diagnosticDone = $state(false);
+  let diagnosticResult = $state(/** @type {{ ability: number; skillsBootstrapped: number } | null} */ (null));
+
+  let search = $state('');
+
+  const unmastered = $derived.by(() => {
+    let list = lessons.filter(l => !l.alreadyMastered);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(l =>
+        (l.title || '').toLowerCase().includes(q) ||
+        (l.slug || '').toLowerCase().includes(q) ||
+        (l.description || '').toLowerCase().includes(q) ||
+        (l.subject || '').toLowerCase().includes(q) ||
+        (l.skillsProvided || []).some(sp => sp.skill.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  });
   const mastered = $derived(lessons.filter(l => l.alreadyMastered));
   const masteryPct = $derived(lessons.length > 0 ? Math.round((mastered.length / lessons.length) * 100) : 0);
   const lessonMap = $derived(new Map(lessons.map(l => [l.lessonId, l])));
@@ -66,6 +90,23 @@
         streakDays = s.currentStreak || 0;
         goalMet = s.goalMet || false;
       } catch { /* streaks not available */ }
+
+      // Badges
+      try {
+        const b = await api.getBadges(pseudoId);
+        badges = b.badges || [];
+      } catch { /* badges not available */ }
+
+      // Diagnostic placement: offer if student has no mastered lessons
+      if (mastered.length === 0 && !localStorage.getItem('agni_diag_done_' + pseudoId)) {
+        try {
+          const diag = await api.getDiagnosticProbes();
+          if (diag.probes && diag.probes.length > 0) {
+            diagnosticProbes = diag.probes;
+            showDiagnostic = true;
+          }
+        } catch { /* diagnostic not available */ }
+      }
 
       // Collaborative awareness
       try {
@@ -125,6 +166,75 @@
   function isBanditPick(lessonId) {
     return banditPick && banditPick === lessonId;
   }
+
+  // ── Student preferences (localStorage) ──
+  let showPrefs = $state(false);
+  let difficultyPref = $state(/** @type {'any' | 'easy' | 'challenge'} */ ('any'));
+  let dailyGoal = $state(3);
+  let bookmarks = $state(/** @type {Set<string>} */ (new Set()));
+
+  function loadPrefs() {
+    try {
+      difficultyPref = /** @type {any} */ (localStorage.getItem('agni_difficulty_pref')) || 'any';
+      dailyGoal = parseInt(localStorage.getItem('agni_daily_goal') || '3', 10) || 3;
+      const bk = localStorage.getItem('agni_bookmarks');
+      bookmarks = bk ? new Set(JSON.parse(bk)) : new Set();
+    } catch { /* defaults */ }
+  }
+
+  function savePref(key, value) {
+    try { localStorage.setItem(key, typeof value === 'object' ? JSON.stringify(value) : String(value)); } catch {}
+  }
+
+  function setDifficultyPref(val) {
+    difficultyPref = val;
+    savePref('agni_difficulty_pref', val);
+  }
+
+  function setDailyGoal(val) {
+    dailyGoal = val;
+    savePref('agni_daily_goal', val);
+  }
+
+  function toggleBookmark(slug) {
+    const next = new Set(bookmarks);
+    if (next.has(slug)) next.delete(slug);
+    else next.add(slug);
+    bookmarks = next;
+    savePref('agni_bookmarks', [...next]);
+  }
+
+  $effect(() => { loadPrefs(); });
+
+  function answerDiagnostic(probeId, answer) {
+    diagnosticAnswers = { ...diagnosticAnswers, [probeId]: answer };
+    if (diagnosticStep < diagnosticProbes.length - 1) {
+      diagnosticStep++;
+    }
+  }
+
+  async function submitDiagnostic() {
+    const responses = diagnosticProbes.map(p => ({
+      probeId: p.probeId,
+      skill: p.skill,
+      difficulty: p.difficulty,
+      answer: diagnosticAnswers[p.probeId] ?? 0
+    }));
+    try {
+      const result = await api.postDiagnostic(pseudoId, responses);
+      diagnosticResult = result;
+      diagnosticDone = true;
+      localStorage.setItem('agni_diag_done_' + pseudoId, 'true');
+      setTimeout(() => { showDiagnostic = false; load(); }, 2000);
+    } catch {
+      showDiagnostic = false;
+    }
+  }
+
+  function skipDiagnostic() {
+    showDiagnostic = false;
+    localStorage.setItem('agni_diag_done_' + pseudoId, 'true');
+  }
 </script>
 
 <svelte:head>
@@ -144,6 +254,51 @@
   {:else}
     {#if error}
       <div class="card error-box" role="alert">{error}</div>
+    {/if}
+
+    <!-- Diagnostic placement assessment -->
+    {#if showDiagnostic && diagnosticProbes.length > 0}
+      <div class="diagnostic-overlay" role="dialog" aria-label="Placement assessment">
+        <div class="diagnostic-card">
+          {#if diagnosticDone}
+            <div class="diagnostic-done">
+              <h2>Assessment complete!</h2>
+              <p>Your personalized learning path is ready.</p>
+            </div>
+          {:else}
+            <h2>Quick Placement Assessment</h2>
+            <p class="diagnostic-subtitle">Help us personalize your lessons. This takes about a minute.</p>
+            <div class="diagnostic-progress">
+              <div class="diagnostic-bar" style="width: {((diagnosticStep + 1) / diagnosticProbes.length) * 100}%"></div>
+            </div>
+            <p class="diagnostic-counter">{diagnosticStep + 1} of {diagnosticProbes.length}</p>
+
+            {@const probe = diagnosticProbes[diagnosticStep]}
+            <div class="diagnostic-probe">
+              <p class="probe-question">{probe.question}</p>
+              <div class="probe-options">
+                {#each probe.options as opt, i}
+                  <button class="probe-btn" class:selected={diagnosticAnswers[probe.probeId] === i} onclick={() => answerDiagnostic(probe.probeId, i)}>
+                    {opt}
+                  </button>
+                {/each}
+              </div>
+            </div>
+
+            <div class="diagnostic-actions">
+              {#if diagnosticStep > 0}
+                <button class="btn btn-secondary" onclick={() => diagnosticStep--}>Back</button>
+              {/if}
+              {#if Object.keys(diagnosticAnswers).length >= diagnosticProbes.length}
+                <button class="btn btn-primary" onclick={submitDiagnostic}>Finish</button>
+              {:else if diagnosticAnswers[diagnosticProbes[diagnosticStep]?.probeId] !== undefined && diagnosticStep < diagnosticProbes.length - 1}
+                <button class="btn btn-primary" onclick={() => diagnosticStep++}>Next</button>
+              {/if}
+              <button class="btn btn-secondary" onclick={skipDiagnostic}>Skip assessment</button>
+            </div>
+          {/if}
+        </div>
+      </div>
     {/if}
 
     <!-- Streak banner -->
@@ -186,6 +341,18 @@
       </div>
     </div>
 
+    <!-- Badges -->
+    {#if badges.length > 0}
+      <div class="badges-row" role="region" aria-label="Achievements">
+        {#each badges as badge}
+          <div class="badge" class:earned={badge.earned} class:locked={!badge.earned} title={badge.earned ? badge.name + ': ' + badge.description : badge.description + ' (locked)'}>
+            <span class="badge-icon">{badge.icon}</span>
+            <span class="badge-name">{badge.name}</span>
+          </div>
+        {/each}
+      </div>
+    {/if}
+
     <!-- Offline caching -->
     {#if unmastered.length > 0}
       <div class="offline-row">
@@ -198,9 +365,37 @@
       </div>
     {/if}
 
+    <!-- Search + Preferences -->
+    <div class="search-row">
+      <input type="text" class="search-input" bind:value={search} placeholder="Search lessons by title, skill, or topic..." />
+      <button class="pref-toggle" onclick={() => showPrefs = !showPrefs} title="Learning preferences">{showPrefs ? 'Hide' : 'Preferences'}</button>
+    </div>
+
+    {#if showPrefs}
+      <div class="prefs-panel" role="region" aria-label="Learning preferences">
+        <div class="pref-row">
+          <label>Difficulty preference</label>
+          <div class="pref-options">
+            <button class="pref-chip" class:active={difficultyPref === 'any'} onclick={() => setDifficultyPref('any')}>Any</button>
+            <button class="pref-chip" class:active={difficultyPref === 'easy'} onclick={() => setDifficultyPref('easy')}>Easier first</button>
+            <button class="pref-chip" class:active={difficultyPref === 'challenge'} onclick={() => setDifficultyPref('challenge')}>Challenge me</button>
+          </div>
+        </div>
+        <div class="pref-row">
+          <label>Daily lesson goal</label>
+          <div class="pref-options">
+            {#each [1, 2, 3, 5] as g}
+              <button class="pref-chip" class:active={dailyGoal === g} onclick={() => setDailyGoal(g)}>{g}</button>
+            {/each}
+          </div>
+        </div>
+      </div>
+    {/if}
+
     <!-- Quick nav -->
     <div class="quick-nav">
       <a href="/learn/browse">{tr('tab.browse')}</a>
+      <a href="/learn/paths">Paths</a>
       <a href="/learn/streaks">{tr('tab.streaks')}</a>
       <a href="/learn/progress">{tr('tab.skills')}</a>
     </div>
@@ -283,7 +478,18 @@
                   </div>
                 {/if}
               </div>
+              <div class="lesson-actions">
+                <button class="bookmark-btn" class:bookmarked={bookmarks.has(l.slug)} onclick={(e) => { e.stopPropagation(); e.preventDefault(); toggleBookmark(l.slug); }} title={bookmarks.has(l.slug) ? 'Remove bookmark' : 'Bookmark'}>
+                  {bookmarks.has(l.slug) ? '\u2605' : '\u2606'}
+                </button>
+              </div>
               <div class="lesson-meta">
+                {#if l.difficulty}
+                  <span class="difficulty-badge" title="Difficulty level {l.difficulty}">{'★'.repeat(Math.min(5, l.difficulty))}</span>
+                {/if}
+                {#if l.teaching_mode}
+                  <span class="mode-chip">{l.teaching_mode}</span>
+                {/if}
                 <span class="theta">&theta;={l.theta}</span>
                 {#if cached.has(l.slug)}
                   <span class="offline-badge">{tr('learn.offline')}</span>
@@ -446,4 +652,86 @@
   }
   .collab-indicator.active { background: rgba(96,165,250,0.12); color: #60a5fa; }
   .collab-indicator.done { background: rgba(0,230,118,0.08); color: var(--accent); opacity: 0.7; }
+
+  .search-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .search-input {
+    flex: 1; padding: 0.5rem 0.75rem;
+    background: #1f2b4e; color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; font-size: 0.95rem;
+  }
+  .search-input:focus { outline: none; border-color: var(--accent); }
+  .pref-toggle {
+    padding: 0.5rem 0.75rem; background: #2a2a4a; color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+    font-size: 0.85rem; white-space: nowrap;
+  }
+
+  .prefs-panel {
+    padding: 0.75rem 1rem; background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; margin-bottom: 1rem;
+  }
+  .pref-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+  .pref-row:last-child { margin-bottom: 0; }
+  .pref-row label { font-size: 0.85rem; opacity: 0.8; min-width: 130px; }
+  .pref-options { display: flex; gap: 0.3rem; }
+  .pref-chip {
+    padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--text); cursor: pointer; font-size: 0.8rem;
+  }
+  .pref-chip.active { background: var(--accent); color: #1a1a2e; font-weight: 600; border-color: var(--accent); }
+
+  .difficulty-badge { font-size: 0.7rem; color: #fbbf24; display: block; letter-spacing: -1px; }
+  .mode-chip {
+    font-size: 0.65rem; padding: 0.1rem 0.3rem;
+    background: rgba(251,191,36,0.15); color: #fbbf24; border-radius: 4px;
+    display: inline-block; margin-top: 0.15rem;
+  }
+
+  .lesson-actions { display: flex; align-items: center; }
+  .bookmark-btn {
+    background: none; border: none; cursor: pointer; font-size: 1.2rem;
+    color: var(--text); opacity: 0.4; padding: 0.2rem; transition: all 0.15s;
+  }
+  .bookmark-btn:hover { opacity: 0.8; }
+  .bookmark-btn.bookmarked { color: #fbbf24; opacity: 1; }
+
+  .badges-row {
+    display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;
+    padding: 0.75rem; background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  }
+  .badge {
+    display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+    padding: 0.4rem 0.5rem; border-radius: 8px; min-width: 56px;
+    transition: all 0.15s;
+  }
+  .badge.earned { background: rgba(0,230,118,0.08); }
+  .badge.locked { opacity: 0.3; filter: grayscale(1); }
+  .badge-icon { font-size: 1.3rem; }
+  .badge-name { font-size: 0.6rem; text-align: center; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .diagnostic-overlay {
+    position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.7); padding: 1rem;
+  }
+  .diagnostic-card {
+    background: var(--card, #1a1a2e); border: 1px solid var(--border); border-radius: 16px;
+    padding: 2rem; max-width: 480px; width: 100%; text-align: center;
+  }
+  .diagnostic-card h2 { margin-bottom: 0.5rem; }
+  .diagnostic-subtitle { opacity: 0.7; font-size: 0.9rem; margin-bottom: 1rem; }
+  .diagnostic-progress { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 0.3rem; }
+  .diagnostic-bar { height: 100%; background: var(--accent); transition: width 0.3s; border-radius: 3px; }
+  .diagnostic-counter { font-size: 0.8rem; opacity: 0.5; margin-bottom: 1.5rem; }
+  .probe-question { font-size: 1.1rem; margin-bottom: 1rem; }
+  .probe-options { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; }
+  .probe-btn {
+    padding: 0.6rem 1rem; border-radius: 10px; border: 1px solid var(--border);
+    background: transparent; color: var(--text); cursor: pointer; font-size: 0.95rem;
+    transition: all 0.15s;
+  }
+  .probe-btn:hover { border-color: var(--accent); }
+  .probe-btn.selected { background: var(--accent); color: #1a1a2e; font-weight: 600; border-color: var(--accent); }
+  .diagnostic-actions { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
+  .diagnostic-done h2 { color: var(--accent); }
+  .diagnostic-done p { opacity: 0.8; }
 </style>

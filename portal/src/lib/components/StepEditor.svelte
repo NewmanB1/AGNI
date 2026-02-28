@@ -1,8 +1,12 @@
 <script>
+  import SvgSpecEditor from './SvgSpecEditor.svelte';
+  import { getFactoryById } from '$lib/svg-catalog.js';
+
   const STEP_TYPES = [
     { value: 'instruction', label: 'Instruction' },
     { value: 'hardware_trigger', label: 'Hardware trigger' },
     { value: 'quiz', label: 'Quiz' },
+    { value: 'svg', label: 'SVG Visual' },
     { value: 'completion', label: 'Completion' }
   ];
 
@@ -59,9 +63,24 @@
     }
   }
 
-  let { steps = $bindable([]), onchange = () => {} } = $props();
+  const STEP_TEMPLATES = [
+    { label: 'Instruction', type: 'instruction', content: 'Explain the concept here.', icon: 'I' },
+    { label: 'Quiz (MCQ)', type: 'quiz', content: 'What is the correct answer?', icon: 'Q',
+      answer_options: ['Option A', 'Option B', 'Option C'], correct_index: 0, feedback: 'Well done!' },
+    { label: 'Hardware Activity', type: 'hardware_trigger', content: 'Perform the physical activity.', icon: 'H',
+      sensor: 'accelerometer', threshold: '', feedback: '' },
+    { label: 'Completion', type: 'completion', content: 'Congratulations, you finished the lesson!', icon: 'C' },
+    { label: 'Reflection', type: 'instruction', content: 'Take a moment to think about what you learned.\n\nWrite your thoughts below.', icon: 'R' },
+    { label: 'Worked Example', type: 'instruction', content: '**Example:** ...\n\n**Step 1:** ...\n**Step 2:** ...\n**Answer:** ...', icon: 'E' },
+    { label: 'SVG Visual', type: 'svg', content: 'Observe the diagram below.', icon: 'V',
+      svg_spec: null },
+  ];
+
+  let { steps = $bindable([]), onchange = () => {}, onfocus = () => {} } = $props();
 
   let thresholdErrors = $state({});
+  let contentPreview = $state({});
+  let showRefSuggestions = $state({});
 
   function nextStepId() {
     let max = 0;
@@ -89,15 +108,21 @@
       base.correct_index = 0;
       base.feedback = '';
     }
+    if (type === 'svg') {
+      base.svg_spec = null;
+    }
     steps = [...steps, base];
     onchange();
   }
 
   function removeStep(i) {
+    const sid = steps[i]?.id;
     steps = steps.filter((_, idx) => idx !== i);
-    const errs = { ...thresholdErrors };
-    delete errs[i];
-    thresholdErrors = errs;
+    if (sid) {
+      const errs = { ...thresholdErrors }; delete errs[sid]; thresholdErrors = errs;
+      const cp = { ...contentPreview }; delete cp[sid]; contentPreview = cp;
+      const ea = { ...expandedAdvanced }; delete ea[sid]; expandedAdvanced = ea;
+    }
     onchange();
   }
 
@@ -122,8 +147,9 @@
     arr[i] = { ...arr[i], [field]: value };
     steps = arr;
     if (field === 'threshold') {
+      const sid = arr[i].id || i;
       const result = validateThreshold(value);
-      thresholdErrors = { ...thresholdErrors, [i]: result.valid ? '' : result.error };
+      thresholdErrors = { ...thresholdErrors, [sid]: result.valid ? '' : result.error };
     }
     onchange();
   }
@@ -139,9 +165,53 @@
       if (!step.sensor) step.sensor = '';
       if (!step.threshold) step.threshold = '';
     }
+    if (newType === 'svg') {
+      if (!step.svg_spec) step.svg_spec = null;
+    }
     arr[i] = step;
     steps = arr;
     onchange();
+  }
+
+  function duplicateStep(i) {
+    const src = steps[i];
+    const clone = JSON.parse(JSON.stringify(src));
+    clone.id = nextStepId();
+    const arr = [...steps];
+    arr.splice(i + 1, 0, clone);
+    steps = arr;
+    onchange();
+  }
+
+  function addFromTemplate(tpl) {
+    const step = { id: nextStepId(), type: tpl.type, content: tpl.content };
+    if (tpl.answer_options) step.answer_options = [...tpl.answer_options];
+    if (tpl.correct_index != null) step.correct_index = tpl.correct_index;
+    if (tpl.feedback != null) step.feedback = tpl.feedback;
+    if (tpl.sensor != null) step.sensor = tpl.sensor;
+    if (tpl.threshold != null) step.threshold = tpl.threshold;
+    if (tpl.svg_spec !== undefined) step.svg_spec = tpl.svg_spec;
+    steps = [...steps, step];
+    onchange();
+  }
+
+  import { renderMarkdown } from '$lib/renderMarkdown.js';
+
+  function toggleContentPreview(step) {
+    const sid = step.id || '??';
+    contentPreview = { ...contentPreview, [sid]: !contentPreview[sid] };
+  }
+
+  const allStepIds = $derived(steps.map(s => s.id).filter(Boolean));
+
+  function getRefSuggestions(currentId, fieldValue) {
+    const prefix = (fieldValue || '').replace(/^redirect:|^skip_to:/i, '').trim().toLowerCase();
+    return allStepIds.filter(id => id !== currentId && id.toLowerCase().startsWith(prefix));
+  }
+
+  function applyRefSuggestion(stepIdx, field, value) {
+    updateField(stepIdx, field, value);
+    showRefSuggestions = { ...showRefSuggestions, [`${stepIdx}_${field}`]: false };
   }
 
   function addAnswerOption(i) {
@@ -149,6 +219,7 @@
     const opts = [...(arr[i].answer_options || []), ''];
     arr[i] = { ...arr[i], answer_options: opts };
     steps = arr;
+    onchange();
   }
 
   function updateAnswerOption(stepIdx, optIdx, value) {
@@ -171,8 +242,9 @@
   }
 
   let expandedAdvanced = $state({});
-  function toggleAdvanced(i) {
-    expandedAdvanced = { ...expandedAdvanced, [i]: !expandedAdvanced[i] };
+  function toggleAdvanced(step) {
+    const sid = step.id || '??';
+    expandedAdvanced = { ...expandedAdvanced, [sid]: !expandedAdvanced[sid] };
   }
 
   let showAddMenu = $state(false);
@@ -224,9 +296,20 @@
 
   {#if showAddMenu}
     <div class="add-menu">
-      {#each STEP_TYPES as t}
-        <button onclick={() => { newStepOfType(t.value); showAddMenu = false; }}>{t.label}</button>
-      {/each}
+      <div class="add-menu-section">
+        <span class="menu-label">Type:</span>
+        {#each STEP_TYPES as t}
+          <button onclick={() => { newStepOfType(t.value); showAddMenu = false; }}>{t.label}</button>
+        {/each}
+      </div>
+      <div class="add-menu-section">
+        <span class="menu-label">Template:</span>
+        {#each STEP_TEMPLATES as tpl}
+          <button class="template-btn" onclick={() => { addFromTemplate(tpl); showAddMenu = false; }} title={tpl.content.slice(0, 60)}>
+            <span class="tpl-icon">{tpl.icon}</span> {tpl.label}
+          </button>
+        {/each}
+      </div>
     </div>
   {/if}
 
@@ -238,6 +321,7 @@
     <div class="step-card"
          class:hw={step.type === 'hardware_trigger'}
          class:quiz={step.type === 'quiz'}
+         class:svg={step.type === 'svg'}
          class:completion={step.type === 'completion'}
          class:drag-over={dragOverIdx === i && dragIdx !== i}
          class:dragging={dragIdx === i}
@@ -246,16 +330,25 @@
          ondragover={(e) => onDragOver(e, i)}
          ondragleave={onDragLeave}
          ondragend={onDragEnd}
-         ondrop={(e) => onDrop(e, i)}>
+         ondrop={(e) => onDrop(e, i)}
+         onfocusin={() => onfocus(i)}
+         onclick={() => onfocus(i)}>
       <div class="step-toolbar">
         <span class="drag-handle" title="Drag to reorder">⠿</span>
         <span class="step-num">#{i + 1}</span>
-        <span class="step-type-badge" class:hw-badge={step.type === 'hardware_trigger'} class:quiz-badge={step.type === 'quiz'} class:comp-badge={step.type === 'completion'}>
+        <span class="step-type-badge" class:hw-badge={step.type === 'hardware_trigger'} class:quiz-badge={step.type === 'quiz'} class:svg-badge={step.type === 'svg'} class:comp-badge={step.type === 'completion'}>
           {STEP_TYPES.find(t => t.value === step.type)?.label || step.type}
         </span>
+        {#if step.type === 'svg' && step.svg_spec?.factory}
+          {@const fd = getFactoryById(step.svg_spec.factory)}
+          {#if fd}
+            <span class="svg-inline-tag">{fd.icon} {fd.label}</span>
+          {/if}
+        {/if}
         <span class="spacer"></span>
         <button class="icon-btn" onclick={() => moveUp(i)} disabled={i === 0} title="Move up">↑</button>
         <button class="icon-btn" onclick={() => moveDown(i)} disabled={i === steps.length - 1} title="Move down">↓</button>
+        <button class="icon-btn" onclick={() => duplicateStep(i)} title="Duplicate step">⧉</button>
         <button class="icon-btn danger" onclick={() => removeStep(i)} title="Remove step">✕</button>
       </div>
 
@@ -282,11 +375,24 @@
           <p class="type-hint">Completion steps mark the end of the lesson. Content is optional (e.g. a congratulations message).</p>
         {/if}
 
-        <div class="form-group">
-          <label>Content
+        <div class="form-group content-group">
+          <div class="content-label-row">
+            <label>Content</label>
+            <div class="content-tools">
+              <button class="micro-btn" onclick={() => { const v = (step.content || '') + '**bold**'; updateField(i, 'content', v); }} title="Bold">B</button>
+              <button class="micro-btn" onclick={() => { const v = (step.content || '') + '*italic*'; updateField(i, 'content', v); }} title="Italic">I</button>
+              <button class="micro-btn" onclick={() => { const v = (step.content || '') + '\\\\(x^2\\\\)'; updateField(i, 'content', v); }} title="Inline math">∑</button>
+              <button class="micro-btn" onclick={() => toggleContentPreview(step)} title="Toggle preview">
+                {contentPreview[step.id] ? 'Edit' : 'Preview'}
+              </button>
+            </div>
+          </div>
+          {#if contentPreview[step.id]}
+            <div class="content-preview">{@html renderMarkdown(step.content || '')}</div>
+          {:else}
             <textarea value={step.content || ''} oninput={(e) => updateField(i, 'content', e.target.value)}
-                      rows="2" placeholder={step.type === 'completion' ? 'e.g. Congratulations! Lesson complete.' : step.type === 'quiz' ? 'Question shown to the student' : 'Lesson content shown to the student'}></textarea>
-          </label>
+                      rows="3" placeholder={step.type === 'completion' ? 'e.g. Congratulations! Lesson complete.' : step.type === 'quiz' ? 'Question shown to the student' : 'Lesson content — supports **bold**, *italic*, `code`, \\(math\\)'}></textarea>
+          {/if}
         </div>
 
         {#if step.type === 'hardware_trigger'}
@@ -300,10 +406,10 @@
             <div class="form-group">
               <label>Threshold
                 <input type="text" value={step.threshold || ''} oninput={(e) => updateField(i, 'threshold', e.target.value)}
-                       placeholder="e.g. accel.total > 2.5g" class:input-error={thresholdErrors[i]} />
+                       placeholder="e.g. accel.total > 2.5g" class:input-error={thresholdErrors[step.id]} />
               </label>
-              {#if thresholdErrors[i]}
-                <span class="field-error">{thresholdErrors[i]}</span>
+              {#if thresholdErrors[step.id]}
+                <span class="field-error">{thresholdErrors[step.id]}</span>
               {/if}
             </div>
           </div>
@@ -344,11 +450,19 @@
           </div>
         {/if}
 
-        <button class="link-btn advanced-toggle" onclick={() => toggleAdvanced(i)}>
-          {expandedAdvanced[i] ? '▾ Hide advanced' : '▸ Advanced fields'}
+        {#if step.type === 'svg'}
+          <div class="svg-section">
+            <label class="section-label">SVG Visual</label>
+            <p class="type-hint">Pick a factory from the library and configure its parameters. The edge device renders the SVG from this spec at runtime.</p>
+            <SvgSpecEditor bind:spec={step.svg_spec} onchange={() => { updateField(i, 'svg_spec', step.svg_spec); }} />
+          </div>
+        {/if}
+
+        <button class="link-btn advanced-toggle" onclick={() => toggleAdvanced(step)}>
+          {expandedAdvanced[step.id] ? '▾ Hide advanced' : '▸ Advanced fields'}
         </button>
 
-        {#if expandedAdvanced[i]}
+        {#if expandedAdvanced[step.id]}
           <div class="advanced-fields">
             {#if step.type !== 'hardware_trigger' && step.type !== 'quiz'}
               <div class="form-group">
@@ -379,17 +493,37 @@
               </div>
             </div>
             <div class="row">
-              <div class="form-group">
+              <div class="form-group ref-group">
                 <label>On fail
-                  <input type="text" value={step.on_fail || ''} oninput={(e) => updateField(i, 'on_fail', e.target.value)}
+                  <input type="text" value={step.on_fail || ''}
+                         oninput={(e) => { updateField(i, 'on_fail', e.target.value); showRefSuggestions = { ...showRefSuggestions, [`${step.id}_on_fail`]: true }; }}
+                         onfocus={() => { showRefSuggestions = { ...showRefSuggestions, [`${step.id}_on_fail`]: true }; }}
+                         onblur={() => setTimeout(() => { showRefSuggestions = { ...showRefSuggestions, [`${step.id}_on_fail`]: false }; }, 150)}
                          placeholder="redirect:step_id, skip, or hint" />
                 </label>
+                {#if showRefSuggestions[`${step.id}_on_fail`] && getRefSuggestions(step.id, step.on_fail).length > 0}
+                  <div class="ref-suggestions">
+                    {#each getRefSuggestions(step.id, step.on_fail) as sid}
+                      <button onmousedown={() => applyRefSuggestion(i, 'on_fail', 'redirect:' + sid)}>{sid}</button>
+                    {/each}
+                  </div>
+                {/if}
               </div>
-              <div class="form-group">
+              <div class="form-group ref-group">
                 <label>On success
-                  <input type="text" value={step.on_success || ''} oninput={(e) => updateField(i, 'on_success', e.target.value)}
+                  <input type="text" value={step.on_success || ''}
+                         oninput={(e) => { updateField(i, 'on_success', e.target.value); showRefSuggestions = { ...showRefSuggestions, [`${step.id}_on_success`]: true }; }}
+                         onfocus={() => { showRefSuggestions = { ...showRefSuggestions, [`${step.id}_on_success`]: true }; }}
+                         onblur={() => setTimeout(() => { showRefSuggestions = { ...showRefSuggestions, [`${step.id}_on_success`]: false }; }, 150)}
                          placeholder="skip_to:step_id" />
                 </label>
+                {#if showRefSuggestions[`${step.id}_on_success`] && getRefSuggestions(step.id, step.on_success).length > 0}
+                  <div class="ref-suggestions">
+                    {#each getRefSuggestions(step.id, step.on_success) as sid}
+                      <button onmousedown={() => applyRefSuggestion(i, 'on_success', 'skip_to:' + sid)}>{sid}</button>
+                    {/each}
+                  </div>
+                {/if}
               </div>
             </div>
             <div class="row">
@@ -444,6 +578,7 @@
   }
   .step-card.hw { border-left: 3px solid #ff9800; }
   .step-card.quiz { border-left: 3px solid #42a5f5; }
+  .step-card.svg { border-left: 3px solid #ce93d8; }
   .step-card.completion { border-left: 3px solid #66bb6a; }
   .step-card.drag-over { border-color: var(--accent); background: rgba(0,230,118,0.06); }
   .step-card.dragging { opacity: 0.4; }
@@ -471,7 +606,13 @@
   }
   .step-type-badge.hw-badge { background: rgba(255,152,0,0.15); color: #ff9800; }
   .step-type-badge.quiz-badge { background: rgba(66,165,245,0.15); color: #42a5f5; }
+  .step-type-badge.svg-badge { background: rgba(206,147,216,0.15); color: #ce93d8; }
   .step-type-badge.comp-badge { background: rgba(102,187,106,0.15); color: #66bb6a; }
+  .svg-inline-tag {
+    font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 8px;
+    background: rgba(206,147,216,0.08); color: #ce93d8; opacity: 0.8;
+    white-space: nowrap;
+  }
   .spacer { flex: 1; }
 
   .icon-btn {
@@ -509,6 +650,7 @@
   .type-group { max-width: 200px; }
 
   .quiz-section { margin-top: 0.25rem; }
+  .svg-section { margin-top: 0.25rem; }
   .section-label { font-weight: 600; font-size: 0.9rem; display: block; margin-bottom: 0.4rem; }
   .answer-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
   .answer-row input[type="radio"] { flex-shrink: 0; accent-color: var(--accent); }
@@ -529,4 +671,58 @@
   }
   .add-btn:hover { background: rgba(0,230,118,0.2); }
   .add-btn.bottom { width: 100%; margin-top: 0.25rem; }
+
+  /* Templates panel */
+  .add-menu-section { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.5rem; }
+  .add-menu-section:last-child { margin-bottom: 0; }
+  .menu-label { font-size: 0.8rem; font-weight: 600; opacity: 0.65; margin-right: 0.2rem; }
+  .template-btn { display: flex; align-items: center; gap: 0.3rem; }
+  .tpl-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 3px; background: rgba(0,230,118,0.12);
+    font-size: 0.7rem; font-weight: 700; color: var(--accent);
+  }
+
+  /* Content preview & tools */
+  .content-group { position: relative; }
+  .content-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.2rem; }
+  .content-label-row label { font-weight: 600; font-size: 0.9rem; margin-bottom: 0; }
+  .content-tools { display: flex; gap: 0.25rem; }
+  .micro-btn {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+    color: var(--text); padding: 0.15rem 0.4rem; border-radius: 3px; cursor: pointer;
+    font-size: 0.75rem; font-weight: 600; opacity: 0.7;
+  }
+  .micro-btn:hover { opacity: 1; border-color: var(--accent); }
+  .content-preview {
+    background: #1a2544; border: 1px solid var(--border); border-radius: 5px;
+    padding: 0.6rem 0.8rem; min-height: 60px; font-size: 0.95rem; line-height: 1.6;
+  }
+  .content-preview :global(code) {
+    background: rgba(255,255,255,0.08); padding: 0.1rem 0.3rem; border-radius: 3px;
+    font-size: 0.85rem;
+  }
+  .content-preview :global(.math-inline) {
+    font-family: 'Cambria Math', 'Times New Roman', serif; font-style: italic;
+    color: #90caf9;
+  }
+  .content-preview :global(.math-block) {
+    display: block; text-align: center; margin: 0.5rem 0;
+    font-family: 'Cambria Math', 'Times New Roman', serif; font-style: italic;
+    color: #90caf9; font-size: 1.1rem;
+  }
+
+  /* Step ID reference autocomplete */
+  .ref-group { position: relative; }
+  .ref-suggestions {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
+    background: #1a2544; border: 1px solid var(--border); border-radius: 5px;
+    max-height: 120px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .ref-suggestions button {
+    display: block; width: 100%; text-align: left; background: none; border: none;
+    color: var(--text); padding: 0.35rem 0.6rem; cursor: pointer; font-size: 0.85rem;
+    font-family: monospace;
+  }
+  .ref-suggestions button:hover { background: rgba(0,230,118,0.1); color: var(--accent); }
 </style>
