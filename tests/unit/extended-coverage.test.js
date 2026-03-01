@@ -391,7 +391,7 @@ describe('Extended API tests', () => {
 
   it('POST /api/learning-paths creates a path with 201', async () => {
     const res = await apiRequest(port, 'POST', '/api/learning-paths', {
-      name: 'Test Path', skills: ['algebra']
+      name: 'Test Path', description: 'Test learning path for algebra skills', skills: ['algebra']
     });
     assert.equal(res.status, 201);
     assert.ok(res.body.ok);

@@ -79,7 +79,8 @@
     "test:graph": "node tests/graph-verification-test.js",
     "test:e2e": "npx playwright test",
     "test:runtime": "node --test tests/unit/checkpoint.test.js tests/unit/frustration.test.js tests/unit/gate-renderer.test.js tests/unit/telemetry.test.js tests/unit/a11y.test.js",
-    "test:all": "node --test tests/unit/*.test.js && node tests/contract-hub-api.js && node tests/graph-verification-test.js",
+    "test:integration": "node --test tests/integration/*.test.js",
+    "test:all": "node --test tests/unit/*.test.js && node --test tests/integration/*.test.js && node tests/contract-hub-api.js && node tests/graph-verification-test.js",
     "codegen:validate-schemas": "node scripts/codegen-validate-schemas.js",
     "dev:vite": "vite --port 5173",
     "test:es5": "node -e \"const fs=require('fs'),p=require('path'),dir=p.join(__dirname,'src/runtime');fs.readdirSync(dir).filter(f=>f.endsWith('.js')).forEach(f=>{const c=fs.readFileSync(p.join(dir,f),'utf8');if(/\\b(let|const)\\s/.test(c)||/=>/.test(c)||/`[^`]*`/.test(c)||/\\bclass\\s/.test(c)||/\\.\\.\\./.test(c))throw new Error('ES6+ syntax found in '+f)})\""

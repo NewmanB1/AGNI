@@ -1,3 +1,14 @@
 {
-  "paths": []
+  "paths": [
+    {
+      "id": "path-1772327690101",
+      "name": "Test Path",
+      "description": "Test learning path for algebra skills",
+      "skills": [
+        "algebra"
+      ],
+      "createdAt": "2026-03-01T01:14:50.101Z",
+      "createdBy": "teacher"
+    }
+  ]
 }

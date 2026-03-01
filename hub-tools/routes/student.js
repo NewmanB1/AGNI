@@ -21,7 +21,7 @@ function register(router, ctx) {
       const studentDir = path.join(CHECKPOINTS_DIR, pseudoId);
       if (!fs.existsSync(studentDir)) fs.mkdirSync(studentDir, { recursive: true });
 
-      const filePath = path.join(studentDir, lessonId.replace(/[^a-zA-Z0-9_:-]/g, '_') + '.json');
+      const filePath = path.join(studentDir, lessonId.replace(/[^a-zA-Z0-9_-]/g, '_') + '.json');
       const existing = await loadJSONAsync(filePath, null);
       if (existing && existing.savedAt && payload.savedAt && payload.savedAt <= existing.savedAt) {
         return sendResponse(200, { ok: true, skipped: true });
@@ -46,7 +46,7 @@ function register(router, ctx) {
     const lessonId = requireParam(qs, 'lessonId', sendResponse);
     if (!lessonId) return;
 
-    const filePath = path.join(CHECKPOINTS_DIR, pseudoId, lessonId.replace(/[^a-zA-Z0-9_:-]/g, '_') + '.json');
+    const filePath = path.join(CHECKPOINTS_DIR, pseudoId, lessonId.replace(/[^a-zA-Z0-9_-]/g, '_') + '.json');
     const data = await loadJSONAsync(filePath, null);
     if (!data) return sendResponse(404, { error: 'No checkpoint found' });
     return sendResponse(200, data);
