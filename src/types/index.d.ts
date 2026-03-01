@@ -111,7 +111,7 @@ export interface LessonIR {
   metadata_source: 'inferred' | 'declared' | 'mixed' | string;
   _devMode: boolean;
   _compiledAt: string;      // ISO timestamp
-  _schemaVersion: string;   // e.g. "1.7.0"
+  _schemaVersion: string;   // e.g. "1.8.0"
   // Allow additional fields copied through from YAML.
   [key: string]: unknown;
 }

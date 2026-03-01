@@ -1,15 +1,15 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://agni-project.org/schemas/ols.schema.json",
-  "title": "AGNI / Open Lesson Standard v1.7",
-  "description": "A standard for offline, sensor-rich interactive lessons. Supports forking, adaptive reordering (θ), and learner pacing metrics. Metadata complies with Dublin Core (DC) and LRMI/Schema.org.",
+  "title": "AGNI / Open Lesson Standard v1.8",
+  "description": "A standard for offline, sensor-rich interactive lessons. Supports forking, adaptive reordering (θ), learner pacing metrics, fill-in-the-blank / matching / ordering assessments, and author-declared feature overrides. Metadata complies with Dublin Core (DC) and LRMI/Schema.org.",
   "type": "object",
   "required": ["version", "meta", "steps"],
   "additionalProperties": false,
   "properties": {
     "version": {
       "type": "string",
-      "enum": ["1.6.0", "1.7.0"],
+      "enum": ["1.6.0", "1.7.0", "1.8.0"],
       "description": "Semver version of the OLS spec."
     },
     "meta": {
@@ -117,6 +117,34 @@
           "type": "boolean",
           "description": "Whether this lesson is designed for group/collaborative work. When true, teachers can assign it to student groups.",
           "default": false
+        },
+        "declared_features": {
+          "type": "object",
+          "description": "Author-declared pedagogical feature overrides. Values here take precedence over compiler-inferred features and receive confidence 1.0.",
+          "additionalProperties": false,
+          "properties": {
+            "blooms_level": {
+              "type": "string",
+              "enum": ["remember", "understand", "apply", "analyze", "evaluate", "create"],
+              "description": "Bloom's Taxonomy level declared by the author."
+            },
+            "vark": {
+              "oneOf": [
+                { "type": "string", "enum": ["visual", "auditory", "read_write", "kinesthetic"] },
+                { "type": "array", "items": { "type": "string", "enum": ["visual", "auditory", "read_write", "kinesthetic"] }, "minItems": 1 }
+              ],
+              "description": "VARK modality or modalities declared by the author."
+            },
+            "teaching_style": {
+              "type": "string",
+              "description": "Declared dominant teaching style (e.g. 'socratic', 'didactic', 'guided')."
+            }
+          }
+        },
+        "checkpointExpiryMs": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Client-side checkpoint expiry in milliseconds. Overrides the default 7-day (604800000 ms) expiry."
         }
       }
     },
@@ -222,15 +250,68 @@
         },
         "type": {
           "type": "string",
-          "enum": ["instruction", "hardware_trigger", "quiz", "completion"],
-          "description": "instruction: text/content; hardware_trigger: sensor gate; quiz: question with answers; completion: lesson-complete screen."
+          "enum": ["instruction", "hardware_trigger", "quiz", "fill_blank", "matching", "ordering", "completion"],
+          "description": "instruction: text/content; hardware_trigger: sensor gate; quiz: MCQ with answers; fill_blank: cloze with ___ placeholders; matching: pair left↔right items; ordering: arrange items in sequence; completion: lesson-complete screen."
         },
         "content": { "type": "string" },
         "sensor": { "type": "string" },
         "threshold": { "type": "string" },
-        "feedback": { "type": "string" },
+        "feedback": {
+          "oneOf": [
+            { "type": "string" },
+            {
+              "type": "object",
+              "properties": {
+                "correct": { "type": "string" },
+                "incorrect": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Feedback text (string) or per-outcome feedback object with 'correct' and 'incorrect' messages."
+        },
         "answer_options": { "type": "array", "items": { "type": "string" } },
         "correct_index": { "type": "integer" },
+        "blanks": {
+          "type": "array",
+          "description": "For fill_blank steps: one entry per ___ placeholder in content. Each blank defines the correct answer and optional accepted alternatives.",
+          "items": {
+            "type": "object",
+            "required": ["answer"],
+            "additionalProperties": false,
+            "properties": {
+              "answer": { "type": "string", "description": "Canonical correct answer." },
+              "accept": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Additional accepted spellings/variants (case-insensitive match at runtime)."
+              }
+            }
+          }
+        },
+        "pairs": {
+          "type": "array",
+          "description": "For matching steps: each pair links a left term to a right term. The player shuffles the right column.",
+          "items": {
+            "type": "object",
+            "required": ["left", "right"],
+            "additionalProperties": false,
+            "properties": {
+              "left": { "type": "string", "description": "Left-column item (displayed in order)." },
+              "right": { "type": "string", "description": "Right-column item (shuffled for the student)." }
+            }
+          }
+        },
+        "items": {
+          "type": "array",
+          "description": "For ordering steps: list of items to arrange. The player shuffles them; the student drags them into the correct sequence.",
+          "items": { "type": "string" }
+        },
+        "correct_order": {
+          "type": "array",
+          "description": "For ordering steps: zero-based indices defining the correct arrangement of 'items'. E.g. [0,1,2] means items are already in correct order.",
+          "items": { "type": "integer", "minimum": 0 }
+        },
         "expected_duration": {
           "type": "string",
           "pattern": "^P(?!$)(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$",
@@ -239,7 +320,7 @@
         "max_attempts": {
           "type": "integer",
           "minimum": 1,
-          "description": "Maximum attempts for quiz or hardware_trigger steps before marking as failed. Default: 3."
+          "description": "Maximum attempts for quiz, fill_blank, matching, or ordering steps before marking as failed. Default varies by type."
         },
         "weight": {
           "type": "number",
