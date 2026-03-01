@@ -4,10 +4,10 @@ const { updateSchedule } = require('../../src/engine/sm2');
 
 function register(router, ctx) {
   const { loadJSONAsync, saveJSONAsync, loadMasterySummaryAsync, handleJsonBody,
-          lmsService: lmsEngine, log, path,
+          requireHubKey, lmsService: lmsEngine, log, path,
           DATA_DIR, MASTERY_SUMMARY, REVIEW_SCHEDULE_PATH, thetaCache } = ctx;
 
-  router.post('/api/telemetry', (req, res, { sendResponse }) => {
+  router.post('/api/telemetry', requireHubKey((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       const events = Array.isArray(payload.events) ? payload.events : [];
       if (events.length === 0) return sendResponse(200, { accepted: [] });
@@ -99,7 +99,7 @@ function register(router, ctx) {
 
       return sendResponse(200, { accepted, processed: events.length });
     });
-  });
+  }));
 }
 
 module.exports = { register };

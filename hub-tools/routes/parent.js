@@ -2,9 +2,9 @@
 
 function register(router, ctx) {
   const { loadMasterySummaryAsync, loadOverridesAsync, loadParentLinksAsync, saveParentLinksAsync,
-          generateInviteCode, handleJsonBody } = ctx;
+          generateInviteCode, handleJsonBody, adminOnly, withRateLimit } = ctx;
 
-  router.post('/api/parent/invite', (req, res, { sendResponse }) => {
+  router.post('/api/parent/invite', adminOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       const pseudoId = payload.pseudoId && String(payload.pseudoId);
       if (!pseudoId) return sendResponse(400, { error: 'pseudoId required' });
@@ -22,9 +22,9 @@ function register(router, ctx) {
       await saveParentLinksAsync(data);
       return sendResponse(201, { code, pseudoId, existing: false });
     });
-  });
+  }));
 
-  router.post('/api/parent/link', (req, res, { sendResponse }) => {
+  router.post('/api/parent/link', withRateLimit('parent-link', (req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       const code = payload.code && String(payload.code).trim().toUpperCase();
       const parentId = payload.parentId && String(payload.parentId).trim();
@@ -44,7 +44,7 @@ function register(router, ctx) {
       await saveParentLinksAsync(data);
       return sendResponse(201, { ok: true, pseudoId: invite.pseudoId, alreadyLinked: false });
     });
-  });
+  }));
 
   router.get('/api/parent/child/:pseudoId/progress', async (req, res, { params, qs, sendResponse }) => {
     const pseudoId = params.pseudoId;

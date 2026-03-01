@@ -47,42 +47,73 @@ function register(router, ctx) {
     });
   }));
 
-  router.post('/api/admin/sync-test', (req, res, { sendResponse }) => {
+  const USB_PATH_PREFIX = process.env.AGNI_USB_PATH || '/mnt/usb/';
+
+  const PRIVATE_IP_RANGES = [
+    /^127\./,
+    /^10\./,
+    /^172\.(1[6-9]|2\d|3[01])\./,
+    /^192\.168\./,
+    /^169\.254\./,
+    /^0\./,
+    /^::1$/,
+    /^fc00:/i, /^fd/i, /^fe80:/i,
+  ];
+
+  function isPrivateHost(hostname) {
+    return PRIVATE_IP_RANGES.some(function (re) { return re.test(hostname); }) ||
+           hostname === 'localhost';
+  }
+
+  router.post('/api/admin/sync-test', adminOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, (payload) => {
       const { transport, homeUrl, usbPath } = payload;
       const t = transport || 'starlink';
       if (t === 'usb') {
-        const p = usbPath || '/mnt/usb/agni-sync';
+        const p = path.resolve(usbPath || path.join(USB_PATH_PREFIX, 'agni-sync'));
+        if (!p.startsWith(path.resolve(USB_PATH_PREFIX))) {
+          return sendResponse(400, { ok: false, message: 'USB path must be under ' + USB_PATH_PREFIX });
+        }
         if (!fs.existsSync(p)) {
           try {
             fs.mkdirSync(p, { recursive: true });
             return sendResponse(200, { ok: true, message: 'USB path created and writable.' });
-          } catch (e) {
-            return sendResponse(200, { ok: false, message: 'USB path not accessible: ' + e.message });
+          } catch (_e) {
+            return sendResponse(200, { ok: false, message: 'USB path not accessible.' });
           }
         }
         try {
           fs.writeFileSync(path.join(p, '.agni-test'), 'ok');
           fs.unlinkSync(path.join(p, '.agni-test'));
           return sendResponse(200, { ok: true, message: 'USB path writable.' });
-        } catch (e) {
-          return sendResponse(200, { ok: false, message: 'USB path not writable: ' + e.message });
+        } catch (_e) {
+          return sendResponse(200, { ok: false, message: 'USB path not writable.' });
         }
       }
       const url = (homeUrl || '').replace(/\/$/, '');
       if (!url) return sendResponse(200, { ok: false, message: 'Home URL required for Starlink test.' });
+      let parsed;
+      try { parsed = new URL(url); } catch (_e) {
+        return sendResponse(400, { ok: false, message: 'Invalid URL.' });
+      }
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return sendResponse(400, { ok: false, message: 'Only http/https URLs are allowed.' });
+      }
+      if (isPrivateHost(parsed.hostname)) {
+        return sendResponse(400, { ok: false, message: 'Cannot connect to private/loopback addresses.' });
+      }
       const target = url + (url.endsWith('/api/hub-sync') ? '' : '/api/hub-sync');
-      const parsed = new URL(target);
+      parsed = new URL(target);
       const client = parsed.protocol === 'https:' ? require('https') : require('http');
       const reqOpt = { hostname: parsed.hostname, port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80), path: parsed.pathname || '/api/hub-sync', method: 'OPTIONS', timeout: 5000 };
       const r = client.request(reqOpt, (resp) => {
         return sendResponse(200, { ok: resp.statusCode < 400, message: 'Home server responded: ' + resp.statusCode });
       });
-      r.on('error', (e) => sendResponse(200, { ok: false, message: 'Connection failed: ' + e.message }));
+      r.on('error', () => sendResponse(200, { ok: false, message: 'Connection failed.' }));
       r.on('timeout', () => { r.destroy(); sendResponse(200, { ok: false, message: 'Connection timeout.' }); });
       r.end();
     });
-  });
+  }));
 }
 
 module.exports = { register };

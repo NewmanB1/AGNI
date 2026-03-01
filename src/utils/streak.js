@@ -28,8 +28,8 @@ function computeStreaks(sortedDates) {
       if (i === 0 || currentStreak > 0) currentStreak = tempStreak;
     } else {
       if (tempStreak > longestStreak) longestStreak = tempStreak;
-      if (i > 0 && currentStreak > 0) break;
       tempStreak = 0;
+      if (currentStreak > 0) break;
     }
     checkDate.setDate(checkDate.getDate() - 1);
   }

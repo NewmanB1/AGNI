@@ -284,11 +284,12 @@ describe('migrations edge cases', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 // 5. Extended API integration tests
 // ═══════════════════════════════════════════════════════════════════════════
-function apiRequest(port, method, urlPath, body) {
+function apiRequest(port, method, urlPath, body, token) {
   return new Promise((resolve, reject) => {
+    const headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
     const opts = {
-      hostname: '127.0.0.1', port, path: urlPath, method,
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
+      hostname: '127.0.0.1', port, path: urlPath, method, headers
     };
     const req = http.request(opts, (res) => {
       let data = '';
@@ -309,15 +310,28 @@ describe('Extended API tests', () => {
   let server;
   let port;
   let dataDir;
+  let adminToken;
 
   before(async () => {
     dataDir = tempDir();
     process.env.AGNI_DATA_DIR = dataDir;
     process.env.AGNI_SERVE_DIR = path.join(dataDir, 'serve');
+    process.env.AGNI_HUB_API_KEY = '';
     fs.mkdirSync(process.env.AGNI_SERVE_DIR, { recursive: true });
     fs.writeFileSync(path.join(dataDir, 'mastery-summary.json'), JSON.stringify({ students: {} }));
     fs.writeFileSync(path.join(dataDir, 'lesson-index.json'), JSON.stringify([]));
     fs.writeFileSync(path.join(dataDir, 'approved-catalog.json'), JSON.stringify({ lessonIds: [] }));
+
+    const { accountsService } = require('../../hub-tools/context/services');
+    const reg = await accountsService.registerCreator({
+      name: 'Ext Admin', email: 'ext-admin@test.local', password: 'testpass123'
+    });
+    if (reg.creator) {
+      await accountsService.setCreatorApproval(reg.creator.id, true);
+      await accountsService.setCreatorRole(reg.creator.id, 'admin');
+    }
+    const login = await accountsService.loginCreator({ email: 'ext-admin@test.local', password: 'testpass123' });
+    adminToken = login.token;
 
     const theta = require('../../hub-tools/theta');
     server = theta.startApi(0);
@@ -348,7 +362,7 @@ describe('Extended API tests', () => {
   });
 
   it('GET /api/theta/all supports pagination', async () => {
-    const res = await apiRequest(port, 'GET', '/api/theta/all?limit=2&offset=0');
+    const res = await apiRequest(port, 'GET', '/api/theta/all?limit=2&offset=0', null, adminToken);
     assert.equal(res.status, 200);
     assert.equal(typeof res.body.total, 'number');
     assert.equal(typeof res.body.limit, 'number');
@@ -392,7 +406,7 @@ describe('Extended API tests', () => {
   it('POST /api/learning-paths creates a path with 201', async () => {
     const res = await apiRequest(port, 'POST', '/api/learning-paths', {
       name: 'Test Path', description: 'Test learning path for algebra skills', skills: ['algebra']
-    });
+    }, adminToken);
     assert.equal(res.status, 201);
     assert.ok(res.body.ok);
     assert.equal(res.body.path.name, 'Test Path');
@@ -412,7 +426,7 @@ describe('Extended API tests', () => {
   });
 
   it('POST /api/author/validate validates lesson input', async () => {
-    const res = await apiRequest(port, 'POST', '/api/author/validate', { body: '' });
+    const res = await apiRequest(port, 'POST', '/api/author/validate', { body: '' }, adminToken);
     assert.ok(res.status === 200 || res.status === 400);
   });
 

@@ -63,6 +63,12 @@ jobs:
         run: npm run test:graph
       - name: Check runtime files for ES5 compatibility
         run: npm run test:es5
+      - name: Verify no orphaned source files
+        run: npm run verify:dead-files
+      - name: Verify .d.ts declarations match .js
+        run: npm run verify:dts
+      - name: Verify no unsafe innerHTML in runtime
+        run: npm run verify:innerhtml
       - name: Validate OLS lessons and data files
         run: node scripts/validate-schemas.js
       # Build all lessons, not just gravity.yaml [R10 P3.4]

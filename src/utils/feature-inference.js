@@ -177,10 +177,15 @@ function _detectEquationTypes(allContent, hasEquations) {
  */
 function _profileVARK(allContent) {
   const vark = { visual: 0, auditory: 0, readWrite: 0, kinesthetic: 0 };
+  let totalMatches = 0;
   Object.keys(VARK_PATTERNS).forEach(function (k) {
     const matches = allContent.match(new RegExp(VARK_PATTERNS[k].source, 'gi'));
-    vark[k] = matches ? matches.length : 0;
+    const count = matches ? matches.length : 0;
+    vark[k] = count;
+    totalMatches += count;
   });
+  const wordCount = allContent.split(/\s+/).length || 1;
+  vark.matchDensity = totalMatches / wordCount;
   return vark;
 }
 
@@ -190,13 +195,19 @@ function _profileVARK(allContent) {
 function _detectBloomsCeiling(allContent) {
   let ceiling = 1;
   let label   = 'remember';
+  let matchCount = 0;
   BLOOMS_PATTERNS.forEach(function (b) {
-    if (b.re.test(allContent) && b.level > ceiling) {
-      ceiling = b.level;
-      label   = b.label;
+    const matches = allContent.match(new RegExp(b.re.source, 'gi'));
+    if (matches) {
+      matchCount += matches.length;
+      if (b.level > ceiling) {
+        ceiling = b.level;
+        label   = b.label;
+      }
     }
   });
-  return { bloomsCeiling: ceiling, bloomsLabel: label };
+  const wordCount = allContent.split(/\s+/).length || 1;
+  return { bloomsCeiling: ceiling, bloomsLabel: label, matchDensity: matchCount / wordCount };
 }
 
 /**
@@ -204,13 +215,18 @@ function _detectBloomsCeiling(allContent) {
  */
 function _detectTeachingStyle(allContent) {
   const scores = {};
+  let totalMatches = 0;
   Object.keys(TEACHING_STYLE_PATTERNS).forEach(function (style) {
     const matches = allContent.match(new RegExp(TEACHING_STYLE_PATTERNS[style].source, 'gi'));
-    scores[style] = matches ? matches.length : 0;
+    const count = matches ? matches.length : 0;
+    scores[style] = count;
+    totalMatches += count;
   });
-  return Object.keys(scores).reduce(function (best, k) {
+  const dominant = Object.keys(scores).reduce(function (best, k) {
     return scores[k] > scores[best] ? k : best;
   }, 'direct');
+  const wordCount = allContent.split(/\s+/).length || 1;
+  return { style: dominant, scores: scores, matchDensity: totalMatches / wordCount };
 }
 
 /**
@@ -265,7 +281,7 @@ function inferFeatures(lessonData) {
     vark:             vark,
     bloomsCeiling:    blooms.bloomsCeiling,
     bloomsLabel:      blooms.bloomsLabel,
-    dominantTeachingStyle: dominantStyle,
+    dominantTeachingStyle: dominantStyle.style,
     stepTypeCounts:   stepTypeCounts,
     difficulty:       difficulty
   };
@@ -303,7 +319,7 @@ function inferFeatures(lessonData) {
     }
 
     if (declared.teaching_style) {
-      features.dominantTeachingStyle = Object.assign({}, dominantStyle, { dominant: declared.teaching_style });
+      features.dominantTeachingStyle = declared.teaching_style;
       featureSources.teachingStyle = 'declared';
       confidence.teachingStyle = 1.0;
     }

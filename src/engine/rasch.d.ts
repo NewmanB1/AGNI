@@ -6,4 +6,4 @@ export function updateAbility(
   state: LMSState,
   studentId: string,
   probeResults: Array<{ probeId: string; correct: boolean }>
-): void;
+): number;

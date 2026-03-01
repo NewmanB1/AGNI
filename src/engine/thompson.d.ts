@@ -5,12 +5,11 @@ import type { LMSState } from '../types';
 export function ensureBanditInitialized(state: LMSState): void;
 export function selectLesson(
   state: LMSState,
-  studentId: string,
-  lessonIds: string[]
+  studentId: string
 ): string | null;
 export function updateBandit(
   state: LMSState,
   studentId: string,
   lessonId: string,
-  reward: number
+  gain: number
 ): void;

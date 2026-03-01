@@ -2,13 +2,13 @@
 
 function register(router, ctx) {
   const { loadGroupsAsync, saveGroupsAsync, generateGroupId, loadOverridesAsync, saveOverridesAsync,
-          handleJsonBody } = ctx;
+          handleJsonBody, adminOnly } = ctx;
 
-  router.get('/api/groups', async (req, res, { sendResponse }) => {
+  router.get('/api/groups', adminOnly(async (req, res, { sendResponse }) => {
     return sendResponse(200, await loadGroupsAsync());
-  });
+  }));
 
-  router.post('/api/groups', (req, res, { sendResponse }) => {
+  router.post('/api/groups', adminOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       const name = payload.name && String(payload.name).trim();
       if (!name) return sendResponse(400, { error: 'name required' });
@@ -20,9 +20,9 @@ function register(router, ctx) {
       await saveGroupsAsync(data);
       return sendResponse(201, { ok: true, group });
     });
-  });
+  }));
 
-  router.put('/api/groups', (req, res, { sendResponse }) => {
+  router.put('/api/groups', adminOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       const id = payload.id && String(payload.id);
       if (!id) return sendResponse(400, { error: 'id required' });
@@ -35,9 +35,9 @@ function register(router, ctx) {
       await saveGroupsAsync(data);
       return sendResponse(200, { ok: true, group: existing });
     });
-  });
+  }));
 
-  router.post('/api/groups/:id/assign', (req, res, { params, sendResponse }) => {
+  router.post('/api/groups/:id/assign', adminOnly((req, res, { params, sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       const lessonId = payload.lessonId && String(payload.lessonId);
       if (!lessonId) return sendResponse(400, { error: 'lessonId required' });
@@ -61,7 +61,7 @@ function register(router, ctx) {
       await saveOverridesAsync(overrides);
       return sendResponse(200, { ok: true, lessonId, assigned: assigned.length, skipped: skipped.length, assignedIds: assigned, skippedIds: skipped });
     });
-  });
+  }));
 }
 
 module.exports = { register };

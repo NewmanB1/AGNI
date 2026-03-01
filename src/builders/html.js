@@ -206,7 +206,7 @@ async function buildHtml(lessonData, options) {
     '<html lang="' + escapeHtml((ir.meta && ir.meta.language) || 'en') + '">',
     '<head>',
     '  <meta charset="UTF-8">',
-    '  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">',
+    '  <meta name="viewport" content="width=device-width, initial-scale=1.0">',
     '  <meta name="theme-color" content="#F4F1E8">',
     '  <meta http-equiv="Content-Security-Policy" content="default-src \'self\'; script-src \'self\' \'unsafe-inline\'; style-src \'self\' \'unsafe-inline\'; img-src \'self\' data:; connect-src \'self\'; font-src \'self\'; media-src \'self\';">',
     '  <title>' + escapeHtml((ir.meta && ir.meta.title) || 'AGNI Lesson') + '</title>',

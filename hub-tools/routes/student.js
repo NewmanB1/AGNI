@@ -3,14 +3,14 @@
 function register(router, ctx) {
   const { loadJSONAsync, saveJSONAsync, loadLessonIndexAsync, loadMasterySummaryAsync,
           loadTelemetryEventsAsync, getStudentSkills, requireParam,
-          computeStreaks, collectReviewDates, handleJsonBody,
+          computeStreaks, collectReviewDates, handleJsonBody, requireHubKey, adminOnly,
           lmsService: lmsEngine, path, fs,
           DATA_DIR, REVIEW_SCHEDULE_PATH, LEARNING_PATHS_PATH, CHECKPOINTS_DIR,
           MASTERY_SUMMARY, MASTERY_THRESHOLD } = ctx;
 
   // ── Checkpoint sync endpoints ────────────────────────────────────────────
 
-  router.post('/api/checkpoint', (req, res, { sendResponse }) => {
+  router.post('/api/checkpoint', requireHubKey((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       const pseudoId = payload.pseudoId;
       const lessonId = payload.lessonId;
@@ -18,10 +18,15 @@ function register(router, ctx) {
       if (!lessonId || typeof lessonId !== 'string') return sendResponse(400, { error: 'lessonId required' });
       if (typeof payload.stepIndex !== 'number') return sendResponse(400, { error: 'stepIndex required' });
 
-      const studentDir = path.join(CHECKPOINTS_DIR, pseudoId);
-      if (!fs.existsSync(studentDir)) fs.mkdirSync(studentDir, { recursive: true });
+      const safePseudoId = pseudoId.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const studentDir = path.join(CHECKPOINTS_DIR, safePseudoId);
+      const resolvedDir = path.resolve(studentDir);
+      if (!resolvedDir.startsWith(path.resolve(CHECKPOINTS_DIR))) {
+        return sendResponse(400, { error: 'Invalid pseudoId' });
+      }
+      if (!fs.existsSync(resolvedDir)) fs.mkdirSync(resolvedDir, { recursive: true });
 
-      const filePath = path.join(studentDir, lessonId.replace(/[^a-zA-Z0-9_-]/g, '_') + '.json');
+      const filePath = path.join(resolvedDir, lessonId.replace(/[^a-zA-Z0-9_-]/g, '_') + '.json');
       const existing = await loadJSONAsync(filePath, null);
       if (existing && existing.savedAt && payload.savedAt && payload.savedAt <= existing.savedAt) {
         return sendResponse(200, { ok: true, skipped: true });
@@ -38,21 +43,22 @@ function register(router, ctx) {
       await saveJSONAsync(filePath, checkpoint);
       return sendResponse(200, { ok: true });
     });
-  });
+  }));
 
-  router.get('/api/checkpoint', async (req, res, { qs, sendResponse }) => {
+  router.get('/api/checkpoint', requireHubKey(async (req, res, { qs, sendResponse }) => {
     const pseudoId = requireParam(qs, 'pseudoId', sendResponse);
     if (!pseudoId) return;
     const lessonId = requireParam(qs, 'lessonId', sendResponse);
     if (!lessonId) return;
 
-    const filePath = path.join(CHECKPOINTS_DIR, pseudoId, lessonId.replace(/[^a-zA-Z0-9_-]/g, '_') + '.json');
+    const safePseudoId = pseudoId.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filePath = path.join(CHECKPOINTS_DIR, safePseudoId, lessonId.replace(/[^a-zA-Z0-9_-]/g, '_') + '.json');
     const data = await loadJSONAsync(filePath, null);
     if (!data) return sendResponse(404, { error: 'No checkpoint found' });
     return sendResponse(200, data);
-  });
+  }));
 
-  router.get('/api/step-analytics', async (req, res, { qs, sendResponse }) => {
+  router.get('/api/step-analytics', requireHubKey(async (req, res, { qs, sendResponse }) => {
     const lessonId = requireParam(qs, 'lessonId', sendResponse);
     if (!lessonId) return;
     const telData = await loadTelemetryEventsAsync();
@@ -82,9 +88,9 @@ function register(router, ctx) {
       sampleSize: sm.count
     }));
     return sendResponse(200, { lessonId, steps: analytics, totalEvents: events.length });
-  });
+  }));
 
-  router.get('/api/mastery-history', async (req, res, { qs, sendResponse }) => {
+  router.get('/api/mastery-history', requireHubKey(async (req, res, { qs, sendResponse }) => {
     const pseudoId = requireParam(qs, 'pseudoId', sendResponse);
     if (!pseudoId) return;
     const telData = await loadTelemetryEventsAsync();
@@ -108,9 +114,9 @@ function register(router, ctx) {
       });
     }
     return sendResponse(200, { pseudoId, snapshots, totalLessons });
-  });
+  }));
 
-  router.get('/api/skill-graph', async (req, res, { qs, sendResponse }) => {
+  router.get('/api/skill-graph', requireHubKey(async (req, res, { qs, sendResponse }) => {
     const index = await loadLessonIndexAsync();
     const pseudoId = qs.pseudoId || '';
     const studentSkills = await getStudentSkills(pseudoId);
@@ -132,9 +138,9 @@ function register(router, ctx) {
       }
     }
     return sendResponse(200, { nodes: [...nodes.values()], edges, totalSkills: nodes.size });
-  });
+  }));
 
-  router.get('/api/reviews', async (req, res, { qs, sendResponse }) => {
+  router.get('/api/reviews', requireHubKey(async (req, res, { qs, sendResponse }) => {
     const pseudoId = requireParam(qs, 'pseudoId', sendResponse);
     if (!pseudoId) return;
     const schedule = await loadJSONAsync(REVIEW_SCHEDULE_PATH, { students: {} });
@@ -150,9 +156,9 @@ function register(router, ctx) {
     due.sort((a, b) => a.nextReviewAt - b.nextReviewAt);
     upcoming.sort((a, b) => a.nextReviewAt - b.nextReviewAt);
     return sendResponse(200, { pseudoId, due, upcoming, total: due.length + upcoming.length });
-  });
+  }));
 
-  router.get('/api/streaks', async (req, res, { qs, sendResponse }) => {
+  router.get('/api/streaks', requireHubKey(async (req, res, { qs, sendResponse }) => {
     const pseudoId = requireParam(qs, 'pseudoId', sendResponse);
     if (!pseudoId) return;
     const schedule = await loadJSONAsync(REVIEW_SCHEDULE_PATH, { students: {} });
@@ -166,9 +172,9 @@ function register(router, ctx) {
       currentStreak, longestStreak, totalSessions: sortedDates.length,
       todayCount: completionsToday, dailyGoal, goalMet: completionsToday >= dailyGoal, dates: sortedDates
     });
-  });
+  }));
 
-  router.get('/api/badges', async (req, res, { qs, sendResponse }) => {
+  router.get('/api/badges', requireHubKey(async (req, res, { qs, sendResponse }) => {
     const pseudoId = requireParam(qs, 'pseudoId', sendResponse);
     if (!pseudoId) return;
     const studentSkills = await getStudentSkills(pseudoId);
@@ -194,9 +200,9 @@ function register(router, ctx) {
       return { id: def.id, name: def.name, description: def.desc, icon: def.icon, earned };
     });
     return sendResponse(200, { pseudoId, badges, stats: { lessons: lessonCount, skills: skillCount, longestStreak, totalSkills: totalSkills.size } });
-  });
+  }));
 
-  router.get('/api/diagnostic', async (req, res, { sendResponse }) => {
+  router.get('/api/diagnostic', requireHubKey(async (req, res, { sendResponse }) => {
     const index = await loadLessonIndexAsync();
     const probes = [];
     const seen = new Set();
@@ -219,9 +225,9 @@ function register(router, ctx) {
       }
     }
     return sendResponse(200, { probes });
-  });
+  }));
 
-  router.post('/api/diagnostic', (req, res, { sendResponse }) => {
+  router.post('/api/diagnostic', requireHubKey((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       const pseudoId = payload.pseudoId;
       const responses = payload.responses || [];
@@ -261,9 +267,9 @@ function register(router, ctx) {
       } catch (e) { /* non-critical */ }
       return sendResponse(200, { ok: true, ability: bootstrapAbility, skillsBootstrapped: Object.keys(skills).length });
     });
-  });
+  }));
 
-  router.get('/api/learning-paths', async (req, res, { qs, sendResponse }) => {
+  router.get('/api/learning-paths', requireHubKey(async (req, res, { qs, sendResponse }) => {
     const data = await loadJSONAsync(LEARNING_PATHS_PATH, { paths: [] });
     const pseudoId = qs.pseudoId || '';
     if (pseudoId) {
@@ -277,9 +283,9 @@ function register(router, ctx) {
       }
     }
     return sendResponse(200, data);
-  });
+  }));
 
-  router.get('/api/learning-paths/:id', async (req, res, { params, qs, sendResponse }) => {
+  router.get('/api/learning-paths/:id', requireHubKey(async (req, res, { params, qs, sendResponse }) => {
     const data = await loadJSONAsync(LEARNING_PATHS_PATH, { paths: [] });
     const lp = data.paths.find(p => p.id === params.id);
     if (!lp) return sendResponse(404, { error: 'Path not found' });
@@ -297,9 +303,9 @@ function register(router, ctx) {
     });
     const completed = steps.filter(s => s.mastered).length;
     return sendResponse(200, { ...lp, steps, progress: { completed, total: steps.length, pct: steps.length > 0 ? Math.round((completed / steps.length) * 100) : 0 } });
-  });
+  }));
 
-  router.post('/api/learning-paths', (req, res, { sendResponse }) => {
+  router.post('/api/learning-paths', adminOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       if (!payload.name || typeof payload.name !== 'string' || !payload.name.trim()) {
         return sendResponse(400, { error: 'name is required and must be non-empty' });
@@ -329,9 +335,9 @@ function register(router, ctx) {
       if (warnings.length > 0) response.warnings = warnings;
       return sendResponse(201, response);
     });
-  });
+  }));
 
-  router.put('/api/learning-paths', (req, res, { sendResponse }) => {
+  router.put('/api/learning-paths', adminOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       const data = await loadJSONAsync(LEARNING_PATHS_PATH, { paths: [] });
       const idx = data.paths.findIndex(p => p.id === payload.id);
@@ -342,9 +348,9 @@ function register(router, ctx) {
       await saveJSONAsync(LEARNING_PATHS_PATH, data);
       return sendResponse(200, { ok: true, path: data.paths[idx] });
     });
-  });
+  }));
 
-  router.get('/api/collab/stats', async (req, res, { qs, sendResponse }) => {
+  router.get('/api/collab/stats', requireHubKey(async (req, res, { qs, sendResponse }) => {
     const lessonIds = (qs.lessonIds || '').split(',').filter(Boolean);
     const mastery = await loadMasterySummaryAsync();
     const students = mastery.students || {};
@@ -365,7 +371,7 @@ function register(router, ctx) {
       stats[lid] = { activeCount, completedCount };
     }
     return sendResponse(200, { stats });
-  });
+  }));
 }
 
 module.exports = { register };

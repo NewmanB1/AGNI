@@ -2,26 +2,26 @@
 
 function register(router, ctx) {
   const { authorService, accountsService, handleJsonBody,
-          adminOnly } = ctx;
+          adminOnly, authOnly } = ctx;
   const envConfig = require('../../src/utils/env-config');
   const yamlDir = envConfig.yamlDir;
 
-  router.get('/api/author/load/:slug', (req, res, { params, sendResponse }) => {
+  router.get('/api/author/load/:slug', authOnly((req, res, { params, sendResponse }) => {
     const result = authorService.loadLesson(params.slug, yamlDir);
     if (result.error) return sendResponse(404, { error: result.error });
     return sendResponse(200, { slug: params.slug, lessonData: result.lessonData });
-  });
+  }));
 
-  router.post('/api/author/validate', (req, res, { sendResponse }) => {
+  router.post('/api/author/validate', authOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, (body) => {
       const parsed = authorService.parseAuthorBody(body);
       if (parsed.error) return sendResponse(400, { error: parsed.error });
       const result = authorService.validateForAuthor(parsed.lessonData);
       sendResponse(200, { valid: result.valid, errors: result.errors || [], warnings: result.warnings || [] });
     });
-  });
+  }));
 
-  router.post('/api/author/save', (req, res, { sendResponse }) => {
+  router.post('/api/author/save', authOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (body) => {
       const parsed = authorService.parseAuthorBody(body);
       if (parsed.error) return sendResponse(400, { error: parsed.error });
@@ -37,7 +37,7 @@ function register(router, ctx) {
       if (result.compiled != null) resp.compiled = result.compiled;
       sendResponse(200, resp);
     });
-  });
+  }));
 
   router.delete('/api/author/delete/:slug', adminOnly((req, res, { params, sendResponse }) => {
     const result = authorService.deleteLesson(params.slug, yamlDir);
@@ -45,7 +45,7 @@ function register(router, ctx) {
     sendResponse(200, { ok: true, deleted: result.deleted });
   }));
 
-  router.post('/api/author/preview', (req, res, { sendResponse }) => {
+  router.post('/api/author/preview', authOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (body) => {
       const parsed = authorService.parseAuthorBody(body);
       if (parsed.error) return sendResponse(400, { error: parsed.error });
@@ -53,7 +53,7 @@ function register(router, ctx) {
       if (result.error) return sendResponse(400, { error: result.error });
       sendResponse(200, { ir: result.ir, sidecar: result.sidecar });
     });
-  });
+  }));
 }
 
 module.exports = { register };

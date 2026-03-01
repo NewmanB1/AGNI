@@ -47,7 +47,11 @@ function matchPath(pattern, urlPath) {
   const params = {};
   for (let i = 0; i < patternParts.length; i++) {
     if (patternParts[i].startsWith(':')) {
-      params[patternParts[i].slice(1)] = decodeURIComponent(urlParts[i]);
+      try {
+        params[patternParts[i].slice(1)] = decodeURIComponent(urlParts[i]);
+      } catch (_e) {
+        return null;
+      }
     } else if (patternParts[i] !== urlParts[i]) {
       return null;
     }

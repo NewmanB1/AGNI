@@ -21,7 +21,7 @@ const authLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 2
 function readBody(req, opts) {
   const maxBytes = (opts && opts.maxBytes) || MAX_BODY_SIZE;
   return new Promise((resolve, reject) => {
-    let body = '';
+    const chunks = [];
     let size = 0;
     req.on('data', chunk => {
       size += chunk.length;
@@ -30,9 +30,9 @@ function readBody(req, opts) {
         reject(new Error('Request body too large'));
         return;
       }
-      body += chunk;
+      chunks.push(chunk);
     });
-    req.on('end', () => resolve(body));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
     req.on('error', reject);
   });
 }
@@ -112,10 +112,10 @@ function createResponseSender(req, res, opts) {
  * @param {Record<string, string>} qs
  * @returns {string|null}
  */
-function extractBearerToken(req, qs) {
+function extractBearerToken(req, _qs) {
   const authHeader = req.headers['authorization'] || '';
   if (authHeader.startsWith('Bearer ')) return authHeader.slice(7);
-  return (qs && qs.token) || null;
+  return null;
 }
 
 /**

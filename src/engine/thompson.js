@@ -157,6 +157,9 @@ function selectLesson(state, studentId) {
  * @param {number} gain
  */
 function updateBandit(state, studentId, lessonId, gain) {
+  if (typeof gain !== 'number' || !isFinite(gain)) {
+    throw new Error('[BANDIT] gain must be a finite number, got: ' + gain);
+  }
   ensureBanditInitialized(state);
 
   var studentVec = embeddings.ensureStudentVector(state, studentId);

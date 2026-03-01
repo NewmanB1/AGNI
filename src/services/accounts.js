@@ -191,7 +191,11 @@ async function loginCreator({ email, password }) {
   if (!creator) return { error: 'Invalid email or password' };
 
   const hash = await hashPassword(password, creator.salt);
-  if (hash !== creator.passwordHash) return { error: 'Invalid email or password' };
+  const hashBuf = Buffer.from(hash, 'hex');
+  const storedBuf = Buffer.from(creator.passwordHash, 'hex');
+  if (hashBuf.length !== storedBuf.length || !crypto.timingSafeEqual(hashBuf, storedBuf)) {
+    return { error: 'Invalid email or password' };
+  }
 
   const token = randomHex(TOKEN_BYTES);
   await withLock(SESSIONS_PATH, async () => {
@@ -268,6 +272,18 @@ async function setCreatorApproval(creatorId, approved) {
     creator.approved = !!approved;
     await saveCreators(data);
     return { ok: true, creatorId, approved: creator.approved };
+  });
+}
+
+/** Admin: set a creator's role. */
+async function setCreatorRole(creatorId, role) {
+  return withLock(CREATORS_PATH, async () => {
+    const data = await loadCreators();
+    const creator = data.creators.find(c => c.id === creatorId);
+    if (!creator) return { error: 'Creator not found' };
+    creator.role = role;
+    await saveCreators(data);
+    return { ok: true, creatorId, role: creator.role };
   });
 }
 
@@ -510,6 +526,7 @@ module.exports = {
   cleanExpiredSessions,
   listCreators,
   setCreatorApproval,
+  setCreatorRole,
   recordLessonAuthored,
   createStudent,
   createStudentsBulk,

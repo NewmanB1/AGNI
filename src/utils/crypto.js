@@ -63,7 +63,11 @@ let _keyCache = { path: null, mtime: 0, key: null };
 function canonicalJSON(obj) {
   if (obj === null || obj === undefined) return 'null';
   const type = typeof obj;
-  if (type === 'number' || type === 'boolean') return String(obj);
+  if (type === 'number') {
+    if (!isFinite(obj)) return 'null';
+    return String(obj);
+  }
+  if (type === 'boolean') return String(obj);
   if (type === 'string') return JSON.stringify(obj);
   if (Array.isArray(obj)) {
     return '[' + obj.map(canonicalJSON).join(',') + ']';
@@ -92,7 +96,9 @@ function canonicalJSON(obj) {
  * @returns {string|null}               base64 Ed25519 signature, or null
  */
 function signContent(contentString, deviceId, privateKeyPath) {
-  if (!deviceId || !privateKeyPath) return null;
+  if (typeof contentString !== 'string') throw new Error('contentString must be a string');
+  if (typeof deviceId !== 'string' || !deviceId) return null;
+  if (typeof privateKeyPath !== 'string' || !privateKeyPath) return null;
 
   try {
     const stat = fs.statSync(privateKeyPath);
@@ -119,7 +125,7 @@ function signContent(contentString, deviceId, privateKeyPath) {
     return signature.toString('base64');
 
   } catch (err) {
-    throw new Error('Signing failed: ' + err.message);
+    throw new Error('Signing failed');
   }
 }
 

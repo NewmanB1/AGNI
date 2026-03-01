@@ -66,6 +66,9 @@ function ensureLessonVector(state, lessonId) {
  * @param {number} gain
  */
 function updateEmbedding(state, studentId, lessonId, gain) {
+  if (typeof gain !== 'number' || !isFinite(gain)) {
+    throw new Error('[EMBEDDING] gain must be a finite number, got: ' + gain);
+  }
   var z = ensureStudentVector(state, studentId);
   var w = ensureLessonVector(state, lessonId);
 

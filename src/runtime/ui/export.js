@@ -27,15 +27,26 @@ export function showExportModal(proofString) {
     // Using a public API for MVP visualization (offline needs a local JS lib)
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${proofString}`;
     
-    div.innerHTML = `
-        <h2 style="margin-bottom:20px;">Lesson Complete!</h2>
-        <div style="background:white; padding:10px; border-radius:2px;">
-            <img src="${qrUrl}" alt="Scan to save" />
-        </div>
-        <p style="margin-top:20px; font-family:monospace; color:#e0e0e0;">${proofString}</p>
-        <button id="close-export" style="margin-top:20px; padding:18px 30px; font-size:18px; font-weight:bold;">Close</button>
-    `;
-    
+    var h2 = document.createElement('h2');
+    h2.style.marginBottom = '20px';
+    h2.textContent = 'Lesson Complete!';
+    var qrWrap = document.createElement('div');
+    qrWrap.style.cssText = 'background:white;padding:10px;border-radius:2px;';
+    var qrImg = document.createElement('img');
+    qrImg.src = qrUrl;
+    qrImg.alt = 'Scan to save';
+    qrWrap.appendChild(qrImg);
+    var proofP = document.createElement('p');
+    proofP.style.cssText = 'margin-top:20px;font-family:monospace;color:#e0e0e0;';
+    proofP.textContent = proofString;
+    var closeBtn = document.createElement('button');
+    closeBtn.style.cssText = 'margin-top:20px;padding:18px 30px;font-size:18px;font-weight:bold;';
+    closeBtn.textContent = 'Close';
+    closeBtn.onclick = function () { div.remove(); };
+    div.appendChild(h2);
+    div.appendChild(qrWrap);
+    div.appendChild(proofP);
+    div.appendChild(closeBtn);
+
     document.body.appendChild(div);
-    document.getElementById('close-export').onclick = () => div.remove();
 }

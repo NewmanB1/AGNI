@@ -312,7 +312,7 @@ async function _doCompile(slug, loaded, options) {
 function _buildPwaShell(ir, styles, lessonScript, nonce) {
   const lang    = _escapeHtml((ir.meta && ir.meta.language) || 'en');
   const title   = _escapeHtml((ir.meta && ir.meta.title)    || 'AGNI Lesson');
-  const cspMeta = buildCspMeta({ nonce: nonce });
+  const cspMeta = buildCspMeta(nonce);
   // nonce value embedded in the script tag must not be HTML-escaped —
   // only the CSP meta content attribute needs escaping (done inside buildCspMeta).
   const nonceAttr = ' nonce="' + nonce + '"';
@@ -322,7 +322,7 @@ function _buildPwaShell(ir, styles, lessonScript, nonce) {
     '<html lang="' + lang + '">',
     '<head>',
     '  <meta charset="UTF-8">',
-    '  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">',
+    '  <meta name="viewport" content="width=device-width, initial-scale=1.0">',
     '  <meta name="theme-color" content="#F4F1E8">',
     '  ' + cspMeta,
     '  <title>' + title + '</title>',
@@ -364,7 +364,7 @@ function _gzip(buf, cb) {
  */
 function _sendText(req, res, statusCode, contentType, body) {
   const buf = Buffer.from(body, 'utf8');
-  res.setHeader('Access-Control-Allow-Origin', envConfig.corsOrigin || '*');
+  res.setHeader('Access-Control-Allow-Origin', envConfig.corsOrigin || 'null');
   res.setHeader('Content-Type', contentType);
 
   if (req.headers['accept-encoding'] &&
@@ -398,7 +398,7 @@ function _sendFile(req, res, filePath, contentType, maxAge) {
     return;
   }
   const buf = fs.readFileSync(filePath);
-  res.setHeader('Access-Control-Allow-Origin', envConfig.corsOrigin || '*');
+  res.setHeader('Access-Control-Allow-Origin', envConfig.corsOrigin || 'null');
   res.setHeader('Content-Type', contentType);
   res.setHeader('Cache-Control', 'public, max-age=' + (maxAge || 0));
 

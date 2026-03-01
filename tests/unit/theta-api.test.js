@@ -13,14 +13,16 @@ function tempDir() {
   return dir;
 }
 
-function request(port, method, urlPath, body) {
+function request(port, method, urlPath, body, token) {
   return new Promise((resolve, reject) => {
+    const headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
     const opts = {
       hostname: '127.0.0.1',
       port,
       path: urlPath,
       method,
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
+      headers
     };
     const req = http.request(opts, (res) => {
       let data = '';
@@ -42,15 +44,29 @@ describe('Theta API integration tests', () => {
   let port;
   let dataDir;
 
+  let adminToken;
+
   before(async () => {
     dataDir = tempDir();
     process.env.AGNI_DATA_DIR = dataDir;
     process.env.AGNI_SERVE_DIR = path.join(dataDir, 'serve');
+    process.env.AGNI_HUB_API_KEY = '';
     fs.mkdirSync(process.env.AGNI_SERVE_DIR, { recursive: true });
 
     fs.writeFileSync(path.join(dataDir, 'mastery-summary.json'), JSON.stringify({ students: {} }));
     fs.writeFileSync(path.join(dataDir, 'lesson-index.json'), JSON.stringify([]));
     fs.writeFileSync(path.join(dataDir, 'approved-catalog.json'), JSON.stringify({ lessonIds: [] }));
+
+    const { accountsService } = require('../../hub-tools/context/services');
+    const result = await accountsService.registerCreator({
+      name: 'Test Admin', email: 'admin@test.local', password: 'testpass123'
+    });
+    if (result.creator) {
+      await accountsService.setCreatorApproval(result.creator.id, true);
+      await accountsService.setCreatorRole(result.creator.id, 'admin');
+    }
+    const login = await accountsService.loginCreator({ email: 'admin@test.local', password: 'testpass123' });
+    adminToken = login.token;
 
     const theta = require('../../hub-tools/theta');
     server = theta.startApi(0);
@@ -77,7 +93,7 @@ describe('Theta API integration tests', () => {
   });
 
   it('GET /api/theta/all returns all students', async () => {
-    const res = await request(port, 'GET', '/api/theta/all');
+    const res = await request(port, 'GET', '/api/theta/all', null, adminToken);
     assert.equal(res.status, 200);
     assert.ok(res.body.students);
   });
@@ -110,13 +126,13 @@ describe('Theta API integration tests', () => {
   });
 
   it('GET /api/groups returns groups', async () => {
-    const res = await request(port, 'GET', '/api/groups');
+    const res = await request(port, 'GET', '/api/groups', null, adminToken);
     assert.equal(res.status, 200);
     assert.ok(Array.isArray(res.body.groups));
   });
 
   it('POST /api/groups creates a group', async () => {
-    const res = await request(port, 'POST', '/api/groups', { name: 'Test Group' });
+    const res = await request(port, 'POST', '/api/groups', { name: 'Test Group' }, adminToken);
     assert.equal(res.status, 201);
     assert.ok(res.body.ok);
     assert.equal(res.body.group.name, 'Test Group');

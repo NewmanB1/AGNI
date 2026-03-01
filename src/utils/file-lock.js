@@ -47,8 +47,8 @@ function acquireSync(filePath) {
         continue;
       }
       var wait = RETRY_INTERVAL_MS + Math.floor(Math.random() * RETRY_INTERVAL_MS);
-      var end = Date.now() + wait;
-      while (Date.now() < end) { /* busy wait — sync context, no setTimeout */ }
+      try { var _b = new Int32Array(new SharedArrayBuffer(4)); Atomics.wait(_b, 0, 0, wait); }
+      catch (_e2) { var _end = Date.now() + wait; while (Date.now() < _end) { /* fallback */ } }
     }
   }
   throw new Error('Could not acquire lock after ' + MAX_RETRIES + ' attempts: ' + lp);

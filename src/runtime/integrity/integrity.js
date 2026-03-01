@@ -108,9 +108,9 @@
    * @param {object} lesson LESSON_DATA
    */
   function verify(lesson) {
-    var devMode = isDevMode();
+    var buildTimeDevMode = !!(global.AGNI_BUILD_DEV_MODE);
 
-    if (devMode && (!global.OLS_SIGNATURE || !global.OLS_PUBLIC_KEY)) {
+    if (buildTimeDevMode && (!global.OLS_SIGNATURE || !global.OLS_PUBLIC_KEY)) {
       return Promise.resolve(true);
     }
 
