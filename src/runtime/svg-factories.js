@@ -86,8 +86,8 @@
 
   // Default colour palette (accessible, works on dark backgrounds)
   var PALETTE = [
-    '#4dabf7', '#ff6b35', '#51cf66', '#fcc419',
-    '#cc5de8', '#ff8787', '#20c997', '#f06595'
+    '#0B5FFF', '#D84315', '#1B5E20', '#996600',
+    '#7B1FA2', '#B00020', '#00695C', '#AD1457'
   ];
 
   // ── 1. Venn Diagram ─────────────────────────────────────────────────────────
@@ -200,7 +200,7 @@
     // Grid & ticks
     for (var v = min; v <= max; v += step) {
       var px = toX(v);
-      svg.appendChild(el('line', { x1:px, y1:MT, x2:px, y2:MT+CH, stroke:'#2a2a4a', 'stroke-width':'1' }));
+      svg.appendChild(el('line', { x1:px, y1:MT, x2:px, y2:MT+CH, stroke:'#C0BDB3', 'stroke-width':'1' }));
       svg.appendChild(el('line', { x1:px, y1:MT+CH, x2:px, y2:MT+CH+5, stroke:'#aaaacc', 'stroke-width':'1.5' }));
       svg.appendChild(txt(v, { x:px, y:MT+CH+18, 'font-size':'11', fill:'#8888aa' }));
     }
@@ -328,7 +328,7 @@
 
     // Stand
     svg.appendChild(el('line', { x1:cx, y1:baseY, x2:cx, y2:baseY-100, stroke:'#aaaacc', 'stroke-width':'4', 'stroke-linecap':'round' }));
-    svg.appendChild(el('ellipse', { cx:cx, cy:baseY, rx:30, ry:8, fill:'#2a2a4a', stroke:'#aaaacc', 'stroke-width':'2' }));
+    svg.appendChild(el('ellipse', { cx:cx, cy:baseY, rx:30, ry:8, fill:'#C0BDB3', stroke:'#888', 'stroke-width':'2' }));
 
     // Pivot point
     var pivotY = baseY - 100;
@@ -413,7 +413,7 @@
     for (var gi = 0; gi <= 4; gi++) {
       var gv = (yMax / 4) * gi;
       var gy = MT + CH - (gv / yMax) * CH;
-      svg.appendChild(el('line', { x1:ML, y1:gy, x2:ML+CW, y2:gy, stroke:'#2a2a4a', 'stroke-width':'1' }));
+      svg.appendChild(el('line', { x1:ML, y1:gy, x2:ML+CW, y2:gy, stroke:'#C0BDB3', 'stroke-width':'1' }));
       svg.appendChild(txt(Math.round(gv), { x:ML-8, y:gy, 'font-size':'11', fill:'#8888aa', 'text-anchor':'end' }));
     }
 
@@ -641,12 +641,12 @@
       } else {
         var pathD = arcPath(cx, cy, r, cursor, cursor + sweep);
         svg.appendChild(el('path', { d:pathD, fill:color, 'fill-opacity':'0.85',
-          stroke:'#1a1a2e', 'stroke-width':'2' }));
+          stroke:'#F4F1E8', 'stroke-width':'2' }));
       }
 
       // Donut hole
       if (opts.donut) {
-        svg.appendChild(el('circle', { cx:cx, cy:cy, r:innerR, fill:'#1a1a2e' }));
+        svg.appendChild(el('circle', { cx:cx, cy:cy, r:innerR, fill:'#F4F1E8' }));
       }
 
       // Slice label (only for slices > 8%)

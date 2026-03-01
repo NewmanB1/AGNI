@@ -1,0 +1,63 @@
+# GitHub labels for AGNI
+# Apply with: gh label create <name> --color <color> --description <desc>
+# Or use github-labeler action with this file.
+
+- name: bug
+  color: "d73a4a"
+  description: "Something isn't working"
+
+- name: enhancement
+  color: "a2eeef"
+  description: "New feature or improvement"
+
+- name: good first issue
+  color: "7057ff"
+  description: "Small, well-scoped task for new contributors"
+
+- name: lesson
+  color: "0e8a16"
+  description: "New lesson or lesson improvement"
+
+- name: translation
+  color: "1d76db"
+  description: "Adding or updating a lesson translation"
+
+- name: documentation
+  color: "0075ca"
+  description: "Docs, README, playbooks, tutorials"
+
+- name: "area: hub"
+  color: "d4c5f9"
+  description: "Hub server and API routes"
+
+- name: "area: runtime"
+  color: "f9d0c4"
+  description: "Browser lesson player and runtime modules"
+
+- name: "area: compiler"
+  color: "c5def5"
+  description: "Compiler, builders, and IR generation"
+
+- name: "area: portal"
+  color: "bfdadc"
+  description: "SvelteKit portal UI"
+
+- name: "area: governance"
+  color: "fef2c0"
+  description: "Governance policies, compliance, coverage"
+
+- name: "priority: high"
+  color: "b60205"
+  description: "Urgent or blocking issue"
+
+- name: "priority: low"
+  color: "c2e0c6"
+  description: "Nice to have, not urgent"
+
+- name: "device: old-android"
+  color: "e4e669"
+  description: "Specific to Android 6-8 or old WebView"
+
+- name: "offline"
+  color: "fbca04"
+  description: "Offline-first behavior, caching, or sync"

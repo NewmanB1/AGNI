@@ -46,8 +46,8 @@
 
 'use strict';
 
-var crypto = require('crypto');
-var fs     = require('fs');
+const crypto = require('crypto');
+const fs     = require('fs');
 
 
 /**
@@ -66,12 +66,12 @@ function signContent(contentString, deviceId, privateKeyPath) {
   if (!deviceId || !privateKeyPath) return null;
 
   try {
-    var privateKey = fs.readFileSync(privateKeyPath, 'utf8');
+    const privateKey = fs.readFileSync(privateKeyPath, 'utf8');
 
     // ── Step 1: canonical binding hash ───────────────────────────────────────
     // NUL separator prevents boundary-shift attacks. The browser verifier
     // must reconstruct this exact byte sequence before verifying.
-    var bindingHash = crypto
+    const bindingHash = crypto
       .createHash('sha256')
       .update(contentString)
       .update('\x00')      // NUL separator — never present in a UUID
@@ -81,7 +81,7 @@ function signContent(contentString, deviceId, privateKeyPath) {
     // ── Step 2: Ed25519 signature ─────────────────────────────────────────────
     // crypto.sign(null, data, key) — null algorithm is correct for Ed25519.
     // No dsaEncoding option. Signatures are fixed 64 bytes, no ASN.1 framing.
-    var signature = crypto.sign(null, bindingHash, privateKey);
+    const signature = crypto.sign(null, bindingHash, privateKey);
 
     return signature.toString('base64');
 

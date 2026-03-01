@@ -137,3 +137,10 @@ Sprint 6 (Parent, Student, Launch) ───────────────
 - **Config wizards** — `docs/SPRINT-CONFIGURATION-WIZARDS.md` (G1–G4 done; A1, A3, F1, F2, T1–T4, P1–P3, S1–S3)
 - **WYSIWYG prep** — `docs/YEAR2-PREP.md`
 - **API contract** — `docs/api-contract.md`
+
+---
+
+## Archived
+
+Previous sprint-next and next-sprint-tasks content has been consolidated into this file.
+See git history for the original files: `docs/SPRINT-NEXT.md`, `docs/NEXT-SPRINT-TASKS.md`.

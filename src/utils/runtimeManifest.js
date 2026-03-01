@@ -8,7 +8,13 @@
 
 // ── Canonical load order (after shared-runtime.js, which html/hub prepend) ─────
 // binary-utils.js is prepended by html.js before shared-runtime; not listed here.
-var FACTORY_LOAD_ORDER = [
+const FACTORY_LOAD_ORDER = [
+  'a11y.js',
+  'gate-renderer.js',
+  'integrity.js',
+  'checkpoint.js',
+  'frustration.js',
+  'completion.js',
   'sensor-bridge.js',
   'svg-stage.js',
   'svg-factories.js',
@@ -19,7 +25,7 @@ var FACTORY_LOAD_ORDER = [
 ];
 
 // ── Registry ID → file membership ────────────────────────────────────────────
-var FACTORY_FILE_MAP = {
+const FACTORY_FILE_MAP = {
   'venn':          'svg-factories.js',
   'axis':          'svg-factories.js',
   'numberLine':    'svg-factories.js',
@@ -64,7 +70,14 @@ function getFileForFactoryId(id) {
  * @returns {string[]}
  */
 function getOrderedFactoryFiles(capabilities) {
-  var files = [];
+  const files = [
+    'a11y.js',
+    'gate-renderer.js',
+    'integrity.js',
+    'checkpoint.js',
+    'frustration.js',
+    'completion.js'
+  ];
   if (capabilities.includeSensorBridge) files.push('sensor-bridge.js');
   files.push('svg-stage.js');
   files.push('svg-factories.js');

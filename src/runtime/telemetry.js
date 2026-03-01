@@ -316,6 +316,11 @@
         durationMs:    Math.round(totalDurationMs || 0),
         // Probe results for LMS engine (Rasch + bandit)
         probeResults:  Array.isArray(probeResults) ? probeResults : [],
+        // Frustration telemetry
+        frustrationEvents: (global.AGNI_FRUSTRATION && global.AGNI_FRUSTRATION.getEvents)
+          ? global.AGNI_FRUSTRATION.getEvents() : [],
+        frustrationTotal: (global.AGNI_FRUSTRATION && global.AGNI_FRUSTRATION.getTotalEvents)
+          ? global.AGNI_FRUSTRATION.getTotalEvents() : 0,
         // Metadata
         completedAt:   new Date().toISOString(),
         flushed:       false

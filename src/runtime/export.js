@@ -22,18 +22,18 @@ export function generateProof(lessonId, score, userUuid) {
  */
 export function showExportModal(proofString) {
     const div = document.createElement('div');
-    div.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; text-align:center;";
+    div.style.cssText = "position:fixed; inset:0; background:#2D2D2D; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#FFFFFF; text-align:center;";
     
     // Using a public API for MVP visualization (offline needs a local JS lib)
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${proofString}`;
     
     div.innerHTML = `
         <h2 style="margin-bottom:20px;">Lesson Complete!</h2>
-        <div style="background:white; padding:10px; border-radius:8px;">
+        <div style="background:white; padding:10px; border-radius:2px;">
             <img src="${qrUrl}" alt="Scan to save" />
         </div>
-        <p style="margin-top:20px; font-family:monospace; color:#aaa;">${proofString}</p>
-        <button id="close-export" style="margin-top:20px; padding:10px 30px; font-size:18px;">Close</button>
+        <p style="margin-top:20px; font-family:monospace; color:#e0e0e0;">${proofString}</p>
+        <button id="close-export" style="margin-top:20px; padding:18px 30px; font-size:18px; font-weight:bold;">Close</button>
     `;
     
     document.body.appendChild(div);

@@ -5,13 +5,14 @@
  * Phase 2 / Sprint K: every lesson path validates with the same schema before business logic.
  */
 
-var path = require('path');
-var fs = require('fs');
-var validateThresholdSyntax = require('../utils/threshold-syntax').validateThresholdSyntax;
+const path = require('path');
+const fs = require('fs');
+const validateThresholdSyntax = require('../utils/threshold-syntax').validateThresholdSyntax;
 
-var schemaPath = path.join(__dirname, '../../schemas', 'ols.schema.json');
-var Ajv;
-var ajvFormats;
+const schemaPath = path.join(__dirname, '../../schemas', 'ols.schema.json');
+const utuConstantsPath = path.join(__dirname, '../../data', 'utu-constants.json');
+let Ajv;
+let ajvFormats;
 try {
   Ajv = require('ajv');
   ajvFormats = require('ajv-formats');
@@ -19,11 +20,23 @@ try {
   Ajv = null;
 }
 
-var validateSchema = null;
+let _canonicalSpineIds = null;
+function getCanonicalSpineIds() {
+  if (_canonicalSpineIds) return _canonicalSpineIds;
+  try {
+    if (fs.existsSync(utuConstantsPath)) {
+      const data = JSON.parse(fs.readFileSync(utuConstantsPath, 'utf8'));
+      _canonicalSpineIds = data.spineIds || [];
+    }
+  } catch (e) { /* ignore — validation will skip spine check */ }
+  return _canonicalSpineIds || [];
+}
+
+let validateSchema = null;
 if (Ajv && fs.existsSync(schemaPath)) {
   try {
-    var schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
-    var ajv = new Ajv({ allErrors: true });
+    const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+    const ajv = new Ajv({ allErrors: true });
     if (typeof ajvFormats === 'function') ajvFormats(ajv);
     validateSchema = ajv.compile(schema);
   } catch (err) {
@@ -39,7 +52,7 @@ if (Ajv && fs.existsSync(schemaPath)) {
  * @returns {{ valid: boolean, errors: string[] }}
  */
 function validateWithSchema(lessonData) {
-  var errors = [];
+  const errors = [];
   if (!lessonData || typeof lessonData !== 'object') {
     return { valid: false, errors: ['Lesson data must be an object'] };
   }
@@ -49,10 +62,10 @@ function validateWithSchema(lessonData) {
       errors: ['Schema validation unavailable. Install dependencies: npm install ajv ajv-formats']
     };
   }
-  var ok = validateSchema(lessonData);
+  const ok = validateSchema(lessonData);
   if (!ok && validateSchema.errors) {
     validateSchema.errors.forEach(function (err) {
-      var msg = (err.instancePath || err.params?.missingProperty || '') + ' ' + (err.message || '');
+      const msg = (err.instancePath || err.params?.missingProperty || '') + ' ' + (err.message || '');
       errors.push(msg.trim());
     });
   }
@@ -82,12 +95,12 @@ function validateStructure(lessonData) {
  * @returns {{ valid: boolean, errors: string[] }}
  */
 function validateThresholds(lessonData) {
-  var errors = [];
-  var steps = lessonData && lessonData.steps;
+  const errors = [];
+  const steps = lessonData && lessonData.steps;
   if (!Array.isArray(steps)) return { valid: true, errors: [] };
   steps.forEach(function (step, idx) {
     if (step.type === 'hardware_trigger' && step.threshold) {
-      var result = validateThresholdSyntax(step.threshold);
+      const result = validateThresholdSyntax(step.threshold);
       if (!result.valid) {
         errors.push('step ' + (idx + 1) + ' (' + (step.id || '?') + '): threshold "' + step.threshold + '" — ' + result.error);
       }
@@ -104,12 +117,12 @@ function validateThresholds(lessonData) {
  * @returns {{ errors: string[], warnings: string[] }}
  */
 function validateSemantics(lessonData) {
-  var errors = [];
-  var warnings = [];
-  var steps = lessonData && lessonData.steps;
+  const errors = [];
+  const warnings = [];
+  const steps = lessonData && lessonData.steps;
   if (!Array.isArray(steps)) return { errors: errors, warnings: warnings };
 
-  var ids = {};
+  const ids = {};
   steps.forEach(function (step, idx) {
     if (step.id) {
       if (ids[step.id] !== undefined) {
@@ -120,7 +133,7 @@ function validateSemantics(lessonData) {
   });
 
   steps.forEach(function (step, idx) {
-    var label = 'step ' + (idx + 1) + ' (' + (step.id || '?') + ')';
+    const label = 'step ' + (idx + 1) + ' (' + (step.id || '?') + ')';
 
     if (step.type === 'quiz') {
       if (!Array.isArray(step.answer_options) || step.answer_options.length < 2) {
@@ -154,7 +167,7 @@ function validateSemantics(lessonData) {
 
     function checkStepRef(fieldName, val) {
       if (!val || typeof val !== 'string') return;
-      var ref = val.replace(/^redirect:|^skip_to:|^ols:/i, '').trim();
+      const ref = val.replace(/^redirect:|^skip_to:|^ols:/i, '').trim();
       if (ref && ids[ref] === undefined && ref !== 'skip' && ref !== 'hint') {
         warnings.push(label + ': ' + fieldName + ' references unknown step ID "' + ref + '"');
       }
@@ -163,7 +176,7 @@ function validateSemantics(lessonData) {
     checkStepRef('on_success', step.on_success);
   });
 
-  var meta = lessonData.meta || {};
+  const meta = lessonData.meta || {};
   if (meta.is_group != null && typeof meta.is_group !== 'boolean') {
     warnings.push('meta.is_group should be a boolean (true / false)');
   }
@@ -173,9 +186,27 @@ function validateSemantics(lessonData) {
   if (!meta.time_required && !lessonData.time_required) {
     warnings.push('Missing time_required (helps students plan)');
   }
-  var ont = lessonData.ontology || {};
+  const ont = lessonData.ontology || {};
   if ((!ont.provides || ont.provides.length === 0) && (!ont.requires || ont.requires.length === 0)) {
     warnings.push('No ontology skills defined (limits adaptive recommendations)');
+  }
+
+  // UTU coordinate validation
+  const utu = meta.utu;
+  if (utu && typeof utu === 'object') {
+    const spineId = utu.spineId || utu.class;
+    if (spineId) {
+      const canonical = getCanonicalSpineIds();
+      if (canonical.length > 0 && canonical.indexOf(spineId) === -1) {
+        warnings.push('meta.utu Spine ID "' + spineId + '" is not in canonical list (' + canonical.slice(0, 5).join(', ') + '…). Check docs/specs/utu-architecture.md');
+      }
+    }
+    if (typeof utu.band === 'number' && (utu.band < 1 || utu.band > 6)) {
+      errors.push('meta.utu.band must be 1–6 (got ' + utu.band + ')');
+    }
+    if (typeof utu.protocol === 'number' && (utu.protocol < 1 || utu.protocol > 5)) {
+      errors.push('meta.utu.protocol must be 1–5 (got ' + utu.protocol + ')');
+    }
   }
 
   return { errors: errors, warnings: warnings };
@@ -190,8 +221,8 @@ function validateSemantics(lessonData) {
  * @returns {{ valid: boolean, errors: string[], warnings: string[] }}
  */
 function validateLessonData(lessonData) {
-  var errors = [];
-  var warnings = [];
+  let errors = [];
+  let warnings = [];
 
   if (!lessonData || typeof lessonData !== 'object') {
     return { valid: false, errors: ['Lesson data must be an object'], warnings: [] };
@@ -203,17 +234,17 @@ function validateLessonData(lessonData) {
     return { valid: false, errors: [e.message], warnings: [] };
   }
 
-  var schemaResult = validateWithSchema(lessonData);
+  const schemaResult = validateWithSchema(lessonData);
   if (!schemaResult.valid) {
     errors = errors.concat(schemaResult.errors);
   }
 
-  var thresholdResult = validateThresholds(lessonData);
+  const thresholdResult = validateThresholds(lessonData);
   if (!thresholdResult.valid) {
     errors = errors.concat(thresholdResult.errors);
   }
 
-  var semanticResult = validateSemantics(lessonData);
+  const semanticResult = validateSemantics(lessonData);
   errors = errors.concat(semanticResult.errors);
   warnings = warnings.concat(semanticResult.warnings);
 

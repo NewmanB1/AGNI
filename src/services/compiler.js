@@ -11,17 +11,40 @@
 // I/O (file read/write) is at the edges; runCompilePipeline(rawYaml) is pure
 // except for Markdown processor init.
 
-var fs   = require('fs');
-var path = require('path');
-var yaml = require('js-yaml');
+const fs   = require('fs');
+const path = require('path');
+const yaml = require('js-yaml');
 
-var buildHtml   = require('../builders/html');
-var buildNative = require('../builders/native');
-var inferFeatures = require('../utils/featureInference').inferFeatures;
-var lessonSchema = require('./lessonSchema');
-var compiler = require('../compiler');
-var buildLessonIR = compiler.buildLessonIR;
-var buildLessonSidecar = compiler.buildLessonSidecar;
+const buildHtml   = require('../builders/html');
+const buildNative = require('../builders/native');
+const inferFeatures = require('../utils/featureInference').inferFeatures;
+const lessonSchema = require('./lessonSchema');
+const compiler = require('../compiler');
+const buildLessonIR = compiler.buildLessonIR;
+const buildLessonSidecar = compiler.buildLessonSidecar;
+
+/**
+ * Parse a YAML string using the OLS-standard JSON_SCHEMA option.
+ * @param {string} str
+ * @returns {object}
+ */
+function safeYamlLoad(str) {
+  return yaml.load(str, { schema: yaml.JSON_SCHEMA });
+}
+
+/**
+ * Build IR and sidecar from already-validated lesson data.
+ * Callers are responsible for validation before calling this.
+ *
+ * @param  {object} lessonData
+ * @param  {{ dev?: boolean }} [options]
+ * @returns {Promise<{ ir: object, sidecar: object }>}
+ */
+async function buildIRWithSidecar(lessonData, options) {
+  const ir = await buildLessonIR(lessonData, { dev: !!(options && options.dev) });
+  const sidecar = buildLessonSidecar(ir);
+  return { ir, sidecar };
+}
 
 /**
  * Parse raw YAML string to lesson data. Pure: no I/O.
@@ -34,7 +57,7 @@ function parseLessonFromString(rawYaml) {
     return { error: 'Raw YAML must be a string' };
   }
   try {
-    var lessonData = yaml.load(rawYaml.trim(), { schema: yaml.JSON_SCHEMA });
+    const lessonData = safeYamlLoad(rawYaml.trim());
     return { lessonData: lessonData };
   } catch (err) {
     return { error: (err && err.message) ? err.message : String(err) };
@@ -48,8 +71,8 @@ function parseLessonFromString(rawYaml) {
  * @returns {{ lessonData: object, raw: string }}
  */
 function parseLessonYaml(inputPath) {
-  var raw = fs.readFileSync(inputPath, 'utf8');
-  var lessonData = yaml.load(raw, { schema: yaml.JSON_SCHEMA });
+  const raw = fs.readFileSync(inputPath, 'utf8');
+  const lessonData = safeYamlLoad(raw);
   return { lessonData: lessonData, raw: raw };
 }
 
@@ -73,8 +96,8 @@ function validateLessonStructure(lessonData) {
  */
 function maybeLogFeatureInference(lessonData, inputPath) {
   try {
-    var result = inferFeatures(lessonData);
-    var title  = (lessonData.meta && lessonData.meta.title) || 'Unnamed lesson';
+    const result = inferFeatures(lessonData);
+    const title  = (lessonData.meta && lessonData.meta.title) || 'Unnamed lesson';
     console.log('\n[FEATURE INFERENCE] ' + title + ' (' + inputPath + ')');
     console.log(JSON.stringify(result, null, 2));
     // Preserve current CLI behaviour: attach result to lessonData for future
@@ -87,27 +110,29 @@ function maybeLogFeatureInference(lessonData, inputPath) {
 
 /**
  * Compile from raw YAML string: parse → validate(schema + thresholds) → buildIR.
- * Pure pipeline: no file I/O; returns { ir, sidecar } or throws.
- * Use for author preview and tests. Caller is responsible for writing artifacts.
+ * Pure pipeline: no file I/O. Returns { ir, sidecar } on success or { error }
+ * on failure (consistent with other service-layer functions).
  *
  * @param  {string} rawYaml
  * @param  {object} options  { dev: boolean }
- * @returns {Promise<{ ir: object, sidecar: object }>}
+ * @returns {Promise<{ ir: object, sidecar: object }|{ error: string }>}
  */
 async function runCompilePipeline(rawYaml, options) {
   options = options || {};
-  var parsed = parseLessonFromString(rawYaml);
+  const parsed = parseLessonFromString(rawYaml);
   if (parsed.error) {
-    throw new Error('Parse error: ' + parsed.error);
+    return { error: 'Parse error: ' + parsed.error };
   }
-  var lessonData = parsed.lessonData;
-  var validation = lessonSchema.validateLessonData(lessonData);
+  const lessonData = parsed.lessonData;
+  const validation = lessonSchema.validateLessonData(lessonData);
   if (!validation.valid) {
-    throw new Error('Validation failed: ' + validation.errors.join('; '));
+    return { error: 'Validation failed: ' + validation.errors.join('; ') };
   }
-  var ir = await buildLessonIR(lessonData, { dev: options.dev === true });
-  var sidecar = buildLessonSidecar(ir);
-  return { ir: ir, sidecar: sidecar };
+  try {
+    return await buildIRWithSidecar(lessonData, { dev: options.dev });
+  } catch (err) {
+    return { error: (err && err.message) ? err.message : String(err) };
+  }
 }
 
 /**
@@ -127,16 +152,16 @@ async function runCompilePipeline(rawYaml, options) {
 async function compileLessonFromYamlFile(inputPath, options) {
   options = options || {};
 
-  var parsed;
+  let parsed;
   try {
     parsed = parseLessonYaml(inputPath);
   } catch (err) {
     throw new Error('Error parsing YAML: ' + (err && err.message ? err.message : String(err)));
   }
 
-  var lessonData = parsed.lessonData;
+  const lessonData = parsed.lessonData;
 
-  var validation = lessonSchema.validateLessonData(lessonData);
+  const validation = lessonSchema.validateLessonData(lessonData);
   if (!validation.valid) {
     throw new Error('Validation failed: ' + validation.errors.join('; '));
   }
@@ -152,7 +177,7 @@ async function compileLessonFromYamlFile(inputPath, options) {
     maybeLogFeatureInference(lessonData, inputPath);
   }
 
-  var format = options.format || 'html';
+  const format = options.format || 'html';
 
   if (format === 'html') {
     if (!options.output) {
@@ -163,8 +188,7 @@ async function compileLessonFromYamlFile(inputPath, options) {
     if (!options.outputDir) {
       throw new Error('--output-dir=<path> is required for Native format.');
     }
-    var ir = await buildLessonIR(lessonData, { dev: options.dev === true });
-    var sidecar = buildLessonSidecar(ir);
+    const { ir, sidecar } = await buildIRWithSidecar(lessonData, { dev: options.dev });
     await buildNative(ir, options);
     fs.writeFileSync(
       path.join(options.outputDir, 'lesson-ir.json'),
@@ -174,9 +198,8 @@ async function compileLessonFromYamlFile(inputPath, options) {
     if (!options.outputDir) {
       throw new Error('--output-dir=<path> is required for yaml-packet format.');
     }
-    var buildYamlPacket = require('../builders/yaml-packet').buildYamlPacket;
-    var ir = await buildLessonIR(lessonData, { dev: options.dev === true });
-    var sidecar = buildLessonSidecar(ir);
+    const buildYamlPacket = require('../builders/yaml-packet').buildYamlPacket;
+    const { ir, sidecar } = await buildIRWithSidecar(lessonData, { dev: options.dev });
     await buildYamlPacket(parsed.raw, ir, sidecar, options);
     fs.writeFileSync(
       path.join(options.outputDir, 'lesson-ir.json'),
@@ -188,7 +211,9 @@ async function compileLessonFromYamlFile(inputPath, options) {
 }
 
 module.exports = {
-  parseLessonFromString:   parseLessonFromString,
+  safeYamlLoad:             safeYamlLoad,
+  buildIRWithSidecar:       buildIRWithSidecar,
+  parseLessonFromString:    parseLessonFromString,
   parseLessonYaml:          parseLessonYaml,
   validateLessonStructure:  validateLessonStructure,
   maybeLogFeatureInference: maybeLogFeatureInference,

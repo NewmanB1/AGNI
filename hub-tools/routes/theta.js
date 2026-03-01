@@ -7,16 +7,17 @@ function register(router, ctx) {
 
   router.get('/api/theta', async (req, res, { qs, sendResponse }) => {
     if (!qs.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
-    const lessons = ctx.getLessonsSortedByTheta(qs.pseudoId);
+    const lessons = await ctx.getLessonsSortedByTheta(qs.pseudoId);
     const overrides = await loadOverridesAsync();
     const overrideLessonId = overrides[qs.pseudoId]?.lessonId || null;
     const effectiveLessons = ctx.applyRecommendationOverride(lessons, overrideLessonId);
+    const graphWeights = await ctx.getEffectiveGraphWeights();
     return sendResponse(200, {
       pseudoId:    qs.pseudoId,
       lessons:     effectiveLessons,
       computedAt:  new Date().toISOString(),
       cached:      thetaCache.has(qs.pseudoId),
-      graphSource: ctx.getEffectiveGraphWeights().level || 'village',
+      graphSource: graphWeights.level || 'village',
       override:    overrideLessonId || undefined
     });
   });
@@ -26,14 +27,14 @@ function register(router, ctx) {
     const allIds = Object.keys(mastery.students || {});
     const page = ctx.paginate(allIds, qs);
     const result  = {};
-    page.items.forEach(id => {
-      result[id] = ctx.getLessonsSortedByTheta(id);
-    });
+    for (const id of page.items) {
+      result[id] = await ctx.getLessonsSortedByTheta(id);
+    }
     return sendResponse(200, { students: result, total: page.total, limit: page.limit, offset: page.offset, computedAt: new Date().toISOString() });
   });
 
-  router.get('/api/theta/graph', (req, res, { sendResponse }) => {
-    return sendResponse(200, ctx.getEffectiveGraphWeights());
+  router.get('/api/theta/graph', async (req, res, { sendResponse }) => {
+    return sendResponse(200, await ctx.getEffectiveGraphWeights());
   });
 
   router.get('/api/lessons', async (req, res, { qs, sendResponse }) => {
@@ -75,7 +76,7 @@ function register(router, ctx) {
         await saveOverridesAsync(overrides);
         return sendResponse(200, { ok: true, override: null });
       }
-      const eligible = ctx.getLessonsSortedByTheta(pseudoId);
+      const eligible = await ctx.getLessonsSortedByTheta(pseudoId);
       const inList = eligible.some(l => l.lessonId === lessonId);
       if (!inList) {
         return sendResponse(400, { error: 'lessonId not in eligible list for this student', lessonId });

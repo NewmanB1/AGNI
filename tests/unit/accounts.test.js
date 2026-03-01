@@ -91,33 +91,33 @@ describe('session management', () => {
     token = r.token;
   });
 
-  it('validateSession returns creator for valid token', () => {
-    const creator = accounts.validateSession(token);
+  it('validateSession returns creator for valid token', async () => {
+    const creator = await accounts.validateSession(token);
     assert.ok(creator);
     assert.equal(creator.email, 'alice@example.com');
     assert.ok(!creator.passwordHash);
   });
 
-  it('validateSession returns null for invalid token', () => {
-    assert.equal(accounts.validateSession('bad-token'), null);
+  it('validateSession returns null for invalid token', async () => {
+    assert.equal(await accounts.validateSession('bad-token'), null);
   });
 
-  it('validateSession returns null for null', () => {
-    assert.equal(accounts.validateSession(null), null);
+  it('validateSession returns null for null', async () => {
+    assert.equal(await accounts.validateSession(null), null);
   });
 
-  it('destroySession invalidates the token', () => {
-    const tempToken = token; // use the real token
-    accounts.destroySession(tempToken);
-    assert.equal(accounts.validateSession(tempToken), null);
+  it('destroySession invalidates the token', async () => {
+    const tempToken = token;
+    await accounts.destroySession(tempToken);
+    assert.equal(await accounts.validateSession(tempToken), null);
   });
 });
 
 // ── Creator admin functions ──────────────────────────────────────────────────
 
 describe('creator admin', () => {
-  it('listCreators returns creators without password hashes', () => {
-    const list = accounts.listCreators();
+  it('listCreators returns creators without password hashes', async () => {
+    const list = await accounts.listCreators();
     assert.ok(Array.isArray(list));
     assert.ok(list.length >= 1);
     for (const c of list) {
@@ -126,25 +126,25 @@ describe('creator admin', () => {
     }
   });
 
-  it('setCreatorApproval approves a creator', () => {
-    const list = accounts.listCreators();
+  it('setCreatorApproval approves a creator', async () => {
+    const list = await accounts.listCreators();
     const alice = list.find(c => c.email === 'alice@example.com');
-    const r = accounts.setCreatorApproval(alice.id, true);
+    const r = await accounts.setCreatorApproval(alice.id, true);
     assert.ok(r.ok);
     assert.equal(r.approved, true);
   });
 
-  it('setCreatorApproval rejects unknown ID', () => {
-    const r = accounts.setCreatorApproval('cr-nonexistent', true);
+  it('setCreatorApproval rejects unknown ID', async () => {
+    const r = await accounts.setCreatorApproval('cr-nonexistent', true);
     assert.ok(r.error);
   });
 
-  it('recordLessonAuthored adds slug to creator', () => {
-    const list = accounts.listCreators();
+  it('recordLessonAuthored adds slug to creator', async () => {
+    const list = await accounts.listCreators();
     const alice = list.find(c => c.email === 'alice@example.com');
-    accounts.recordLessonAuthored(alice.id, 'my-lesson');
-    accounts.recordLessonAuthored(alice.id, 'my-lesson'); // duplicate — should not add twice
-    const updated = accounts.listCreators().find(c => c.id === alice.id);
+    await accounts.recordLessonAuthored(alice.id, 'my-lesson');
+    await accounts.recordLessonAuthored(alice.id, 'my-lesson');
+    const updated = (await accounts.listCreators()).find(c => c.id === alice.id);
     assert.equal(updated.lessonsAuthored.filter(s => s === 'my-lesson').length, 1);
   });
 });
@@ -186,19 +186,19 @@ describe('student accounts', () => {
     assert.ok(r.error);
   });
 
-  it('listStudents returns all students', () => {
-    const list = accounts.listStudents();
+  it('listStudents returns all students', async () => {
+    const list = await accounts.listStudents();
     assert.ok(list.length >= 5); // 1 + 1 + 3 from above
   });
 
-  it('getStudent returns a specific student', () => {
-    const s = accounts.getStudent(studentId);
+  it('getStudent returns a specific student', async () => {
+    const s = await accounts.getStudent(studentId);
     assert.ok(s);
     assert.equal(s.displayName, 'Charlie');
   });
 
-  it('getStudent returns null for unknown ID', () => {
-    assert.equal(accounts.getStudent('px-nonexistent'), null);
+  it('getStudent returns null for unknown ID', async () => {
+    assert.equal(await accounts.getStudent('px-nonexistent'), null);
   });
 
   it('updateStudent modifies name and pin', async () => {
@@ -227,8 +227,8 @@ describe('transfer tokens', () => {
     studentId = r.student.pseudoId;
   });
 
-  it('generateTransferToken produces a code', () => {
-    const r = accounts.generateTransferToken(studentId);
+  it('generateTransferToken produces a code', async () => {
+    const r = await accounts.generateTransferToken(studentId);
     assert.ok(r.ok);
     assert.ok(r.token);
     assert.ok(r.token.length >= 6);
@@ -236,26 +236,26 @@ describe('transfer tokens', () => {
     transferCode = r.token;
   });
 
-  it('generateTransferToken rejects unknown student', () => {
-    const r = accounts.generateTransferToken('px-unknown');
+  it('generateTransferToken rejects unknown student', async () => {
+    const r = await accounts.generateTransferToken('px-unknown');
     assert.ok(r.error);
   });
 
-  it('claimTransferToken returns the pseudoId', () => {
-    const r = accounts.claimTransferToken(transferCode);
+  it('claimTransferToken returns the pseudoId', async () => {
+    const r = await accounts.claimTransferToken(transferCode);
     assert.ok(r.ok);
     assert.equal(r.pseudoId, studentId);
     assert.equal(r.displayName, 'Transfer Test');
   });
 
-  it('claimTransferToken is one-time use (second claim fails)', () => {
-    const r = accounts.claimTransferToken(transferCode);
+  it('claimTransferToken is one-time use (second claim fails)', async () => {
+    const r = await accounts.claimTransferToken(transferCode);
     assert.ok(r.error);
     assert.ok(r.error.includes('Invalid or expired'));
   });
 
-  it('claimTransferToken rejects empty token', () => {
-    const r = accounts.claimTransferToken('');
+  it('claimTransferToken rejects empty token', async () => {
+    const r = await accounts.claimTransferToken('');
     assert.ok(r.error);
   });
 });

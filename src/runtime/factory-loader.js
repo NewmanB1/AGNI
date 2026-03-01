@@ -64,9 +64,18 @@
 
   // ── Hub URL resolution ──────────────────────────────────────────────────────
 
+  var HUB_URL_KEY = 'agni_hub_url';
+
   function resolveHubUrl(lessonData) {
     if (lessonData && lessonData._hubUrl) return lessonData._hubUrl;
     if (global.AGNI_HUB)                 return global.AGNI_HUB;
+
+    // Student/facilitator-configured hub URL, stored via the setup prompt
+    // or setHubUrl() API.
+    try {
+      var stored = localStorage.getItem(HUB_URL_KEY);
+      if (stored) return stored;
+    } catch (e) {}
 
     // document.baseURI is correct even in deep subdirectory paths and
     // respects any <base href> tag the hub may inject. Preferred over
@@ -86,6 +95,78 @@
     } catch (e) {}
 
     return '';
+  }
+
+  /**
+   * Persist hub URL to localStorage so the student/facilitator only
+   * needs to set it once. Immediately updates the in-memory value.
+   */
+  function persistHubUrl(url) {
+    _hubUrl = url;
+    try { localStorage.setItem(HUB_URL_KEY, url); } catch (e) {}
+  }
+
+  /**
+   * Show a one-time setup banner asking the student/facilitator to
+   * enter their village hub URL. The banner is non-blocking — lessons
+   * still work offline; this just enables hub connectivity.
+   *
+   * Shown only when no hub URL was resolved from any source.
+   * ES5 syntax only.
+   */
+  function showHubSetup() {
+    if (document.getElementById('agni-hub-setup')) return;
+
+    var wrap = document.createElement('div');
+    wrap.id = 'agni-hub-setup';
+    wrap.style.cssText =
+      'position:fixed;bottom:0;left:0;right:0;background:#2D2D2D;' +
+      'border-top:2px solid #0B5FFF;color:#FFFFFF;font-family:sans-serif;' +
+      'font-size:14px;padding:16px 1rem;z-index:9999;text-align:center;';
+
+    var label = document.createElement('div');
+    label.textContent = 'Enter your village hub address to enable syncing:';
+    label.style.cssText = 'margin-bottom:8px;font-weight:bold;';
+
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;';
+
+    var input = document.createElement('input');
+    input.type = 'url';
+    input.placeholder = 'http://192.168.1.1:3000';
+    input.style.cssText =
+      'padding:10px 12px;font-size:14px;border:2px solid #555;' +
+      'border-radius:2px;background:#FFFFFF;color:#1A1A1A;min-width:220px;';
+
+    var btn = document.createElement('button');
+    btn.textContent = 'Save';
+    btn.style.cssText =
+      'padding:10px 20px;font-size:14px;font-weight:bold;border:none;' +
+      'border-radius:2px;background:#0B5FFF;color:#FFFFFF;cursor:pointer;';
+
+    var skip = document.createElement('button');
+    skip.textContent = 'Skip';
+    skip.style.cssText =
+      'padding:10px 16px;font-size:14px;border:1px solid #555;' +
+      'border-radius:2px;background:transparent;color:#FFFFFF;cursor:pointer;';
+
+    btn.onclick = function () {
+      var val = input.value.trim().replace(/\/+$/, '');
+      if (!val) return;
+      persistHubUrl(val);
+      wrap.remove();
+    };
+
+    skip.onclick = function () {
+      wrap.remove();
+    };
+
+    row.appendChild(input);
+    row.appendChild(btn);
+    row.appendChild(skip);
+    wrap.appendChild(label);
+    wrap.appendChild(row);
+    document.body.appendChild(wrap);
   }
 
   // ── Cache API helpers ───────────────────────────────────────────────────────
@@ -251,9 +332,9 @@
       banner = document.createElement('div');
       banner.id = 'agni-offline-banner';
       banner.style.cssText =
-        'position:fixed;bottom:0;left:0;right:0;background:#1a1a2e;' +
-        'border-top:2px solid #fcc419;color:#fcc419;font-family:sans-serif;' +
-        'font-size:13px;padding:0.6rem 1rem;z-index:9999;text-align:center;';
+        'position:fixed;bottom:0;left:0;right:0;background:#2D2D2D;' +
+        'border-top:2px solid #FFFFFF;color:#FFFFFF;font-family:sans-serif;' +
+        'font-size:14px;padding:18px 1rem;z-index:9999;text-align:center;font-weight:bold;';
       document.body.appendChild(banner);
     }
     banner.textContent =
@@ -298,6 +379,14 @@
    */
   function loadDependencies(lessonData) {
     _hubUrl = resolveHubUrl(lessonData);
+
+    // If we resolved no explicit hub URL (only baseURI fallback) and the
+    // lesson wasn't served from a hub, prompt the student/facilitator to
+    // configure one. This only fires when there's no _hubUrl, no AGNI_HUB,
+    // and no localStorage value — i.e. a locally-opened HTML file.
+    if (!_hubUrl && !(lessonData && lessonData._hubUrl)) {
+      try { showHubSetup(); } catch (e) {}
+    }
 
     var deps = (lessonData &&
                 lessonData.requires &&
@@ -383,10 +472,9 @@
     evict:            evict,
     clearCache:       clearCache,
     retryQueued:      retryQueued,
-    setHubUrl:        function (url) { _hubUrl = url; },
-    // First execution error encountered this session, or null.
-    // Player and devtools can read this to surface load failures without
-    // scanning the console.
+    setHubUrl:        persistHubUrl,
+    showHubSetup:     showHubSetup,
+    get hubUrl()      { return _hubUrl; },
     get lastError()   { return _lastError; }
   };
 

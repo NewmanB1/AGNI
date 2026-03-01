@@ -6,9 +6,10 @@ This document supports **ROADMAP Phase 4: Launch & Ecosystem (Days 76–100)**. 
 
 ## 1. Launch checklist (Days 76–80)
 
-- [ ] **Publish manifesto / intro** to HN, Reddit, Dev.to (or equivalent).
+- [x] **Manifesto written** — see `MANIFESTO.md` in repo root.
   - **One-line pitch:** AGNI compiles YAML lessons into tiny, offline-first HTML bundles that run on 10-year-old phones and use sensors (accelerometer, etc.) for interactive learning.
-  - **Links:** Repo, README, CONTRIBUTING.md, and (optional) a short blog post or manifesto in `docs/` or the repo wiki.
+  - **Links:** Repo, README, CONTRIBUTING.md, MANIFESTO.md.
+- [ ] **Publish manifesto / intro** to HN, Reddit, Dev.to (or equivalent).
 - [ ] **Pin README and CONTRIBUTING** so new visitors see how to run, validate, and contribute.
 - [ ] **Tag a release** (e.g. `v0.1.0` or `v0.2.0`) so the launch points at a stable artifact.
 
@@ -19,12 +20,17 @@ This document supports **ROADMAP Phase 4: Launch & Ecosystem (Days 76–100)**. 
 ### Triage and labels
 
 - **Triage issues** regularly so contributors know what's in scope and what's already covered.
-- **Suggested GitHub labels** for "Good First Issue" and discovery:
+- **GitHub labels** configured in `.github/labels.yml`. Includes:
   - `good first issue` — small, well-scoped tasks (e.g. translate one lesson, fix a doc typo).
+  - `lesson` — new lesson or lesson improvement.
   - `translation` — adding or updating a lesson translation (see tutorial below).
   - `documentation` — docs, README, playbooks, tutorials.
-  - `hub` / `runtime` / `compiler` — area of the codebase (optional).
+  - `area: hub` / `area: runtime` / `area: compiler` / `area: portal` / `area: governance` — codebase area.
   - `priority: high` / `priority: low` — optional priority.
+  - `device: old-android` — specific to Android 6-8 or old WebView.
+  - `offline` — offline-first behavior, caching, or sync.
+- **Issue templates** configured in `.github/ISSUE_TEMPLATE/`:
+  - Bug Report, Feature Request, Lesson Submission, plus contact links to CONTRIBUTING.md and fork-and-translate tutorial.
 
 ### Where to point new contributors
 

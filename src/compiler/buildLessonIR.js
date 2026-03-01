@@ -37,8 +37,11 @@
 
 'use strict';
 
-var inferFeatures = require('../utils/featureInference').inferFeatures;
-var config        = require('../config');
+const { createLogger } = require('../utils/logger');
+const log = createLogger('compiler');
+
+const inferFeatures = require('../utils/featureInference').inferFeatures;
+const config        = require('../config');
 
 /**
  * Builds the canonical lesson IR from a parsed OLS lesson object.
@@ -69,23 +72,23 @@ async function buildLessonIR(lessonData, options) {
   // inferFeatures returns { inferredFeatures, metadata_source }.
   // If lessonData.inferredFeatures is already present (future WYSIWYG path),
   // inferFeatures verifies it and sets metadata_source to 'declared' or 'mixed'.
-  var inferenceResult  = inferFeatures(lessonData);
-  var inferredFeatures = inferenceResult.inferredFeatures;
-  var metadataSource   = inferenceResult.metadata_source;
+  const inferenceResult  = inferFeatures(lessonData);
+  const inferredFeatures = inferenceResult.inferredFeatures;
+  const metadataSource   = inferenceResult.metadata_source;
 
   // ── 2. Pre-render Markdown to HTML for each step ───────────────────────────
   // Done at build time so the runtime is pure innerHTML with no parsing cost.
   // Errors per step are caught individually — a bad step does not abort the
   // build; it falls back to line-break-separated plain text.
-  var steps = await Promise.all(
+  const steps = await Promise.all(
     (lessonData.steps || []).map(async function (step) {
-      var htmlContent = '';
+      let htmlContent = '';
       if (step.content) {
         try {
           htmlContent = await config.processMarkdown(step.content);
         } catch (err) {
-          console.error(
-            '[IR] Markdown failed for step', step.id || '(no id)', ':', err.message
+          log.error(
+            'Markdown failed for step', step.id || '(no id)', ':', err.message
           );
           // Graceful fallback: preserve line breaks, escape nothing else
           htmlContent = step.content.replace(/\n/g, '<br>');
@@ -102,13 +105,14 @@ async function buildLessonIR(lessonData, options) {
   // _schemaVersion — OLS schema version from lesson YAML; preserved for
   //   forward-compatibility checks in future lesson player versions
   // metadata_source — 'inferred' until WYSIWYG writes explicit metadata
-  var ir = Object.assign({}, lessonData, {
+  const ir = Object.assign({}, lessonData, {
     steps:            steps,
     inferredFeatures: inferredFeatures,
     metadata_source:  metadataSource,
     _devMode:         options.dev === true,
     _compiledAt:      new Date().toISOString(),
-    _schemaVersion:   lessonData.schema_version || lessonData.schemaVersion || '1.7.0'
+    _schemaVersion:   lessonData.schema_version || lessonData.schemaVersion || '1.8.0',
+    featureFlags:     options.featureFlags || {}
   });
 
   return ir;
@@ -152,8 +156,8 @@ async function buildLessonIR(lessonData, options) {
  * @returns {object}     metadata-only sidecar object
  */
 function buildLessonSidecar(ir) {
-  var meta     = ir.meta     || {};
-  var ontology = ir.ontology || {};
+  const meta     = ir.meta     || {};
+  const ontology = ir.ontology || {};
 
   return {
     // ── Identity ─────────────────────────────────────────────────────────────

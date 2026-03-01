@@ -106,9 +106,14 @@ export interface UtuConstants {
   bands?: Array<{ id: number; phase: string }>;
 }
 
+export interface ComplianceIssue {
+  message: string;
+  severity: 'fail' | 'warning';
+}
+
 export interface ComplianceResult {
   status: 'ok' | 'warning' | 'fail';
-  issues: string[];
+  issues: ComplianceIssue[];
 }
 
 export interface ApprovedCatalog {

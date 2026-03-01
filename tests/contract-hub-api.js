@@ -269,7 +269,7 @@ async function main() {
 
   let server;
   try {
-    theta.rebuildLessonIndex();
+    await theta.rebuildLessonIndex();
   } catch (e) {
     console.warn('[contract-hub-api] rebuildLessonIndex failed (no serve dir?):', e.message);
   }

@@ -13,9 +13,9 @@ const { aggregateCohortCoverage, MASTERY_THRESHOLD } = require('../../src/govern
 // ── validatePolicy ───────────────────────────────────────────────────────────
 
 describe('validatePolicy', () => {
-  it('accepts null (no policy = no restrictions)', () => {
+  it('rejects null as invalid policy', () => {
     const r = policy.validatePolicy(null);
-    assert.ok(r.valid);
+    assert.equal(r.valid, false);
   });
 
   it('accepts an empty object', () => {
@@ -23,9 +23,9 @@ describe('validatePolicy', () => {
     assert.ok(r.valid);
   });
 
-  it('accepts a non-object gracefully', () => {
+  it('rejects a non-object as invalid policy', () => {
     const r = policy.validatePolicy('not-an-object');
-    assert.ok(r.valid);
+    assert.equal(r.valid, false);
   });
 });
 
@@ -86,7 +86,7 @@ describe('evaluateLessonCompliance', () => {
       sampleSidecar({ difficulty: 1 }),
       samplePolicy({ minDifficulty: 3 })
     );
-    assert.ok(r.issues.some(i => /below policy minimum/.test(i)));
+    assert.ok(r.issues.some(i => /below policy minimum/.test(i.message)));
     assert.notEqual(r.status, 'ok');
   });
 
@@ -95,7 +95,7 @@ describe('evaluateLessonCompliance', () => {
       sampleSidecar({ difficulty: 5 }),
       samplePolicy({ maxDifficulty: 3 })
     );
-    assert.ok(r.issues.some(i => /exceeds policy maximum/.test(i)));
+    assert.ok(r.issues.some(i => /exceeds policy maximum/.test(i.message)));
   });
 
   it('flags missing UTU when required', () => {
@@ -103,7 +103,7 @@ describe('evaluateLessonCompliance', () => {
       sampleSidecar(),
       samplePolicy({ requireUtu: true })
     );
-    assert.ok(r.issues.some(i => /UTU/.test(i)));
+    assert.ok(r.issues.some(i => /UTU/.test(i.message)));
   });
 
   it('flags missing teaching_mode when required', () => {
@@ -111,7 +111,7 @@ describe('evaluateLessonCompliance', () => {
       sampleSidecar({ teaching_mode: undefined }),
       samplePolicy({ requireTeachingMode: true })
     );
-    assert.ok(r.issues.some(i => /teaching_mode/.test(i)));
+    assert.ok(r.issues.some(i => /teaching_mode/.test(i.message)));
   });
 
   it('flags disallowed teaching mode', () => {
@@ -119,7 +119,7 @@ describe('evaluateLessonCompliance', () => {
       sampleSidecar({ teaching_mode: 'narrative' }),
       samplePolicy({ allowedTeachingModes: ['direct', 'socratic'] })
     );
-    assert.ok(r.issues.some(i => /not in allowed list/.test(i)));
+    assert.ok(r.issues.some(i => /not in allowed list/.test(i.message)));
   });
 
   it('flags protocol below minimum', () => {
@@ -127,7 +127,7 @@ describe('evaluateLessonCompliance', () => {
       sampleSidecar({ utu: { class: 'A', protocol: 1 } }),
       samplePolicy({ minProtocol: 3 })
     );
-    assert.ok(r.issues.some(i => /below policy minimum/.test(i)));
+    assert.ok(r.issues.some(i => /below policy minimum/.test(i.message)));
   });
 
   it('flags protocol above maximum', () => {
@@ -135,7 +135,7 @@ describe('evaluateLessonCompliance', () => {
       sampleSidecar({ utu: { class: 'A', protocol: 5 } }),
       samplePolicy({ maxProtocol: 3 })
     );
-    assert.ok(r.issues.some(i => /exceeds policy maximum/.test(i)));
+    assert.ok(r.issues.some(i => /exceeds policy maximum/.test(i.message)));
   });
 
   it('flags protocol not in allowed list', () => {
@@ -143,7 +143,7 @@ describe('evaluateLessonCompliance', () => {
       sampleSidecar({ utu: { class: 'A', protocol: 2 } }),
       samplePolicy({ allowedProtocols: [1, 3, 5] })
     );
-    assert.ok(r.issues.some(i => /not in allowed protocols/.test(i)));
+    assert.ok(r.issues.some(i => /not in allowed protocols/.test(i.message)));
   });
 
   it('accepts protocol in allowed list', () => {
@@ -151,7 +151,7 @@ describe('evaluateLessonCompliance', () => {
       sampleSidecar({ utu: { class: 'A', protocol: 3 } }),
       samplePolicy({ allowedProtocols: [1, 3, 5] })
     );
-    assert.ok(!r.issues.some(i => /protocol/.test(i)));
+    assert.ok(!r.issues.some(i => /protocol/.test(i.message)));
   });
 
   it('flags missing protocol when policy enforces bounds and requireUtu', () => {
@@ -159,7 +159,7 @@ describe('evaluateLessonCompliance', () => {
       sampleSidecar(),
       samplePolicy({ requireUtu: true, minProtocol: 1, maxProtocol: 5 })
     );
-    assert.ok(r.issues.some(i => /protocol/.test(i)));
+    assert.ok(r.issues.some(i => /protocol/.test(i.message)));
   });
 
   it('adds failureModeHints when enabled and protocol fails', () => {
@@ -167,7 +167,7 @@ describe('evaluateLessonCompliance', () => {
       sampleSidecar({ utu: { class: 'A', protocol: 1 } }),
       samplePolicy({ minProtocol: 3, failureModeHints: true })
     );
-    assert.ok(r.issues.some(i => /below policy minimum/.test(i)));
+    assert.ok(r.issues.some(i => /below policy minimum/.test(i.message)));
   });
 
   it('returns "fail" status for hard violations', () => {
@@ -187,9 +187,71 @@ describe('evaluateLessonCompliance', () => {
     assert.notEqual(r.status, 'ok');
   });
 
+  it('issues have structured { message, severity } shape', () => {
+    const r = evaluateLessonCompliance(
+      sampleSidecar({ difficulty: 1 }),
+      samplePolicy({ minDifficulty: 3 })
+    );
+    assert.ok(r.issues.length > 0);
+    for (const iss of r.issues) {
+      assert.equal(typeof iss.message, 'string');
+      assert.ok(iss.severity === 'fail' || iss.severity === 'warning');
+    }
+  });
+
   it('handles no-policy no-utu lesson without errors', () => {
     const r = evaluateLessonCompliance(sampleSidecar(), null);
     assert.equal(r.status, 'ok');
+  });
+
+  it('warns on non-canonical Spine ID (portability check)', () => {
+    const r = evaluateLessonCompliance(
+      sampleSidecar({ utu: { class: 'FAKE-99', band: 1, protocol: 1 } }),
+      samplePolicy()
+    );
+    assert.ok(r.issues.some(i => /not in canonical list/.test(i.message)));
+  });
+
+  it('no portability warning for canonical Spine ID', () => {
+    const r = evaluateLessonCompliance(
+      sampleSidecar({ utu: { class: 'MAC-2', band: 3, protocol: 2 } }),
+      samplePolicy()
+    );
+    assert.ok(!r.issues.some(i => /canonical/.test(i.message)));
+  });
+
+  it('fails when lesson UTU does not match any policy target', () => {
+    const r = evaluateLessonCompliance(
+      sampleSidecar({ utu: { class: 'MAC-2', band: 3, protocol: 2 } }),
+      samplePolicy({
+        requireUtu: true,
+        utuTargets: [{ class: 'SCI-1', band: 1 }]
+      })
+    );
+    assert.ok(r.issues.some(i => /does not match any policy target/.test(i.message)));
+    assert.equal(r.status, 'fail');
+  });
+
+  it('passes when lesson UTU matches a policy target', () => {
+    const r = evaluateLessonCompliance(
+      sampleSidecar({ utu: { class: 'MAC-2', band: 3, protocol: 2 } }),
+      samplePolicy({
+        requireUtu: true,
+        utuTargets: [{ class: 'MAC-2', band: 3 }]
+      })
+    );
+    assert.ok(!r.issues.some(i => /does not match/.test(i.message)));
+  });
+
+  it('fails when lesson protocol does not match per-target protocol', () => {
+    const r = evaluateLessonCompliance(
+      sampleSidecar({ utu: { class: 'MAC-2', band: 3, protocol: 4 } }),
+      samplePolicy({
+        requireUtu: true,
+        utuTargets: [{ class: 'MAC-2', band: 3, protocol: 2 }]
+      })
+    );
+    assert.ok(r.issues.some(i => /does not match any policy target/.test(i.message)));
   });
 });
 

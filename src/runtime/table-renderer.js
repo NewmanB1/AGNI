@@ -198,8 +198,8 @@
         '<span class="agni-freq-val">' + row[1] + '</span>' +
         '<span class="agni-freq-bar" style="' +
           'display:inline-block;height:10px;width:' + pct + '%;' +
-          'background:var(--agni-accent,#4dabf7);border-radius:2px;' +
-          'margin-left:0.4em;vertical-align:middle;opacity:0.8' +
+          'background:var(--agni-accent,#0B5FFF);border-radius:2px;' +
+          'margin-left:0.4em;vertical-align:middle' +
         '"></span>';
     });
   }
@@ -247,9 +247,9 @@
     var btn = document.createElement('button');
     btn.className   = 'agni-chart-btn';
     btn.textContent = '📊 View as bar chart';
-    btn.style.cssText = 'margin-top:0.5rem;font-size:12px;padding:4px 10px;' +
-      'background:#1a3a5c;color:#4dabf7;border:1px solid #4dabf7;' +
-      'border-radius:4px;cursor:pointer;';
+    btn.style.cssText = 'margin-top:0.5rem;font-size:14px;padding:18px 10px;' +
+      'background:#E3F2FD;color:#0B5FFF;border:2px solid #0B5FFF;' +
+      'border-radius:2px;cursor:pointer;font-weight:bold;';
 
     var chartContainer = null;
     var showing = false;
@@ -313,29 +313,29 @@
       '.agni-table { width:100%; border-collapse:collapse; font-size:0.9em;',
       '  color:var(--agni-text,#ccccee); margin:0.75rem 0; }',
 
-      '.agni-table th { background:var(--agni-surface2,#1a1a3e);',
-      '  color:var(--agni-accent,#4dabf7); font-weight:600;',
-      '  padding:0.45rem 0.65rem; text-align:left; border-bottom:2px solid var(--agni-accent,#4dabf7); }',
+      '.agni-table th { background:var(--agni-surface2,#EDEBE3);',
+      '  color:var(--agni-accent,#0B5FFF); font-weight:600;',
+      '  padding:0.45rem 0.65rem; text-align:left; border-bottom:2px solid var(--agni-accent,#0B5FFF); }',
 
       '.agni-table td { padding:0.4rem 0.65rem;',
-      '  border-bottom:1px solid var(--agni-border,#2a2a4a); }',
+      '  border-bottom:1px solid var(--agni-border,#2D2D2D); }',
 
-      '.agni-table tbody tr:nth-child(even) { background:var(--agni-surface1,#12122a); }',
-      '.agni-table tbody tr:hover { background:var(--agni-hover,#1a2a4a); }',
+      '.agni-table tbody tr:nth-child(even) { background:var(--agni-surface1,#F4F1E8); }',
+      '.agni-table tbody tr:hover { background:var(--agni-hover,#E8E5DA); }',
 
       /* Comparison */
       '.agni-yn { font-size:1.1em; font-weight:bold; }',
-      '.agni-yn-yes { color:#51cf66; }',
-      '.agni-yn-no  { color:#ff6b6b; }',
+      '.agni-yn-yes { color:#1B5E20; }',
+      '.agni-yn-no  { color:#B00020; }',
 
       /* Data: min/max highlight */
-      '.agni-data-max { color:#fcc419; font-weight:600; }',
-      '.agni-data-min { color:#ff8787; }',
+      '.agni-data-max { color:#0B5FFF; font-weight:600; }',
+      '.agni-data-min { color:#B00020; }',
 
       /* Timeline: date column */
-      '.agni-timeline-date { color:var(--agni-accent,#4dabf7);',
+      '.agni-timeline-date { color:var(--agni-accent,#0B5FFF);',
       '  font-size:0.85em; white-space:nowrap;',
-      '  border-left:3px solid var(--agni-accent,#4dabf7); padding-left:0.5rem; }',
+      '  border-left:3px solid var(--agni-accent,#0B5FFF); padding-left:0.5rem; }',
 
       /* Frequency: value + bar */
       '.agni-freq-val { min-width:2.5em; display:inline-block; text-align:right; }',

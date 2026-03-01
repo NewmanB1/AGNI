@@ -74,18 +74,16 @@ describe('runCompilePipeline', () => {
     assert.equal(ir._devMode, true);
   });
 
-  it('throws on invalid YAML', async () => {
-    await assert.rejects(
-      () => runCompilePipeline('{{bad', {}),
-      /Parse error/
-    );
+  it('returns error on invalid YAML', async () => {
+    const r = await runCompilePipeline('{{bad', {});
+    assert.ok(r.error);
+    assert.match(r.error, /Parse error/);
   });
 
-  it('throws on structurally invalid lesson', async () => {
-    await assert.rejects(
-      () => runCompilePipeline(yaml.dump({ not: 'a lesson' }), {}),
-      /Validation failed/
-    );
+  it('returns error on structurally invalid lesson', async () => {
+    const r = await runCompilePipeline(yaml.dump({ not: 'a lesson' }), {});
+    assert.ok(r.error);
+    assert.match(r.error, /Validation failed/);
   });
 
   it('sidecar has compiledAt timestamp', async () => {

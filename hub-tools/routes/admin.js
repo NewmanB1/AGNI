@@ -1,51 +1,51 @@
 'use strict';
 
 function register(router, ctx) {
-  const { fs, path, loadJSONAsync, saveJSONAsync, requireAdmin, handleJsonBody, safeErrorMessage,
+  const { fs, path, loadJSONAsync, saveJSONAsync, adminOnly, handleJsonBody,
           DATA_DIR, SERVE_DIR, PORT, APPROVED_CATALOG,
           MIN_LOCAL_SAMPLE_SIZE, MIN_LOCAL_EDGE_COUNT } = ctx;
 
   router.get('/api/admin/onboarding-status', (req, res, { sendResponse }) => {
-    try {
-      const isFirstRun = !fs.existsSync(path.join(DATA_DIR, 'hub_config.json')) &&
-                         !fs.existsSync(path.resolve(path.join(__dirname, '../../data/hub_config.json')));
-      return sendResponse(200, { isFirstRun });
-    } catch (err) {
-      return sendResponse(500, { error: safeErrorMessage(err) });
-    }
+    const isFirstRun = !fs.existsSync(path.join(DATA_DIR, 'hub_config.json')) &&
+                       !fs.existsSync(path.resolve(path.join(__dirname, '../../data/hub_config.json')));
+    return sendResponse(200, { isFirstRun });
   });
 
-  router.get('/api/admin/config', async (req, res, { qs, sendResponse }) => {
-    if (!requireAdmin(req, qs, sendResponse)) return;
-    try {
-      const cfgPath = path.resolve(path.join(__dirname, '../../data/hub_config.json'));
-      const cfg = await loadJSONAsync(cfgPath, {});
-      const effective = {
-        dataDir: DATA_DIR,
-        serveDir: SERVE_DIR,
-        thetaPort: PORT,
-        approvedCatalog: APPROVED_CATALOG,
-        minLocalSample: MIN_LOCAL_SAMPLE_SIZE,
-        minLocalEdges: MIN_LOCAL_EDGE_COUNT,
-        ...cfg
-      };
-      return sendResponse(200, effective);
-    } catch (err) {
-      return sendResponse(500, { error: safeErrorMessage(err) });
-    }
-  });
+  router.get('/api/admin/config', adminOnly(async (req, res, { sendResponse }) => {
+    const cfgPath = path.resolve(path.join(__dirname, '../../data/hub_config.json'));
+    const cfg = await loadJSONAsync(cfgPath, {});
+    const effective = {
+      dataDir: DATA_DIR,
+      serveDir: SERVE_DIR,
+      thetaPort: PORT,
+      approvedCatalog: APPROVED_CATALOG,
+      minLocalSample: MIN_LOCAL_SAMPLE_SIZE,
+      minLocalEdges: MIN_LOCAL_EDGE_COUNT,
+      ...cfg
+    };
+    return sendResponse(200, effective);
+  }));
 
-  router.put('/api/admin/config', (req, res, { qs, sendResponse }) => {
-    if (!requireAdmin(req, qs, sendResponse)) return;
+  const ALLOWED_CONFIG_KEYS = new Set([
+    'hubName', 'hubId', 'dataDir', 'serveDir', 'thetaPort', 'servePort', 'sentryPort',
+    'corsOrigin', 'syncTransport', 'homeUrl', 'usbPath', 'maxStudents', 'maxLessons',
+    'memoryBudgetMb', 'enableTelemetry', 'enableLms', 'locale'
+  ]);
+
+  router.put('/api/admin/config', adminOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (cfg) => {
       if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) {
         return sendResponse(400, { error: 'Config must be a JSON object' });
+      }
+      const unknown = Object.keys(cfg).filter(k => !ALLOWED_CONFIG_KEYS.has(k));
+      if (unknown.length > 0) {
+        return sendResponse(400, { error: 'Unknown config keys: ' + unknown.join(', ') });
       }
       const cfgPath = path.resolve(path.join(__dirname, '../../data/hub_config.json'));
       await saveJSONAsync(cfgPath, cfg);
       return sendResponse(200, { ok: true, message: 'Config saved. Restart hub for changes to take effect.' });
     });
-  });
+  }));
 
   router.post('/api/admin/sync-test', (req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, (payload) => {

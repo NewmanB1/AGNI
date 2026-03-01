@@ -57,7 +57,7 @@ function writeJson(filePath, obj) {
   fs.writeFileSync(filePath, JSON.stringify(obj, null, 2), 'utf8');
 }
 
-function runTest() {
+async function runTest() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agni-theta-test-'));
   const originalDataDir = process.env.AGNI_DATA_DIR;
 
@@ -83,7 +83,7 @@ function runTest() {
         }
       }
     });
-    const weaverLessons = theta.getLessonsSortedByTheta('weaver');
+    const weaverLessons = await theta.getLessonsSortedByTheta('weaver');
     const weaverFirst = weaverLessons && weaverLessons.length > 0 ? weaverLessons[0].lessonId : null;
 
     // Farmer: high farming:seasons, low weaving:patterns → modulo should be cheaper (first).
@@ -95,7 +95,7 @@ function runTest() {
         }
       }
     });
-    const farmerLessons = theta.getLessonsSortedByTheta('farmer');
+    const farmerLessons = await theta.getLessonsSortedByTheta('farmer');
     const farmerFirst = farmerLessons && farmerLessons.length > 0 ? farmerLessons[0].lessonId : null;
 
     if (weaverFirst !== 'lesson-loops' || farmerFirst !== 'lesson-modulo') {
@@ -114,4 +114,4 @@ function runTest() {
   }
 }
 
-runTest();
+runTest().catch(err => { console.error(err); process.exit(1); });

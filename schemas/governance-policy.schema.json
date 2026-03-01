@@ -8,14 +8,15 @@
   "properties": {
     "utuTargets": {
       "type": "array",
-      "description": "Target UTU classes and bands for cohort coverage.",
+      "description": "Target UTU coordinates for cohort coverage. Each target specifies a Spine + Band, optionally a Protocol.",
       "items": {
         "type": "object",
         "required": ["class", "band"],
         "additionalProperties": false,
         "properties": {
-          "class": { "type": "string" },
-          "band": { "type": "number" }
+          "class": { "type": "string", "description": "Spine ID (e.g. MAC-2, SCI-1, SOC-3)." },
+          "band": { "type": "number", "minimum": 1, "maximum": 6, "description": "Developmental band B1–B6." },
+          "protocol": { "type": "integer", "minimum": 1, "maximum": 5, "description": "Optional. Target protocol P1–P5 for this coordinate." }
         }
       }
     },

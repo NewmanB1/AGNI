@@ -32,6 +32,8 @@
 
 'use strict';
 
+var log = require('./utils/logger').createLogger('config');
+
 // ── Singleton processor ───────────────────────────────────────────────────────
 // The remark/rehype pipeline is expensive to initialise (dynamic imports,
 // plugin setup). We build it once and reuse it across all steps and lessons
@@ -106,7 +108,7 @@ async function _buildProcessor() {
       allowDangerousHtml: true
     });
 
-  console.log('[config] Markdown processor ready');
+  log.info('Markdown processor ready');
   return processor;
 }
 

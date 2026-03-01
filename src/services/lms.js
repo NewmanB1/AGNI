@@ -4,14 +4,19 @@
 // Provides a small, top-down API around src/engine/index.js so that
 // callers (theta, future HTTP handlers, tools) do not need to know
 // the engine's internal file layout.
+//
+// Uses a Proxy to delegate all engine method calls without maintaining
+// a manual list of pass-through wrappers. Only `isAvailable` and
+// `persistState` carry custom logic; everything else forwards directly
+// to the loaded engine module.
 
-var path = require('path');
+const path = require('path');
 
-var { createLogger } = require('../utils/logger');
-var log = createLogger('lms-service');
+const { createLogger } = require('../utils/logger');
+const log = createLogger('lms-service');
 
-var ENGINE_PATH = path.join(__dirname, '../engine/index.js');
-var engine = null;
+const ENGINE_PATH = path.join(__dirname, '../engine/index.js');
+let engine = null;
 
 try {
   engine = require(ENGINE_PATH);
@@ -31,72 +36,18 @@ function requireEngine() {
   return engine;
 }
 
-function getStatus() {
-  return requireEngine().getStatus();
-}
-
-function seedLessons(lessons) {
-  return requireEngine().seedLessons(lessons);
-}
-
-function selectBestLesson(studentId, candidates) {
-  return requireEngine().selectBestLesson(studentId, candidates);
-}
-
-function recordObservation(studentId, lessonId, probeResults) {
-  return requireEngine().recordObservation(studentId, lessonId, probeResults);
-}
-
-function exportBanditSummary() {
-  return requireEngine().exportBanditSummary();
-}
-
-function mergeRemoteSummary(remote) {
-  return requireEngine().mergeRemoteSummary(remote);
-}
-
-function reloadState() {
-  return requireEngine().reloadState();
-}
-
-function getStudentAbility(studentId) {
-  return requireEngine().getStudentAbility(studentId);
-}
-
-function exportTransitionTable() {
-  return requireEngine().exportTransitionTable();
-}
-
-function getStudentLessonHistory(studentId) {
-  return requireEngine().getStudentLessonHistory(studentId);
-}
-
-function getFlowBottlenecks(topK) {
-  return requireEngine().getFlowBottlenecks(topK);
-}
-
-function getDropoutBottlenecks(minSample) {
-  return requireEngine().getDropoutBottlenecks(minSample);
-}
-
 function persistState() {
-  return requireEngine().persistState();
+  const eng = requireEngine();
+  if (typeof eng.persistState === 'function') return eng.persistState();
+  if (typeof eng.reloadState === 'function') return eng.reloadState();
+  throw new Error('Engine does not expose a state persistence method');
 }
 
-module.exports = {
-  isAvailable:            isAvailable,
-  getStatus:              getStatus,
-  seedLessons:            seedLessons,
-  selectBestLesson:       selectBestLesson,
-  recordObservation:      recordObservation,
-  exportBanditSummary:    exportBanditSummary,
-  mergeRemoteSummary:     mergeRemoteSummary,
-  reloadState:            reloadState,
-  getStudentAbility:      getStudentAbility,
-  exportTransitionTable:  exportTransitionTable,
-  getStudentLessonHistory: getStudentLessonHistory,
-  getFlowBottlenecks:     getFlowBottlenecks,
-  getDropoutBottlenecks:  getDropoutBottlenecks,
-  persistState:           persistState
-};
+module.exports = new Proxy({}, {
+  get(_, prop) {
+    if (prop === 'isAvailable') return isAvailable;
+    if (prop === 'persistState') return persistState;
+    return requireEngine()[prop];
+  }
+});
 

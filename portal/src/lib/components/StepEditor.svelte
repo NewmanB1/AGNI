@@ -6,6 +6,9 @@
     { value: 'instruction', label: 'Instruction' },
     { value: 'hardware_trigger', label: 'Hardware trigger' },
     { value: 'quiz', label: 'Quiz' },
+    { value: 'fill_blank', label: 'Fill in the blank' },
+    { value: 'matching', label: 'Matching' },
+    { value: 'ordering', label: 'Ordering' },
     { value: 'svg', label: 'SVG Visual' },
     { value: 'completion', label: 'Completion' }
   ];
@@ -74,6 +77,12 @@
     { label: 'Worked Example', type: 'instruction', content: '**Example:** ...\n\n**Step 1:** ...\n**Step 2:** ...\n**Answer:** ...', icon: 'E' },
     { label: 'SVG Visual', type: 'svg', content: 'Observe the diagram below.', icon: 'V',
       svg_spec: null },
+    { label: 'Fill in the blank', type: 'fill_blank', content: 'The force of ___ pulls objects toward the Earth.', icon: 'F',
+      blanks: [{ answer: 'gravity', accept: ['Gravity', 'GRAVITY'] }] },
+    { label: 'Matching', type: 'matching', content: 'Match each term to its definition.', icon: 'M',
+      pairs: [{ left: 'Force', right: 'A push or pull' }, { left: 'Mass', right: 'Amount of matter' }] },
+    { label: 'Ordering', type: 'ordering', content: 'Put the steps in the correct order.', icon: 'O',
+      items: ['Step 1', 'Step 2', 'Step 3'], correct_order: [0, 1, 2] },
   ];
 
   let { steps = $bindable([]), onchange = () => {}, onfocus = () => {} } = $props();
@@ -161,6 +170,16 @@
       step.answer_options = ['', ''];
       step.correct_index = 0;
     }
+    if (newType === 'fill_blank' && !step.blanks) {
+      step.blanks = [{ answer: '', accept: [] }];
+    }
+    if (newType === 'matching' && !step.pairs) {
+      step.pairs = [{ left: '', right: '' }];
+    }
+    if (newType === 'ordering' && !step.items) {
+      step.items = [];
+      step.correct_order = [];
+    }
     if (newType === 'hardware_trigger') {
       if (!step.sensor) step.sensor = '';
       if (!step.threshold) step.threshold = '';
@@ -191,6 +210,9 @@
     if (tpl.sensor != null) step.sensor = tpl.sensor;
     if (tpl.threshold != null) step.threshold = tpl.threshold;
     if (tpl.svg_spec !== undefined) step.svg_spec = tpl.svg_spec;
+    if (tpl.blanks) step.blanks = JSON.parse(JSON.stringify(tpl.blanks));
+    if (tpl.pairs) step.pairs = JSON.parse(JSON.stringify(tpl.pairs));
+    if (tpl.items) { step.items = [...tpl.items]; step.correct_order = [...(tpl.correct_order || [])]; }
     steps = [...steps, step];
     onchange();
   }
@@ -321,6 +343,9 @@
     <div class="step-card"
          class:hw={step.type === 'hardware_trigger'}
          class:quiz={step.type === 'quiz'}
+         class:fill-blank={step.type === 'fill_blank'}
+         class:matching={step.type === 'matching'}
+         class:ordering={step.type === 'ordering'}
          class:svg={step.type === 'svg'}
          class:completion={step.type === 'completion'}
          class:drag-over={dragOverIdx === i && dragIdx !== i}
@@ -447,6 +472,108 @@
               <input type="text" value={step.feedback || ''} oninput={(e) => updateField(i, 'feedback', e.target.value)}
                      placeholder="Shown after answering (e.g. 'Correct! Gravity is 9.8 m/s²')" />
             </label>
+          </div>
+        {/if}
+
+        {#if step.type === 'fill_blank'}
+          <div class="quiz-section">
+            <label class="section-label">Blanks</label>
+            <p class="type-hint">Use <code>___</code> in the content for each blank. Define accepted answers below.</p>
+            {#each (step.blanks || []) as blank, bi}
+              <div class="answer-row">
+                <input type="text" value={blank.answer}
+                       oninput={(e) => {
+                         const arr = [...steps]; const blanks = [...(arr[i].blanks || [])];
+                         blanks[bi] = { ...blanks[bi], answer: e.target.value };
+                         arr[i] = { ...arr[i], blanks }; steps = arr; onchange();
+                       }}
+                       placeholder="Correct answer" class="answer-input" />
+                <input type="text" value={(blank.accept || []).join(', ')}
+                       oninput={(e) => {
+                         const arr = [...steps]; const blanks = [...(arr[i].blanks || [])];
+                         blanks[bi] = { ...blanks[bi], accept: e.target.value.split(',').map(s => s.trim()).filter(Boolean) };
+                         arr[i] = { ...arr[i], blanks }; steps = arr; onchange();
+                       }}
+                       placeholder="Also accept (comma-separated)" class="answer-input" />
+                <button class="icon-btn danger small" onclick={() => {
+                  const arr = [...steps]; const blanks = (arr[i].blanks || []).filter((_, j) => j !== bi);
+                  arr[i] = { ...arr[i], blanks }; steps = arr; onchange();
+                }} title="Remove blank">✕</button>
+              </div>
+            {/each}
+            <button class="link-btn" onclick={() => {
+              const arr = [...steps]; const blanks = [...(arr[i].blanks || []), { answer: '', accept: [] }];
+              arr[i] = { ...arr[i], blanks }; steps = arr; onchange();
+            }}>+ Add blank</button>
+          </div>
+        {/if}
+
+        {#if step.type === 'matching'}
+          <div class="quiz-section">
+            <label class="section-label">Matching pairs</label>
+            {#each (step.pairs || []) as pair, pi}
+              <div class="answer-row">
+                <input type="text" value={pair.left}
+                       oninput={(e) => {
+                         const arr = [...steps]; const pairs = [...(arr[i].pairs || [])];
+                         pairs[pi] = { ...pairs[pi], left: e.target.value };
+                         arr[i] = { ...arr[i], pairs }; steps = arr; onchange();
+                       }}
+                       placeholder="Left item" class="answer-input" />
+                <span style="opacity:0.5">→</span>
+                <input type="text" value={pair.right}
+                       oninput={(e) => {
+                         const arr = [...steps]; const pairs = [...(arr[i].pairs || [])];
+                         pairs[pi] = { ...pairs[pi], right: e.target.value };
+                         arr[i] = { ...arr[i], pairs }; steps = arr; onchange();
+                       }}
+                       placeholder="Right item" class="answer-input" />
+                <button class="icon-btn danger small" onclick={() => {
+                  const arr = [...steps]; const pairs = (arr[i].pairs || []).filter((_, j) => j !== pi);
+                  arr[i] = { ...arr[i], pairs }; steps = arr; onchange();
+                }} title="Remove pair">✕</button>
+              </div>
+            {/each}
+            <button class="link-btn" onclick={() => {
+              const arr = [...steps]; const pairs = [...(arr[i].pairs || []), { left: '', right: '' }];
+              arr[i] = { ...arr[i], pairs }; steps = arr; onchange();
+            }}>+ Add pair</button>
+            {#if (step.pairs || []).length < 2}
+              <p class="field-warning">Matching steps need at least 2 pairs.</p>
+            {/if}
+          </div>
+        {/if}
+
+        {#if step.type === 'ordering'}
+          <div class="quiz-section">
+            <label class="section-label">Items (in correct order)</label>
+            <p class="type-hint">Enter items in the correct order. The player will shuffle them for the student.</p>
+            {#each (step.items || []) as item, oi}
+              <div class="answer-row">
+                <span style="opacity:0.5; font-weight:600; min-width:1.5rem">{oi + 1}.</span>
+                <input type="text" value={item}
+                       oninput={(e) => {
+                         const arr = [...steps]; const items = [...(arr[i].items || [])];
+                         items[oi] = e.target.value;
+                         arr[i] = { ...arr[i], items, correct_order: items.map((_, idx) => idx) };
+                         steps = arr; onchange();
+                       }}
+                       placeholder={`Item ${oi + 1}`} class="answer-input" />
+                <button class="icon-btn danger small" onclick={() => {
+                  const arr = [...steps]; const items = (arr[i].items || []).filter((_, j) => j !== oi);
+                  arr[i] = { ...arr[i], items, correct_order: items.map((_, idx) => idx) };
+                  steps = arr; onchange();
+                }} title="Remove item">✕</button>
+              </div>
+            {/each}
+            <button class="link-btn" onclick={() => {
+              const arr = [...steps]; const items = [...(arr[i].items || []), ''];
+              arr[i] = { ...arr[i], items, correct_order: items.map((_, idx) => idx) };
+              steps = arr; onchange();
+            }}>+ Add item</button>
+            {#if (step.items || []).length < 2}
+              <p class="field-warning">Ordering steps need at least 2 items.</p>
+            {/if}
           </div>
         {/if}
 
@@ -578,6 +705,9 @@
   }
   .step-card.hw { border-left: 3px solid #ff9800; }
   .step-card.quiz { border-left: 3px solid #42a5f5; }
+  .step-card.fill-blank { border-left: 3px solid #26c6da; }
+  .step-card.matching { border-left: 3px solid #ffca28; }
+  .step-card.ordering { border-left: 3px solid #ef5350; }
   .step-card.svg { border-left: 3px solid #ce93d8; }
   .step-card.completion { border-left: 3px solid #66bb6a; }
   .step-card.drag-over { border-color: var(--accent); background: rgba(0,230,118,0.06); }

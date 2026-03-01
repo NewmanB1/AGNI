@@ -35,6 +35,8 @@ import type { LMSState, BanditSummary, EmbeddingEntityState, LMSObservation } fr
 
 var fs         = require('fs');
 var path       = require('path');
+var envConfig  = require('../utils/env-config');
+var log        = require('../utils/logger').createLogger('lms');
 var rasch       = require('./rasch');
 var embeddings  = require('./embeddings');
 var thompson    = require('./thompson');
@@ -44,18 +46,12 @@ var migrations  = require('./migrations');
 var markov      = require('./markov');
 var pagerank    = require('./pagerank');
 
-// ── Paths ─────────────────────────────────────────────────────────────────────
-var DATA_DIR       = process.env.AGNI_DATA_DIR || path.join(__dirname, '../../data');
+// ── Paths (from centralized config) ──────────────────────────────────────────
+var DATA_DIR       = envConfig.dataDir;
 var STATE_PATH     = path.join(DATA_DIR, 'lms_state.json');
 var STATE_TMP_PATH = STATE_PATH + '.tmp';
 
-// ── Default engine configuration ──────────────────────────────────────────────
-// These values produce stable learning for embedding dims in the 16–32 range.
-// Operators can override via environment variables at hub startup.
-var DEFAULT_EMBEDDING_DIM = parseInt(process.env.AGNI_EMBEDDING_DIM  || '16', 10);
-var DEFAULT_FORGETTING     = parseFloat(process.env.AGNI_FORGETTING   || '0.98');
-var DEFAULT_EMBEDDING_LR   = parseFloat(process.env.AGNI_EMBEDDING_LR || '0.01');
-var DEFAULT_EMBEDDING_REG  = parseFloat(process.env.AGNI_EMBEDDING_REG || '0.001');
+// Engine defaults read directly from envConfig (single source of truth).
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -69,7 +65,7 @@ var DEFAULT_EMBEDDING_REG  = parseFloat(process.env.AGNI_EMBEDDING_REG || '0.001
  * @returns {import('../types').LMSState}
  */
 function buildDefaultState(): LMSState {
-  var dim = DEFAULT_EMBEDDING_DIM;
+  var dim = envConfig.embeddingDim;
   return {
     rasch: {
       students:     {},
@@ -78,17 +74,17 @@ function buildDefaultState(): LMSState {
     },
     embedding: {
       dim:        dim,
-      lr:         DEFAULT_EMBEDDING_LR,
-      reg:        DEFAULT_EMBEDDING_REG,
-      forgetting: DEFAULT_FORGETTING,
+      lr:         envConfig.embeddingLr,
+      reg:        envConfig.embeddingReg,
+      forgetting: envConfig.forgetting,
       students:   {},
       lessons:    {}
     },
     bandit: {
-      A:                [],   // initialized lazily by ensureBanditInitialized
+      A:                [],
       b:                [],
-      featureDim:       dim * 2,  // featureDim === embeddingDim * 2 (enforced)
-      forgetting:       DEFAULT_FORGETTING,
+      featureDim:       dim * 2,
+      forgetting:       envConfig.forgetting,
       observationCount: 0
     },
     markov: {
@@ -106,53 +102,69 @@ function buildDefaultState(): LMSState {
  */
 function loadState(): LMSState {
   if (!fs.existsSync(STATE_PATH)) {
-    console.log('[LMS] No state file found — starting fresh');
+    log.info('No state file found — starting fresh');
     return buildDefaultState();
   }
 
   try {
     var raw   = fs.readFileSync(STATE_PATH, 'utf8');
     var parsed = JSON.parse(raw) as unknown;
-    var migratedResult = migrations.migrateLMSState(parsed, { embeddingDim: DEFAULT_EMBEDDING_DIM });
+    var migratedResult = migrations.migrateLMSState(parsed, { embeddingDim: envConfig.embeddingDim });
     var state: LMSState = migratedResult.state;
     if (migratedResult.migrated) {
-      console.log('[LMS] State repaired (schema migration applied) — saving');
-      saveState(state);
+      log.info('State repaired (schema migration applied) — saving');
+      saveStateSync(state);
     }
-    console.log('[LMS] State loaded:', STATE_PATH,
+    log.info('State loaded:', STATE_PATH,
       '— students:', Object.keys(state.rasch.students).length,
       'lessons:', Object.keys(state.embedding.lessons).length,
       'observations:', state.bandit.observationCount);
     return state;
   } catch (err) {
     var msg = err instanceof Error ? err.message : String(err);
-    console.error('[LMS] Failed to parse state file:', msg,
+    log.error('Failed to parse state file:', msg,
       '— starting fresh. Corrupted file preserved at:', STATE_PATH + '.bak');
     try { fs.copyFileSync(STATE_PATH, STATE_PATH + '.bak'); } catch (_) {}
     return buildDefaultState();
   }
 }
 
+var fsp = fs.promises;
+
 /**
- * Persist LMSState to disk atomically.
+ * Persist LMSState to disk atomically (async, Pi-friendly).
  * Writes to a .tmp file first, then renames over the real file.
- * A process crash mid-write cannot leave a truncated state file.
+ * Async I/O avoids blocking the event loop on the Pi's slow SD card.
  * @param {import('../types').LMSState} state
  */
-function saveState(state: LMSState): void {
+async function saveState(state: LMSState): Promise<void> {
+  try {
+    await fsp.mkdir(DATA_DIR, { recursive: true });
+    await fsp.writeFile(STATE_TMP_PATH, JSON.stringify(state, null, 2));
+    await fsp.rename(STATE_TMP_PATH, STATE_PATH);
+  } catch (err) {
+    var msg = err instanceof Error ? err.message : String(err);
+    log.error('Failed to save state:', msg);
+  }
+}
+
+/**
+ * Synchronous save — used only during initial load/migration.
+ */
+function saveStateSync(state: LMSState): void {
   try {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
     fs.writeFileSync(STATE_TMP_PATH, JSON.stringify(state, null, 2));
     fs.renameSync(STATE_TMP_PATH, STATE_PATH);
   } catch (err) {
     var msg = err instanceof Error ? err.message : String(err);
-    // Do not re-throw — a save failure should not crash the hub API call
-    console.error('[LMS] Failed to save state:', msg);
+    log.error('Failed to save state:', msg);
   }
 }
 
 // ── Module-level state (loaded once at require() time) ────────────────────────
 var _state: LMSState = loadState();
+thompson.ensureBanditInitialized(_state);
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -191,7 +203,7 @@ function seedLesson(lessonId: string, difficulty: number, skill: string): void {
  *
  * @param {{ lessonId: string, difficulty: number, skill: string }[]} lessons
  */
-function seedLessons(lessons: Array<{ lessonId: string; difficulty: number; skill: string }>): void {
+async function seedLessons(lessons: Array<{ lessonId: string; difficulty: number; skill: string }>): Promise<void> {
   var seeded = 0;
   for (var i = 0; i < lessons.length; i++) {
     var entry  = lessons[i];
@@ -200,8 +212,8 @@ function seedLessons(lessons: Array<{ lessonId: string; difficulty: number; skil
     if (wasNew) seeded++;
   }
   if (seeded > 0) {
-    saveState(_state);
-    console.log('[LMS] Seeded', seeded, 'new lesson(s)');
+    await saveState(_state);
+    log.info('Seeded', seeded, 'new lesson(s)');
   }
 }
 
@@ -214,8 +226,8 @@ function seedLessons(lessons: Array<{ lessonId: string; difficulty: number; skil
 // These control how much influence the new signals have relative to the
 // Thompson Sampling bandit. They are intentionally conservative so the
 // bandit remains the primary selector and these act as tie-breakers.
-var MARKOV_TRANSITION_WEIGHT  = parseFloat(process.env.AGNI_MARKOV_WEIGHT   || '0.15');
-var PAGERANK_WEIGHT           = parseFloat(process.env.AGNI_PAGERANK_WEIGHT || '0.10');
+var MARKOV_TRANSITION_WEIGHT  = envConfig.markovWeight;
+var PAGERANK_WEIGHT           = envConfig.pagerankWeight;
 
 /**
  * Select the best lesson for a student from a theta-eligible candidate set.
@@ -264,20 +276,21 @@ function selectBestLesson(
   }
 
   // ── Thompson Sampling scores (primary signal) ──────────────────────────
-  _state.embedding.lessons = filteredLessons;
-  thompson.ensureBanditInitialized(_state);
+  // Build a lightweight scoring view that shares all sub-objects except
+  // embedding.lessons, so the module-level _state is never mutated.
+  var scoringEmbedding = Object.assign({}, _state.embedding, { lessons: filteredLessons });
+  var scoringState: LMSState = Object.assign({}, _state, { embedding: scoringEmbedding });
 
-  var thetaSample = sampleThetaForScoring(_state);
-  var studentVec = embeddings.ensureStudentVector(_state, studentId);
+  var thetaSample = sampleThetaForScoring(scoringState);
+  var studentVec = embeddings.ensureStudentVector(scoringState, studentId);
 
   var thompsonScores: Record<string, number> = {};
   for (var ti = 0; ti < candidates.length; ti++) {
     var cid = candidates[ti];
-    var lessonVec = embeddings.ensureLessonVector(_state, cid);
+    var lessonVec = embeddings.ensureLessonVector(scoringState, cid);
     var x = studentVec.concat(lessonVec);
     thompsonScores[cid] = math.dot(thetaSample, x);
   }
-  _state.embedding.lessons = fullLessons;
 
   // ── Markov transition scores (with bigrams, dropout, cooldown) ──────
   var markovScores: Record<string, any> = {};
@@ -335,7 +348,6 @@ function selectBestLesson(
  * Extracted so selectBestLesson can score all candidates against one sample.
  */
 function sampleThetaForScoring(state: LMSState): number[] {
-  thompson.ensureBanditInitialized(state);
   var Ainv = math.invertSPD(state.bandit.A);
   var mean = math.matVec(Ainv, state.bandit.b);
   var L = math.cholesky(Ainv);
@@ -355,7 +367,7 @@ function sampleThetaForScoring(state: LMSState): number[] {
  * @returns {LMSState}
  */
 function applyObservation(state: LMSState, observation: LMSObservation): LMSState {
-  var next = JSON.parse(JSON.stringify(state)) as LMSState;
+  var next = structuredClone(state) as LMSState;
   var gain = rasch.updateAbility(next, observation.studentId, observation.probeResults);
   embeddings.updateEmbedding(next, observation.studentId, observation.lessonId, gain);
   thompson.updateBandit(next, observation.studentId, observation.lessonId, gain);
@@ -371,13 +383,13 @@ function applyObservation(state: LMSState, observation: LMSObservation): LMSStat
  * @param {string}   lessonId
  * @param {{ probeId: string, correct: boolean }[]} probeResults
  */
-function recordObservation(
+async function recordObservation(
   studentId: string,
   lessonId: string,
   probeResults: Array<{ probeId: string; correct: boolean }>
-): void {
+): Promise<void> {
   _state = applyObservation(_state, { studentId, lessonId, probeResults });
-  saveState(_state);
+  await saveState(_state);
 }
 
 /**
@@ -395,7 +407,6 @@ function getStudentAbility(studentId: string): { ability: number; variance: numb
  * @returns {import('../types').BanditSummary}
  */
 function exportBanditSummary() {
-  thompson.ensureBanditInitialized(_state);
   return federation.getBanditSummary(_state);
 }
 
@@ -409,8 +420,7 @@ function exportBanditSummary() {
  *
  * @param {import('../types').BanditSummary} remote
  */
-function mergeRemoteSummary(remote: BanditSummary): void {
-  thompson.ensureBanditInitialized(_state);
+async function mergeRemoteSummary(remote: BanditSummary): Promise<void> {
   var local  = federation.getBanditSummary(_state);
   var merged = federation.mergeBanditSummaries(local, remote);
 
@@ -418,8 +428,8 @@ function mergeRemoteSummary(remote: BanditSummary): void {
   _state.bandit.b                = math.matVec(merged.precision, merged.mean);
   _state.bandit.observationCount = merged.sampleSize;
 
-  saveState(_state);
-  console.log('[LMS] Remote summary merged — total observations:', merged.sampleSize);
+  await saveState(_state);
+  log.info('Remote summary merged — total observations:', merged.sampleSize);
 }
 
 /**
@@ -428,6 +438,7 @@ function mergeRemoteSummary(remote: BanditSummary): void {
  */
 function reloadState() {
   _state = loadState();
+  thompson.ensureBanditInitialized(_state);
 }
 
 /**

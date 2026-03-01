@@ -27,12 +27,12 @@
 
 'use strict';
 
-var runtimeManifest = require('./runtimeManifest');
-var FACTORY_LOAD_ORDER = runtimeManifest.FACTORY_LOAD_ORDER;
-var FACTORY_FILE_MAP  = runtimeManifest.FACTORY_FILE_MAP;
+const runtimeManifest = require('./runtimeManifest');
+const FACTORY_LOAD_ORDER = runtimeManifest.FACTORY_LOAD_ORDER;
+const FACTORY_FILE_MAP  = runtimeManifest.FACTORY_FILE_MAP;
 
 // ── Equation type detection patterns ────────────────────────────────────────
-var EQUATION_TYPE_PATTERNS = {
+const EQUATION_TYPE_PATTERNS = {
   trig:     /\\(sin|cos|tan|sec|csc|cot|arcsin|arccos|arctan|theta|phi|psi)\b/,
   calculus: /\\(int|sum|prod|lim|partial|nabla|infty|frac\s*\{[^}]*d[a-z])/,
   physics:  /\\(vec|hat|dot|times|cdot|hbar|Delta|Sigma|Omega|mu|lambda|rho|epsilon|sigma|omega)\b/,
@@ -40,7 +40,7 @@ var EQUATION_TYPE_PATTERNS = {
 };
 
 // ── Visual detection patterns ────────────────────────────────────────────────
-var STATIC_VISUAL_PATTERNS = [
+const STATIC_VISUAL_PATTERNS = [
   /\bvenn\b/i,
   /\bbarGraph\b|\bbar.graph\b|\bbar.chart\b/i,
   /\bpieChart\b|\bpie.chart\b/i,
@@ -53,7 +53,7 @@ var STATIC_VISUAL_PATTERNS = [
   /\baxis\b(?!Label)/i
 ];
 
-var DYNAMIC_VISUAL_PATTERNS = [
+const DYNAMIC_VISUAL_PATTERNS = [
   /\bnumberLineDynamic\b/i,
   /\bclockFaceDynamic\b/i,
   /\btimeGraph\b|\btime.graph\b/i,
@@ -61,14 +61,14 @@ var DYNAMIC_VISUAL_PATTERNS = [
   /\bcompose\b/i
 ];
 
-var GEOMETRY_PATTERNS = [
+const GEOMETRY_PATTERNS = [
   /\bpolygonDynamic\b/i,
   /\bcartesianGrid\b|\bcartesian.grid\b/i,
   /\bunitCircle\b|\bunit.circle\b/i
 ];
 
 // ── Sensor keyword patterns ───────────────────────────────────────────────────
-var SENSOR_PATTERNS = [
+const SENSOR_PATTERNS = [
   /\baccel\b/i, /\baccelerometer\b/i,
   /\bgyro\b/i, /\bgyroscope\b/i,
   /\brotation\b/i, /\borientation\b/i,
@@ -79,7 +79,7 @@ var SENSOR_PATTERNS = [
 ];
 
 // ── Teaching style patterns ───────────────────────────────────────────────────
-var TEACHING_STYLE_PATTERNS = {
+const TEACHING_STYLE_PATTERNS = {
   constructivist: /\bexplore\b|\bdiscover\b|\binvestigate\b|\bhypothesi[sz]e\b|\bexperiment\b/i,
   direct:         /\blearn\b|\bstudy\b|\bunderstand\b|\bremember\b|\bmemorize\b/i,
   socratic:       /\bwhy\b|\bhow\b|\bwhat if\b|\bwould\b.*\?|\bcould\b.*\?|\bdo you\b.*\?/i,
@@ -87,7 +87,7 @@ var TEACHING_STYLE_PATTERNS = {
 };
 
 // ── VARK indicator patterns ───────────────────────────────────────────────────
-var VARK_PATTERNS = {
+const VARK_PATTERNS = {
   visual:      /\bdiagram\b|\bchart\b|\bgraph\b|\bfigure\b|\bshow\b|\bvisual\b|\bdraw\b|\billustrat/i,
   auditory:    /\blisten\b|\bsound\b|\bnote\b|\btone\b|\brhythm\b|\bbeat\b|\bsing\b/i,
   readWrite:   /\bread\b|\bwrite\b|\blist\b|\btable\b|\bword\b|\bdefinit\b|\btext\b/i,
@@ -95,7 +95,7 @@ var VARK_PATTERNS = {
 };
 
 // ── Bloom's taxonomy level patterns ──────────────────────────────────────────
-var BLOOMS_PATTERNS = [
+const BLOOMS_PATTERNS = [
   { level: 1, label: 'remember',   re: /\bidentify\b|\brecall\b|\bname\b|\blist\b|\bstate\b|\bdefine\b/i },
   { level: 2, label: 'understand', re: /\bexplain\b|\bdescribe\b|\bsummarise\b|\bclassify\b|\binterpret\b/i },
   { level: 3, label: 'apply',      re: /\buse\b|\bsolve\b|\bcalculate\b|\bdemonstr\b|\bapply\b/i },
@@ -110,55 +110,57 @@ var BLOOMS_PATTERNS = [
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Infer lesson features from a parsed OLS lesson object.
- *
- * @param  {object} lessonData   parsed YAML lesson object
- * @returns {object}             { inferredFeatures, metadata_source }
+ * Concatenate all textual content from steps and metadata for pattern matching.
  */
-function inferFeatures(lessonData) {
-  var steps    = lessonData.steps || [];
-  var meta     = lessonData.meta  || {};
-  var ontology = lessonData.ontology || {};
-
-  // ── Collect all text content for pattern matching ─────────────────────────
-  var allContent = steps.map(function (s) {
+function _collectAllText(steps, meta) {
+  let allContent = steps.map(function (s) {
     return [s.content, s.title, s.label, s.feedback,
             JSON.stringify(s.spec || ''),
             JSON.stringify(s.svg_spec || ''),
             JSON.stringify(s.threshold || '')
            ].filter(Boolean).join(' ');
   }).join(' ');
-
   allContent += ' ' + [meta.title, meta.description, meta.tags].filter(Boolean).join(' ');
+  return allContent;
+}
 
-  // ── Capability flags ──────────────────────────────────────────────────────
-  var hasEquations = /\$[^$]+\$|\$\$[\s\S]+?\$\$/.test(allContent);
-  var hasSensors   = steps.some(function (s) { return s.type === 'hardware_trigger'; }) ||
+/**
+ * Detect capability flags (equations, sensors, tables, visuals).
+ */
+function _detectCapabilityFlags(steps, allContent) {
+  const hasEquations = /\$[^$]+\$|\$\$[\s\S]+?\$\$/.test(allContent);
+  const hasSensors   = steps.some(function (s) { return s.type === 'hardware_trigger'; }) ||
                      SENSOR_PATTERNS.some(function (p) { return p.test(allContent); });
-  var hasTables    = /\|.+\|/.test(allContent);
+  const hasTables    = /\|.+\|/.test(allContent);
 
-  var specFactoryIds = _collectSpecFactoryIds(steps);
-  var hasStaticVisuals  = !!specFactoryIds.length ||
+  const specFactoryIds = _collectSpecFactoryIds(steps);
+  const hasStaticVisuals  = !!specFactoryIds.length ||
     STATIC_VISUAL_PATTERNS.some(function (p) { return p.test(allContent); });
-  var hasDynamicVisuals = specFactoryIds.some(function (id) {
+  const hasDynamicVisuals = specFactoryIds.some(function (id) {
     return runtimeManifest.getFileForFactoryId(id) === 'svg-factories-dynamic.js';
   }) || DYNAMIC_VISUAL_PATTERNS.some(function (p) { return p.test(allContent); });
-  var hasGeometryVisuals = specFactoryIds.some(function (id) {
+  const hasGeometryVisuals = specFactoryIds.some(function (id) {
     return runtimeManifest.getFileForFactoryId(id) === 'svg-factories-geometry.js';
   }) || GEOMETRY_PATTERNS.some(function (p) { return p.test(allContent); });
-  var hasVisuals = hasStaticVisuals || hasDynamicVisuals || hasGeometryVisuals;
+  const hasVisuals = hasStaticVisuals || hasDynamicVisuals || hasGeometryVisuals;
 
-  // ── Equation type detection ───────────────────────────────────────────────
-  var equationTypes = {
-    algebra:  false,
-    trig:     false,
-    calculus: false,
-    physics:  false,
-    sets:     false
+  return {
+    hasEquations: hasEquations, hasSensors: hasSensors, hasTables: hasTables,
+    hasStaticVisuals: hasStaticVisuals, hasDynamicVisuals: hasDynamicVisuals,
+    hasGeometryVisuals: hasGeometryVisuals, hasVisuals: hasVisuals,
+    specFactoryIds: specFactoryIds
   };
+}
 
+/**
+ * Classify equation types present in the content.
+ */
+function _detectEquationTypes(allContent, hasEquations) {
+  const equationTypes = {
+    algebra: false, trig: false, calculus: false, physics: false, sets: false
+  };
   if (hasEquations) {
-    var anySpecific = false;
+    let anySpecific = false;
     Object.keys(EQUATION_TYPE_PATTERNS).forEach(function (type) {
       if (EQUATION_TYPE_PATTERNS[type].test(allContent)) {
         equationTypes[type] = true;
@@ -167,88 +169,163 @@ function inferFeatures(lessonData) {
     });
     if (!anySpecific) equationTypes.algebra = true;
   }
+  return equationTypes;
+}
 
-  // ── KaTeX asset list ──────────────────────────────────────────────────────
-  var katexAssets = hasEquations ? _buildKatexAssetList(equationTypes) : [];
-
-  // ── Factory dependency manifest ───────────────────────────────────────────
-  // sensor-bridge.js is included whenever the lesson has visuals (stages always
-  // bind sensors) or explicit sensor steps. html.js prepends shared-runtime.js
-  // before this manifest, so the full runtime load order becomes:
-  //   shared-runtime.js → sensor-bridge.js → svg-stage.js → factories...
-  var needsSensorBridge = hasVisuals || hasSensors;
-  var factoryManifest = hasVisuals
-    ? _buildFactoryManifest(specFactoryIds, hasDynamicVisuals, hasGeometryVisuals,
-        hasTables && hasVisuals, needsSensorBridge)
-    : (hasSensors ? ['sensor-bridge.js'] : []);
-
-  // ── VARK profile ──────────────────────────────────────────────────────────
-  var vark = { visual: 0, auditory: 0, readWrite: 0, kinesthetic: 0 };
+/**
+ * Build the VARK learning-style profile from content text.
+ */
+function _profileVARK(allContent) {
+  const vark = { visual: 0, auditory: 0, readWrite: 0, kinesthetic: 0 };
   Object.keys(VARK_PATTERNS).forEach(function (k) {
-    var matches = allContent.match(new RegExp(VARK_PATTERNS[k].source, 'gi'));
+    const matches = allContent.match(new RegExp(VARK_PATTERNS[k].source, 'gi'));
     vark[k] = matches ? matches.length : 0;
   });
+  return vark;
+}
 
-  // ── Bloom's ceiling ───────────────────────────────────────────────────────
-  var bloomsCeiling = 1;
-  var bloomsLabel   = 'remember';
+/**
+ * Detect the highest Bloom's taxonomy level present in the content.
+ */
+function _detectBloomsCeiling(allContent) {
+  let ceiling = 1;
+  let label   = 'remember';
   BLOOMS_PATTERNS.forEach(function (b) {
-    if (b.re.test(allContent) && b.level > bloomsCeiling) {
-      bloomsCeiling = b.level;
-      bloomsLabel   = b.label;
+    if (b.re.test(allContent) && b.level > ceiling) {
+      ceiling = b.level;
+      label   = b.label;
     }
   });
+  return { bloomsCeiling: ceiling, bloomsLabel: label };
+}
 
-  // ── Teaching style ────────────────────────────────────────────────────────
-  var teachingScores = {};
+/**
+ * Determine the dominant teaching style from content text.
+ */
+function _detectTeachingStyle(allContent) {
+  const scores = {};
   Object.keys(TEACHING_STYLE_PATTERNS).forEach(function (style) {
-    var matches = allContent.match(new RegExp(TEACHING_STYLE_PATTERNS[style].source, 'gi'));
-    teachingScores[style] = matches ? matches.length : 0;
+    const matches = allContent.match(new RegExp(TEACHING_STYLE_PATTERNS[style].source, 'gi'));
+    scores[style] = matches ? matches.length : 0;
   });
-  var dominantStyle = Object.keys(teachingScores).reduce(function (best, k) {
-    return teachingScores[k] > teachingScores[best] ? k : best;
+  return Object.keys(scores).reduce(function (best, k) {
+    return scores[k] > scores[best] ? k : best;
   }, 'direct');
+}
 
-  // ── Step count by type ────────────────────────────────────────────────────
-  var stepTypeCounts = {};
+/**
+ * Infer lesson features from a parsed OLS lesson object.
+ *
+ * @param  {object} lessonData   parsed YAML lesson object
+ * @returns {object}             { inferredFeatures, metadata_source }
+ */
+function inferFeatures(lessonData) {
+  const steps = lessonData.steps || [];
+  const meta  = lessonData.meta  || {};
+
+  const allContent = _collectAllText(steps, meta);
+  const caps       = _detectCapabilityFlags(steps, allContent);
+  const eqTypes    = _detectEquationTypes(allContent, caps.hasEquations);
+  const katexAssets = caps.hasEquations ? _buildKatexAssetList(eqTypes) : [];
+
+  // sensor-bridge.js loads whenever lesson has visuals or sensor steps
+  const needsSensorBridge = caps.hasVisuals || caps.hasSensors;
+  const factoryManifest = caps.hasVisuals
+    ? _buildFactoryManifest(caps.specFactoryIds, caps.hasDynamicVisuals,
+        caps.hasGeometryVisuals, caps.hasTables && caps.hasVisuals, needsSensorBridge)
+    : (caps.hasSensors ? ['sensor-bridge.js'] : []);
+
+  const vark   = _profileVARK(allContent);
+  const blooms = _detectBloomsCeiling(allContent);
+  const dominantStyle = _detectTeachingStyle(allContent);
+
+  const stepTypeCounts = {};
   steps.forEach(function (s) {
-    var t = s.type || 'unknown';
+    const t = s.type || 'unknown';
     stepTypeCounts[t] = (stepTypeCounts[t] || 0) + 1;
   });
 
-  // ── Difficulty estimate ───────────────────────────────────────────────────
-  var difficulty = (typeof lessonData.difficulty === 'number')
+  const difficulty = (typeof lessonData.difficulty === 'number')
     ? lessonData.difficulty
-    : Math.max(1, Math.min(5, bloomsCeiling));
+    : Math.max(1, Math.min(5, blooms.bloomsCeiling));
 
-  // ── Assemble result ───────────────────────────────────────────────────────
-  var inferredFeatures = {
+  var features = {
     flags: {
-      has_equations:       hasEquations,
-      equation_types:      equationTypes,
-      has_sensors:         hasSensors,
-      has_tables:          hasTables,
-      has_static_visuals:  hasStaticVisuals,
-      has_dynamic_visuals: hasDynamicVisuals,
-      has_geometry:        hasGeometryVisuals,
-      has_visuals:         hasVisuals
+      has_equations:       caps.hasEquations,
+      equation_types:      eqTypes,
+      has_sensors:         caps.hasSensors,
+      has_tables:          caps.hasTables,
+      has_static_visuals:  caps.hasStaticVisuals,
+      has_dynamic_visuals: caps.hasDynamicVisuals,
+      has_geometry:        caps.hasGeometryVisuals,
+      has_visuals:         caps.hasVisuals
     },
     katexAssets:      katexAssets,
     factoryManifest:  factoryManifest,
     vark:             vark,
-    bloomsCeiling:    bloomsCeiling,
-    bloomsLabel:      bloomsLabel,
+    bloomsCeiling:    blooms.bloomsCeiling,
+    bloomsLabel:      blooms.bloomsLabel,
     dominantTeachingStyle: dominantStyle,
     stepTypeCounts:   stepTypeCounts,
     difficulty:       difficulty
   };
 
   var metadataSource = lessonData.metadata_source || 'inferred';
+  var featureSources = {};
+  var confidence = {};
+
+  confidence.blooms = _computeConfidence(blooms.matchDensity);
+  confidence.vark = _computeConfidence(vark.matchDensity);
+  confidence.teachingStyle = _computeConfidence(dominantStyle.matchDensity);
+
+  featureSources.blooms = 'inferred';
+  featureSources.vark = 'inferred';
+  featureSources.teachingStyle = 'inferred';
+
+  var declared = meta.declared_features;
+  if (declared && typeof declared === 'object') {
+    metadataSource = 'mixed';
+
+    if (declared.blooms_level) {
+      features.bloomsLabel = declared.blooms_level;
+      var bloomsMap = { remember: 1, understand: 2, apply: 3, analyze: 4, evaluate: 5, create: 6 };
+      var normalised = String(declared.blooms_level).toLowerCase();
+      if (bloomsMap[normalised]) features.bloomsCeiling = bloomsMap[normalised];
+      featureSources.blooms = 'declared';
+      confidence.blooms = 1.0;
+    }
+
+    if (declared.vark) {
+      var declaredVark = Array.isArray(declared.vark) ? declared.vark : [declared.vark];
+      features.vark = Object.assign({}, vark, { dominant: declaredVark });
+      featureSources.vark = 'declared';
+      confidence.vark = 1.0;
+    }
+
+    if (declared.teaching_style) {
+      features.dominantTeachingStyle = Object.assign({}, dominantStyle, { dominant: declared.teaching_style });
+      featureSources.teachingStyle = 'declared';
+      confidence.teachingStyle = 1.0;
+    }
+  }
+
+  features.confidence = confidence;
+  features.featureSources = featureSources;
 
   return {
-    inferredFeatures: inferredFeatures,
-    metadata_source:  metadataSource
+    inferredFeatures: features,
+    metadata_source: metadataSource
   };
+}
+
+
+/**
+ * Compute a confidence score (0-1) from keyword match density.
+ * undefined/NaN yields 0.5 (medium confidence).
+ */
+function _computeConfidence(matchDensity) {
+  if (typeof matchDensity !== 'number' || isNaN(matchDensity)) return 0.5;
+  return Math.min(1, Math.max(0, Math.round(matchDensity * 100) / 100));
 }
 
 
@@ -260,8 +337,8 @@ function inferFeatures(lessonData) {
  * @returns {string[]} deduplicated registry ids
  */
 function _collectSpecFactoryIds(steps) {
-  var seen = {};
-  var ids  = [];
+  const seen = {};
+  const ids  = [];
 
   function collectFromSpec(spec) {
     if (!spec) return;
@@ -270,7 +347,7 @@ function _collectSpecFactoryIds(steps) {
     }
     if (spec.compose && Array.isArray(spec.layers)) {
       spec.layers.forEach(function (layer) {
-        var fid = layer.factory;
+        const fid = layer.factory;
         if (fid && runtimeManifest.getFileForFactoryId(fid) && !seen[fid]) {
           ids.push(fid);
           seen[fid] = true;
@@ -309,8 +386,8 @@ function _buildFactoryManifest(specIds, hasDynamic, hasGeometry,
  * @returns {string[]}
  */
 function _buildKatexAssetList(equationTypes) {
-  var assets  = ['katex-core.css'];
-  var domains = ['algebra', 'trig', 'calculus', 'physics', 'sets'];
+  const assets  = ['katex-core.css'];
+  const domains = ['algebra', 'trig', 'calculus', 'physics', 'sets'];
   domains.forEach(function (domain) {
     if (equationTypes[domain]) assets.push('katex-symbols-' + domain + '.css');
   });

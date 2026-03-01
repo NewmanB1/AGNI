@@ -36,11 +36,12 @@
 
 'use strict';
 
-var fs   = require('fs');
-var path = require('path');
+const fs   = require('fs');
+const path = require('path');
+const { writeIfNewer } = require('./io');
 
 // ── KaTeX source path ─────────────────────────────────────────────────────────
-var KATEX_CSS_SOURCE = path.join(
+const KATEX_CSS_SOURCE = path.join(
   __dirname, '../../node_modules/katex/dist/katex.min.css'
 );
 
@@ -53,7 +54,7 @@ var KATEX_CSS_SOURCE = path.join(
 // The selectors come from KaTeX's generated class names — these are stable
 // across KaTeX minor versions but should be verified on major version bumps.
 //
-var DOMAIN_PATTERNS = {
+const DOMAIN_PATTERNS = {
   trig:     /\.mord\.sin|\.mord\.cos|\.mord\.tan|\.mord\.sec|\.mord\.csc|\.mord\.cot|katex-html.*trig/i,
   calculus: /\.mop\.int|\.mop\.sum|\.mop\.prod|\.mop\.lim|katex-html.*calc/i,
   physics:  /\.mord\.vec|\.mord\.hat|katex-html.*phys/i,
@@ -65,8 +66,8 @@ var DOMAIN_PATTERNS = {
 // ── Cached split result (per process) ────────────────────────────────────────
 // Splitting the full CSS is O(n) over ~1500 rules. Cache the result so a
 // multi-lesson build run only pays this cost once per Node.js process.
-var _splitCache = null;
-var _splitSourceMtime = 0;
+let _splitCache = null;
+let _splitSourceMtime = 0;
 
 /**
  * Read and split the full KaTeX CSS into buckets.
@@ -82,10 +83,10 @@ function _getSplitCss() {
     );
   }
 
-  var mtime = fs.statSync(KATEX_CSS_SOURCE).mtimeMs;
+  const mtime = fs.statSync(KATEX_CSS_SOURCE).mtimeMs;
   if (_splitCache && _splitSourceMtime === mtime) return _splitCache;
 
-  var raw = fs.readFileSync(KATEX_CSS_SOURCE, 'utf8');
+  const raw = fs.readFileSync(KATEX_CSS_SOURCE, 'utf8');
   _splitCache = _splitCss(raw);
   _splitSourceMtime = mtime;
   return _splitCache;
@@ -104,17 +105,17 @@ function _getSplitCss() {
  * @returns {{ core: string, fonts: string, symbols: Object.<string,string> }}
  */
 function _splitCss(raw) {
-  var fonts   = [];
-  var core    = [];
-  var symbols = { algebra: [], trig: [], calculus: [], physics: [], sets: [] };
+  const fonts   = [];
+  const core    = [];
+  const symbols = { algebra: [], trig: [], calculus: [], physics: [], sets: [] };
 
   // Split into individual rule blocks by walking the string character by
   // character and tracking brace depth. This handles @font-face and @keyframes
   // which contain nested braces without a full CSS parser.
-  var rules = _extractRuleBlocks(raw);
+  const rules = _extractRuleBlocks(raw);
 
   rules.forEach(function (rule) {
-    var trimmed = rule.trim();
+    const trimmed = rule.trim();
     if (!trimmed) return;
 
     // @font-face → fonts bucket
@@ -124,11 +125,11 @@ function _splitCss(raw) {
     }
 
     // Test against domain patterns — first match wins
-    var claimed = false;
-    var domains = ['trig', 'calculus', 'physics', 'sets'];
-    for (var i = 0; i < domains.length; i++) {
-      var domain  = domains[i];
-      var pattern = DOMAIN_PATTERNS[domain];
+    let claimed = false;
+    const domains = ['trig', 'calculus', 'physics', 'sets'];
+    for (let i = 0; i < domains.length; i++) {
+      const domain  = domains[i];
+      const pattern = DOMAIN_PATTERNS[domain];
       if (pattern && pattern.test(trimmed)) {
         symbols[domain].push(trimmed);
         claimed = true;
@@ -169,14 +170,14 @@ function _splitCss(raw) {
  * @returns {string[]}   one entry per top-level rule block
  */
 function _extractRuleBlocks(css) {
-  var blocks = [];
-  var depth  = 0;
-  var start  = 0;
-  var inStr  = false;
-  var strCh  = '';
+  const blocks = [];
+  let depth  = 0;
+  let start  = 0;
+  let inStr  = false;
+  let strCh  = '';
 
-  for (var i = 0; i < css.length; i++) {
-    var ch = css[i];
+  for (let i = 0; i < css.length; i++) {
+    const ch = css[i];
 
     // Track string literals (url("...") etc.) to avoid counting their braces
     if (!inStr && (ch === '"' || ch === "'")) {
@@ -222,46 +223,37 @@ function _extractRuleBlocks(css) {
 function buildKatexCss(assetList, outputDir) {
   if (!assetList || assetList.length === 0) return;
 
-  var split = _getSplitCss();
+  const split = _getSplitCss();
 
   // Map filename → content
   function contentFor(filename) {
     if (filename === 'katex-core.css')  return split.core;
     if (filename === 'katex-fonts.css') return split.fonts;
-    var domainMatch = filename.match(/^katex-symbols-(.+)\.css$/);
+    const domainMatch = filename.match(/^katex-symbols-(.+)\.css$/);
     if (domainMatch) {
-      var domain = domainMatch[1];
+      const domain = domainMatch[1];
       return split.symbols[domain] || ('/* no symbols for domain: ' + domain + ' */');
     }
     return null;
   }
 
-  var written = [];
-  var skipped = [];
+  const written = [];
+  const skipped = [];
 
   assetList.forEach(function (filename) {
-    var content = contentFor(filename);
+    const content = contentFor(filename);
     if (content === null) {
       console.warn('[KATEX-CSS] Unknown asset filename:', filename);
       return;
     }
 
-    var destPath = path.join(outputDir, filename);
+    const destPath = path.join(outputDir, filename);
 
-    // Write-if-missing strategy for CSS files:
-    // Unlike source files, the split CSS content is derived from the same
-    // katex.min.css source, so checking source mtime is sufficient.
-    // We use existence check + source mtime vs dest mtime.
-    if (fs.existsSync(destPath)) {
-      var destMtime = fs.statSync(destPath).mtimeMs;
-      if (_splitSourceMtime <= destMtime) {
-        skipped.push(filename);
-        return;
-      }
+    if (writeIfNewer(_splitSourceMtime, destPath, content)) {
+      written.push(filename);
+    } else {
+      skipped.push(filename);
     }
-
-    fs.writeFileSync(destPath, content, 'utf8');
-    written.push(filename);
   });
 
   if (written.length > 0) {

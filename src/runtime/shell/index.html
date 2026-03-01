@@ -6,37 +6,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>AGNI Village Library</title>
     <style>
-        :root { --bg: #1a1a2e; --card: #16213e; --accent: #00e676; --text: #e0e0e0; }
-        body { background: var(--bg); color: var(--text); font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 1rem; }
-        h1 { font-size: 1.5rem; margin-bottom: 1rem; color: #fff; border-bottom: 2px solid #333; padding-bottom: 0.5rem; }
+        :root { --bg: #F4F1E8; --card: #FFFFFF; --accent: #0B5FFF; --text: #1A1A1A; --border: #2D2D2D; }
+        body { background: var(--bg); color: var(--text); font-family: Roboto,'Noto Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif; margin: 0; padding: 1rem; }
+        h1 { font-size: 1.5rem; margin-bottom: 1rem; color: #1A1A1A; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; }
         
         /* Grid Layout */
         .lesson-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
         
         /* Lesson Card */
-        .card { background: var(--card); border-radius: 12px; padding: 1.2rem; position: relative; border-left: 4px solid #333; transition: transform 0.2s; cursor: pointer; }
-        .card:active { transform: scale(0.98); }
-        .card.recommended { border-left-color: var(--accent); background: #1f2b4e; box-shadow: 0 4px 12px rgba(0,230,118,0.1); }
+        .card { background: var(--card); border-radius: 2px; padding: 1.2rem; position: relative; border-left: 4px solid var(--border); cursor: pointer; border:2px solid var(--border); }
+        .card.recommended { border-left-color: var(--accent); background: #E3F2FD; }
         
-        .card h3 { margin: 0 0 0.5rem 0; color: #fff; font-size: 1.1rem; }
-        .card-meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #aaa; margin-top: 0.8rem; }
+        .card h3 { margin: 0 0 0.5rem 0; color: #1A1A1A; font-size: 1.1rem; }
+        .card-meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #555; margin-top: 0.8rem; }
         
         /* Tags */
         .tags { display: flex; gap: 0.5rem; }
-        .tag { background: #0f3460; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
-        .tag.haptic { color: #ffab40; }
-        .tag.sensor { color: #40c4ff; }
+        .tag { background: #E3F2FD; padding: 2px 6px; border-radius: 2px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: #0B5FFF; }
+        .tag.haptic { color: #D84315; }
+        .tag.sensor { color: #00695C; }
         
         /* Scores */
         .theta { font-family: monospace; font-weight: bold; color: var(--accent); }
         
         /* Debug toggle */
-        #debug-toggle { position: fixed; bottom: 10px; right: 10px; opacity: 0.3; font-size: 0.8rem; }
+        #debug-toggle { position: fixed; bottom: 10px; right: 10px; color: #555; font-size: 0.8rem; }
     </style>
 </head>
 <body>
     <header>
-        <h1>Village Library <span style="font-size:0.8rem; font-weight:normal; opacity:0.6; float:right">v2.0</span></h1>
+        <h1>Village Library <span style="font-size:0.8rem; font-weight:normal; color:#555; float:right">v2.0</span></h1>
     </header>
 
     <div id="loading">Analyze local cognition...</div>

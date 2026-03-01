@@ -6,14 +6,21 @@
  * Phase 2 / Sprint K: uses shared lessonSchema so validation matches CLI and hub-transform.
  */
 
-var fs = require('fs');
-var path = require('path');
-var yaml = require('js-yaml');
-var compiler = require('../compiler');
-var buildLessonIR = compiler.buildLessonIR;
-var buildLessonSidecar = compiler.buildLessonSidecar;
-var lessonSchema = require('./lessonSchema');
-var lessonChain = require('./lessonChain');
+const fs = require('fs');
+const path = require('path');
+const yaml = require('js-yaml');
+const compilerService = require('./compiler');
+const safeYamlLoad = compilerService.safeYamlLoad;
+const buildIRWithSidecar = compilerService.buildIRWithSidecar;
+const lessonSchema = require('./lessonSchema');
+const lessonChain = require('./lessonChain');
+const envConfig = require('../utils/env-config');
+
+const DEFAULT_YAML_DIR = envConfig.yamlDir;
+
+function sanitizeSlug(slug) {
+  return slug.replace(/[^a-zA-Z0-9_-]/g, '');
+}
 
 /**
  * Parse request body: YAML string or JSON string or object.
@@ -27,8 +34,7 @@ function parseAuthorBody(body) {
   if (typeof body === 'object' && !Buffer.isBuffer(body)) {
     return { lessonData: body };
   }
-  var str = typeof body === 'string' ? body : String(body);
-  str = str.trim();
+  const str = (typeof body === 'string' ? body : String(body)).trim();
   if (str.charAt(0) === '{') {
     try {
       return { lessonData: JSON.parse(str) };
@@ -37,7 +43,7 @@ function parseAuthorBody(body) {
     }
   }
   try {
-    return { lessonData: yaml.load(str, { schema: yaml.JSON_SCHEMA }) };
+    return { lessonData: safeYamlLoad(str) };
   } catch (e) {
     return { error: 'Invalid YAML: ' + e.message };
   }
@@ -62,14 +68,12 @@ async function previewForAuthor(lessonData) {
   if (!lessonData || typeof lessonData !== 'object') {
     return { error: 'Invalid payload: must be an object' };
   }
-  var validation = lessonSchema.validateLessonData(lessonData);
+  const validation = lessonSchema.validateLessonData(lessonData);
   if (!validation.valid) {
     return { error: 'Validation failed: ' + validation.errors.join('; ') };
   }
   try {
-    var ir = await buildLessonIR(lessonData, { dev: true });
-    var sidecar = buildLessonSidecar(ir);
-    return { ir: ir, sidecar: sidecar };
+    return await buildIRWithSidecar(lessonData, { dev: true });
   } catch (e) {
     return { error: e.message };
   }
@@ -84,8 +88,8 @@ function deriveSlug(lessonData) {
   if (lessonData.slug && typeof lessonData.slug === 'string') {
     return lessonData.slug.replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
   }
-  var m = (lessonData.meta && typeof lessonData.meta === 'object') ? lessonData.meta : lessonData;
-  var title = m.title || m.identifier || lessonData.title || lessonData.identifier || 'untitled';
+  const m = (lessonData.meta && typeof lessonData.meta === 'object') ? lessonData.meta : lessonData;
+  const title = m.title || m.identifier || lessonData.title || lessonData.identifier || 'untitled';
   return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 }
 
@@ -101,7 +105,7 @@ async function saveLesson(lessonData, yamlDir, opts) {
     return { error: 'Invalid payload: must be an object' };
   }
 
-  var m = (lessonData.meta && typeof lessonData.meta === 'object') ? lessonData.meta : lessonData;
+  const m = (lessonData.meta && typeof lessonData.meta === 'object') ? lessonData.meta : lessonData;
   if (!m.updated) {
     if (lessonData.meta && typeof lessonData.meta === 'object') {
       lessonData.meta.updated = new Date().toISOString();
@@ -113,52 +117,46 @@ async function saveLesson(lessonData, yamlDir, opts) {
     }
   }
 
-  var validation = lessonSchema.validateLessonData(lessonData);
+  const validation = lessonSchema.validateLessonData(lessonData);
   if (!validation.valid) {
     return { error: 'Validation failed: ' + validation.errors.join('; ') };
   }
-  var slug = deriveSlug(lessonData);
+  const slug = deriveSlug(lessonData);
   if (!slug) return { error: 'Cannot derive slug from lesson data' };
 
-  // ── Compute content hash and build URI / chain ──────────────────────────
-  var creatorId = m.creator_id || null;
-  var contentHash = lessonChain.computeContentHash(lessonData);
-  var latestVersion = lessonChain.getLatestVersion(slug);
-  var parentHash = latestVersion ? latestVersion.contentHash : null;
+  const creatorId = m.creator_id || null;
+  const contentHash = lessonChain.computeContentHash(lessonData);
+  const latestVersion = await lessonChain.getLatestVersion(slug);
+  const parentHash = latestVersion ? latestVersion.contentHash : null;
+  const uri = creatorId ? lessonChain.buildUri(creatorId, slug) : null;
 
-  // Build the canonical URI (requires creator_id)
-  var uri = creatorId ? lessonChain.buildUri(creatorId, slug) : null;
-
-  // Stamp chain fields onto meta before writing
   if (lessonData.meta && typeof lessonData.meta === 'object') {
     lessonData.meta.content_hash = contentHash;
     lessonData.meta.parent_hash = parentHash;
     if (uri) lessonData.meta.uri = uri;
   }
 
-  var dir = yamlDir || path.join(process.cwd(), 'data', 'yaml');
+  const dir = yamlDir || DEFAULT_YAML_DIR;
   try {
     fs.mkdirSync(dir, { recursive: true });
   } catch (e) {
     return { error: 'Cannot create directory: ' + e.message };
   }
 
-  var filePath = path.join(dir, slug + '.yaml');
-  var existingPath = path.join(dir, slug + '.yaml');
-  if (opts && opts.checkCollision && fs.existsSync(existingPath) && !opts.overwrite) {
+  const filePath = path.join(dir, slug + '.yaml');
+  if (opts && opts.checkCollision && fs.existsSync(filePath) && !opts.overwrite) {
     return { error: 'A lesson with slug "' + slug + '" already exists. Use a different identifier or title.' };
   }
 
   try {
-    var yamlStr = yaml.dump(lessonData, { lineWidth: 120, noRefs: true, sortKeys: false, schema: yaml.JSON_SCHEMA });
+    const yamlStr = yaml.dump(lessonData, { lineWidth: 120, noRefs: true, sortKeys: false, schema: yaml.JSON_SCHEMA });
     fs.writeFileSync(filePath, yamlStr, 'utf8');
   } catch (e) {
     return { error: 'Write failed: ' + e.message };
   }
 
-  // Append to the hash chain (skip if content unchanged from latest)
   if (!latestVersion || latestVersion.contentHash !== contentHash) {
-    lessonChain.appendVersion(slug, {
+    await lessonChain.appendVersion(slug, {
       contentHash: contentHash,
       parentHash: parentHash,
       creatorId: creatorId,
@@ -167,7 +165,7 @@ async function saveLesson(lessonData, yamlDir, opts) {
     });
   }
 
-  var result = {
+  const result = {
     ok: true, slug: slug, path: filePath,
     warnings: validation.warnings || [],
     uri: uri || undefined,
@@ -177,12 +175,11 @@ async function saveLesson(lessonData, yamlDir, opts) {
 
   if (opts && opts.compile) {
     try {
-      var ir = await buildLessonIR(lessonData, { dev: false });
-      var sidecar = buildLessonSidecar(ir);
-      var irPath = path.join(dir, slug + '.ir.json');
-      var sidecarPath = path.join(dir, slug + '.sidecar.json');
-      fs.writeFileSync(irPath, JSON.stringify(ir, null, 2), 'utf8');
-      fs.writeFileSync(sidecarPath, JSON.stringify(sidecar, null, 2), 'utf8');
+      const compiled = await buildIRWithSidecar(lessonData, { dev: false });
+      const irPath = path.join(dir, slug + '.ir.json');
+      const sidecarPath = path.join(dir, slug + '.sidecar.json');
+      fs.writeFileSync(irPath, JSON.stringify(compiled.ir, null, 2), 'utf8');
+      fs.writeFileSync(sidecarPath, JSON.stringify(compiled.sidecar, null, 2), 'utf8');
       result.compiled = true;
       result.irPath = irPath;
       result.sidecarPath = sidecarPath;
@@ -201,7 +198,7 @@ async function saveLesson(lessonData, yamlDir, opts) {
  * @returns {string[]} array of slugs (filename without .yaml)
  */
 function listSavedLessons(yamlDir) {
-  var dir = yamlDir || path.join(process.cwd(), 'data', 'yaml');
+  const dir = yamlDir || DEFAULT_YAML_DIR;
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir)
     .filter(function(f) { return f.endsWith('.yaml'); })
@@ -215,15 +212,15 @@ function listSavedLessons(yamlDir) {
  * @returns {{ lessonData: object, raw: string }|{ error: string }}
  */
 function loadLesson(slug, yamlDir) {
-  var dir = yamlDir || path.join(process.cwd(), 'data', 'yaml');
-  var safeName = slug.replace(/[^a-zA-Z0-9_-]/g, '');
-  var filePath = path.join(dir, safeName + '.yaml');
+  const dir = yamlDir || DEFAULT_YAML_DIR;
+  const safeName = sanitizeSlug(slug);
+  const filePath = path.join(dir, safeName + '.yaml');
   if (!fs.existsSync(filePath)) {
     return { error: 'Lesson not found: ' + safeName };
   }
   try {
-    var raw = fs.readFileSync(filePath, 'utf8');
-    var parsed = yaml.load(raw, { schema: yaml.JSON_SCHEMA });
+    const raw = fs.readFileSync(filePath, 'utf8');
+    const parsed = safeYamlLoad(raw);
     if (!parsed || typeof parsed !== 'object') {
       return { error: 'YAML parsed to non-object' };
     }
@@ -240,13 +237,13 @@ function loadLesson(slug, yamlDir) {
  * @returns {{ ok: boolean, deleted: string[] }|{ error: string }}
  */
 function deleteLesson(slug, yamlDir) {
-  var dir = yamlDir || path.join(process.cwd(), 'data', 'yaml');
-  var safeName = slug.replace(/[^a-zA-Z0-9_-]/g, '');
+  const dir = yamlDir || DEFAULT_YAML_DIR;
+  const safeName = sanitizeSlug(slug);
   if (!safeName) return { error: 'Invalid slug' };
-  var deleted = [];
-  var extensions = ['.yaml', '.ir.json', '.sidecar.json'];
-  for (var i = 0; i < extensions.length; i++) {
-    var fp = path.join(dir, safeName + extensions[i]);
+  const deleted = [];
+  const extensions = ['.yaml', '.ir.json', '.sidecar.json'];
+  for (let i = 0; i < extensions.length; i++) {
+    const fp = path.join(dir, safeName + extensions[i]);
     if (fs.existsSync(fp)) {
       try {
         fs.unlinkSync(fp);
@@ -269,8 +266,8 @@ function deleteLesson(slug, yamlDir) {
  * @returns {boolean}
  */
 function slugExists(slug, yamlDir) {
-  var dir = yamlDir || path.join(process.cwd(), 'data', 'yaml');
-  var safeName = slug.replace(/[^a-zA-Z0-9_-]/g, '');
+  const dir = yamlDir || DEFAULT_YAML_DIR;
+  const safeName = sanitizeSlug(slug);
   return fs.existsSync(path.join(dir, safeName + '.yaml'));
 }
 

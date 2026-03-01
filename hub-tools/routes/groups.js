@@ -49,7 +49,7 @@ function register(router, ctx) {
       const assigned = [];
       const skipped = [];
       for (const pseudoId of studentIds) {
-        const eligible = ctx.getLessonsSortedByTheta(pseudoId);
+        const eligible = await ctx.getLessonsSortedByTheta(pseudoId);
         const inList = eligible.some(l => l.lessonId === lessonId);
         if (inList) {
           overrides[pseudoId] = { lessonId };

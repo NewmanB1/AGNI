@@ -17,13 +17,13 @@
  */
 function buildLessonScript(ir, options) {
   options = options || {};
-  var dataString     = JSON.stringify(ir);
-  var safeDataString = dataString.replace(/<\/script>/gi, '<\\/script>');
-  var signature      = options.signature != null ? options.signature : '';
-  var publicKeySpki  = options.publicKeySpki != null ? options.publicKeySpki : '';
-  var deviceId       = options.deviceId != null ? options.deviceId : '';
-  var factoryLoaderJs = options.factoryLoaderJs || '';
-  var playerJs        = options.playerJs || '';
+  const dataString     = JSON.stringify(ir);
+  const safeDataString = dataString.replace(/<\/script>/gi, '<\\/script>');
+  const signature      = options.signature != null ? options.signature : '';
+  const publicKeySpki  = options.publicKeySpki != null ? options.publicKeySpki : '';
+  const deviceId       = options.deviceId != null ? options.deviceId : '';
+  const factoryLoaderJs = options.factoryLoaderJs || '';
+  const playerJs        = options.playerJs || '';
 
   return [
     '// factory-loader.js — AGNI_LOADER bootstrap (must run before all other runtime code)',
@@ -51,7 +51,7 @@ function buildLessonScript(ir, options) {
     '// Safety net: hide loading spinner if init stalls beyond 5s.',
     'window.addEventListener(\'load\', function () {',
     '  setTimeout(function () {',
-    '    var loading = document.getElementById(\'loading\');',
+    '    const loading = document.getElementById(\'loading\');',
     '    if (loading) loading.style.display = \'none\';',
     '  }, 5000);',
     '});'

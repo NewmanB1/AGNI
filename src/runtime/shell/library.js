@@ -52,7 +52,7 @@ async function initLibrary() {
             <div class="meta">
                 <span>
                     ${lesson.inferredFeatures.sensors_used.map(s => `<span class="tag">${s}</span>`).join(' ')}
-                    <span style="color:#00e676; margin-left:5px;">${affinityLabel}</span>
+                    <span style="color:#0B5FFF; margin-left:5px; font-weight:bold;">${affinityLabel}</span>
                 </span>
                 <span class="theta-score">θ ${lesson._score.theta}</span>
             </div>

@@ -3,7 +3,6 @@
 // hub-tools/theta.js — AGNI Hub API entry point
 // Business logic for theta scheduling + router wiring to route modules.
 
-const fs   = require('fs');
 const path = require('path');
 const http = require('http');
 
@@ -16,9 +15,9 @@ const { Router } = require('../src/utils/router');
 const ctx = require('./shared');
 
 const {
-  loadJSON, saveJSON, getFileMtime,
-  loadMasterySummary, loadBaseCosts, loadLessonIndex, loadSchedules,
-  loadCurriculum, loadApprovedCatalog,
+  loadJSONAsync, saveJSONAsync, getFileMtimeAsync,
+  loadMasterySummaryAsync, loadBaseCostsAsync, loadLessonIndexAsync, loadSchedulesAsync,
+  loadCurriculumAsync, loadApprovedCatalogAsync,
   lmsService: lmsEngine, log,
   GRAPH_WEIGHTS_LOCAL, GRAPH_WEIGHTS_REGIONAL,
   MASTERY_SUMMARY, SCHEDULES, CURRICULUM_GRAPH, APPROVED_CATALOG,
@@ -49,11 +48,11 @@ const sharedCache = {
 // Theta business logic (pure computation + caching)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function getEffectiveGraphWeights() {
-  const local = loadJSON(GRAPH_WEIGHTS_LOCAL, { edges: [], sample_size: 0, default_weight: 1.0 });
+async function getEffectiveGraphWeights() {
+  const local = await loadJSONAsync(GRAPH_WEIGHTS_LOCAL, { edges: [], sample_size: 0, default_weight: 1.0 });
   const useLocal = local.sample_size >= MIN_LOCAL_SAMPLE_SIZE && local.edges.length >= MIN_LOCAL_EDGE_COUNT;
   if (useLocal) return local;
-  const regional = loadJSON(GRAPH_WEIGHTS_REGIONAL, null);
+  const regional = await loadJSONAsync(GRAPH_WEIGHTS_REGIONAL, null);
   if (regional && regional.edges && regional.edges.length > 0) return regional;
   return local;
 }
@@ -75,13 +74,19 @@ function buildSkillGraph(lessonIndex, curriculum) {
   return graph;
 }
 
-function updateSharedCacheIfNeeded() {
-  const mtimes = [getFileMtime(CURRICULUM_GRAPH), getFileMtime(LESSON_INDEX), getFileMtime(SCHEDULES)];
+async function updateSharedCacheIfNeeded() {
+  const mtimes = await Promise.all([
+    getFileMtimeAsync(CURRICULUM_GRAPH),
+    getFileMtimeAsync(LESSON_INDEX),
+    getFileMtimeAsync(SCHEDULES)
+  ]);
   const maxMtime = Math.max(...mtimes);
   if (maxMtime <= sharedCache.graphMtime) return;
-  const lessonIndex = loadLessonIndex();
-  const curriculum  = loadCurriculum();
-  const schedules   = loadSchedules();
+  const [lessonIndex, curriculum, schedules] = await Promise.all([
+    loadLessonIndexAsync(),
+    loadCurriculumAsync(),
+    loadSchedulesAsync()
+  ]);
   sharedCache.skillGraph = buildSkillGraph(lessonIndex, curriculum);
   const allScheduled = new Set();
   Object.values(schedules.students || {}).flat().forEach(s => allScheduled.add(s));
@@ -208,11 +213,14 @@ function applyRecommendationOverride(orderedLessons, overrideLessonId) {
   return out;
 }
 
-function getLessonsSortedByTheta(pseudoId) {
-  const currentMasteryMtime    = getFileMtime(MASTERY_SUMMARY);
-  const currentScheduleMtime   = getFileMtime(SCHEDULES);
-  const currentCurriculumMtime = getFileMtime(CURRICULUM_GRAPH);
-  const currentCatalogMtime    = fs.existsSync(APPROVED_CATALOG) ? getFileMtime(APPROVED_CATALOG) : 0;
+async function getLessonsSortedByTheta(pseudoId) {
+  const [currentMasteryMtime, currentScheduleMtime, currentCurriculumMtime, currentCatalogMtime] =
+    await Promise.all([
+      getFileMtimeAsync(MASTERY_SUMMARY),
+      getFileMtimeAsync(SCHEDULES),
+      getFileMtimeAsync(CURRICULUM_GRAPH),
+      getFileMtimeAsync(APPROVED_CATALOG)
+    ]);
   if (currentMasteryMtime   > (thetaCache._lastMasteryMtime    || 0) ||
       currentScheduleMtime  > (thetaCache._lastScheduleMtime   || 0) ||
       currentCurriculumMtime > (thetaCache._lastCurriculumMtime || 0) ||
@@ -223,22 +231,58 @@ function getLessonsSortedByTheta(pseudoId) {
     thetaCache._lastCurriculumMtime = currentCurriculumMtime;
     thetaCache._lastCatalogMtime    = currentCatalogMtime;
   }
-  updateSharedCacheIfNeeded();
+  await updateSharedCacheIfNeeded();
   const cached = thetaCache.get(pseudoId);
   if (cached && cached.masteryMtime === currentMasteryMtime) return cached.lessons;
-  const baseCosts = loadBaseCosts();
-  const masterySummary = loadMasterySummary();
-  const graphWeights = getEffectiveGraphWeights();
-  const schedules = loadSchedules();
+  const [baseCosts, masterySummary, graphWeights, schedules, catalog] = await Promise.all([
+    loadBaseCostsAsync(),
+    loadMasterySummaryAsync(),
+    getEffectiveGraphWeights(),
+    loadSchedulesAsync(),
+    loadApprovedCatalogAsync()
+  ]);
   const scheduledSkills = schedules.students?.[pseudoId] || [];
-  let candidates = sharedCache.eligibleLessons || loadLessonIndex();
-  const catalog = loadApprovedCatalog();
+  let candidates = sharedCache.eligibleLessons || await loadLessonIndexAsync();
   if (catalog.lessonIds && catalog.lessonIds.length > 0) {
     const approvedSet = new Set(catalog.lessonIds);
     candidates = candidates.filter(l => approvedSet.has(l.lessonId));
   }
   const skillGraph = sharedCache.skillGraph || {};
   const results = computeLessonOrder(candidates, skillGraph, baseCosts, graphWeights, masterySummary, pseudoId, scheduledSkills);
+
+  // Frustration-to-theta feedback loop: penalize lessons with historically frustrating steps
+  const FRUSTRATION_PENALTY_WEIGHT = 0.10;
+  try {
+    const telData = await ctx.loadTelemetryEventsAsync();
+    const studentEvents = (telData.events || []).filter(e => e.pseudoId === pseudoId);
+    if (studentEvents.length > 0) {
+      const frustrationByLesson = {};
+      for (const ev of studentEvents) {
+        if (ev.frustrationTotal > 0 || (ev.frustrationEvents && ev.frustrationEvents.length > 0)) {
+          const lid = ev.lessonId;
+          if (!frustrationByLesson[lid]) frustrationByLesson[lid] = { total: 0, count: 0 };
+          frustrationByLesson[lid].total += (ev.frustrationTotal || ev.frustrationEvents.length);
+          frustrationByLesson[lid].count++;
+        }
+      }
+      for (const r of results) {
+        const fData = frustrationByLesson[r.lessonId];
+        if (fData && fData.count > 0) {
+          var avgFrustration = fData.total / fData.count;
+          var penalty = Math.min(0.5, avgFrustration * 0.1) * FRUSTRATION_PENALTY_WEIGHT;
+          r.theta = Math.round((r.theta + penalty) * 1000) / 1000;
+          r.frustrationPenalty = Math.round(penalty * 1000) / 1000;
+        }
+      }
+      results.sort((a, b) => {
+        if (a.alreadyMastered !== b.alreadyMastered) return a.alreadyMastered ? 1 : -1;
+        return a.theta - b.theta;
+      });
+    }
+  } catch (e) {
+    log.warn('Frustration feedback loop failed (non-critical)', { error: e.message });
+  }
+
   thetaCache.set(pseudoId, { lessons: results, computedAt: new Date().toISOString(), masteryMtime: currentMasteryMtime });
   return results;
 }
@@ -247,24 +291,30 @@ function getLessonsSortedByTheta(pseudoId) {
 // Lesson index builder
 // ═══════════════════════════════════════════════════════════════════════════
 
-function rebuildLessonIndex() {
+async function rebuildLessonIndex() {
+  const fsp = require('fs').promises;
   const catalogPath = path.join(SERVE_DIR, 'catalog.json');
-  if (!fs.existsSync(catalogPath)) {
-    log.info('No catalog.json found — skipping index rebuild');
-    return;
-  }
-  const catalog = loadJSON(catalogPath, { lessons: [] });
+  try { await fsp.access(catalogPath); }
+  catch { log.info('No catalog.json found — skipping index rebuild'); return; }
+
+  const catalog = await loadJSONAsync(catalogPath, { lessons: [] });
   let sidecarCount = 0;
   let fallbackCount = 0;
-  const index = catalog.lessons.map(entry => {
+  const index = [];
+
+  for (const entry of catalog.lessons) {
     const lessonDir   = path.join(SERVE_DIR, 'lessons', entry.slug);
     const sidecarPath = path.join(lessonDir, 'index-ir.json');
     const htmlPath    = path.join(lessonDir, 'index.html');
-    if (fs.existsSync(sidecarPath)) {
+
+    let hasSidecar = false;
+    try { await fsp.access(sidecarPath); hasSidecar = true; } catch {}
+
+    if (hasSidecar) {
       sidecarCount++;
-      const sidecar = loadJSON(sidecarPath, null);
+      const sidecar = await loadJSONAsync(sidecarPath, null);
       if (sidecar) {
-        return {
+        index.push({
           lessonId: sidecar.identifier || entry.identifier || entry.slug,
           slug: sidecar.slug || entry.slug,
           title: sidecar.title || entry.title || '',
@@ -281,15 +331,20 @@ function rebuildLessonIndex() {
             ? sidecar.ontology.requires.map(r => typeof r === 'string' ? r : r.skill) : []),
           inferredFeatures: sidecar.inferredFeatures || null,
           katexAssets: sidecar.katexAssets || [], factoryManifest: sidecar.factoryManifest || []
-        };
+        });
+        continue;
       }
     }
+
     fallbackCount++;
     log.info('No sidecar — falling back to HTML scrape', { slug: entry.slug });
     let skillsProvided = [];
     let skillsRequired = [];
-    if (fs.existsSync(htmlPath)) {
-      const html = fs.readFileSync(htmlPath, 'utf8');
+
+    let hasHtml = false;
+    try { await fsp.access(htmlPath); hasHtml = true; } catch {}
+    if (hasHtml) {
+      const html = await fsp.readFile(htmlPath, 'utf8');
       const m = html.match(/window\.LESSON_DATA\s*=\s*(\{[\s\S]*?\});/);
       if (m) {
         try {
@@ -299,14 +354,15 @@ function rebuildLessonIndex() {
         } catch (e) { log.warn('HTML scrape parse error', { slug: entry.slug, error: e.message }); }
       }
     }
-    return {
+    index.push({
       lessonId: entry.identifier || entry.slug, slug: entry.slug, title: entry.title || '',
       difficulty: entry.difficulty || 2, language: entry.language || 'en', is_group: !!(entry.is_group),
       compiledAt: null, metadata_source: 'unknown',
       skillsProvided, skillsRequired, inferredFeatures: null, katexAssets: [], factoryManifest: []
-    };
-  });
-  saveJSON(LESSON_INDEX, index);
+    });
+  }
+
+  await saveJSONAsync(LESSON_INDEX, index);
   log.info('Lesson index rebuilt', { total: index.length, sidecar: sidecarCount, htmlFallback: fallbackCount });
   if (lmsEngine.isAvailable && lmsEngine.isAvailable()) {
     const seedEntries = index
@@ -356,6 +412,7 @@ function startApi(port) {
   require('./routes/admin').register(router, ctx);
   require('./routes/chain').register(router, ctx);
   require('./routes/telemetry').register(router, ctx);
+  require('../src/utils/feature-flags').registerRoutes(router, ctx);
 
   const server = http.createServer((req, res) => {
     const requestId = ctx.generateRequestId();
@@ -402,30 +459,32 @@ function startApi(port) {
 
 // ── Startup ──────────────────────────────────────────────────────────────
 if (require.main === module) {
-  rebuildLessonIndex();
-  const server = startApi(PORT);
-  const HUB_TRANSFORM_PATH = path.join(__dirname, '../server/hub-transform.js');
-  try {
-    const hubTransform = require(HUB_TRANSFORM_PATH);
-    hubTransform.attachRoutes(server, { dev: process.env.NODE_ENV !== 'production', deviceId: null, privateKey: null });
-  } catch (err) {
-    log.warn('hub-transform not available — /lessons/, /factories/, /katex/ routes disabled', { error: err.message });
-  }
+  (async () => {
+    await rebuildLessonIndex();
+    const server = startApi(PORT);
+    const HUB_TRANSFORM_PATH = path.join(__dirname, '../server/hub-transform.js');
+    try {
+      const hubTransform = require(HUB_TRANSFORM_PATH);
+      hubTransform.attachRoutes(server, { dev: process.env.NODE_ENV !== 'production', deviceId: null, privateKey: null });
+    } catch (err) {
+      log.warn('hub-transform not available — /lessons/, /factories/, /katex/ routes disabled', { error: err.message });
+    }
 
-  function shutdown(signal) {
-    log.info('Shutting down gracefully', { signal });
-    server.close(() => {
-      log.info('HTTP server closed');
-      if (lmsEngine.isAvailable && lmsEngine.isAvailable()) {
-        try { lmsEngine.persistState(); log.info('LMS state persisted'); }
-        catch (e) { log.error('LMS state save failed', { error: e.message }); }
-      }
-      process.exit(0);
-    });
-    setTimeout(() => { log.error('Forced shutdown after timeout'); process.exit(1); }, 10000);
-  }
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT', () => shutdown('SIGINT'));
+    function shutdown(signal) {
+      log.info('Shutting down gracefully', { signal });
+      server.close(() => {
+        log.info('HTTP server closed');
+        if (lmsEngine.isAvailable && lmsEngine.isAvailable()) {
+          try { lmsEngine.persistState(); log.info('LMS state persisted'); }
+          catch (e) { log.error('LMS state save failed', { error: e.message }); }
+        }
+        process.exit(0);
+      });
+      setTimeout(() => { log.error('Forced shutdown after timeout'); process.exit(1); }, 10000);
+    }
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
+  })();
 }
 
 module.exports = {

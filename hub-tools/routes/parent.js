@@ -55,7 +55,7 @@ function register(router, ctx) {
     if (!link) return sendResponse(403, { error: 'Not linked to this student' });
     const mastery = await loadMasterySummaryAsync();
     const studentMastery = mastery.students?.[pseudoId] || {};
-    const lessons = ctx.getLessonsSortedByTheta(pseudoId);
+    const lessons = await ctx.getLessonsSortedByTheta(pseudoId);
     const overrides = await loadOverridesAsync();
     const override = overrides[pseudoId]?.lessonId || null;
     const completedCount = Object.values(studentMastery).filter(v => typeof v === 'number' && v >= 1.0).length;

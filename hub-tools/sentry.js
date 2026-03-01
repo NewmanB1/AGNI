@@ -7,6 +7,7 @@ const path = require('path');
 const http = require('http');
 const crypto = require('crypto');
 const { createLogger } = require('../src/utils/logger');
+const envConfig = require('../src/utils/env-config');
 
 // ── Hub config bootstrap (F1) ───────────────────────────────────────────────
 const { loadHubConfig } = require('../src/utils/hub-config');
@@ -48,15 +49,22 @@ function appendEvents(events) {
   eventBuffer.push(...events.map(e => JSON.stringify(e)));
 }
 
-// Flush to SD card every 30 seconds asynchronously to prevent write-wear
-setInterval(() => {
-  if (eventBuffer.length === 0) return;
-  const toWrite = eventBuffer.join('\n') + '\n';
-  eventBuffer = []; 
-  fs.appendFile(todayFile(), toWrite, 'utf8', (err) => {
-    if (err) log.error('File write error', { error: err.message });
-  });
-}, 30000);
+let _flushTimer = null;
+function startFlushTimer() {
+  if (_flushTimer) return;
+  _flushTimer = setInterval(() => {
+    if (eventBuffer.length === 0) return;
+    const toWrite = eventBuffer.join('\n') + '\n';
+    const snapshot = eventBuffer.slice();
+    eventBuffer = [];
+    fs.appendFile(todayFile(), toWrite, 'utf8', (err) => {
+      if (err) {
+        log.error('File write error', { error: err.message });
+        eventBuffer.unshift(...snapshot);
+      }
+    });
+  }, 30000);
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 2. HTTP receiver
@@ -81,7 +89,7 @@ function validateEvent(raw) {
 
 function startReceiver() {
   const server = http.createServer((req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Origin', envConfig.corsOrigin || '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -89,8 +97,14 @@ function startReceiver() {
 
     if (req.method === 'POST' && req.url === '/api/telemetry') {
       let body = '';
-      req.on('data', chunk => { body += chunk; if (body.length > 1e6) req.destroy(); });
+      let tooBig = false;
+      req.on('data', chunk => {
+        if (tooBig) return;
+        body += chunk;
+        if (body.length > 1e6) { tooBig = true; req.destroy(); }
+      });
       req.on('end', () => {
+        if (tooBig) { res.writeHead(413); res.end(); return; }
         try {
           const payload = JSON.parse(body);
           const raw = Array.isArray(payload.events) ? payload.events : [payload];
@@ -121,7 +135,7 @@ function startReceiver() {
 // ═══════════════════════════════════════════════════════════════════════════
 // 3. O(1) Memory Graph Engine & Analysis
 // ═══════════════════════════════════════════════════════════════════════════
-const { loadJSON } = require('../src/utils/json-store');
+const { loadJSONAsync, saveJSONAsync } = require('../src/utils/json-store');
 
 function jaccardSimilarity(a, centroid) {
   let intersection = 0, union = 0;
@@ -144,18 +158,18 @@ async function runAnalysis() {
   log.info('Starting O(1) Incremental Analysis');
   _eventsSinceLastAnalysis = 0;
 
-  const state = loadJSON(SENTRY_STATE, { cursors: {} });
-  const mastery = loadJSON(MASTERY_SUMMARY, { schemaVersion: '1.7.0', students: {} });
-  // Contingency tables: { "pseudoId": { "priorSkill\x00targetSkill": { a, b, c, d } } }
-  const contingencies = loadJSON(CONTINGENCY_TABLES, {});
+  const state = await loadJSONAsync(SENTRY_STATE, { cursors: {} });
+  const mastery = await loadJSONAsync(MASTERY_SUMMARY, { schemaVersion: '1.7.0', students: {} });
+  const contingencies = await loadJSONAsync(CONTINGENCY_TABLES, {});
 
-  const files = fs.readdirSync(EVENTS_DIR).filter(f => f.endsWith('.ndjson')).sort();
+  const fsp = fs.promises;
+  const files = (await fsp.readdir(EVENTS_DIR)).filter(f => f.endsWith('.ndjson')).sort();
   let eventsProcessed = 0;
 
   // 1. Process New Events Incrementally
-  files.forEach(file => {
+  for (const file of files) {
     const filePath = path.join(EVENTS_DIR, file);
-    const content = fs.readFileSync(filePath, 'utf8');
+    const content = await fsp.readFile(filePath, 'utf8');
     const lines = content.split('\n');
     let startIdx = state.cursors[file] || 0;
 
@@ -201,14 +215,13 @@ async function runAnalysis() {
         eventsProcessed++;
       } catch (e) { log.warn('Skipping malformed event', { file, error: e.message }); }
     }
-  });
+  }
 
   if (eventsProcessed === 0) { log.info('No new events to process'); return; }
 
-  // Save State
-  fs.writeFileSync(SENTRY_STATE, JSON.stringify(state, null, 2));
-  fs.writeFileSync(MASTERY_SUMMARY, JSON.stringify(mastery, null, 2));
-  fs.writeFileSync(CONTINGENCY_TABLES, JSON.stringify(contingencies)); // Minified to save space
+  await saveJSONAsync(SENTRY_STATE, state);
+  await saveJSONAsync(MASTERY_SUMMARY, mastery);
+  await saveJSONAsync(CONTINGENCY_TABLES, contingencies, { minified: true });
 
   // 2. Discover Cohort using Jaccard Similarity on Current Mastery
   const allSkills = Array.from(new Set(Object.values(mastery.students).flatMap(Object.keys))).sort();
@@ -297,12 +310,13 @@ async function runAnalysis() {
     metadata: { computation_date: now, software_version: SW_VERSION }
   };
 
-  fs.writeFileSync(GRAPH_WEIGHTS, JSON.stringify(gw, null, 2));
+  await saveJSONAsync(GRAPH_WEIGHTS, gw);
   log.info('Analysis complete', { eventsProcessed, edges: edges.length });
 }
 
 if (require.main === module) {
   ensureDirs();
+  startFlushTimer();
   startReceiver();
   runAnalysis().catch(e => log.error('Startup analysis error', { error: e.message }));
   setInterval(() => runAnalysis().catch(e => log.error('Scheduled analysis error', { error: e.message })), MIN_MS_BETWEEN_ANALYSIS);

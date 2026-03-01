@@ -37,8 +37,11 @@
   ]);
 
   function applyPolicy(p) {
+    const targets = Array.isArray(p.utuTargets)
+      ? p.utuTargets.map(t => ({ class: t.class || '', band: t.band || 1, protocol: typeof t.protocol === 'number' ? t.protocol : undefined }))
+      : [];
     policy = {
-      utuTargets: Array.isArray(p.utuTargets) ? p.utuTargets : [],
+      utuTargets: targets,
       allowedTeachingModes: Array.isArray(p.allowedTeachingModes) ? p.allowedTeachingModes : [],
       allowedProtocols: Array.isArray(p.allowedProtocols) ? p.allowedProtocols : [],
       minProtocol: typeof p.minProtocol === 'number' ? p.minProtocol : undefined,
@@ -73,7 +76,7 @@
   });
 
   function addUtuTarget() {
-    policy.utuTargets = [...policy.utuTargets, { class: spineIds[0] || '', band: 1 }];
+    policy.utuTargets = [...policy.utuTargets, { class: spineIds[0] || '', band: 1, protocol: undefined }];
   }
 
   function removeUtuTarget(i) {
@@ -162,7 +165,7 @@
     {/if}
 
     <h2>UTU Targets</h2>
-    <p class="hint">Target Spine IDs and bands for cohort coverage (e.g. MAC-2 Band 4).</p>
+    <p class="hint">Target Spine IDs, bands, and optional protocols for cohort coverage (e.g. MAC-2 Band 4 P2).</p>
     {#each policy.utuTargets as target, i}
       <div class="gov-form-row">
         <select bind:value={target.class} class="spine-picker">
@@ -171,6 +174,12 @@
           {/each}
         </select>
         <input type="number" bind:value={target.band} min="1" max="6" placeholder="Band" class="band-input" />
+        <select bind:value={target.protocol} class="protocol-picker">
+          <option value={undefined}>Any P</option>
+          {#each protocols as p}
+            <option value={p.id}>{p.short}</option>
+          {/each}
+        </select>
         <button type="button" class="btn-small remove-btn" onclick={() => removeUtuTarget(i)}>Remove</button>
       </div>
     {/each}
@@ -246,11 +255,12 @@
 
   .spine-picker { flex: 1; min-width: 120px; }
   .band-input { width: 5rem; flex: none; }
+  .protocol-picker { width: 5.5rem; flex: none; }
 
   .protocol-bounds { flex-wrap: wrap; }
   .hint-inline { font-size: 0.85rem; opacity: 0.7; margin-left: 0.5rem; }
 
-  .remove-btn { background: rgba(255,82,82,0.2); color: #ff5252; }
+  .remove-btn { background: #FFEBEE; color: #B00020; }
 
   .actions {
     margin-top: 2rem;

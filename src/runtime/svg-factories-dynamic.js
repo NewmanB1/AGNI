@@ -34,7 +34,7 @@
     return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
   }
 
-  var PALETTE = ['#4dabf7','#ff6b35','#51cf66','#fcc419','#cc5de8','#ff8787','#20c997','#f06595'];
+  var PALETTE = ['#0B5FFF','#D84315','#1B5E20','#996600','#7B1FA2','#B00020','#00695C','#AD1457'];
 
   // ── Ensure AGNI_SVG exists ──────────────────────────────────────────────────
   if (!global.AGNI_SVG) global.AGNI_SVG = {};
@@ -310,7 +310,7 @@
     for (var gi = 0; gi <= gridCount; gi++) {
       var gv = yMin0 + (yMax0 - yMin0) * (gi / gridCount);
       var gy = MT + CH - (gi / gridCount) * CH;
-      layer.appendChild(el('line', { x1:ML, y1:gy, x2:ML+CW, y2:gy, stroke:'#2a2a4a', 'stroke-width':'1' }));
+      layer.appendChild(el('line', { x1:ML, y1:gy, x2:ML+CW, y2:gy, stroke:'#C0BDB3', 'stroke-width':'1' }));
       layer.appendChild(txt(gv.toFixed(1), { x:ML-6, y:gy, 'font-size':'10', fill:'#8888aa', 'text-anchor':'end' }));
     }
 
@@ -552,7 +552,7 @@
       var labelText = a.label || '';
       if (labelText) {
         var pill = el('rect', { x: midX - 45, y: midY - 12, width: 90, height: 22,
-          rx: 6, fill: '#000000', 'fill-opacity': '0.65' });
+          rx: 2, fill: '#FFFFFF', stroke: '#2D2D2D', 'stroke-width': '1' });
         labelGroup.appendChild(pill);
         var lt = el('text', { x: midX, y: midY + 2, 'text-anchor':'middle', 'dominant-baseline':'central',
           'font-family':'sans-serif', 'font-size':'11', fill: color, 'font-weight':'bold' });
@@ -561,7 +561,7 @@
       }
       if (a.sublabel) {
         var st = el('text', { x: midX, y: midY + 18, 'text-anchor':'middle', 'dominant-baseline':'central',
-          'font-family':'sans-serif', 'font-size':'10', fill:'#ccccee' });
+          'font-family':'sans-serif', 'font-size':'10', fill:'#555' });
         st.textContent = a.sublabel;
         labelGroup.appendChild(st);
       }
@@ -587,7 +587,7 @@
 
     // ── Title ─────────────────────────────────────────────────────────────────
     if (opts.title) {
-      var titleBg = el('rect', { x:0, y:0, width:W, height:28, fill:'#000000', 'fill-opacity':'0.55' });
+      var titleBg = el('rect', { x:0, y:0, width:W, height:28, fill:'#EDEBE3' });
       labelLayer.appendChild(titleBg);
       labelLayer.appendChild(txt(opts.title, { x:W/2, y:14, 'font-size':'14', 'font-weight':'bold' }));
     }
@@ -683,7 +683,7 @@
     var stage = SVG.stage(container, {
       w: opts.w || 400,
       h: opts.h || 300,
-      background: opts.background || '#1a1a2e'
+      background: opts.background || '#F4F1E8'
     });
 
     (opts.layers || []).forEach(function (layerDef) {

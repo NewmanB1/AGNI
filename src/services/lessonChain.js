@@ -17,7 +17,9 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const DATA_DIR = process.env.AGNI_DATA_DIR || path.join(__dirname, '../../data');
+const envConfig = require('../utils/env-config');
+const { loadJSONAsync, saveJSONAsync } = require('../utils/json-store');
+const DATA_DIR = envConfig.dataDir;
 const CHAINS_DIR = path.join(DATA_DIR, 'chains');
 
 // ── Canonical hashing ────────────────────────────────────────────────────────
@@ -122,16 +124,12 @@ function chainPath(slug) {
   return path.join(CHAINS_DIR, slug + '.chain.json');
 }
 
-function loadChain(slug) {
-  const fp = chainPath(slug);
-  if (!fs.existsSync(fp)) return { slug, versions: [] };
-  try { return JSON.parse(fs.readFileSync(fp, 'utf8')); }
-  catch { return { slug, versions: [] }; }
+async function loadChain(slug) {
+  return loadJSONAsync(chainPath(slug), { slug, versions: [] });
 }
 
-function saveChain(slug, chain) {
-  fs.mkdirSync(CHAINS_DIR, { recursive: true });
-  fs.writeFileSync(chainPath(slug), JSON.stringify(chain, null, 2), 'utf8');
+async function saveChain(slug, chain) {
+  await saveJSONAsync(chainPath(slug), chain);
 }
 
 /**
@@ -140,8 +138,8 @@ function saveChain(slug, chain) {
  * @param {{ contentHash: string, parentHash: string|null, creatorId: string, uri: string, timestamp: string }} entry
  * @returns {{ ok: boolean, version: number }}
  */
-function appendVersion(slug, entry) {
-  const chain = loadChain(slug);
+async function appendVersion(slug, entry) {
+  const chain = await loadChain(slug);
   const version = chain.versions.length + 1;
   chain.versions.push({
     version,
@@ -151,15 +149,15 @@ function appendVersion(slug, entry) {
     uri: entry.uri || null,
     timestamp: entry.timestamp || new Date().toISOString()
   });
-  saveChain(slug, chain);
+  await saveChain(slug, chain);
   return { ok: true, version };
 }
 
 /**
  * Get the latest version entry for a slug (or null if no chain exists).
  */
-function getLatestVersion(slug) {
-  const chain = loadChain(slug);
+async function getLatestVersion(slug) {
+  const chain = await loadChain(slug);
   if (!chain.versions.length) return null;
   return chain.versions[chain.versions.length - 1];
 }
@@ -169,8 +167,8 @@ function getLatestVersion(slug) {
  * Checks that each version's parentHash matches the previous version's contentHash.
  * @returns {{ valid: boolean, errors: string[] }}
  */
-function verifyChain(slug) {
-  const chain = loadChain(slug);
+async function verifyChain(slug) {
+  const chain = await loadChain(slug);
   const errors = [];
   for (let i = 0; i < chain.versions.length; i++) {
     const v = chain.versions[i];

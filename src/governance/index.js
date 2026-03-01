@@ -3,10 +3,10 @@
 // Governance module — policy-driven lesson compliance and cohort coverage.
 // Used by hub APIs and portal for governance reporting.
 
-var policy                  = require('./policy');
-var catalog                 = require('./catalog');
-var evaluateLessonCompliance = require('./evaluateLessonCompliance').evaluateLessonCompliance;
-var aggregateCohortCoverage  = require('./aggregateCohortCoverage');
+const policy                  = require('./policy');
+const catalog                 = require('./catalog');
+const evaluateLessonCompliance = require('./evaluateLessonCompliance').evaluateLessonCompliance;
+const aggregateCohortCoverage  = require('./aggregateCohortCoverage');
 
 module.exports = {
   loadPolicy:                policy.loadPolicy,

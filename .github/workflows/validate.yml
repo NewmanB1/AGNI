@@ -7,7 +7,10 @@ on:
       - 'schemas/**'
       - 'fixtures/**'
       - 'src/**'
+      - 'hub-tools/**'
+      - 'server/**'
       - 'tests/**'
+      - 'portal/**'
       - 'package.json'
   pull_request:
     paths:
@@ -15,7 +18,10 @@ on:
       - 'schemas/**'
       - 'fixtures/**'
       - 'src/**'
+      - 'hub-tools/**'
+      - 'server/**'
       - 'tests/**'
+      - 'portal/**'
       - 'package.json'
   workflow_dispatch:
 jobs:
@@ -28,12 +34,19 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: '.nvmrc'
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
       - name: Audit dependencies for vulnerabilities
-        run: npm audit --audit-level=moderate || echo "::warning::npm audit found vulnerabilities"
+        run: npm audit --audit-level=high
+      - name: Lint
+        run: npm run lint
+      - name: Format check
+        run: npx prettier --check "src/**/*.{js,ts}" "hub-tools/**/*.js" "server/**/*.js" "tests/**/*.js"
+      - name: Dead code check (knip)
+        run: npx knip
+        continue-on-error: true
       - name: Validate JSON schemas load (Ajv)
         run: npm run codegen:validate-schemas
       - name: Build LMS engine (TypeScript)
@@ -41,24 +54,35 @@ jobs:
       - name: Run unit tests with coverage
         run: |
           npm run test:coverage 2>&1 | tee test-output.txt
-          # Extract line coverage percentage and enforce minimum threshold
-          LINE_COV=$(grep 'all files' test-output.txt | awk '{print $3}' | head -1)
-          echo "Line coverage: $LINE_COV%"
-          if [ -n "$LINE_COV" ]; then
-            THRESHOLD=85
-            if [ "$(echo "$LINE_COV < $THRESHOLD" | bc -l)" = "1" ]; then
-              echo "FAIL: Line coverage $LINE_COV% is below threshold of $THRESHOLD%"
-              exit 1
-            fi
-            echo "PASS: Line coverage $LINE_COV% meets threshold of $THRESHOLD%"
+          LINE_COV=$(node -e "
+            const fs = require('fs');
+            const out = fs.readFileSync('test-output.txt', 'utf8');
+            const m = out.match(/all files[^\\d]*(\\d+\\.?\\d*)/);
+            if (m) process.stdout.write(m[1]);
+            else process.stdout.write('0');
+          ")
+          echo "Line coverage: ${LINE_COV}%"
+          THRESHOLD=85
+          if [ "$(echo "$LINE_COV < $THRESHOLD" | bc -l)" = "1" ]; then
+            echo "FAIL: Line coverage ${LINE_COV}% is below threshold of ${THRESHOLD}%"
+            exit 1
           fi
+          echo "PASS: Line coverage ${LINE_COV}% meets threshold of ${THRESHOLD}%"
           rm -f test-output.txt
+      - name: Run runtime module tests
+        run: npm run test:runtime
+      - name: Run contract tests
+        run: npm run test:contract
+      - name: Run graph verification tests
+        run: npm run test:graph
+      - name: Check runtime files for ES5 compatibility
+        run: npm run test:es5
       - name: Validate all OLS lesson files
         run: |
-          echo "🔍 Validating all .yaml lessons..."
+          echo "Validating all .yaml lessons..."
           for file in lessons/*.yaml lessons/*.yml; do
             if [ -f "$file" ]; then
-              echo "→ Checking $file"
+              echo "Checking $file"
               node -e "
                 const fs = require('fs');
                 const yaml = require('js-yaml');
@@ -67,16 +91,39 @@ jobs:
               " > temp.json
               npx ajv validate -s schemas/ols.schema.json -d temp.json -c ajv-formats || exit 1
               rm temp.json
-              echo "   ✓ Valid"
             fi
           done
       - name: Validate graph weights fixtures
         run: |
-          echo "🔍 Validating graph weights examples..."
+          echo "Validating graph weights examples..."
           for file in fixtures/*.json; do
             if [ -f "$file" ]; then
-              echo "→ Checking $file"
+              echo "Checking $file"
               npx ajv validate -s schemas/graph_weights.schema.json -d "$file" -c ajv-formats || exit 1
-              echo "   ✓ Valid"
             fi
           done
+  portal:
+    name: Portal (SvelteKit) checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: portal
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: portal/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Svelte type check
+        run: npm run check
+      - name: Lint
+        run: npm run lint
+      - name: Format check
+        run: npm run format:check
+      - name: Build
+        run: npm run build

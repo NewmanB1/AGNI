@@ -15,8 +15,8 @@ describe('FACTORY_LOAD_ORDER', () => {
     FACTORY_LOAD_ORDER.forEach(f => assert.equal(typeof f, 'string'));
   });
 
-  it('starts with sensor-bridge.js', () => {
-    assert.equal(FACTORY_LOAD_ORDER[0], 'sensor-bridge.js');
+  it('starts with a11y.js (core modules load before factories)', () => {
+    assert.equal(FACTORY_LOAD_ORDER[0], 'a11y.js');
   });
 
   it('includes svg-stage.js before factory files', () => {
@@ -69,10 +69,12 @@ describe('getOrderedFactoryFiles', () => {
     assert.ok(files.includes('svg-registry.js'));
   });
 
-  it('includes sensor-bridge.js when requested', () => {
+  it('includes sensor-bridge.js when requested (after core modules)', () => {
     const files = getOrderedFactoryFiles({ specIds: [], hasDynamic: false, hasGeometry: false, includeTableRenderer: false, includeSensorBridge: true });
     assert.ok(files.includes('sensor-bridge.js'));
-    assert.equal(files[0], 'sensor-bridge.js', 'sensor-bridge should be first');
+    const coreIdx = files.indexOf('completion.js');
+    const sensorIdx = files.indexOf('sensor-bridge.js');
+    assert.ok(sensorIdx > coreIdx, 'sensor-bridge should come after core modules');
   });
 
   it('excludes sensor-bridge.js when not requested', () => {

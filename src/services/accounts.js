@@ -18,7 +18,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const DATA_DIR = process.env.AGNI_DATA_DIR || path.join(__dirname, '../../data');
+const envConfig = require('../utils/env-config');
+const DATA_DIR = envConfig.dataDir;
 const CREATORS_PATH = path.join(DATA_DIR, 'creator_accounts.json');
 const STUDENTS_PATH = path.join(DATA_DIR, 'student_accounts.json');
 const SESSIONS_PATH = path.join(DATA_DIR, 'sessions.json');
@@ -30,7 +31,7 @@ const TRANSFER_TTL_MS = 48 * 60 * 60 * 1000; // 48h
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-const { loadJSON: loadJson, saveJSON: saveJson } = require('../utils/json-store');
+const { loadJSONAsync: loadJson, saveJSONAsync: saveJson } = require('../utils/json-store');
 
 function hashPassword(password, salt) {
   return new Promise((resolve, reject) => {
@@ -51,17 +52,54 @@ function randomId(prefix) {
 
 function randomCode(len) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const bytes = crypto.randomBytes(len);
-  return Array.from(bytes).map(b => chars[b % chars.length]).join('');
+  const max = Math.floor(256 / chars.length) * chars.length;
+  let result = '';
+  while (result.length < len) {
+    const bytes = crypto.randomBytes(len - result.length + 4);
+    for (let i = 0; i < bytes.length && result.length < len; i++) {
+      if (bytes[i] < max) result += chars[bytes[i] % chars.length];
+    }
+  }
+  return result;
+}
+
+function sanitizeCreator(creator) {
+  const { passwordHash, salt, ...safe } = creator;
+  return safe;
+}
+
+function buildStudentRecord({ pseudoId, displayName, pinHash, pinSalt, createdBy }) {
+  return {
+    pseudoId,
+    displayName: (displayName || '').trim() || null,
+    pinHash,
+    pinSalt,
+    createdAt: new Date().toISOString(),
+    createdBy: createdBy || null,
+    transferToken: null,
+    transferExpiresAt: null,
+    active: true
+  };
+}
+
+async function findStudentWithData(pseudoId) {
+  const data = await loadStudents();
+  const student = data.students.find(s => s.pseudoId === pseudoId);
+  return { data, student };
+}
+
+function purgeExpiredSessions(sessions) {
+  const now = Date.now();
+  sessions.sessions = sessions.sessions.filter(s => new Date(s.expiresAt).getTime() > now);
 }
 
 // ── Creator accounts ─────────────────────────────────────────────────────────
 
-function loadCreators() {
+async function loadCreators() {
   return loadJson(CREATORS_PATH, { creators: [] });
 }
-function saveCreators(data) {
-  saveJson(CREATORS_PATH, data);
+async function saveCreators(data) {
+  await saveJson(CREATORS_PATH, data);
 }
 
 /**
@@ -75,7 +113,7 @@ async function registerCreator({ name, email, password }) {
   if (!password || password.length < 6) return { error: 'Password must be at least 6 characters' };
 
   const normalEmail = email.trim().toLowerCase();
-  const data = loadCreators();
+  const data = await loadCreators();
   if (data.creators.some(c => c.email === normalEmail)) {
     return { error: 'An account with this email already exists' };
   }
@@ -94,10 +132,9 @@ async function registerCreator({ name, email, password }) {
     lessonsAuthored: []
   };
   data.creators.push(creator);
-  saveCreators(data);
+  await saveCreators(data);
 
-  const { passwordHash: _, salt: __, ...safe } = creator;
-  return { ok: true, creator: safe };
+  return { ok: true, creator: sanitizeCreator(creator) };
 }
 
 /**
@@ -107,7 +144,7 @@ async function registerCreator({ name, email, password }) {
 async function loginCreator({ email, password }) {
   if (!email || !password) return { error: 'Email and password are required' };
   const normalEmail = email.trim().toLowerCase();
-  const data = loadCreators();
+  const data = await loadCreators();
   const creator = data.creators.find(c => c.email === normalEmail);
   if (!creator) return { error: 'Invalid email or password' };
 
@@ -115,24 +152,23 @@ async function loginCreator({ email, password }) {
   if (hash !== creator.passwordHash) return { error: 'Invalid email or password' };
 
   const token = randomHex(TOKEN_BYTES);
-  const sessions = loadJson(SESSIONS_PATH, { sessions: [] });
-  sessions.sessions = sessions.sessions.filter(s => new Date(s.expiresAt).getTime() > Date.now());
+  const sessions = await loadJson(SESSIONS_PATH, { sessions: [] });
+  purgeExpiredSessions(sessions);
   sessions.sessions.push({
     token,
     creatorId: creator.id,
     createdAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + SESSION_TTL_MS).toISOString()
   });
-  saveJson(SESSIONS_PATH, sessions);
+  await saveJson(SESSIONS_PATH, sessions);
 
-  const { passwordHash: _, salt: __, ...safe } = creator;
-  return { ok: true, token, creator: safe };
+  return { ok: true, token, creator: sanitizeCreator(creator) };
 }
 
 /** Validate a session token and return the creator profile (or null). */
-function validateSession(token) {
+async function validateSession(token) {
   if (!token) return null;
-  const sessions = loadJson(SESSIONS_PATH, { sessions: [] });
+  const sessions = await loadJson(SESSIONS_PATH, { sessions: [] });
   const now = Date.now();
   const tokenBuf = Buffer.from(String(token));
   const session = sessions.sessions.find(s => {
@@ -143,65 +179,72 @@ function validateSession(token) {
   });
   if (!session) return null;
 
-  const data = loadCreators();
+  const data = await loadCreators();
   const creator = data.creators.find(c => c.id === session.creatorId);
   if (!creator) return null;
-  const { passwordHash: _, salt: __, ...safe } = creator;
-  return safe;
+  return sanitizeCreator(creator);
+}
+
+/** Clean up expired sessions. Call periodically from hub startup. */
+async function cleanExpiredSessions() {
+  const sessions = await loadJson(SESSIONS_PATH, { sessions: [] });
+  const before = sessions.sessions.length;
+  purgeExpiredSessions(sessions);
+  if (sessions.sessions.length < before) {
+    await saveJson(SESSIONS_PATH, sessions);
+  }
+  return { removed: before - sessions.sessions.length };
 }
 
 /** Destroy a session (logout). */
-function destroySession(token) {
+async function destroySession(token) {
   if (!token) return;
-  const sessions = loadJson(SESSIONS_PATH, { sessions: [] });
+  const sessions = await loadJson(SESSIONS_PATH, { sessions: [] });
   const tokenBuf = Buffer.from(String(token));
   sessions.sessions = sessions.sessions.filter(s => {
     const sBuf = Buffer.from(String(s.token));
     if (tokenBuf.length !== sBuf.length) return true;
     return !crypto.timingSafeEqual(tokenBuf, sBuf);
   });
-  saveJson(SESSIONS_PATH, sessions);
+  await saveJson(SESSIONS_PATH, sessions);
 }
 
 /** Admin: list all creator accounts (without password hashes). */
-function listCreators() {
-  const data = loadCreators();
-  return data.creators.map(c => {
-    const { passwordHash, salt, ...safe } = c;
-    return safe;
-  });
+async function listCreators() {
+  const data = await loadCreators();
+  return data.creators.map(sanitizeCreator);
 }
 
 /** Admin: approve or revoke a creator account. */
-function setCreatorApproval(creatorId, approved) {
-  const data = loadCreators();
+async function setCreatorApproval(creatorId, approved) {
+  const data = await loadCreators();
   const creator = data.creators.find(c => c.id === creatorId);
   if (!creator) return { error: 'Creator not found' };
   creator.approved = !!approved;
-  saveCreators(data);
+  await saveCreators(data);
   return { ok: true, creatorId, approved: creator.approved };
 }
 
 /** Record that a creator authored a lesson (called on save). */
-function recordLessonAuthored(creatorId, slug) {
+async function recordLessonAuthored(creatorId, slug) {
   if (!creatorId) return;
-  const data = loadCreators();
+  const data = await loadCreators();
   const creator = data.creators.find(c => c.id === creatorId);
   if (!creator) return;
   if (!creator.lessonsAuthored) creator.lessonsAuthored = [];
   if (!creator.lessonsAuthored.includes(slug)) {
     creator.lessonsAuthored.push(slug);
-    saveCreators(data);
+    await saveCreators(data);
   }
 }
 
 // ── Student accounts ─────────────────────────────────────────────────────────
 
-function loadStudents() {
+async function loadStudents() {
   return loadJson(STUDENTS_PATH, { students: [] });
 }
-function saveStudents(data) {
-  saveJson(STUDENTS_PATH, data);
+async function saveStudents(data) {
+  await saveJson(STUDENTS_PATH, data);
 }
 
 function generatePseudoId() {
@@ -231,22 +274,12 @@ async function verifyPinHash(pin, hash, salt) {
  * No email or ID required — just an optional display name and PIN.
  */
 async function createStudent({ displayName, pin, createdBy } = {}) {
-  const data = loadStudents();
+  const data = await loadStudents();
   const pseudoId = generatePseudoId();
   const { hash, salt } = await hashPin(pin);
-  const student = {
-    pseudoId,
-    displayName: (displayName || '').trim() || null,
-    pinHash: hash,
-    pinSalt: salt,
-    createdAt: new Date().toISOString(),
-    createdBy: createdBy || null,
-    transferToken: null,
-    transferExpiresAt: null,
-    active: true
-  };
+  const student = buildStudentRecord({ pseudoId, displayName, pinHash: hash, pinSalt: salt, createdBy });
   data.students.push(student);
-  saveStudents(data);
+  await saveStudents(data);
   return { ok: true, student };
 }
 
@@ -258,45 +291,34 @@ async function createStudentsBulk({ names, pin, createdBy } = {}) {
   if (!Array.isArray(names) || names.length === 0) {
     return { error: 'At least one name is required' };
   }
-  const data = loadStudents();
+  const data = await loadStudents();
+  const { hash, salt } = await hashPin(pin);
   const created = [];
   for (const name of names) {
     const pseudoId = generatePseudoId();
-    const { hash, salt } = await hashPin(pin);
-    const student = {
-      pseudoId,
-      displayName: (name || '').trim() || null,
-      pinHash: hash,
-      pinSalt: salt,
-      createdAt: new Date().toISOString(),
-      createdBy: createdBy || null,
-      transferToken: null,
-      transferExpiresAt: null,
-      active: true
-    };
+    const student = buildStudentRecord({ pseudoId, displayName: name, pinHash: hash, pinSalt: salt, createdBy });
     data.students.push(student);
     created.push(student);
   }
-  saveStudents(data);
+  await saveStudents(data);
   return { ok: true, students: created, count: created.length };
 }
 
 /** List all student accounts. */
-function listStudents() {
-  const data = loadStudents();
+async function listStudents() {
+  const data = await loadStudents();
   return data.students;
 }
 
 /** Get a single student by pseudoId. */
-function getStudent(pseudoId) {
-  const data = loadStudents();
-  return data.students.find(s => s.pseudoId === pseudoId) || null;
+async function getStudent(pseudoId) {
+  const { student } = await findStudentWithData(pseudoId);
+  return student || null;
 }
 
 /** Update a student's display name or PIN. */
 async function updateStudent(pseudoId, updates) {
-  const data = loadStudents();
-  const student = data.students.find(s => s.pseudoId === pseudoId);
+  const { data, student } = await findStudentWithData(pseudoId);
   if (!student) return { error: 'Student not found' };
   if (updates.displayName !== undefined) student.displayName = updates.displayName;
   if (updates.pin !== undefined) {
@@ -306,7 +328,7 @@ async function updateStudent(pseudoId, updates) {
     delete student.pin;
   }
   if (updates.active !== undefined) student.active = !!updates.active;
-  saveStudents(data);
+  await saveStudents(data);
   return { ok: true, student };
 }
 
@@ -314,15 +336,14 @@ async function updateStudent(pseudoId, updates) {
  * Generate a one-time transfer token so a student can move to a new device.
  * The token encodes the pseudoId and can be entered on the new phone.
  */
-function generateTransferToken(pseudoId) {
-  const data = loadStudents();
-  const student = data.students.find(s => s.pseudoId === pseudoId);
+async function generateTransferToken(pseudoId) {
+  const { data, student } = await findStudentWithData(pseudoId);
   if (!student) return { error: 'Student not found' };
 
   const token = randomCode(8);
   student.transferToken = token;
   student.transferExpiresAt = new Date(Date.now() + TRANSFER_TTL_MS).toISOString();
-  saveStudents(data);
+  await saveStudents(data);
   return { ok: true, pseudoId, token, expiresAt: student.transferExpiresAt };
 }
 
@@ -330,10 +351,10 @@ function generateTransferToken(pseudoId) {
  * Claim a transfer token from a new device.
  * Returns the pseudoId so the client can set it in localStorage.
  */
-function claimTransferToken(token) {
+async function claimTransferToken(token) {
   if (!token || !token.trim()) return { error: 'Token is required' };
   const code = token.trim().toUpperCase();
-  const data = loadStudents();
+  const data = await loadStudents();
   const student = data.students.find(s =>
     s.transferToken === code &&
     s.transferExpiresAt &&
@@ -343,7 +364,7 @@ function claimTransferToken(token) {
 
   student.transferToken = null;
   student.transferExpiresAt = null;
-  saveStudents(data);
+  await saveStudents(data);
   return { ok: true, pseudoId: student.pseudoId, displayName: student.displayName };
 }
 
@@ -355,8 +376,7 @@ function claimTransferToken(token) {
  *   3. plaintext (pin field) — legacy v0
  */
 async function verifyStudentPin(pseudoId, pin) {
-  const data = loadStudents();
-  const student = data.students.find(s => s.pseudoId === pseudoId);
+  const { data, student } = await findStudentWithData(pseudoId);
   if (!student) return { error: 'Student not found' };
 
   if (!student.pinHash && !student.pin) return { ok: true, verified: true };
@@ -369,9 +389,6 @@ async function verifyStudentPin(pseudoId, pin) {
   } else if (student.pinHash) {
     verified = hashPinLegacy(pin) === student.pinHash;
     needsMigration = verified;
-  } else if (student.pin) {
-    verified = String(student.pin) === String(pin);
-    needsMigration = verified;
   }
 
   if (!verified) return { ok: false, verified: false };
@@ -381,10 +398,32 @@ async function verifyStudentPin(pseudoId, pin) {
     student.pinHash = hash;
     student.pinSalt = salt;
     delete student.pin;
-    saveStudents(data);
+    await saveStudents(data);
   }
 
   return { ok: true, verified: true };
+}
+
+/**
+ * Migrate all legacy plaintext PINs to scrypt hashes.
+ * Call once at hub startup; idempotent.
+ */
+async function migrateLegacyPins() {
+  const data = await loadStudents();
+  let migrated = 0;
+  for (const student of data.students) {
+    if (student.pin && !student.pinHash) {
+      const { hash, salt } = await hashPin(student.pin);
+      student.pinHash = hash;
+      student.pinSalt = salt;
+      delete student.pin;
+      migrated++;
+    }
+  }
+  if (migrated > 0) {
+    await saveStudents(data);
+  }
+  return { migrated };
 }
 
 module.exports = {
@@ -392,6 +431,7 @@ module.exports = {
   loginCreator,
   validateSession,
   destroySession,
+  cleanExpiredSessions,
   listCreators,
   setCreatorApproval,
   recordLessonAuthored,
@@ -402,5 +442,6 @@ module.exports = {
   updateStudent,
   generateTransferToken,
   claimTransferToken,
-  verifyStudentPin
+  verifyStudentPin,
+  migrateLegacyPins
 };

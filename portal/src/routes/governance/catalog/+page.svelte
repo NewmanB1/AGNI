@@ -199,7 +199,7 @@
           <li>
             <div class="lesson-main">
               <span class="compliance-dot" class:dot-ok={compliance.status === 'ok'} class:dot-fail={compliance.status === 'fail'} class:dot-unknown={compliance.status === 'unknown'}
-                    title={compliance.status === 'ok' ? 'Compliant' : compliance.issues.join(', ')}></span>
+                    title={compliance.status === 'ok' ? 'Compliant' : compliance.issues.map(i => typeof i === 'string' ? i : i.message).join(', ')}></span>
               <div class="lesson-info">
                 <span class="id">{id}</span>
                 {#if info}

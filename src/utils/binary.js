@@ -20,7 +20,7 @@ function base64ToBytes(b64) {
  * @returns {string}
  */
 function bytesToBase64(bytes) {
-  var buf = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
+  const buf = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
   return buf.toString('base64');
 }
 
@@ -39,7 +39,7 @@ function utf8ToBytes(str) {
  * @returns {string}
  */
 function bytesToUtf8(bytes) {
-  var buf = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
+  const buf = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
   return buf.toString('utf8');
 }
 

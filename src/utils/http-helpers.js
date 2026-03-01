@@ -72,7 +72,9 @@ function handleJsonBody(req, sendResponse, handler) {
  * @returns {Function} sendResponse(statusCode, payload)
  */
 function createResponseSender(req, res, opts) {
-  const corsOrigin = (opts && opts.corsOrigin) || process.env.AGNI_CORS_ORIGIN || 'null';
+  let _defaultCors;
+  try { _defaultCors = require('./env-config').corsOrigin; } catch (_) { _defaultCors = 'null'; }
+  const corsOrigin = (opts && opts.corsOrigin) || _defaultCors;
   const requestId = (opts && opts.requestId) || null;
 
   return function sendResponse(statusCode, payload) {

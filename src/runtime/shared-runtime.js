@@ -330,7 +330,36 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 10. Assemble and expose AGNI_SHARED
+  // 10. DOM & formatting helpers
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Create an element, set class/text, optionally append to parent. ES5-safe. */
+  function el(tag, cls, text, parent) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text) node.textContent = text;
+    if (parent) parent.appendChild(node);
+    return node;
+  }
+
+  /** Parse ISO 8601 duration (e.g. PT2M, PT30S) to milliseconds. */
+  function parseDurationMs(str) {
+    if (!str || typeof str !== 'string') return 0;
+    var m = str.match(/^P(?:T(?=(\d)))?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
+    if (!m) return 0;
+    var h = parseInt(m[2], 10) || 0;
+    var min = parseInt(m[3], 10) || 0;
+    var s = parseInt(m[4], 10) || 0;
+    return (h * 3600 + min * 60 + s) * 1000;
+  }
+
+  /** Format "N attempt(s) remaining" with consistent pluralisation. */
+  function formatRemainingAttempts(prefix, remaining) {
+    return prefix + ' (' + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining)';
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 11. Assemble and expose AGNI_SHARED
   // ═══════════════════════════════════════════════════════════════════════════
 
   global.AGNI_SHARED = {
@@ -373,7 +402,12 @@
 
     // ── Encoding (Phase 4; from binary-utils.js when present) ───────────────────
     base64ToBytes: base64ToBytes,
-    concatBytes:   concatBytes
+    concatBytes:   concatBytes,
+
+    // ── DOM & formatting helpers ─────────────────────────────────────────────
+    el:                       el,
+    parseDurationMs:          parseDurationMs,
+    formatRemainingAttempts:  formatRemainingAttempts
   };
 
   // ── Self-register with factory-loader if present ────────────────────────────

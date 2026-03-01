@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Contributing Guide
+    url: https://github.com/NewmanB1/AGNI/blob/main/CONTRIBUTING.md
+    about: New to AGNI? Start here for setup instructions and contribution guidelines.
+  - name: Fork & Translate Tutorial
+    url: https://github.com/NewmanB1/AGNI/blob/main/docs/tutorials/fork-and-translate-lesson.md
+    about: Step-by-step guide to forking and translating a lesson.

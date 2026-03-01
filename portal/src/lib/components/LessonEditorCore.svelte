@@ -2,6 +2,7 @@
   import { hubApiStore } from '$lib/api';
   import { goto } from '$app/navigation';
   import { onMount, onDestroy } from 'svelte';
+  import yaml from 'js-yaml';
   import StepEditor from './StepEditor.svelte';
   import PreviewPanel from './PreviewPanel.svelte';
   import LivePreview from './LivePreview.svelte';
@@ -426,14 +427,25 @@
 
   // ─── YAML import/export ──────────────────────────────────────────────────────
 
-  function exportYaml() {
+  let exportFormat = $state('yaml');
+
+  function exportLesson() {
     const payload = buildPayload();
-    const yamlStr = JSON.stringify(payload, null, 2);
-    const blob = new Blob([yamlStr], { type: 'application/json' });
+    let content, mimeType, extension;
+    if (exportFormat === 'yaml') {
+      content = yaml.dump(payload, { lineWidth: 120, noRefs: true, sortKeys: false });
+      mimeType = 'text/yaml';
+      extension = 'yaml';
+    } else {
+      content = JSON.stringify(payload, null, 2);
+      mimeType = 'application/json';
+      extension = 'json';
+    }
+    const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${lesson.identifier || lesson.title || 'lesson'}.json`;
+    a.download = `${lesson.identifier || lesson.title || 'lesson'}.${extension}`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -448,10 +460,13 @@
     if (!trimmed) { importError = 'Paste JSON or YAML content'; return; }
     try {
       let parsed;
-      if (trimmed.startsWith('{')) {
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
         parsed = JSON.parse(trimmed);
       } else {
-        importError = 'Only JSON import is supported in the browser. Paste the JSON payload.';
+        parsed = yaml.load(trimmed, { schema: yaml.JSON_SCHEMA });
+      }
+      if (!parsed || typeof parsed !== 'object') {
+        importError = 'Parsed content is not a valid lesson object.';
         return;
       }
       populateFromData(parsed);
@@ -595,6 +610,54 @@
     loading = false;
   });
 
+  const LESSON_TEMPLATES = [
+    { name: 'Sensor Lab', desc: 'Hands-on activity with accelerometer/thermometer', icon: '🔬',
+      lesson: { title: 'Sensor Lab', description: 'A hands-on sensor activity.', difficulty: 3, teaching_mode: 'constructivist',
+        steps: [
+          { id: 'step_1', type: 'instruction', content: 'In this activity you will use your phone\u2019s sensors to explore a physical concept.' },
+          { id: 'step_2', type: 'hardware_trigger', content: 'Hold the device steady, then perform the activity.', sensor: 'accelerometer', threshold: '', feedback: '' },
+          { id: 'step_3', type: 'instruction', content: 'Reflect on what you observed. How does the sensor reading relate to the concept?' },
+          { id: 'step_4', type: 'quiz', content: 'Quick check \u2014 what did you observe?', answer_options: ['Option A', 'Option B', 'Option C'], correct_index: 0, feedback: '' },
+          { id: 'step_5', type: 'completion', content: 'Great work! You\u2019ve completed the sensor lab.' }
+        ] } },
+    { name: 'Multiple Choice Quiz', desc: 'Assessment with formative feedback questions', icon: '📝',
+      lesson: { title: 'Quiz', description: 'A formative assessment quiz.', difficulty: 2, teaching_mode: 'didactic',
+        steps: [
+          { id: 'step_1', type: 'instruction', content: 'Read the following passage carefully.' },
+          { id: 'step_2', type: 'quiz', content: 'Question 1: ...', answer_options: ['A', 'B', 'C', 'D'], correct_index: 0, feedback: '' },
+          { id: 'step_3', type: 'quiz', content: 'Question 2: ...', answer_options: ['A', 'B', 'C', 'D'], correct_index: 0, feedback: '' },
+          { id: 'step_4', type: 'completion', content: 'Quiz complete!' }
+        ] } },
+    { name: 'Reading Comprehension', desc: 'Text passage with reflection and questions', icon: '📖',
+      lesson: { title: 'Reading Comprehension', description: 'A reading comprehension exercise.', difficulty: 2, teaching_mode: 'narrative',
+        steps: [
+          { id: 'step_1', type: 'instruction', content: '## Reading Passage\n\nReplace this with the reading material.' },
+          { id: 'step_2', type: 'instruction', content: 'Take a moment to think about the key ideas in the passage.' },
+          { id: 'step_3', type: 'fill_blank', content: 'Complete the sentence: The main idea is ___.', blanks: [{ answer: '', accept: [] }] },
+          { id: 'step_4', type: 'quiz', content: 'Which best summarizes the passage?', answer_options: ['Option A', 'Option B', 'Option C'], correct_index: 0, feedback: '' },
+          { id: 'step_5', type: 'completion', content: 'Well done!' }
+        ] } },
+    { name: 'Mixed Lesson', desc: 'Instruction, quiz, matching, and ordering', icon: '🎯',
+      lesson: { title: 'Mixed Lesson', description: 'A comprehensive lesson with varied activities.', difficulty: 3, teaching_mode: 'guided_discovery',
+        steps: [
+          { id: 'step_1', type: 'instruction', content: 'Welcome! This lesson covers multiple activity types.' },
+          { id: 'step_2', type: 'quiz', content: 'Quick check question.', answer_options: ['A', 'B', 'C'], correct_index: 0, feedback: '' },
+          { id: 'step_3', type: 'matching', content: 'Match the terms to their definitions.', pairs: [{ left: 'Term 1', right: 'Definition 1' }, { left: 'Term 2', right: 'Definition 2' }] },
+          { id: 'step_4', type: 'ordering', content: 'Put these steps in order.', items: ['First', 'Second', 'Third'], correct_order: [0, 1, 2] },
+          { id: 'step_5', type: 'completion', content: 'Lesson complete!' }
+        ] } }
+  ];
+
+  function applyLessonTemplate(tpl) {
+    lesson.title = tpl.lesson.title;
+    lesson.description = tpl.lesson.description;
+    lesson.difficulty = tpl.lesson.difficulty;
+    lesson.teaching_mode = tpl.lesson.teaching_mode || '';
+    lesson.steps = JSON.parse(JSON.stringify(tpl.lesson.steps));
+    activeEditorTab = 'steps';
+    markDirty();
+  }
+
   onDestroy(() => {
     if (draftTimer) clearTimeout(draftTimer);
     if (autoValidateTimer) clearTimeout(autoValidateTimer);
@@ -629,6 +692,22 @@
         {/each}
       </div>
     </details>
+  {/if}
+
+  {#if mode === 'new' && lesson.steps.length === 0 && !draftRestored}
+    <div class="card template-library">
+      <h3>Start from a template</h3>
+      <div class="template-grid">
+        {#each LESSON_TEMPLATES as tpl}
+          <button class="template-card" onclick={() => applyLessonTemplate(tpl)}>
+            <span class="template-icon">{tpl.icon}</span>
+            <span class="template-name">{tpl.name}</span>
+            <span class="template-desc">{tpl.desc}</span>
+          </button>
+        {/each}
+      </div>
+      <p class="template-hint">Or start from scratch with the editor below.</p>
+    </div>
   {/if}
 
   <div class="card wizard">
@@ -891,8 +970,12 @@
       {/if}
     </div>
     <div class="actions secondary-actions">
-      <button class="secondary" onclick={exportYaml} title="Download lesson as JSON">Export JSON</button>
-      <button class="secondary" onclick={() => showImport = !showImport}>Import</button>
+      <button class="secondary" onclick={exportLesson} title="Download lesson as {exportFormat.toUpperCase()}">Export {exportFormat.toUpperCase()}</button>
+      <select class="export-format" bind:value={exportFormat}>
+        <option value="yaml">YAML</option>
+        <option value="json">JSON</option>
+      </select>
+      <button class="secondary" onclick={() => showImport = !showImport}>Import JSON / YAML</button>
       {#if mode === 'edit' && slug}
         <button class="danger-btn" onclick={deleteCurrentLesson}>Delete lesson</button>
       {/if}
@@ -900,7 +983,7 @@
 
     {#if showImport}
       <div class="import-box">
-        <textarea bind:value={importText} rows="5" placeholder="Paste lesson JSON here…"></textarea>
+        <textarea bind:value={importText} rows="5" placeholder="Paste lesson JSON or YAML here…"></textarea>
         {#if importError}
           <span class="field-error">{importError}</span>
         {/if}
@@ -1052,6 +1135,21 @@
     font-weight: 600; font-size: 0.95rem;
   }
 
+  .template-library { margin-bottom: 1rem; }
+  .template-library h3 { margin: 0 0 0.75rem; font-size: 1.1rem; }
+  .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; }
+  .template-card {
+    display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
+    padding: 1rem; background: rgba(31,43,78,0.6); border: 1px solid var(--border);
+    border-radius: 8px; cursor: pointer; text-align: center;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .template-card:hover { border-color: var(--accent); background: rgba(0,230,118,0.06); }
+  .template-icon { font-size: 2rem; }
+  .template-name { font-weight: 700; font-size: 0.95rem; }
+  .template-desc { font-size: 0.8rem; opacity: 0.7; }
+  .template-hint { font-size: 0.85rem; opacity: 0.6; margin-top: 0.5rem; font-style: italic; }
+
   .lang-custom-row { display: flex; gap: 0.4rem; align-items: center; }
   .lang-custom-row select,
   .lang-custom-row input[type="text"] { flex: 1; }
@@ -1070,6 +1168,10 @@
   .field-hint { display: block; font-size: 0.8rem; opacity: 0.55; margin-top: 0.15rem; }
 
   .secondary-actions { margin-top: 0.5rem; gap: 0.5rem; }
+  .export-format {
+    background: #2a2a4a; color: var(--text); border: 1px solid var(--border);
+    padding: 0.4rem 0.5rem; border-radius: 6px; font-size: 0.85rem;
+  }
 
   .danger-btn {
     background: rgba(255,107,107,0.12); color: #ff6b6b; border: 1px solid rgba(255,107,107,0.3);

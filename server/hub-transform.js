@@ -38,27 +38,31 @@
 
 'use strict';
 
-var fs      = require('fs');
-var path    = require('path');
-var zlib    = require('zlib');
-var yaml    = require('js-yaml');
+const fs      = require('fs');
+const path    = require('path');
+const zlib    = require('zlib');
+const yaml    = require('js-yaml');
 
-var compiler           = require('../src/compiler');
-var buildLessonIR      = compiler.buildLessonIR;
-var buildLessonSidecar = compiler.buildLessonSidecar;
-var buildKatexCss      = require('../src/utils/katex-css-builder');
-var lessonSchema       = require('../src/services/lessonSchema');
-var signContent        = require('../src/utils/crypto').signContent;
-var generateNonce      = require('../src/utils/csp').generateNonce;
-var buildCspMeta       = require('../src/utils/csp').buildCspMeta;
-var lessonAssembly     = require('../src/services/lessonAssembly');
+const { createLogger }   = require('../src/utils/logger');
+const log                = createLogger('hub-transform');
+const compiler           = require('../src/compiler');
+const buildLessonIR      = compiler.buildLessonIR;
+const buildLessonSidecar = compiler.buildLessonSidecar;
+const buildKatexCss      = require('../src/utils/katex-css-builder');
+const lessonSchema       = require('../src/services/lessonSchema');
+const signContent        = require('../src/utils/crypto').signContent;
+const generateNonce      = require('../src/utils/csp').generateNonce;
+const buildCspMeta       = require('../src/utils/csp').buildCspMeta;
+const lessonAssembly     = require('../src/services/lessonAssembly');
+const _escapeHtml        = require('../src/utils/io').escapeHtml;
 
-// ── Paths ─────────────────────────────────────────────────────────────────────
-var YAML_DIR      = process.env.AGNI_YAML_DIR    || path.join(__dirname, '../data/yaml');
-var FACTORY_DIR   = process.env.AGNI_FACTORY_DIR || path.join(__dirname, '../src/runtime');
-var KATEX_DIR     = process.env.AGNI_KATEX_DIR   || path.join(__dirname, '../data/katex-css');
-var DATA_DIR      = process.env.AGNI_DATA_DIR     || path.join(__dirname, '../data');
-var SERVE_PORT    = parseInt(process.env.AGNI_SERVE_PORT || '8083', 10);
+// ── Paths (from centralized config) ──────────────────────────────────────────
+const envConfig     = require('../src/utils/env-config');
+const YAML_DIR      = envConfig.yamlDir;
+const FACTORY_DIR   = process.env.AGNI_FACTORY_DIR || path.join(__dirname, '../src/runtime');
+const KATEX_DIR     = process.env.AGNI_KATEX_DIR   || path.join(__dirname, '../data/katex-css');
+const DATA_DIR      = envConfig.dataDir;
+const SERVE_PORT    = envConfig.servePort;
 
 // ── In-memory lesson cache ────────────────────────────────────────────────────
 // { slug: { html: string, sidecar: object, mtime: number, lastAccessed: number } }
@@ -68,9 +72,9 @@ var SERVE_PORT    = parseInt(process.env.AGNI_SERVE_PORT || '8083', 10);
 // lastAccessed timestamp is removed before the new one is inserted.
 // Each compiled lesson HTML is roughly 50–500KB. At 100 entries that
 // is 5–50MB worst case, acceptable on a Pi with 1–2GB RAM.
-var _lessonCache   = {};
-var _cacheSize     = 0;
-var MAX_CACHE_ENTRIES = parseInt(process.env.AGNI_CACHE_MAX || '100', 10);
+const _lessonCache   = {};
+let _cacheSize       = 0;
+const MAX_CACHE_ENTRIES = parseInt(process.env.AGNI_CACHE_MAX || '100', 10);
 
 // ── Per-slug in-flight compilation guard ─────────────────────────────────────
 // Prevents concurrent requests for the same slug from each triggering a
@@ -78,14 +82,20 @@ var MAX_CACHE_ENTRIES = parseInt(process.env.AGNI_CACHE_MAX || '100', 10);
 // request the same lesson simultaneously (e.g. class starting together).
 // When a compilation is already in flight for a slug, subsequent requests
 // await the same Promise rather than starting a new one.
-var _compilingNow  = {};
+const _compilingNow  = {};
 
 // ── Allowed factory files ─────────────────────────────────────────────────────
 // Whitelist prevents directory traversal. Only files in this set can be
 // served from /factories/. All are ES5-compatible IIFE scripts.
-var ALLOWED_FACTORY_FILES = new Set([
+const ALLOWED_FACTORY_FILES = new Set([
   'binary-utils.js',
   'shared-runtime.js',
+  'a11y.js',
+  'gate-renderer.js',
+  'integrity.js',
+  'checkpoint.js',
+  'frustration.js',
+  'completion.js',
   'sensor-bridge.js',
   'svg-stage.js',
   'svg-factories.js',
@@ -97,7 +107,7 @@ var ALLOWED_FACTORY_FILES = new Set([
 ]);
 
 // ── Allowed KaTeX CSS files ───────────────────────────────────────────────────
-var ALLOWED_KATEX_FILES = new Set([
+const ALLOWED_KATEX_FILES = new Set([
   'katex-core.css',
   'katex-fonts.css',
   'katex-symbols-algebra.css',
@@ -108,7 +118,7 @@ var ALLOWED_KATEX_FILES = new Set([
 ]);
 
 // ── MIME types ────────────────────────────────────────────────────────────────
-var MIME = {
+const MIME = {
   '.js':   'application/javascript; charset=utf-8',
   '.css':  'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
@@ -132,27 +142,27 @@ function loadYaml(slug) {
   // for subdirectory paths. Reject anything that could be a traversal attempt.
   if (!/^[a-zA-Z0-9_\-/]+$/.test(slug)) return null;
 
-  var candidates = [
+  const candidates = [
     path.join(YAML_DIR, slug + '.yaml'),
     path.join(YAML_DIR, slug, 'index.yaml')
   ];
 
-  for (var i = 0; i < candidates.length; i++) {
-    var yamlPath = candidates[i];
+  for (let i = 0; i < candidates.length; i++) {
+    const yamlPath = candidates[i];
     if (!fs.existsSync(yamlPath)) continue;
 
     // Resolve to absolute path and confirm it's inside YAML_DIR
-    var resolved = path.resolve(yamlPath);
-    var base     = path.resolve(YAML_DIR);
+    const resolved = path.resolve(yamlPath);
+    const base     = path.resolve(YAML_DIR);
     if (!resolved.startsWith(base + path.sep)) return null;  // traversal guard
 
     try {
-      var raw        = fs.readFileSync(yamlPath, 'utf8');
-      var lessonData = yaml.load(raw);
-      var mtime      = fs.statSync(yamlPath).mtimeMs;
+      const raw        = fs.readFileSync(yamlPath, 'utf8');
+      const lessonData = yaml.load(raw);
+      const mtime      = fs.statSync(yamlPath).mtimeMs;
       return { lessonData: lessonData, yamlPath: yamlPath, mtime: mtime };
     } catch (err) {
-      console.error('[HUB-TRANSFORM] YAML parse error for', slug, ':', err.message);
+      log.error('YAML parse error', { slug, error: err.message });
       return null;
     }
   }
@@ -181,23 +191,23 @@ function loadYaml(slug) {
  * @returns {Promise<{ html: string, sidecar: object } | null>}
  */
 async function compileLesson(slug, options) {
-  var loaded = loadYaml(slug);
+  const loaded = loadYaml(slug);
   if (!loaded) return null;
 
-  var cached = _lessonCache[slug];
+  const cached = _lessonCache[slug];
   if (cached && cached.mtime === loaded.mtime) {
     cached.lastAccessed = Date.now();
-    if (options.dev) console.log('[HUB-TRANSFORM] Cache hit:', slug);
+    if (options.dev) log.debug('Cache hit', { slug });
     return { html: cached.html, sidecar: cached.sidecar };
   }
 
   // In-flight guard: return existing compilation Promise if one is running
   if (_compilingNow[slug]) {
-    if (options.dev) console.log('[HUB-TRANSFORM] Awaiting in-flight compile:', slug);
+    if (options.dev) log.debug('Awaiting in-flight compile', { slug });
     return _compilingNow[slug];
   }
 
-  console.log('[HUB-TRANSFORM] Compiling:', slug);
+  log.info('Compiling', { slug });
   _compilingNow[slug] = _doCompile(slug, loaded, options).finally(function () {
     delete _compilingNow[slug];
   });
@@ -211,18 +221,18 @@ async function compileLesson(slug, options) {
  */
 async function _doCompile(slug, loaded, options) {
 
-  var validation = lessonSchema.validateLessonData(loaded.lessonData);
+  const validation = lessonSchema.validateLessonData(loaded.lessonData);
   if (!validation.valid) {
     throw new Error('Lesson validation failed: ' + validation.errors.join('; '));
   }
 
-  var ir      = await buildLessonIR(loaded.lessonData, options);
-  var sidecar = buildLessonSidecar(ir);
+  const ir      = await buildLessonIR(loaded.lessonData, options);
+  const sidecar = buildLessonSidecar(ir);
 
   // Build factory dependency list (same logic as html.js Step 6)
-  var RUNTIME_VERSION = '1.9.0';
-  var factoryDeps     = [{ file: 'binary-utils.js', version: RUNTIME_VERSION }, { file: 'shared-runtime.js', version: RUNTIME_VERSION }];
-  var manifest        = (ir.inferredFeatures && ir.inferredFeatures.factoryManifest) || [];
+  const RUNTIME_VERSION = '1.9.0';
+  const factoryDeps     = [{ file: 'binary-utils.js', version: RUNTIME_VERSION }, { file: 'shared-runtime.js', version: RUNTIME_VERSION }];
+  const manifest        = (ir.inferredFeatures && ir.inferredFeatures.factoryManifest) || [];
   manifest.forEach(function (filename) {
     factoryDeps.push({ file: filename, version: RUNTIME_VERSION });
   });
@@ -235,15 +245,15 @@ async function _doCompile(slug, loaded, options) {
   }
 
   // Read runtime files
-  var runtimeDir      = path.join(__dirname, '../src/runtime');
-  var factoryLoaderJs = fs.readFileSync(path.join(runtimeDir, 'factory-loader.js'), 'utf8');
-  var playerJs        = fs.readFileSync(path.join(runtimeDir, 'player.js'),         'utf8');
-  var styles          = fs.readFileSync(path.join(runtimeDir, 'style.css'),          'utf8');
+  const runtimeDir      = path.join(__dirname, '../src/runtime');
+  const factoryLoaderJs = fs.readFileSync(path.join(runtimeDir, 'factory-loader.js'), 'utf8');
+  const playerJs        = fs.readFileSync(path.join(runtimeDir, 'player.js'),         'utf8');
+  const styles          = fs.readFileSync(path.join(runtimeDir, 'style.css'),          'utf8');
 
   // Serialize and sign; script block shared with CLI html builder (lessonAssembly)
-  var dataString = JSON.stringify(ir);
-  var signature  = signContent(dataString, options.deviceId, options.privateKey);
-  var lessonScript = lessonAssembly.buildLessonScript(ir, {
+  const dataString = JSON.stringify(ir);
+  const signature  = signContent(dataString, options.deviceId, options.privateKey);
+  const lessonScript = lessonAssembly.buildLessonScript(ir, {
     signature:       signature,
     publicKeySpki:   options.publicKeySpki != null ? options.publicKeySpki : '',
     deviceId:        options.deviceId || '',
@@ -254,13 +264,13 @@ async function _doCompile(slug, loaded, options) {
   // Generate a per-request nonce for the CSP <meta> tag.
   // LESSON_DATA changes every compilation so a hash would have to be
   // recomputed per request — a nonce is equivalent and simpler here.
-  var nonce = generateNonce();
-  var html = _buildPwaShell(ir, styles, lessonScript, nonce);
+  const nonce = generateNonce();
+  const html = _buildPwaShell(ir, styles, lessonScript, nonce);
 
   // LRU eviction: if cache is full, remove the least recently accessed entry
   if (_cacheSize >= MAX_CACHE_ENTRIES) {
-    var oldestSlug = null;
-    var oldestTime = Infinity;
+    let oldestSlug = null;
+    let oldestTime = Infinity;
     Object.keys(_lessonCache).forEach(function (s) {
       if (_lessonCache[s].lastAccessed < oldestTime) {
         oldestTime = _lessonCache[s].lastAccessed;
@@ -270,7 +280,7 @@ async function _doCompile(slug, loaded, options) {
     if (oldestSlug) {
       delete _lessonCache[oldestSlug];
       _cacheSize--;
-      console.log('[HUB-TRANSFORM] Cache evicted:', oldestSlug);
+      log.debug('Cache evicted', { slug: oldestSlug });
     }
   }
 
@@ -299,20 +309,20 @@ async function _doCompile(slug, loaded, options) {
  * @returns {string}
  */
 function _buildPwaShell(ir, styles, lessonScript, nonce) {
-  var lang    = _escapeHtml((ir.meta && ir.meta.language) || 'en');
-  var title   = _escapeHtml((ir.meta && ir.meta.title)    || 'AGNI Lesson');
-  var cspMeta = buildCspMeta({ nonce: nonce });
+  const lang    = _escapeHtml((ir.meta && ir.meta.language) || 'en');
+  const title   = _escapeHtml((ir.meta && ir.meta.title)    || 'AGNI Lesson');
+  const cspMeta = buildCspMeta({ nonce: nonce });
   // nonce value embedded in the script tag must not be HTML-escaped —
   // only the CSP meta content attribute needs escaping (done inside buildCspMeta).
-  var nonceAttr = ' nonce="' + nonce + '"';
+  const nonceAttr = ' nonce="' + nonce + '"';
 
   return [
     '<!DOCTYPE html>',
-    '<html lang="' + lang + '">',
+    '<html lang="' + lang + '" manifest="/appcache.manifest">',
     '<head>',
     '  <meta charset="UTF-8">',
     '  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">',
-    '  <meta name="theme-color" content="#1a1a2e">',
+    '  <meta name="theme-color" content="#F4F1E8">',
     '  ' + cspMeta,
     '  <title>' + title + '</title>',
     '  <link rel="manifest" href="/manifest.json">',
@@ -341,22 +351,12 @@ function _buildPwaShell(ir, styles, lessonScript, nonce) {
 // Response helpers
 // ═══════════════════════════════════════════════════════════════════════════
 
-function _escapeHtml(str) {
-  if (!str) return '';
-  return str
-    .replace(/&/g,  '&amp;')
-    .replace(/</g,  '&lt;')
-    .replace(/>/g,  '&gt;')
-    .replace(/"/g,  '&quot;')
-    .replace(/'/g,  '&#039;');
-}
-
 /**
  * Send a text/HTML or text/plain response, gzipped if accepted.
  */
 function _sendText(req, res, statusCode, contentType, body) {
-  var buf = Buffer.from(body, 'utf8');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const buf = Buffer.from(body, 'utf8');
+  res.setHeader('Access-Control-Allow-Origin', envConfig.corsOrigin || '*');
   res.setHeader('Content-Type', contentType);
 
   if (req.headers['accept-encoding'] &&
@@ -382,8 +382,8 @@ function _sendFile(req, res, filePath, contentType, maxAge) {
     res.end('Not found');
     return;
   }
-  var buf = fs.readFileSync(filePath);
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const buf = fs.readFileSync(filePath);
+  res.setHeader('Access-Control-Allow-Origin', envConfig.corsOrigin || '*');
   res.setHeader('Content-Type', contentType);
   res.setHeader('Cache-Control', 'public, max-age=' + (maxAge || 0));
 
@@ -415,12 +415,12 @@ function _sendFile(req, res, filePath, contentType, maxAge) {
  * @returns {boolean}
  */
 function handleRequest(req, res, options) {
-  var urlPath = req.url.split('?')[0];
+  const urlPath = req.url.split('?')[0];
 
   // GET /lessons/:slug — compile YAML on demand and stream lesson HTML
-  var lessonMatch = urlPath.match(/^\/lessons\/([a-zA-Z0-9_\-/]+)$/);
+  const lessonMatch = urlPath.match(/^\/lessons\/([a-zA-Z0-9_\-/]+)$/);
   if (req.method === 'GET' && lessonMatch) {
-    var slug = lessonMatch[1];
+    const slug = lessonMatch[1];
     compileLesson(slug, options || {}).then(function (result) {
       if (!result) {
         _sendText(req, res, 404, 'text/html; charset=utf-8',
@@ -433,7 +433,7 @@ function handleRequest(req, res, options) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       _sendText(req, res, 200, 'text/html; charset=utf-8', result.html);
     }).catch(function (err) {
-      console.error('[HUB-TRANSFORM] Compile error for', slug, ':', err.message);
+      log.error('Compile error', { slug, error: err.message });
       _sendText(req, res, 500, 'text/html; charset=utf-8',
         '<h1>Compilation error</h1><pre>' + _escapeHtml(err.message) + '</pre>');
     });
@@ -441,9 +441,9 @@ function handleRequest(req, res, options) {
   }
 
   // GET /lessons/:slug/sidecar — serve lesson IR sidecar for theta engine
-  var sidecarMatch = urlPath.match(/^\/lessons\/([a-zA-Z0-9_\-/]+)\/sidecar$/);
+  const sidecarMatch = urlPath.match(/^\/lessons\/([a-zA-Z0-9_\-/]+)\/sidecar$/);
   if (req.method === 'GET' && sidecarMatch) {
-    var sidecarSlug = sidecarMatch[1];
+    const sidecarSlug = sidecarMatch[1];
     compileLesson(sidecarSlug, options || {}).then(function (result) {
       if (!result) return _sendJson(req, res, 404, { error: 'Lesson not found' });
       _sendJson(req, res, 200, result.sidecar);
@@ -455,15 +455,15 @@ function handleRequest(req, res, options) {
 
   // GET /factories/:file — serve a runtime factory file with long cache headers.
   // factory-loader.js fetches these at lesson startup and caches them on-device.
-  var factoryMatch = urlPath.match(/^\/factories\/(.+)$/);
+  const factoryMatch = urlPath.match(/^\/factories\/(.+)$/);
   if (req.method === 'GET' && factoryMatch) {
-    var factoryFile = path.basename(factoryMatch[1]);  // basename strips any ../ attempts
+    const factoryFile = path.basename(factoryMatch[1]);  // basename strips any ../ attempts
     if (!ALLOWED_FACTORY_FILES.has(factoryFile)) {
       res.writeHead(404);
       res.end('Not found');
       return true;
     }
-    var factoryPath = path.join(FACTORY_DIR, factoryFile);
+    const factoryPath = path.join(FACTORY_DIR, factoryFile);
     // Long cache: 7 days. Version string in factory-loader cache key forces
     // refresh when RUNTIME_VERSION bumps, so stale-while-revalidate is safe.
     _sendFile(req, res, factoryPath, MIME['.js'], 604800);
@@ -471,15 +471,15 @@ function handleRequest(req, res, options) {
   }
 
   // GET /katex/:file — serve a KaTeX CSS subset file.
-  var katexMatch = urlPath.match(/^\/katex\/(.+)$/);
+  const katexMatch = urlPath.match(/^\/katex\/(.+)$/);
   if (req.method === 'GET' && katexMatch) {
-    var katexFile = path.basename(katexMatch[1]);
+    const katexFile = path.basename(katexMatch[1]);
     if (!ALLOWED_KATEX_FILES.has(katexFile)) {
       res.writeHead(404);
       res.end('Not found');
       return true;
     }
-    var katexPath = path.join(KATEX_DIR, katexFile);
+    const katexPath = path.join(KATEX_DIR, katexFile);
     // Long cache: 30 days. KaTeX CSS changes only with KaTeX version bumps.
     _sendFile(req, res, katexPath, MIME['.css'], 2592000);
     return true;
@@ -487,14 +487,21 @@ function handleRequest(req, res, options) {
 
   // GET /manifest.json — PWA manifest
   if (req.method === 'GET' && urlPath === '/manifest.json') {
-    var manifestPath = path.join(__dirname, 'manifest.json');
+    const manifestPath = path.join(__dirname, 'manifest.json');
     _sendFile(req, res, manifestPath, MIME['.json'], 86400);
+    return true;
+  }
+
+  // GET /appcache.manifest — AppCache fallback for Android 6 WebView
+  if (req.method === 'GET' && urlPath === '/appcache.manifest') {
+    const appcachePath = path.join(__dirname, 'appcache.manifest');
+    _sendFile(req, res, appcachePath, 'text/cache-manifest', 86400);
     return true;
   }
 
   // GET /sw.js — Service Worker
   if (req.method === 'GET' && urlPath === '/sw.js') {
-    var swPath = path.join(__dirname, 'sw.js');
+    const swPath = path.join(__dirname, 'sw.js');
     // Service Worker must not be cached — browsers check it for updates.
     res.setHeader('Cache-Control', 'no-cache');
     _sendFile(req, res, swPath, MIME['.js'], 0);
@@ -516,20 +523,20 @@ function handleRequest(req, res, options) {
  */
 function attachRoutes(server, options) {
   // Wrap the existing listener rather than replacing it
-  var listeners = server.listeners('request').slice();
+  const listeners = server.listeners('request').slice();
   server.removeAllListeners('request');
 
   server.on('request', function (req, res) {
-    var handled = handleRequest(req, res, options || {});
+    const handled = handleRequest(req, res, options || {});
     if (!handled) {
       // Fall through to original theta.js handler
-      for (var i = 0; i < listeners.length; i++) {
+      for (let i = 0; i < listeners.length; i++) {
         listeners[i].call(server, req, res);
       }
     }
   });
 
-  console.log('[HUB-TRANSFORM] Routes attached — serving /lessons/, /factories/, /katex/');
+  log.info('Routes attached — serving /lessons/, /factories/, /katex/');
 }
 
 /**
@@ -537,16 +544,16 @@ function attachRoutes(server, options) {
  * Useful for testing or when running hub-transform on a separate process/port.
  */
 function startStandalone(options) {
-  var http = require('http');
-  var server = http.createServer(function (req, res) {
-    var handled = handleRequest(req, res, options || {});
+  const http = require('http');
+  const server = http.createServer(function (req, res) {
+    const handled = handleRequest(req, res, options || {});
     if (!handled) {
       res.writeHead(404);
       res.end(JSON.stringify({ error: 'Not found' }));
     }
   });
   server.listen(SERVE_PORT, '0.0.0.0', function () {
-    console.log('[HUB-TRANSFORM] Standalone server listening on port', SERVE_PORT);
+    log.info('Standalone server listening', { port: SERVE_PORT });
   });
   return server;
 }

@@ -3,15 +3,15 @@
 function register(router, ctx) {
   const { lessonChain, authorService, handleJsonBody, DATA_DIR, path } = ctx;
 
-  router.get('/api/chain/:slug', (req, res, { params, sendResponse }) => {
-    const chain = lessonChain.loadChain(params.slug);
+  router.get('/api/chain/:slug', async (req, res, { params, sendResponse }) => {
+    const chain = await lessonChain.loadChain(params.slug);
     return sendResponse(200, chain);
   });
 
   router.post('/api/chain/verify', (req, res, { sendResponse }) => {
-    handleJsonBody(req, sendResponse, (payload) => {
+    handleJsonBody(req, sendResponse, async (payload) => {
       if (!payload.slug) return sendResponse(400, { error: 'slug required' });
-      const chainResult = lessonChain.verifyChain(payload.slug);
+      const chainResult = await lessonChain.verifyChain(payload.slug);
       if (payload.lessonData) {
         const contentResult = lessonChain.verifyContentHash(payload.lessonData);
         return sendResponse(200, { chain: chainResult, content: contentResult });

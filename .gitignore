@@ -37,5 +37,11 @@ coverage/
 test-output.txt
 temp.json
 
+# Compiled engine output (built from src/engine/index.ts)
+src/engine/index.js
+src/engine/index.js.map
+src/engine/index.d.ts
+src/engine/index.d.ts.map
+
 # Build artifacts
 serve/

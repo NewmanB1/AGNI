@@ -177,13 +177,13 @@ describe('parseUri', () => {
 describe('chain management', () => {
   const slug = 'test-chain-lesson';
 
-  it('loadChain returns empty chain for nonexistent slug', () => {
-    const c = chain.loadChain('nonexistent-slug-xyz');
+  it('loadChain returns empty chain for nonexistent slug', async () => {
+    const c = await chain.loadChain('nonexistent-slug-xyz');
     assert.deepEqual(c.versions, []);
   });
 
-  it('appendVersion creates version 1 with null parent', () => {
-    const result = chain.appendVersion(slug, {
+  it('appendVersion creates version 1 with null parent', async () => {
+    const result = await chain.appendVersion(slug, {
       contentHash: 'sha256:' + 'a'.repeat(64),
       parentHash: null,
       creatorId: 'cr-1',
@@ -193,8 +193,8 @@ describe('chain management', () => {
     assert.equal(result.version, 1);
   });
 
-  it('appendVersion creates version 2 with parent hash', () => {
-    const result = chain.appendVersion(slug, {
+  it('appendVersion creates version 2 with parent hash', async () => {
+    const result = await chain.appendVersion(slug, {
       contentHash: 'sha256:' + 'b'.repeat(64),
       parentHash: 'sha256:' + 'a'.repeat(64),
       creatorId: 'cr-1',
@@ -204,23 +204,23 @@ describe('chain management', () => {
     assert.equal(result.version, 2);
   });
 
-  it('getLatestVersion returns the most recent entry', () => {
-    const latest = chain.getLatestVersion(slug);
+  it('getLatestVersion returns the most recent entry', async () => {
+    const latest = await chain.getLatestVersion(slug);
     assert.equal(latest.version, 2);
     assert.equal(latest.contentHash, 'sha256:' + 'b'.repeat(64));
   });
 
-  it('verifyChain passes for a valid chain', () => {
-    const result = chain.verifyChain(slug);
+  it('verifyChain passes for a valid chain', async () => {
+    const result = await chain.verifyChain(slug);
     assert.ok(result.valid, 'Expected valid chain, got: ' + result.errors.join('; '));
     assert.equal(result.versions, 2);
   });
 
-  it('verifyChain detects broken parent link', () => {
+  it('verifyChain detects broken parent link', async () => {
     const brokenSlug = 'broken-chain';
-    chain.appendVersion(brokenSlug, { contentHash: 'sha256:' + '1'.repeat(64), parentHash: null });
-    chain.appendVersion(brokenSlug, { contentHash: 'sha256:' + '2'.repeat(64), parentHash: 'sha256:' + 'x'.repeat(64) });
-    const result = chain.verifyChain(brokenSlug);
+    await chain.appendVersion(brokenSlug, { contentHash: 'sha256:' + '1'.repeat(64), parentHash: null });
+    await chain.appendVersion(brokenSlug, { contentHash: 'sha256:' + '2'.repeat(64), parentHash: 'sha256:' + 'x'.repeat(64) });
+    const result = await chain.verifyChain(brokenSlug);
     assert.ok(!result.valid);
     assert.ok(result.errors[0].includes('mismatch'));
   });

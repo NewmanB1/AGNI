@@ -14,9 +14,9 @@
 
 'use strict';
 
-var fs = require('fs');
-var path = require('path');
-var ensureDir = require('../utils/io').ensureDir;
+const fs = require('fs');
+const path = require('path');
+const ensureDir = require('../utils/io').ensureDir;
 
 /**
  * Build YAML packet from raw YAML and IR/sidecar.
@@ -27,12 +27,12 @@ var ensureDir = require('../utils/io').ensureDir;
  * @param {object} options  { outputDir }
  */
 function buildYamlPacket(rawYaml, ir, sidecar, options) {
-  var outputDir = options.outputDir;
+  const outputDir = options.outputDir;
   ensureDir(outputDir);
 
   fs.writeFileSync(path.join(outputDir, 'lesson.yaml'), rawYaml, 'utf8');
 
-  var packet = {
+  const packet = {
     identifier: sidecar.identifier,
     title: sidecar.title,
     language: sidecar.language,

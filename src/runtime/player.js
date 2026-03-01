@@ -1,7 +1,15 @@
 // src/runtime/player.js
-// AGNI Lesson Player  v2.0.0
+// AGNI Lesson Player  v4.0.0
 //
-// Lesson state machine. Evaluates gates, renders steps, routes navigation.
+// Core state machine: step routing, sensor init, rendering.
+// Delegates to extracted modules for isolated concerns:
+//   AGNI_INTEGRITY   — Ed25519 signature verification (integrity.js)
+//   AGNI_CHECKPOINT  — localStorage save/resume (checkpoint.js)
+//   AGNI_FRUSTRATION — frustration detection + nudges (frustration.js)
+//   AGNI_COMPLETION  — completion screen rendering (completion.js)
+//   AGNI_GATES       — gate quiz, manual verification, redirects (gate-renderer.js)
+//   AGNI_A11Y        — accessibility prefs + CSS injection (a11y.js)
+//
 // Depends on: shared-runtime.js (AGNI_SHARED), sensor-bridge.js,
 //             threshold-evaluator.js
 // Loaded inline by html.js after factory-loader.js and LESSON_DATA.
@@ -57,76 +65,26 @@
   var history   = [];
   var stepIndex = 0;
 
+  var _stepIdMap = {};
+  for (var _mi = 0; _mi < steps.length; _mi++) {
+    if (steps[_mi].id) _stepIdMap[steps[_mi].id] = _mi;
+  }
+
   // ── Step outcome tracking & probe collection ──
   var stepOutcomes  = [];
   var probeResults  = [];
   var lessonStartMs = Date.now();
   var stepEntryMs   = Date.now();
   var LESSON_ID     = (lesson.meta && lesson.meta.identifier) || lesson.id || 'unknown';
-  var CHECKPOINT_KEY = 'agni_ckpt_' + LESSON_ID;
 
-  // ── Frustration detection state ──
-  var _frustration = {
-    consecutiveSkips: 0,
-    consecutiveFails: 0,
-    lastAnswerMs: 0,
-    rapidRetries: 0,
-    nudgeShown: false
+  // ── Frustration detection — delegated to AGNI_FRUSTRATION module ──
+  var _frust = global.AGNI_FRUSTRATION || {
+    trackOutcome: function () {}, trackRetry: function () {},
+    shouldShowNudge: function () { return false; },
+    showNudge: function () {}, reset: function () {}
   };
 
-  function _trackFrustrationOutcome(passed, skipped) {
-    if (skipped) {
-      _frustration.consecutiveSkips++;
-      _frustration.consecutiveFails = 0;
-    } else if (!passed) {
-      _frustration.consecutiveFails++;
-      _frustration.consecutiveSkips = 0;
-    } else {
-      _frustration.consecutiveSkips = 0;
-      _frustration.consecutiveFails = 0;
-      _frustration.rapidRetries = 0;
-      _frustration.nudgeShown = false;
-    }
-  }
-
-  function _trackFrustrationRetry() {
-    var now = Date.now();
-    if (_frustration.lastAnswerMs && (now - _frustration.lastAnswerMs) < 2000) {
-      _frustration.rapidRetries++;
-    } else {
-      _frustration.rapidRetries = Math.max(0, _frustration.rapidRetries - 1);
-    }
-    _frustration.lastAnswerMs = now;
-  }
-
-  function _shouldShowFrustrationNudge() {
-    if (_frustration.nudgeShown) return false;
-    return _frustration.consecutiveSkips >= 2 ||
-           _frustration.consecutiveFails >= 3 ||
-           _frustration.rapidRetries >= 4;
-  }
-
-  function _showFrustrationNudge(container) {
-    if (!container || !container.parentNode) return;
-    _frustration.nudgeShown = true;
-    var nudge = document.createElement('div');
-    nudge.className = 'frustration-nudge';
-    nudge.setAttribute('aria-live', 'polite');
-    var messages = [
-      'This is a tough section \u2014 you\u2019re doing great for sticking with it!',
-      'It\u2019s okay to find this challenging. Try a different approach or take a short break.',
-      'Learning takes time. Every attempt helps, even when it doesn\u2019t feel like it.'
-    ];
-    var msg = messages[Math.floor(Math.random() * messages.length)];
-    nudge.innerHTML = '<strong>\u{1F4AA}</strong> ' + msg;
-    var dismissBtn = document.createElement('button');
-    dismissBtn.className = 'btn btn-secondary';
-    dismissBtn.style.cssText = 'font-size:0.8em;margin-top:0.5rem;';
-    dismissBtn.textContent = 'Got it';
-    dismissBtn.onclick = function () { nudge.remove(); };
-    nudge.appendChild(dismissBtn);
-    container.appendChild(nudge);
-  }
+  function _showFrustrationNudge(container) { _frust.showNudge(container, t); }
 
   function recordStepOutcome(step, passed, attempts, skipped) {
     var w = typeof step.weight === 'number' ? step.weight : _defaultWeight(step.type);
@@ -140,7 +98,7 @@
       maxAttempts: step.max_attempts || 1,
       durationMs:  Date.now() - stepEntryMs
     });
-    _trackFrustrationOutcome(passed, skipped);
+    _frust.trackOutcome(passed, skipped);
   }
 
   function _defaultWeight(type) {
@@ -149,521 +107,54 @@
     return 0.5;
   }
 
-  // ── Checkpoint save/resume (localStorage) ──
+  // ── Checkpoint save/resume — delegated to AGNI_CHECKPOINT module ──
+  var _ckpt = global.AGNI_CHECKPOINT || {
+    save: function () {}, load: function () { return null; }, clear: function () {}
+  };
+
+  var _hubUrl = (function () {
+    try { var p = new URLSearchParams(location.search); return p.get('hub') || ''; } catch (e) { return ''; }
+  })();
+  var _pseudoId = (function () {
+    try { var p = new URLSearchParams(location.search); return p.get('pseudoId') || ''; } catch (e) { return ''; }
+  })();
+
   function saveCheckpoint() {
-    try {
-      var data = {
-        stepIndex: stepIndex,
-        stepId: steps[stepIndex] ? steps[stepIndex].id : null,
-        stepOutcomes: stepOutcomes,
-        probeResults: probeResults,
-        savedAt: Date.now()
-      };
-      localStorage.setItem(CHECKPOINT_KEY, JSON.stringify(data));
-    } catch (e) { /* localStorage may be unavailable */ }
+    _ckpt.save(LESSON_ID, {
+      stepIndex: stepIndex,
+      stepId: steps[stepIndex] ? steps[stepIndex].id : null,
+      stepOutcomes: stepOutcomes,
+      probeResults: probeResults
+    }, DEV_MODE);
+    if (_ckpt.sync) _ckpt.sync(_hubUrl, _pseudoId, LESSON_ID, DEV_MODE);
   }
 
-  function loadCheckpoint() {
-    try {
-      var raw = localStorage.getItem(CHECKPOINT_KEY);
-      if (!raw) return null;
-      var data = JSON.parse(raw);
-      // Expire checkpoints older than 24 hours
-      if (data.savedAt && (Date.now() - data.savedAt) > 86400000) {
-        clearCheckpoint();
-        return null;
-      }
-      return data;
-    } catch (e) { return null; }
-  }
+  function loadCheckpoint() { return _ckpt.load(LESSON_ID, DEV_MODE); }
+  function clearCheckpoint() { _ckpt.clear(LESSON_ID, DEV_MODE); }
 
-  function clearCheckpoint() {
-    try { localStorage.removeItem(CHECKPOINT_KEY); } catch (e) {}
-  }
-
-  /** Parse ISO 8601 duration (e.g. PT2M, PT30S) to milliseconds. Phase 5 retry_delay. */
   function parseDurationMs(str) {
+    if (S.parseDurationMs) return S.parseDurationMs(str);
     if (!str || typeof str !== 'string') return 0;
     var m = str.match(/^P(?:T(?=(\d)))?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
     if (!m) return 0;
-    var h = parseInt(m[2], 10) || 0;
-    var min = parseInt(m[3], 10) || 0;
-    var s = parseInt(m[4], 10) || 0;
-    return (h * 3600 + min * 60 + s) * 1000;
+    return ((parseInt(m[2], 10) || 0) * 3600 + (parseInt(m[3], 10) || 0) * 60 + (parseInt(m[4], 10) || 0)) * 1000;
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // SECTION 1 — Integrity Verification (Phase 4)
-  //
-  // Verifies the Ed25519 signature embedded by the Hub at build time.
-  //
-  // What was signed (crypto.js, server-side):
-  //   SHA-256(JSON.stringify(lessonIR) + '\x00' + deviceUUID)
-  //   → crypto.sign(null, bindingHash, ed25519PrivateKey)
-  //
-  // What we verify here:
-  //   Reconstruct the same binding hash from embedded content + OLS_INTENDED_OWNER.
-  //   Import OLS_PUBLIC_KEY (base64 SPKI DER) and verify the signature against it.
-  //
-  // Embedded globals (written by html.js at build time):
-  //   window.OLS_SIGNATURE       base64 Ed25519 signature (64 bytes decoded)
-  //   window.OLS_PUBLIC_KEY      base64 SPKI DER Ed25519 public key (44 bytes decoded)
-  //   window.OLS_INTENDED_OWNER  UUID of the intended device
-  //
-  // Verification paths:
-  //   1. SubtleCrypto  — preferred, native, iOS 15+, all modern browsers
-  //   2. TweetNaCl     — pure-JS fallback, iOS 9–14, legacy WebKit
-  //   3. DEV_MODE      — skip, always pass
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  // Use shared binary helpers (AGNI_SHARED from shared-runtime; refreshed after loadDependencies).
-  function getBase64ToBytes() {
-    return (global.AGNI_SHARED && global.AGNI_SHARED.base64ToBytes) || function (b64) {
-      var binary = atob(b64);
-      var bytes  = new Uint8Array(binary.length);
-      for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      return bytes;
-    };
-  }
-  function getConcatBytes() {
-    return (global.AGNI_SHARED && global.AGNI_SHARED.concatBytes) || function () {
-      var arrays = Array.prototype.slice.call(arguments);
-      var total  = arrays.reduce(function (n, a) { return n + a.length; }, 0);
-      var result = new Uint8Array(total);
-      var offset = 0;
-      arrays.forEach(function (a) { result.set(a, offset); offset += a.length; });
-      return result;
-    };
-  }
-
-  /**
-   * Reconstruct the canonical binding that was signed by the Hub.
-   * Must exactly mirror crypto.js: SHA-256(content + NUL + deviceId).
-   *
-   * @param  {string}  contentString  JSON.stringify(lesson)
-   * @param  {string}  deviceId       OLS_INTENDED_OWNER
-   * @returns {Promise<ArrayBuffer>}
-   */
-  function buildBindingHash(contentString, deviceId) {
-    var enc          = new TextEncoder();
-    var contentBytes = enc.encode(contentString);
-    var sepBytes     = new Uint8Array([0x00]);    // NUL separator
-    var deviceBytes  = enc.encode(deviceId);
-    var combined     = getConcatBytes()(contentBytes, sepBytes, deviceBytes);
-    return crypto.subtle.digest('SHA-256', combined);
-  }
-
-  /**
-   * Verify via SubtleCrypto (Ed25519, native).
-   * Rejects if Ed25519 is unsupported — caller catches and tries TweetNaCl.
-   * @returns {Promise<boolean>}
-   */
-  function verifyWithSubtleCrypto() {
-    var base64ToBytes = getBase64ToBytes();
-    var sigBytes    = base64ToBytes(global.OLS_SIGNATURE);
-    var pubKeyBytes = base64ToBytes(global.OLS_PUBLIC_KEY);
-    var owner       = global.OLS_INTENDED_OWNER;
-    var content     = JSON.stringify(lesson);
-
-    // OLS_PUBLIC_KEY is SPKI DER — import with format: 'spki'.
-    // Do NOT strip the DER header and import raw bytes; you'll get the wrong key.
-    return crypto.subtle.importKey(
-      'spki',
-      pubKeyBytes,
-      { name: 'Ed25519' },
-      false,
-      ['verify']
-    ).then(function (publicKey) {
-      return buildBindingHash(content, owner).then(function (bindingHash) {
-        return crypto.subtle.verify(
-          { name: 'Ed25519' },
-          publicKey,
-          sigBytes,         // ArrayBuffer / Uint8Array — not base64
-          bindingHash       // same binding reconstructed above
-        );
-      });
-    });
-  }
-
-  /**
-   * Verify via TweetNaCl (pure-JS fallback for iOS < 15 and legacy WebKit).
-   *
-   * TweetNaCl expects the raw 32-byte Ed25519 public key, not SPKI.
-   * Ed25519 SPKI = 12-byte DER header + 32-byte raw key; we slice off the header.
-   *
-   * SHA-256 digest (used to reconstruct the binding) is available even on
-   * iOS 9 — SubtleCrypto's digest() is supported well before sign/verify.
-   *
-   * Requires window.nacl (TweetNaCl.js, ~3KB gzipped), loaded as a cached
-   * asset by factory-loader.js when inferredFeatures.requiresTweetNacl is true.
-   *
-   * @returns {Promise<boolean>}
-   */
-  function verifyWithTweetNaCl() {
-    if (!global.nacl || !global.nacl.sign) {
-      if (DEV_MODE) console.warn('[VERIFY] TweetNaCl not loaded \u2014 cannot verify');
-      return Promise.resolve(DEV_MODE);  // fail closed in production
-    }
-
-    try {
-      var base64ToBytes = getBase64ToBytes();
-      var concatBytes   = getConcatBytes();
-      var sigBytes  = base64ToBytes(global.OLS_SIGNATURE);
-      var spkiBytes = base64ToBytes(global.OLS_PUBLIC_KEY);
-      // SPKI DER for Ed25519 is always 44 bytes: 12-byte header + 32-byte key.
-      var rawPubKey = spkiBytes.slice(spkiBytes.length - 32);
-      var owner     = global.OLS_INTENDED_OWNER;
-      var content   = JSON.stringify(lesson);
-
-      // Reconstruct the same binding bytes as the signing side.
-      var enc          = new TextEncoder();
-      var contentBytes = enc.encode(content);
-      var sepBytes     = new Uint8Array([0x00]);
-      var deviceBytes  = enc.encode(owner);
-      var combined     = concatBytes(contentBytes, sepBytes, deviceBytes);
-
-      // SHA-256 digest is available on iOS 9+ even when Ed25519 sign/verify is not.
-      return crypto.subtle.digest('SHA-256', combined).then(function (bindingHash) {
-        var bindingBytes = new Uint8Array(bindingHash);
-        var valid = global.nacl.sign.detached.verify(bindingBytes, sigBytes, rawPubKey);
-        if (DEV_MODE) console.log('[VERIFY] TweetNaCl result:', valid);
-        return valid;
-      });
-
-    } catch (err) {
-      if (DEV_MODE) console.warn('[VERIFY] TweetNaCl error:', err.message);
-      return Promise.resolve(false);
-    }
-  }
-
-  /**
-   * Top-level integrity check. Returns Promise<boolean>.
-   *
-   * DEV_MODE: always passes.
-   * Production: SubtleCrypto → TweetNaCl fallback on failure.
-   * Missing globals: fails closed immediately.
-   *
-   * @returns {Promise<boolean>}
-   */
+  // ── Integrity verification — delegated to AGNI_INTEGRITY module ──
   function verifyIntegrity() {
+    if (global.AGNI_INTEGRITY) return global.AGNI_INTEGRITY.verify(lesson, DEV_MODE);
     if (DEV_MODE) return Promise.resolve(true);
-
-    if (!global.OLS_SIGNATURE || !global.OLS_PUBLIC_KEY || !global.OLS_INTENDED_OWNER) {
-      console.error('[VERIFY] Missing signature globals \u2014 lesson will not play');
-      return Promise.resolve(false);
-    }
-
-    var canUseSubtle = global.crypto &&
-                       global.crypto.subtle &&
-                       typeof global.crypto.subtle.verify === 'function';
-
-    if (!canUseSubtle) {
-      if (DEV_MODE) console.log('[VERIFY] SubtleCrypto unavailable, using TweetNaCl');
-      return verifyWithTweetNaCl();
-    }
-
-    return verifyWithSubtleCrypto().then(function (result) {
-      if (DEV_MODE) console.log('[VERIFY] SubtleCrypto result:', result);
-      return result;
-    }).catch(function (err) {
-      // SubtleCrypto present but Ed25519 not supported (iOS 9–14)
-      if (DEV_MODE) console.warn('[VERIFY] SubtleCrypto failed, falling back:', err.message);
-      return verifyWithTweetNaCl();
-    });
+    console.error('[VERIFY] AGNI_INTEGRITY module not loaded');
+    return Promise.resolve(false);
   }
 
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // SECTION 2 — Gate evaluation
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ── Gate evaluation — delegated to AGNI_GATES module ──
+  var _gates = global.AGNI_GATES || {};
+  var resolveDirective = _gates.resolveDirective;
 
-  /**
-   * Strip directive prefixes consistently across all routing paths.
-   * Handles: 'redirect:', 'ols:', 'skip_to:'
-   * @param  {string} raw
-   * @returns {string}
-   */
-  function resolveDirective(raw) {
-    if (!raw) return '';
-    return raw
-      .replace(/^redirect:/i, '')
-      .replace(/^ols:/i, '')
-      .replace(/^skip_to:/i, '')
-      .trim();
-  }
-
-  /**
-   * Render a gate redirect notice pointing the student to a prerequisite lesson.
-   * Now includes a clickable link to the prerequisite lesson on the hub.
-   * @param {object} gate  must have gate.on_fail
-   */
   function renderGateRedirect(gate) {
-    var prereqId = resolveDirective(gate.on_fail);
-    var app      = document.getElementById('app');
-
-    var container = document.createElement('div');
-    container.className = 'gate-redirect';
-
-    var msg = document.createElement('p');
-    msg.textContent = 'You need to complete a prerequisite lesson first:';
-    container.appendChild(msg);
-
-    // Build a link to the prerequisite lesson on the same hub
-    var hubBase = (lesson._hubUrl || '').replace(/\/$/, '');
-    if (!hubBase) {
-      try { hubBase = global.location.protocol + '//' + global.location.host; } catch (e) {}
-    }
-
-    if (hubBase && prereqId) {
-      var link = document.createElement('a');
-      link.href = hubBase + '/lessons/' + encodeURIComponent(prereqId);
-      link.className = 'btn btn-primary';
-      link.style.display = 'inline-block';
-      link.style.marginTop = '1rem';
-      link.textContent = 'Go to: ' + prereqId;
-      container.appendChild(link);
-    } else {
-      var idEl = document.createElement('p');
-      idEl.style.fontWeight = 'bold';
-      idEl.textContent = prereqId;
-      container.appendChild(idEl);
-    }
-
-    var backMsg = document.createElement('p');
-    backMsg.style.marginTop = '1rem';
-    backMsg.style.opacity = '0.8';
-    backMsg.style.fontSize = '0.9rem';
-    backMsg.textContent = 'After completing the prerequisite, return to this lesson to continue.';
-    container.appendChild(backMsg);
-
-    app.innerHTML = '';
-    app.appendChild(container);
-  }
-
-  /**
-   * Render a gate quiz and resolve its Promise once the student passes or fails.
-   *
-   * FIX (v1.9.3): Previously never resolved 'fail' — gate.on_fail was
-   * permanently unreachable and a student lacking the prerequisite was trapped
-   * forever. Now honours gate.max_attempts (default 3) and reveals an escape
-   * button once exhausted, resolving 'fail' so routing can proceed normally.
-   *
-   * @param {object}   gate
-   * @param {Function} resolve  resolver from evaluateGate()'s Promise
-   */
-  function renderGateQuiz(gate, resolve) {
-    var app         = document.getElementById('app');
-    var MAX_ATTEMPTS = (gate.max_attempts > 0) ? gate.max_attempts : 3;
-    var attempts    = 0;
-
-    var container = document.createElement('div');
-    container.className = 'gate-quiz';
-
-    var prompt = document.createElement('p');
-    prompt.textContent = gate.question || 'Answer to continue:';
-    container.appendChild(prompt);
-
-    var input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'gate-input';
-    container.appendChild(input);
-
-    var submitBtn = document.createElement('button');
-    submitBtn.className = 'btn btn-primary';
-    submitBtn.textContent = 'Submit';
-    container.appendChild(submitBtn);
-
-    var feedback = document.createElement('p');
-    feedback.className = 'gate-feedback';
-    container.appendChild(feedback);
-
-    // Escape button — hidden until max_attempts is reached, then shown.
-    // Resolves 'fail' so gate.on_fail routing fires normally.
-    var escapeBtn = document.createElement('button');
-    escapeBtn.className = 'btn btn-secondary';
-    escapeBtn.style.marginTop = '0.75rem';
-    escapeBtn.style.display   = 'none';
-    escapeBtn.textContent     = "I haven\u2019t completed the prerequisite";
-    escapeBtn.onclick         = function () { resolve('fail'); };
-    container.appendChild(escapeBtn);
-
-    var retryDelayMs = parseDurationMs(gate.retry_delay);
-    var passingScore = (typeof gate.passing_score === 'number' && gate.passing_score >= 0 && gate.passing_score <= 1)
-      ? gate.passing_score : 1;
-    var expectedAnswer = (gate.expected_answer != null ? gate.expected_answer : gate.answer || '').trim().toLowerCase();
-    var waitingRetry = false;
-
-    function checkAnswer() {
-      if (waitingRetry) return;
-      var answer = input.value.trim().toLowerCase();
-      var score = (answer === expectedAnswer) ? 1 : 0;
-
-      if (score >= passingScore) {
-        resolve('pass');
-        return;
-      }
-
-      attempts++;
-
-      if (attempts >= MAX_ATTEMPTS) {
-        feedback.textContent    = 'Maximum attempts reached.';
-        submitBtn.disabled      = true;
-        input.disabled          = true;
-        escapeBtn.style.display = 'block';
-        return;
-      }
-
-      var remaining = MAX_ATTEMPTS - attempts;
-      feedback.textContent = 'Not quite \u2014 try again. ('
-        + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining)';
-      input.value = '';
-      input.focus();
-
-      if (retryDelayMs > 0) {
-        waitingRetry = true;
-        submitBtn.disabled = true;
-        input.disabled = true;
-        var deadline = Date.now() + retryDelayMs;
-        function updateWait() {
-          var left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-          if (left <= 0) {
-            waitingRetry = false;
-            submitBtn.disabled = false;
-            input.disabled = false;
-            feedback.textContent = 'Not quite \u2014 try again. ('
-              + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining)';
-            input.focus();
-            return;
-          }
-          feedback.textContent = 'Please wait ' + left + 's before trying again. ('
-            + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining)';
-          setTimeout(updateWait, 500);
-        }
-        updateWait();
-      }
-    }
-
-    submitBtn.onclick = checkAnswer;
-    input.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') checkAnswer();
-    });
-
-    app.innerHTML = '';
-    app.appendChild(container);
-    input.focus();
-  }
-
-  /**
-   * Evaluate a gate step.
-   * @param  {object}          gate
-   * @returns {Promise<string>}     id of the next step to route to
-   */
-  /**
-   * Render a manual verification gate: the student enters a teacher-provided
-   * verification code to proceed. Teachers can generate codes from the hub.
-   */
-  function renderManualVerification(gate, callback) {
-    var app = document.getElementById('app');
-    app.innerHTML = '';
-
-    var container = document.createElement('div');
-    container.className = 'step step-gate gate-manual';
-
-    var title = document.createElement('h2');
-    title.textContent = gate.question || 'Teacher Verification Required';
-    container.appendChild(title);
-
-    var desc = document.createElement('p');
-    desc.textContent = 'Ask your teacher to verify your work. Enter the verification code they give you.';
-    container.appendChild(desc);
-
-    var inputRow = document.createElement('div');
-    inputRow.style.cssText = 'display:flex;gap:0.5rem;margin:1rem 0;';
-
-    var input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'gate-input';
-    input.placeholder = 'Enter code\u2026';
-    input.style.cssText = 'padding:0.6rem;font-size:1.2rem;text-align:center;letter-spacing:0.2em;text-transform:uppercase;background:#1f2b4e;color:#fff;border:1px solid var(--border,#3a3a5a);border-radius:6px;flex:1;max-width:200px;';
-    inputRow.appendChild(input);
-
-    var verifyBtn = document.createElement('button');
-    verifyBtn.className = 'btn btn-primary';
-    verifyBtn.textContent = 'Verify';
-    inputRow.appendChild(verifyBtn);
-
-    container.appendChild(inputRow);
-
-    var feedback = document.createElement('p');
-    feedback.className = 'gate-feedback';
-    container.appendChild(feedback);
-
-    app.appendChild(container);
-    input.focus();
-
-    var expected = (gate.expected_answer || '').toUpperCase().trim();
-    var retryDelayMs = parseDurationMs(gate.retry_delay);
-    var maxAttempts = (gate.max_attempts > 0) ? gate.max_attempts : 5;
-    var attempts = 0;
-    var waitingRetry = false;
-
-    function check() {
-      if (waitingRetry) return;
-      var val = input.value.toUpperCase().trim();
-      if (!val) return;
-      if (val === expected || (!expected && val.length >= 4)) {
-        feedback.textContent = 'Verified!';
-        feedback.style.color = '#4ade80';
-        input.disabled = true;
-        verifyBtn.disabled = true;
-        setTimeout(function () { callback('pass'); }, 800);
-      } else {
-        attempts++;
-        if (attempts >= maxAttempts) {
-          feedback.textContent = 'Maximum attempts reached. Ask your teacher for help.';
-          feedback.style.color = '#ff5252';
-          input.disabled = true;
-          verifyBtn.disabled = true;
-          var escapeBtn = document.createElement('button');
-          escapeBtn.className = 'btn btn-secondary';
-          escapeBtn.style.marginTop = '0.75rem';
-          escapeBtn.textContent = 'Continue without verification';
-          escapeBtn.onclick = function () { callback('fail'); };
-          container.appendChild(escapeBtn);
-          return;
-        }
-        var remaining = maxAttempts - attempts;
-        feedback.textContent = 'Code not recognized (' + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining)';
-        feedback.style.color = '#ff5252';
-        input.value = '';
-
-        if (retryDelayMs > 0) {
-          waitingRetry = true;
-          verifyBtn.disabled = true;
-          input.disabled = true;
-          var deadline = Date.now() + retryDelayMs;
-          (function updateWait() {
-            var left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-            if (left <= 0) {
-              waitingRetry = false;
-              verifyBtn.disabled = false;
-              input.disabled = false;
-              input.focus();
-              return;
-            }
-            feedback.textContent = 'Wait ' + left + 's before trying again.';
-            setTimeout(updateWait, 500);
-          })();
-        } else {
-          input.focus();
-        }
-      }
-    }
-
-    verifyBtn.onclick = check;
-    input.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') check();
-    });
+    if (_gates.renderRedirect) return _gates.renderRedirect(gate, lesson, DEV_MODE);
   }
 
   function _safeNextStepId(gate) {
@@ -676,21 +167,13 @@
       var nextId = _safeNextStepId(gate);
       if (!nextId) { renderCompletion(); return; }
 
-      if (gate.type === 'quiz') {
-        renderGateQuiz(gate, function (result) {
-          if (result === 'pass') {
-            resolve(nextId);
-          } else {
-            renderGateRedirect(gate);
-          }
+      if (gate.type === 'quiz' && _gates.renderQuiz) {
+        _gates.renderQuiz(gate, function (result) {
+          if (result === 'pass') { resolve(nextId); } else { renderGateRedirect(gate); }
         });
-      } else if (gate.type === 'manual_verification') {
-        renderManualVerification(gate, function (result) {
-          if (result === 'pass') {
-            resolve(nextId);
-          } else {
-            renderGateRedirect(gate);
-          }
+      } else if (gate.type === 'manual_verification' && _gates.renderManualVerification) {
+        _gates.renderManualVerification(gate, function (result) {
+          if (result === 'pass') { resolve(nextId); } else { renderGateRedirect(gate); }
         });
       } else {
         resolve(nextId);
@@ -699,97 +182,9 @@
   }
 
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // SECTION 2a — Accessibility preferences (read from localStorage)
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  var a11y = (function loadA11y() {
-    var defaults = { fontScale: 1, highContrast: false, reducedMotion: false, hapticIntensity: 1 };
-    try {
-      var fs = localStorage.getItem('agni_font_scale');
-      var hc = localStorage.getItem('agni_high_contrast');
-      var rm = localStorage.getItem('agni_reduced_motion');
-      var hi = localStorage.getItem('agni_haptic_intensity');
-      return {
-        fontScale:       fs !== null ? Math.max(0.8, Math.min(1.5, parseFloat(fs))) : 1,
-        highContrast:    hc === 'true',
-        reducedMotion:   rm === 'true',
-        hapticIntensity: hi !== null ? Math.max(0, Math.min(1, parseFloat(hi))) : 1
-      };
-    } catch (e) { return defaults; }
-  })();
-
-  function applyAccessibility() {
-    var root = document.documentElement;
-    if (a11y.fontScale !== 1) {
-      root.style.fontSize = (a11y.fontScale * 100) + '%';
-    }
-    if (a11y.highContrast) {
-      root.classList.add('agni-high-contrast');
-    }
-    if (a11y.reducedMotion) {
-      root.classList.add('agni-reduced-motion');
-    }
-
-    if (!document.getElementById('agni-a11y-style')) {
-      var style = document.createElement('style');
-      style.id = 'agni-a11y-style';
-      style.textContent =
-        '.agni-high-contrast { --bg: #000; --text: #fff; --accent: #ffff00; }' +
-        '.agni-high-contrast .step-content { color: #fff !important; }' +
-        '.agni-high-contrast .quiz-option { border: 2px solid #fff !important; color: #fff !important; }' +
-        '.agni-high-contrast .btn { border: 2px solid #fff !important; }' +
-        '.agni-reduced-motion * { transition: none !important; animation: none !important; }' +
-        /* Sensor gauge */
-        '.sensor-gauge { margin: 1.5rem 0; text-align: center; }' +
-        '.gauge-label { font-size: 0.85em; opacity: 0.7; margin-bottom: 0.3rem; }' +
-        '.gauge-track { position: relative; height: 1.5rem; background: #1e293b; border-radius: 0.75rem; overflow: visible; }' +
-        '.gauge-fill { height: 100%; width: 0%; border-radius: 0.75rem; background: var(--accent, #00e676); transition: width 0.1s; }' +
-        '.gauge-threshold { position: absolute; top: -2px; bottom: -2px; width: 3px; background: #fff; border-radius: 1px; }' +
-        '.gauge-value { font-size: 1.25rem; font-weight: bold; margin-top: 0.25rem; }' +
-        '.hw-hint { opacity: 0.7; font-style: italic; }' +
-        '.hw-status { font-size: 0.9em; margin-top: 1rem; }' +
-        /* Completion screen */
-        '.completion-icon { font-size: 3rem; color: #4ade80; margin-bottom: 0.5rem; }' +
-        '.completion-title { margin-bottom: 0.5rem; }' +
-        '.skills-earned { margin: 1rem 0; text-align: left; }' +
-        '.skills-earned h3 { font-size: 0.95em; opacity: 0.7; }' +
-        '.skills-earned ul { padding-left: 1.2em; }' +
-        '.skills-earned li { margin: 0.25rem 0; }' +
-        '.score-breakdown { margin-top: 0.5rem; opacity: 0.8; }' +
-        '.pace-summary { margin: 0.5rem 0; font-size: 0.9em; }' +
-        '.next-lesson-actions { display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; }' +
-        '.step-progress { font-size: 0.8em; opacity: 0.6; margin-bottom: 0.5rem; }' +
-        '.step-hint-nudge { margin-top: 1rem; padding: 0.75rem; background: rgba(251,191,36,0.1); border: 1px solid #fbbf24; border-radius: 8px; font-size: 0.9em; }' +
-        '.hint-tier-1 { border-color: #60a5fa; background: rgba(96,165,250,0.08); }' +
-        '.hint-tier-2 { border-color: #fbbf24; background: rgba(251,191,36,0.1); }' +
-        '.hint-tier-3 { border-color: #ff6b6b; background: rgba(255,107,107,0.1); }' +
-        '.hint-skip { font-size: 0.8em; padding: 0.3rem 0.6rem; }' +
-        /* Completion review */
-        '.completion-excellent .completion-icon { font-size: 4rem; }' +
-        '.mastery-ring { text-align: center; margin: 1rem 0; }' +
-        '.mastery-pct { display: block; font-size: 2.5rem; font-weight: bold; color: var(--accent, #4ade80); }' +
-        '.mastery-label { display: block; font-size: 0.8rem; opacity: 0.6; }' +
-        '.completion-review { margin: 1.5rem 0; }' +
-        '.review-toggle { width: 100%; text-align: center; }' +
-        '.review-list { margin-top: 0.75rem; }' +
-        '.review-step { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.5rem; border-radius: 6px; margin-bottom: 0.25rem; font-size: 0.9em; }' +
-        '.review-passed { background: rgba(74,222,128,0.1); }' +
-        '.review-failed { background: rgba(255,107,107,0.1); }' +
-        '.review-skipped { background: rgba(255,255,255,0.05); opacity: 0.7; }' +
-        '.review-icon { min-width: 1.2em; text-align: center; }' +
-        '.review-label { flex: 1; }' +
-        '.review-detail { font-size: 0.85em; opacity: 0.7; }' +
-        /* Frustration nudge */
-        '.frustration-nudge { margin-top: 1rem; padding: 0.75rem; background: rgba(96,165,250,0.1); border: 1px solid #60a5fa; border-radius: 8px; font-size: 0.9em; }';
-      document.head.appendChild(style);
-    }
-  }
-
-  function addAriaToElement(el, role, label) {
-    if (role) el.setAttribute('role', role);
-    if (label) el.setAttribute('aria-label', label);
-  }
+  // ── Accessibility — delegated to AGNI_A11Y module ──
+  var _a11y = global.AGNI_A11Y || { prefs: { fontScale: 1, highContrast: false, reducedMotion: false, hapticIntensity: 1 }, apply: function () {}, addAria: function () {} };
+  var a11y = _a11y.prefs;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTION 2b — Hardware trigger step rendering (sensor + threshold + gauge)
@@ -824,7 +219,7 @@
     // Sensor gauge visualization
     var gaugeContainer = document.createElement('div');
     gaugeContainer.className = 'sensor-gauge';
-    addAriaToElement(gaugeContainer, 'meter', 'Sensor reading');
+    _a11y.addAria(gaugeContainer, 'meter', 'Sensor reading');
 
     var gaugeLabel = document.createElement('div');
     gaugeLabel.className = 'gauge-label';
@@ -855,7 +250,7 @@
     var statusEl = document.createElement('p');
     statusEl.className = 'hw-status';
     statusEl.textContent = t('waiting_sensor');
-    addAriaToElement(statusEl, 'status', 'Sensor status');
+    _a11y.addAria(statusEl, 'status', 'Sensor status');
     statusEl.setAttribute('aria-live', 'polite');
     container.appendChild(statusEl);
 
@@ -871,15 +266,20 @@
         targetValue = parseFloat(numMatch[1]);
         if (/g/i.test(thresholdStr)) targetValue *= 9.81;
       }
-    } catch (e) {}
+    } catch (e) { if (DEV_MODE) console.warn('[PLAYER] threshold parse failed:', e); }
     var gaugeMax = targetValue * 1.5;
 
     // Position threshold marker
     var markerPct = Math.min(100, (targetValue / gaugeMax) * 100);
     thresholdMarker.style.left = markerPct + '%';
 
-    // Subscribe to sensor updates for live gauge
+    // Subscribe to sensor updates for live gauge — register cleanup for step navigation
     var cancelWatch = null;
+    if (S.registerStepCleanup) {
+      S.registerStepCleanup(function () {
+        if (cancelWatch) cancelWatch();
+      });
+    }
     if (S.thresholdEvaluator && thresholdStr) {
       var _triggerCancel = null;
 
@@ -887,15 +287,15 @@
         var val = reading.value;
         var pct = Math.min(100, Math.max(0, (val / gaugeMax) * 100));
         gaugeFill.style.width = pct + '%';
-        gaugeFill.style.background = (val >= targetValue) ? '#4ade80' : 'var(--accent, #00e676)';
+        gaugeFill.style.background = (val >= targetValue) ? '#1B5E20' : '#0B5FFF';
         gaugeValue.textContent = val.toFixed(1);
       });
 
       _triggerCancel = S.thresholdEvaluator.watch(thresholdStr, primarySensor, function () {
         unsub();
         statusEl.textContent = t('threshold_met');
-        statusEl.style.color = '#4ade80';
-        gaugeFill.style.background = '#4ade80';
+        statusEl.style.color = '#1B5E20';
+        gaugeFill.style.background = '#1B5E20';
         gaugeFill.style.width = '100%';
         recordStepOutcome(step, true, 1, false);
 
@@ -986,7 +386,7 @@
     function handleAnswer(selectedIdx) {
       var correct = (selectedIdx === correctIdx);
       attempts++;
-      _trackFrustrationRetry();
+      _frust.trackRetry();
 
       probeResults.push({
         probeId:       step.id,
@@ -1005,8 +405,11 @@
       }
 
       if (correct) {
-        feedbackEl.innerHTML = '<p class="fb-correct">' +
-          (fb.correct || 'Correct!') + '</p>';
+        var fbCorrectP = document.createElement('p');
+        fbCorrectP.className = 'fb-correct';
+        fbCorrectP.textContent = fb.correct || 'Correct!';
+        feedbackEl.innerHTML = '';
+        feedbackEl.appendChild(fbCorrectP);
         recordStepOutcome(step, true, attempts, false);
         setTimeout(function () {
           if (step.on_success) {
@@ -1019,8 +422,11 @@
         var correctText = (correctIdx >= 0 && correctIdx < options.length)
           ? (typeof options[correctIdx] === 'string' ? options[correctIdx] : options[correctIdx].text || '')
           : '';
-        feedbackEl.innerHTML = '<p class="fb-incorrect">' +
-          (fb.incorrect || ('The correct answer was: ' + correctText)) + '</p>';
+        var fbIncorrectP = document.createElement('p');
+        fbIncorrectP.className = 'fb-incorrect';
+        fbIncorrectP.textContent = fb.incorrect || ('The correct answer was: ' + correctText);
+        feedbackEl.innerHTML = '';
+        feedbackEl.appendChild(fbIncorrectP);
         recordStepOutcome(step, false, attempts, false);
 
         var continueBtn = document.createElement('button');
@@ -1038,19 +444,441 @@
         var remaining = maxAtt - attempts;
         var hintTexts = Array.isArray(fb.hints) ? fb.hints : [];
         var attemptHint = hintTexts[attempts - 1] || fb.hint || '';
-        var retryMsg = attemptHint
-          ? attemptHint + ' (' + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining)'
-          : 'Not quite \u2014 try again. (' + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining)';
-        feedbackEl.innerHTML = '<p class="fb-hint">' + retryMsg + '</p>';
+        var _fmt = S.formatRemainingAttempts || function (p, r) { return p + ' (' + r + ' attempt' + (r === 1 ? '' : 's') + ' remaining)'; };
+        var retryMsg = _fmt(attemptHint || 'Not quite \u2014 try again.', remaining);
+        var fbHintP = document.createElement('p');
+        fbHintP.className = 'fb-hint';
+        fbHintP.textContent = retryMsg;
+        feedbackEl.innerHTML = '';
+        feedbackEl.appendChild(fbHintP);
         optBtns.forEach(function (btn, i) {
           if (i !== selectedIdx) {
             btn.disabled = false;
             btn.classList.remove('quiz-correct', 'quiz-incorrect');
           }
         });
-        if (_shouldShowFrustrationNudge()) _showFrustrationNudge(container);
+        if (_frust.shouldShowNudge()) _showFrustrationNudge(container);
       }
     }
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 2d — Fill-in-the-blank step rendering
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function renderFillBlankStep(step) {
+    var app = document.getElementById('app');
+    app.innerHTML = '';
+
+    var container = document.createElement('div');
+    container.className = 'step step-fill-blank';
+
+    if (step.htmlContent) {
+      var contentDiv = document.createElement('div');
+      contentDiv.className = 'step-content';
+      var html = step.htmlContent.replace(/___/g, '<input type="text" class="fill-blank-input" autocomplete="off" autocapitalize="off">');
+      contentDiv.innerHTML = html;
+      container.appendChild(contentDiv);
+    }
+
+    var blanks = step.blanks || [];
+    var maxAtt = (step.max_attempts > 0) ? step.max_attempts : 2;
+    var fb = step.feedback || {};
+    var attempts = 0;
+
+    var feedbackEl = document.createElement('div');
+    feedbackEl.className = 'quiz-feedback';
+    container.appendChild(feedbackEl);
+
+    var submitBtn = document.createElement('button');
+    submitBtn.className = 'btn btn-primary';
+    submitBtn.textContent = 'Check Answer';
+    submitBtn.style.marginTop = '1rem';
+    container.appendChild(submitBtn);
+
+    app.appendChild(container);
+
+    submitBtn.onclick = function () {
+      attempts++;
+      _frust.trackRetry();
+      var inputs = container.querySelectorAll('.fill-blank-input');
+      var correctCount = 0;
+      for (var i = 0; i < inputs.length; i++) {
+        var userAnswer = (inputs[i].value || '').trim().toLowerCase();
+        var blankDef = blanks[i] || {};
+        var accepted = [blankDef.answer || ''].concat(blankDef.accept || []);
+        var isCorrect = false;
+        for (var j = 0; j < accepted.length; j++) {
+          if (userAnswer === String(accepted[j]).toLowerCase()) { isCorrect = true; break; }
+        }
+        inputs[i].style.borderColor = isCorrect ? '#1B5E20' : '#B00020';
+        if (isCorrect) correctCount++;
+      }
+
+      var allCorrect = (correctCount === inputs.length);
+
+      probeResults.push({
+        probeId: step.id,
+        correct: allCorrect,
+        correctCount: correctCount,
+        totalBlanks: inputs.length,
+        attempt: attempts
+      });
+
+      if (allCorrect) {
+        feedbackEl.innerHTML = '';
+        var p = document.createElement('p');
+        p.className = 'fb-correct';
+        p.textContent = fb.correct || 'All correct!';
+        feedbackEl.appendChild(p);
+        submitBtn.disabled = true;
+        recordStepOutcome(step, true, attempts, false);
+        setTimeout(function () {
+          if (step.on_success) routeStep(resolveDirective(step.on_success));
+          else nextStep();
+        }, 1200);
+      } else if (attempts >= maxAtt) {
+        feedbackEl.innerHTML = '';
+        var pFail = document.createElement('p');
+        pFail.className = 'fb-incorrect';
+        var answers = blanks.map(function (b) { return b.answer || '?'; }).join(', ');
+        pFail.textContent = fb.incorrect || ('Correct answers: ' + answers);
+        feedbackEl.appendChild(pFail);
+        submitBtn.disabled = true;
+        recordStepOutcome(step, false, attempts, false);
+        var continueBtn = document.createElement('button');
+        continueBtn.className = 'btn btn-primary';
+        continueBtn.textContent = 'Continue';
+        continueBtn.style.marginTop = '0.5rem';
+        continueBtn.onclick = function () {
+          if (step.on_fail) routeStep(resolveDirective(step.on_fail));
+          else nextStep();
+        };
+        feedbackEl.appendChild(continueBtn);
+      } else {
+        feedbackEl.innerHTML = '';
+        var pHint = document.createElement('p');
+        pHint.className = 'fb-hint';
+        pHint.textContent = correctCount + ' of ' + inputs.length + ' correct. Try again.';
+        feedbackEl.appendChild(pHint);
+        if (_frust.shouldShowNudge()) _showFrustrationNudge(container);
+      }
+    };
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 2e — Matching step rendering (tap-to-select for mobile)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function renderMatchingStep(step) {
+    var app = document.getElementById('app');
+    app.innerHTML = '';
+
+    var container = document.createElement('div');
+    container.className = 'step step-matching';
+
+    if (step.htmlContent) {
+      var contentDiv = document.createElement('div');
+      contentDiv.className = 'step-content';
+      contentDiv.innerHTML = step.htmlContent;
+      container.appendChild(contentDiv);
+    }
+
+    var pairs = step.pairs || [];
+    var maxAtt = (step.max_attempts > 0) ? step.max_attempts : 2;
+    var fb = step.feedback || {};
+    var attempts = 0;
+
+    var leftItems = pairs.map(function (p) { return p.left; });
+    var rightItems = pairs.map(function (p) { return p.right; });
+    var shuffledRight = rightItems.slice().sort(function () { return Math.random() - 0.5; });
+
+    var matches = {};
+    var selectedLeft = null;
+
+    var matchGrid = document.createElement('div');
+    matchGrid.style.cssText = 'display:flex;gap:1rem;margin:1rem 0;';
+
+    var leftCol = document.createElement('div');
+    leftCol.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:0.5rem;';
+    var rightCol = document.createElement('div');
+    rightCol.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:0.5rem;';
+
+    var leftBtns = [];
+    var rightBtns = [];
+
+    leftItems.forEach(function (item, idx) {
+      var btn = document.createElement('button');
+      btn.className = 'quiz-option';
+      btn.textContent = item;
+      btn.style.minHeight = '48px';
+      btn.setAttribute('data-left-idx', idx);
+      btn.onclick = function () {
+        for (var k = 0; k < leftBtns.length; k++) leftBtns[k].style.outline = '';
+        selectedLeft = idx;
+        btn.style.outline = '3px solid #0B5FFF';
+      };
+      leftCol.appendChild(btn);
+      leftBtns.push(btn);
+    });
+
+    shuffledRight.forEach(function (item, idx) {
+      var btn = document.createElement('button');
+      btn.className = 'quiz-option';
+      btn.textContent = item;
+      btn.style.minHeight = '48px';
+      btn.setAttribute('data-right-idx', idx);
+      btn.onclick = function () {
+        if (selectedLeft === null) return;
+        matches[selectedLeft] = item;
+        leftBtns[selectedLeft].style.outline = '3px solid #1B5E20';
+        leftBtns[selectedLeft].textContent = leftItems[selectedLeft] + ' \u2192 ' + item;
+        leftBtns[selectedLeft].disabled = true;
+        btn.style.outline = '3px solid #1B5E20';
+        btn.disabled = true;
+        selectedLeft = null;
+        for (var k = 0; k < leftBtns.length; k++) {
+          if (!leftBtns[k].disabled) leftBtns[k].style.outline = '';
+        }
+      };
+      rightCol.appendChild(btn);
+      rightBtns.push(btn);
+    });
+
+    matchGrid.appendChild(leftCol);
+    matchGrid.appendChild(rightCol);
+    container.appendChild(matchGrid);
+
+    var feedbackEl = document.createElement('div');
+    feedbackEl.className = 'quiz-feedback';
+    container.appendChild(feedbackEl);
+
+    var submitBtn = document.createElement('button');
+    submitBtn.className = 'btn btn-primary';
+    submitBtn.textContent = 'Check Matches';
+    submitBtn.style.marginTop = '0.5rem';
+    container.appendChild(submitBtn);
+
+    app.appendChild(container);
+
+    submitBtn.onclick = function () {
+      attempts++;
+      _frust.trackRetry();
+      var correctCount = 0;
+      for (var i = 0; i < pairs.length; i++) {
+        if (matches[i] === pairs[i].right) correctCount++;
+      }
+      var allCorrect = (correctCount === pairs.length);
+
+      probeResults.push({
+        probeId: step.id,
+        correct: allCorrect,
+        correctCount: correctCount,
+        totalPairs: pairs.length,
+        attempt: attempts
+      });
+
+      if (allCorrect) {
+        feedbackEl.innerHTML = '';
+        var p = document.createElement('p');
+        p.className = 'fb-correct';
+        p.textContent = fb.correct || 'All matched correctly!';
+        feedbackEl.appendChild(p);
+        submitBtn.disabled = true;
+        recordStepOutcome(step, true, attempts, false);
+        setTimeout(function () {
+          if (step.on_success) routeStep(resolveDirective(step.on_success));
+          else nextStep();
+        }, 1200);
+      } else if (attempts >= maxAtt) {
+        feedbackEl.innerHTML = '';
+        var pFail = document.createElement('p');
+        pFail.className = 'fb-incorrect';
+        pFail.textContent = fb.incorrect || (correctCount + ' of ' + pairs.length + ' correct.');
+        feedbackEl.appendChild(pFail);
+        submitBtn.disabled = true;
+        recordStepOutcome(step, false, attempts, false);
+        var continueBtn = document.createElement('button');
+        continueBtn.className = 'btn btn-primary';
+        continueBtn.textContent = 'Continue';
+        continueBtn.style.marginTop = '0.5rem';
+        continueBtn.onclick = function () {
+          if (step.on_fail) routeStep(resolveDirective(step.on_fail));
+          else nextStep();
+        };
+        feedbackEl.appendChild(continueBtn);
+      } else {
+        feedbackEl.innerHTML = '';
+        var pHint = document.createElement('p');
+        pHint.className = 'fb-hint';
+        pHint.textContent = correctCount + ' of ' + pairs.length + ' correct. Try again.';
+        feedbackEl.appendChild(pHint);
+        matches = {};
+        selectedLeft = null;
+        for (var k = 0; k < leftBtns.length; k++) {
+          leftBtns[k].disabled = false;
+          leftBtns[k].textContent = leftItems[k];
+          leftBtns[k].style.outline = '';
+        }
+        for (var m = 0; m < rightBtns.length; m++) {
+          rightBtns[m].disabled = false;
+          rightBtns[m].style.outline = '';
+        }
+        if (_frust.shouldShowNudge()) _showFrustrationNudge(container);
+      }
+    };
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 2f — Ordering step rendering (arrow buttons for mobile)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function renderOrderingStep(step) {
+    var app = document.getElementById('app');
+    app.innerHTML = '';
+
+    var container = document.createElement('div');
+    container.className = 'step step-ordering';
+
+    if (step.htmlContent) {
+      var contentDiv = document.createElement('div');
+      contentDiv.className = 'step-content';
+      contentDiv.innerHTML = step.htmlContent;
+      container.appendChild(contentDiv);
+    }
+
+    var items = (step.items || []).slice();
+    var correctOrder = step.correct_order || [];
+    var maxAtt = (step.max_attempts > 0) ? step.max_attempts : 2;
+    var fb = step.feedback || {};
+    var attempts = 0;
+
+    var shuffled = items.slice().sort(function () { return Math.random() - 0.5; });
+    var currentOrder = shuffled.slice();
+
+    var listEl = document.createElement('div');
+    listEl.className = 'ordering-list';
+    listEl.style.cssText = 'margin:1rem 0;';
+
+    function renderList() {
+      listEl.innerHTML = '';
+      for (var i = 0; i < currentOrder.length; i++) {
+        (function (idx) {
+          var row = document.createElement('div');
+          row.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;';
+
+          var upBtn = document.createElement('button');
+          upBtn.className = 'btn btn-secondary';
+          upBtn.textContent = '\u25B2';
+          upBtn.style.cssText = 'min-width:48px;min-height:48px;font-size:1.2rem;';
+          upBtn.disabled = (idx === 0);
+          upBtn.onclick = function () {
+            var temp = currentOrder[idx - 1];
+            currentOrder[idx - 1] = currentOrder[idx];
+            currentOrder[idx] = temp;
+            renderList();
+          };
+
+          var downBtn = document.createElement('button');
+          downBtn.className = 'btn btn-secondary';
+          downBtn.textContent = '\u25BC';
+          downBtn.style.cssText = 'min-width:48px;min-height:48px;font-size:1.2rem;';
+          downBtn.disabled = (idx === currentOrder.length - 1);
+          downBtn.onclick = function () {
+            var temp = currentOrder[idx + 1];
+            currentOrder[idx + 1] = currentOrder[idx];
+            currentOrder[idx] = temp;
+            renderList();
+          };
+
+          var label = document.createElement('span');
+          label.style.cssText = 'flex:1;padding:0.5rem;background:#f5f5f0;border-radius:2px;';
+          label.textContent = currentOrder[idx];
+
+          row.appendChild(upBtn);
+          row.appendChild(downBtn);
+          row.appendChild(label);
+          listEl.appendChild(row);
+        })(i);
+      }
+    }
+
+    renderList();
+    container.appendChild(listEl);
+
+    var feedbackEl = document.createElement('div');
+    feedbackEl.className = 'quiz-feedback';
+    container.appendChild(feedbackEl);
+
+    var submitBtn = document.createElement('button');
+    submitBtn.className = 'btn btn-primary';
+    submitBtn.textContent = 'Check Order';
+    submitBtn.style.marginTop = '0.5rem';
+    container.appendChild(submitBtn);
+
+    app.appendChild(container);
+
+    submitBtn.onclick = function () {
+      attempts++;
+      _frust.trackRetry();
+
+      var correctCount = 0;
+      for (var i = 0; i < currentOrder.length; i++) {
+        var expectedIdx = correctOrder[i] !== undefined ? correctOrder[i] : i;
+        if (currentOrder[i] === items[expectedIdx]) correctCount++;
+      }
+      var allCorrect = (correctCount === currentOrder.length);
+
+      probeResults.push({
+        probeId: step.id,
+        correct: allCorrect,
+        correctCount: correctCount,
+        totalItems: currentOrder.length,
+        attempt: attempts
+      });
+
+      if (allCorrect) {
+        feedbackEl.innerHTML = '';
+        var p = document.createElement('p');
+        p.className = 'fb-correct';
+        p.textContent = fb.correct || 'Correct order!';
+        feedbackEl.appendChild(p);
+        submitBtn.disabled = true;
+        recordStepOutcome(step, true, attempts, false);
+        setTimeout(function () {
+          if (step.on_success) routeStep(resolveDirective(step.on_success));
+          else nextStep();
+        }, 1200);
+      } else if (attempts >= maxAtt) {
+        feedbackEl.innerHTML = '';
+        var pFail = document.createElement('p');
+        pFail.className = 'fb-incorrect';
+        var correctItems = correctOrder.map(function (ci) { return items[ci]; }).join(' \u2192 ');
+        pFail.textContent = fb.incorrect || ('Correct order: ' + correctItems);
+        feedbackEl.appendChild(pFail);
+        submitBtn.disabled = true;
+        recordStepOutcome(step, false, attempts, false);
+        var continueBtn = document.createElement('button');
+        continueBtn.className = 'btn btn-primary';
+        continueBtn.textContent = 'Continue';
+        continueBtn.style.marginTop = '0.5rem';
+        continueBtn.onclick = function () {
+          if (step.on_fail) routeStep(resolveDirective(step.on_fail));
+          else nextStep();
+        };
+        feedbackEl.appendChild(continueBtn);
+      } else {
+        feedbackEl.innerHTML = '';
+        var pHint = document.createElement('p');
+        pHint.className = 'fb-hint';
+        pHint.textContent = correctCount + ' of ' + currentOrder.length + ' in the right position. Try again.';
+        feedbackEl.appendChild(pHint);
+        if (_frust.shouldShowNudge()) _showFrustrationNudge(container);
+      }
+    };
   }
 
 
@@ -1063,7 +891,7 @@
   try {
     var ed = (lesson.meta && lesson.meta.expected_duration) || '';
     expectedDurationMs = parseDurationMs(ed);
-  } catch (e) {}
+  } catch (e) { if (DEV_MODE) console.warn('[PLAYER] expected_duration parse failed:', e); }
 
   function getPaceRatio() {
     if (expectedDurationMs <= 0) return null;
@@ -1072,247 +900,52 @@
   }
 
   /**
-   * Render the lesson-complete screen with step review, skill summary, retry, and next-lesson flow.
+   * Render the lesson-complete screen — delegated to AGNI_COMPLETION module.
    */
   function renderCompletion() {
+    if (global.AGNI_COMPLETION) {
+      global.AGNI_COMPLETION.render({
+        lesson: lesson,
+        stepOutcomes: stepOutcomes,
+        probeResults: probeResults,
+        steps: steps,
+        lessonStartMs: lessonStartMs,
+        expectedDurationMs: expectedDurationMs,
+        t: t,
+        devMode: DEV_MODE,
+        onRetry: function () {
+          clearCheckpoint();
+          stepOutcomes = [];
+          probeResults = [];
+          stepIndex = 0;
+          lessonStartMs = Date.now();
+          if (_frust.reset) _frust.reset();
+          routeStep(steps[0].id);
+        }
+      });
+      return;
+    }
     var app = document.getElementById('app');
     app.innerHTML = '';
-
-    var container = document.createElement('div');
-    container.className = 'completion-screen';
-    addAriaToElement(container, 'main', 'Lesson completion');
-
-    clearCheckpoint();
-
-    // Compute mastery synchronously for immediate display
-    var computedMastery = null;
-    if (global.AGNI_TELEMETRY && global.AGNI_TELEMETRY.computeMastery) {
-      computedMastery = global.AGNI_TELEMETRY.computeMastery(stepOutcomes);
-    }
-    var masteryPct = computedMastery ? Math.round(computedMastery.mastery * 100) : null;
-
-    // Celebration tier
-    var tier = masteryPct >= 90 ? 'excellent' : (masteryPct >= 70 ? 'good' : 'complete');
-    var icons = { excellent: '\u2B50', good: '\u2714', complete: '\u2714' };
-    var titles = {
-      excellent: t('completion_excellent') || 'Excellent work!',
-      good: t('completion_good') || 'Well done!',
-      complete: (lesson.meta && lesson.meta.completion_message) || t('lesson_complete')
-    };
-
-    var checkmark = document.createElement('div');
-    checkmark.className = 'completion-icon completion-' + tier;
-    checkmark.textContent = icons[tier];
-    container.appendChild(checkmark);
-
-    var msg = document.createElement('h2');
-    msg.className = 'completion-title';
-    msg.textContent = titles[tier];
-    container.appendChild(msg);
-
-    // Mastery score (prominent)
-    if (masteryPct !== null) {
-      var masteryEl = document.createElement('div');
-      masteryEl.className = 'mastery-ring';
-      masteryEl.innerHTML = '<span class="mastery-pct">' + masteryPct + '%</span>' +
-        '<span class="mastery-label">' + t('mastery_label') + '</span>';
-      container.appendChild(masteryEl);
-    }
-
-    // Pace summary
-    var pace = getPaceRatio();
-    if (pace !== null) {
-      var paceEl = document.createElement('p');
-      paceEl.className = 'pace-summary';
-      if (pace < 0.8) {
-        paceEl.textContent = t('pace_fast');
-        paceEl.style.color = '#4ade80';
-      } else if (pace <= 1.2) {
-        paceEl.textContent = t('pace_ontime');
-        paceEl.style.color = '#60a5fa';
-      } else {
-        paceEl.textContent = t('pace_slow');
-        paceEl.style.color = '#fbbf24';
-      }
-      container.appendChild(paceEl);
-    }
-
-    // Step-by-step review
-    var reviewable = stepOutcomes.filter(function (o) {
-      return o.type !== 'instruction' && o.type !== 'completion';
-    });
-    if (reviewable.length > 0) {
-      var reviewSection = document.createElement('div');
-      reviewSection.className = 'completion-review';
-
-      var reviewToggle = document.createElement('button');
-      reviewToggle.className = 'btn btn-secondary review-toggle';
-      reviewToggle.textContent = t('review_steps') || 'Review your answers';
-      var reviewList = document.createElement('div');
-      reviewList.className = 'review-list';
-      reviewList.style.display = 'none';
-
-      reviewable.forEach(function (outcome) {
-        var step = null;
-        for (var i = 0; i < steps.length; i++) {
-          if (steps[i].id === outcome.stepId) { step = steps[i]; break; }
-        }
-        var item = document.createElement('div');
-        var status = outcome.skipped ? 'skipped' : (outcome.passed ? 'passed' : 'failed');
-        item.className = 'review-step review-' + status;
-
-        var icon = outcome.skipped ? '\u23ED' : (outcome.passed ? '\u2714' : '\u2718');
-        var label = (step && step.title) || outcome.stepId;
-        item.innerHTML = '<span class="review-icon">' + icon + '</span>' +
-          '<span class="review-label">' + label + '</span>' +
-          '<span class="review-detail">' +
-            (outcome.skipped ? t('skipped') : (outcome.passed
-              ? (outcome.attempts > 1 ? t('passed_attempts', { n: outcome.attempts }) : t('passed_first'))
-              : t('not_passed'))) +
-          '</span>';
-        reviewList.appendChild(item);
-      });
-
-      reviewToggle.onclick = function () {
-        var visible = reviewList.style.display !== 'none';
-        reviewList.style.display = visible ? 'none' : 'block';
-        reviewToggle.textContent = visible
-          ? (t('review_steps') || 'Review your answers')
-          : (t('hide_review') || 'Hide review');
-      };
-      reviewSection.appendChild(reviewToggle);
-      reviewSection.appendChild(reviewList);
-      container.appendChild(reviewSection);
-    }
-
-    // Skills provided summary
-    var provides = (lesson.ontology && lesson.ontology.provides) || [];
-    if (provides.length > 0) {
-      var skillsDiv = document.createElement('div');
-      skillsDiv.className = 'skills-earned';
-      var skillTitle = document.createElement('h3');
-      skillTitle.textContent = t('skills_practised');
-      skillsDiv.appendChild(skillTitle);
-      var skillList = document.createElement('ul');
-      provides.forEach(function (p) {
-        var li = document.createElement('li');
-        li.textContent = p.skill + (p.declaredLevel ? ' (level ' + p.declaredLevel + ')' : '');
-        skillList.appendChild(li);
-      });
-      skillsDiv.appendChild(skillList);
-      container.appendChild(skillsDiv);
-    }
-
-    // Action buttons: Retry + Next + Dashboard
-    var actionsDiv = document.createElement('div');
-    actionsDiv.className = 'next-lesson-actions';
-    actionsDiv.style.marginTop = '1.5rem';
-
-    var retryBtn = document.createElement('button');
-    retryBtn.className = 'btn btn-secondary';
-    retryBtn.textContent = t('retry_lesson') || 'Retry Lesson';
-    retryBtn.onclick = function () {
-      clearCheckpoint();
-      stepOutcomes = [];
-      probeResults = [];
-      stepIndex = 0;
-      lessonStartMs = Date.now();
-      routeStep(steps[0].id);
-    };
-    actionsDiv.appendChild(retryBtn);
-
-    try {
-      var params = new URLSearchParams(global.location.search || '');
-      var pseudoId = params.get('pseudoId');
-      var hubBase  = params.get('hub') || '';
-      if (pseudoId) {
-        var nextBtn = document.createElement('button');
-        nextBtn.className = 'btn btn-primary';
-        nextBtn.textContent = t('next_lesson');
-        nextBtn.onclick = function () {
-          var portalUrl = hubBase
-            ? hubBase.replace(/\/$/, '') + '/learn?pseudoId=' + encodeURIComponent(pseudoId)
-            : '/learn?pseudoId=' + encodeURIComponent(pseudoId);
-          global.location.href = portalUrl;
-        };
-        actionsDiv.appendChild(nextBtn);
-
-        var homeBtn = document.createElement('button');
-        homeBtn.className = 'btn btn-secondary';
-        homeBtn.textContent = t('back_dashboard');
-        homeBtn.onclick = function () {
-          var portalUrl = hubBase
-            ? hubBase.replace(/\/$/, '') + '/learn/progress?pseudoId=' + encodeURIComponent(pseudoId)
-            : '/learn/progress?pseudoId=' + encodeURIComponent(pseudoId);
-          global.location.href = portalUrl;
-        };
-        actionsDiv.appendChild(homeBtn);
-      }
-    } catch (e) {}
-    container.appendChild(actionsDiv);
-
-    app.appendChild(container);
-
-    // Record completion via telemetry (async, non-blocking)
-    var totalDuration = Date.now() - lessonStartMs;
-    if (global.AGNI_TELEMETRY && global.AGNI_TELEMETRY.record) {
-      global.AGNI_TELEMETRY.record(lesson, stepOutcomes, totalDuration, probeResults)
-        .catch(function (err) {
-          if (DEV_MODE) console.warn('[PLAYER] Telemetry record failed:', err);
-        });
-    }
+    var msg = document.createElement('div');
+    msg.textContent = t('lesson_complete');
+    app.appendChild(msg);
   }
 
   /**
-   * Render a step into #app.
-   *
-   * @param {object} step
+   * Render a content/instruction/svg step (the default renderer).
    */
-  function renderStep(step) {
-    S = global.AGNI_SHARED;
+  function renderContentStep(step) {
     var app = document.getElementById('app');
 
-    stepEntryMs = Date.now();
-
-    if (S.destroyStepVisual)        S.destroyStepVisual();
-    if (S.currentStageHandle && S.currentStageHandle.stage) {
-      try { S.currentStageHandle.stage.destroy(); } catch (_) {}
-      S.currentStageHandle = null;
-    }
-    if (S.clearSensorSubscriptions) S.clearSensorSubscriptions();
-    clearStepHintTimer();
-
-    // Pace indicator (non-intrusive top bar)
-    updatePaceIndicator();
-
-    // completion steps delegate entirely
-    if (step.type === 'completion') {
-      renderCompletion();
-      return;
-    }
-
-    // quiz steps use the dedicated multiple-choice renderer
-    if (step.type === 'quiz' && step.answer_options) {
-      renderQuizStep(step);
-      return;
-    }
-
-    // hardware_trigger steps use the sensor + gauge renderer
-    if (step.type === 'hardware_trigger') {
-      renderHardwareTriggerStep(step);
-      return;
-    }
-
-    // Record instruction/content/svg steps as auto-passed
     if (step.type === 'instruction' || step.type === 'svg' || (!step.type && !step.spec)) {
       recordStepOutcome(step, true, 1, false);
     }
 
     var container = document.createElement('div');
     container.className = 'step step-' + (step.type || 'content');
-    addAriaToElement(container, 'region', step.title || step.id);
+    _a11y.addAria(container, 'region', step.title || step.id);
 
-    // Step progress counter
     var progressEl = document.createElement('div');
     progressEl.className = 'step-progress';
     progressEl.textContent = t('step_of', { current: stepIndex + 1, total: steps.length });
@@ -1324,7 +957,6 @@
       contentDiv.innerHTML = step.htmlContent;
       container.appendChild(contentDiv);
 
-      // Multi-modal: offer TTS for text-heavy instruction steps
       if ('speechSynthesis' in global && step.htmlContent.length > 80) {
         var readAloudBtn = document.createElement('button');
         readAloudBtn.className = 'btn btn-secondary multimodal-btn';
@@ -1351,7 +983,6 @@
       }
     }
 
-    // SVG factory visual — uses cached factories via AGNI_SVG.Registry.fromSpec()
     var svgContainer = null;
     var svgSpec = step.svg_spec || step.spec;
     if (svgSpec && svgSpec.factory) {
@@ -1380,14 +1011,20 @@
           }
           if (DEV_MODE) console.log('[PLAYER] SVG factory rendered:', svgSpec.factory);
         } else {
-          svgContainer.innerHTML = '<p style="color:#fcc419;font-size:0.9em;">' +
-            'SVG factory "' + svgSpec.factory + '" not available — check factory cache.</p>';
+          var warnP = document.createElement('p');
+          warnP.style.cssText = 'color:#996600;font-size:0.9em;font-weight:bold;';
+          warnP.textContent = 'SVG factory "' + svgSpec.factory + '" not available \u2014 check factory cache.';
+          svgContainer.innerHTML = '';
+          svgContainer.appendChild(warnP);
           console.warn('[PLAYER] AGNI_SVG.fromSpec not available for step:', step.id);
         }
       } catch (err) {
         console.error('[PLAYER] SVG render failed:', step.id, err);
-        svgContainer.innerHTML = '<p style="color:#ff6b6b;font-size:0.9em;">SVG render error: ' +
-          (err.message || err) + '</p>';
+        var errP = document.createElement('p');
+        errP.style.cssText = 'color:#B00020;font-size:0.9em;font-weight:bold;';
+        errP.textContent = 'SVG render error: ' + (err.message || err);
+        svgContainer.innerHTML = '';
+        svgContainer.appendChild(errP);
       }
     }
 
@@ -1404,6 +1041,43 @@
     startStepHintTimer(step, container);
   }
 
+  // ── Step-type dispatch table ──
+  var STEP_RENDERERS = {
+    completion:       function () { renderCompletion(); },
+    quiz:             renderQuizStep,
+    hardware_trigger: renderHardwareTriggerStep,
+    fill_blank:       renderFillBlankStep,
+    matching:         renderMatchingStep,
+    ordering:         renderOrderingStep
+  };
+
+  /**
+   * Render a step into #app. Dispatches to the appropriate renderer.
+   */
+  function renderStep(step) {
+    S = global.AGNI_SHARED;
+    stepEntryMs = Date.now();
+
+    if (S.destroyStepVisual)        S.destroyStepVisual();
+    if (S.currentStageHandle && S.currentStageHandle.stage) {
+      try { S.currentStageHandle.stage.destroy(); } catch (_e) { if (DEV_MODE) console.warn('[PLAYER] stage destroy failed:', _e); }
+      S.currentStageHandle = null;
+    }
+    if (S.clearSensorSubscriptions) S.clearSensorSubscriptions();
+    if (global.speechSynthesis && global.speechSynthesis.speaking) {
+      global.speechSynthesis.cancel();
+    }
+    clearStepHintTimer();
+    updatePaceIndicator();
+
+    var renderer = STEP_RENDERERS[step.type];
+    if (renderer) {
+      renderer(step);
+    } else {
+      renderContentStep(step);
+    }
+  }
+
   // ── Per-step adaptive hint timer (multi-tier) ──
   var _stepHintTimers = [];
 
@@ -1415,6 +1089,17 @@
     var hints = Array.isArray(step.hints) ? step.hints : [];
     var fallbackHint = (step.feedback && step.feedback.hint) || '';
 
+    function _safeHintHtml(label, text) {
+      var strong = document.createElement('strong');
+      strong.textContent = label;
+      var span = document.createElement('span');
+      span.textContent = ' ' + text;
+      var frag = document.createDocumentFragment();
+      frag.appendChild(strong);
+      frag.appendChild(span);
+      return frag;
+    }
+
     // Tier 1 — gentle nudge at 1.5x
     _stepHintTimers.push(setTimeout(function () {
       if (!container || !container.parentNode) return;
@@ -1422,10 +1107,10 @@
       var el = document.createElement('div');
       el.className = 'step-hint-nudge hint-tier-1';
       el.setAttribute('aria-live', 'polite');
-      el.innerHTML = '<strong>' + t('hint_nudge') + '</strong> ' +
-        (hints[0] || (step.type === 'quiz'
+      el.appendChild(_safeHintHtml(t('hint_nudge'),
+        hints[0] || (step.type === 'quiz'
           ? 'Take your time \u2014 try eliminating options you know are wrong.'
-          : 'Need help? Try re-reading the content above.'));
+          : 'Need help? Try re-reading the content above.')));
       container.appendChild(el);
     }, stepExpected * 1.5));
 
@@ -1438,8 +1123,8 @@
       var el = document.createElement('div');
       el.className = 'step-hint-nudge hint-tier-2';
       el.setAttribute('aria-live', 'polite');
-      el.innerHTML = '<strong>' + t('hint_label') + '</strong> ' +
-        (hints[1] || fallbackHint || 'Look carefully at the question \u2014 what information narrows down the answer?');
+      el.appendChild(_safeHintHtml(t('hint_label'),
+        hints[1] || fallbackHint || 'Look carefully at the question \u2014 what information narrows down the answer?'));
       container.appendChild(el);
     }, stepExpected * 2.5));
 
@@ -1451,10 +1136,10 @@
       if (prev2) prev2.style.display = 'none';
       var el = document.createElement('div');
       el.className = 'step-hint-nudge hint-tier-3';
-      addAriaToElement(el, 'alert', 'Hint');
+      _a11y.addAria(el, 'alert', 'Hint');
       el.setAttribute('aria-live', 'polite');
-      el.innerHTML = '<strong>' + t('hint_strong') + '</strong> ' +
-        (hints[2] || fallbackHint || 'This is a tough one. You can skip ahead if you\u2019re stuck.');
+      el.appendChild(_safeHintHtml(t('hint_strong'),
+        hints[2] || fallbackHint || 'This is a tough one. You can skip ahead if you\u2019re stuck.'));
       var skipBtn = document.createElement('button');
       skipBtn.className = 'btn btn-secondary hint-skip';
       skipBtn.textContent = t('skip_step');
@@ -1483,13 +1168,13 @@
     if (!el) {
       el = document.createElement('div');
       el.id = 'agni-pace-bar';
-      el.style.cssText = 'position:fixed;top:0;left:0;height:3px;z-index:9999;transition:width 0.3s;';
+      el.style.cssText = 'position:fixed;top:0;left:0;height:4px;z-index:9999;';
       document.body.appendChild(el);
     }
     var pct = Math.min(100, (stepIndex / steps.length) * 100);
     var pace = getPaceRatio();
     el.style.width = pct + '%';
-    el.style.background = (pace !== null && pace > 1.2) ? '#fbbf24' : '#4ade80';
+    el.style.background = (pace !== null && pace > 1.2) ? '#996600' : '#1B5E20';
   }
 
 
@@ -1502,10 +1187,7 @@
    * @param {string} targetId
    */
   function routeStep(targetId) {
-    var idx = -1;
-    for (var i = 0; i < steps.length; i++) {
-      if (steps[i].id === targetId) { idx = i; break; }
-    }
+    var idx = _stepIdMap[targetId] !== undefined ? _stepIdMap[targetId] : -1;
 
     if (idx === -1) {
       console.error('[PLAYER] routeStep: unknown step id:', targetId);
@@ -1730,7 +1412,8 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   function initPlayer() {
-    applyAccessibility();
+    _a11y.apply();
+    if (_a11y.injectSettingsButton) _a11y.injectSettingsButton();
     if (DEV_MODE) console.log('[PLAYER] initPlayer()', lesson.meta && lesson.meta.title);
 
     var loader = global.AGNI_LOADER;
@@ -1765,16 +1448,29 @@
         // Check for a saved checkpoint and offer resume
         var checkpoint = loadCheckpoint();
         if (checkpoint && checkpoint.stepId) {
-          var ckptIdx = -1;
-          for (var i = 0; i < steps.length; i++) {
-            if (steps[i].id === checkpoint.stepId) { ckptIdx = i; break; }
-          }
+          var ckptIdx = _stepIdMap[checkpoint.stepId] !== undefined ? _stepIdMap[checkpoint.stepId] : -1;
           if (ckptIdx > 0) {
             stepOutcomes = checkpoint.stepOutcomes || [];
             probeResults = checkpoint.probeResults || [];
             showResumePrompt(checkpoint.stepId, ckptIdx);
             return;
           }
+        }
+
+        if (!checkpoint && _ckpt.loadRemote && _hubUrl && _pseudoId) {
+          _ckpt.loadRemote(_hubUrl, _pseudoId, LESSON_ID, DEV_MODE).then(function (remote) {
+            if (remote && remote.stepId) {
+              var rIdx = _stepIdMap[remote.stepId] !== undefined ? _stepIdMap[remote.stepId] : -1;
+              if (rIdx > 0) {
+                stepOutcomes = remote.stepOutcomes || [];
+                probeResults = remote.probeResults || [];
+                showResumePrompt(remote.stepId, rIdx);
+                return;
+              }
+            }
+            routeStep(steps[0].id);
+          });
+          return;
         }
 
         routeStep(steps[0].id);

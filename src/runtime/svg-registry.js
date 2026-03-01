@@ -509,7 +509,7 @@
           itemSchema: [
             fnProp('fn', 'y = f(x)', 'x * x'),
             floatProp('x', 'x', 0, -100, 100),
-            colorProp('color', 'Colour', '#fcc419'),
+            colorProp('color', 'Colour', '#996600'),
             boolProp('showSlope', 'Show slope label', true)
           ]
         }),
@@ -659,7 +659,7 @@
         var stage = SVG.stage(container, {
           w: mergedOpts.w || 420,
           h: mergedOpts.h || 280,
-          background: '#1a1a2e'
+          background: '#F4F1E8'
         });
         var result = factory(stage, mergedOpts);
         return { stage: stage, result: result };
@@ -710,7 +710,7 @@
       var stage = SVG.stage(container, {
         w: spec.w || 420,
         h: spec.h || 280,
-        background: spec.background || '#1a1a2e'
+        background: spec.background || '#F4F1E8'
       });
       var results = {};
       (spec.layers || []).forEach(function (layerSpec) {

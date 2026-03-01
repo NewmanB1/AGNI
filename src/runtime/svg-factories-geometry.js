@@ -28,7 +28,7 @@
   }
   function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
-  var PALETTE = ['#4dabf7','#ff6b35','#51cf66','#fcc419','#cc5de8','#ff8787','#20c997','#f06595'];
+  var PALETTE = ['#0B5FFF','#D84315','#1B5E20','#996600','#7B1FA2','#B00020','#00695C','#AD1457'];
 
   if (!global.AGNI_SVG) global.AGNI_SVG = {};
   var SVG = global.AGNI_SVG;
@@ -233,8 +233,8 @@
     if (opts.showAngles) {
       baseVerts.forEach(function () {
         var g = el('g', {});
-        var arc = el('path', { fill: 'none', stroke: '#fcc419', 'stroke-width': '1.5' });
-        var label = txt('', { 'font-size': '10', fill: '#fcc419' });
+        var arc = el('path', { fill: 'none', stroke: '#996600', 'stroke-width': '1.5' });
+        var label = txt('', { 'font-size': '10', fill: '#996600' });
         g.appendChild(arc);
         g.appendChild(label);
         layer.appendChild(g);
@@ -595,14 +595,14 @@
         gridLayer.appendChild(el('line', {
           x1: toScreenX(gx).toFixed(1), y1: pad.t,
           x2: toScreenX(gx).toFixed(1), y2: pad.t + CH,
-          stroke: '#2a2a4a', 'stroke-width': '1'
+          stroke: '#C0BDB3', 'stroke-width': '1'
         }));
       }
       for (var gy = Math.ceil(yMin / yStep) * yStep; gy <= yMax; gy += yStep) {
         gridLayer.appendChild(el('line', {
           x1: pad.l, y1: toScreenY(gy).toFixed(1),
           x2: pad.l + CW, y2: toScreenY(gy).toFixed(1),
-          stroke: '#2a2a4a', 'stroke-width': '1'
+          stroke: '#C0BDB3', 'stroke-width': '1'
         }));
       }
     }
@@ -734,7 +734,7 @@
       point: function (wx, wy, pointOpts) {
         pointOpts = pointOpts || {};
         var sx = toScreenX(wx), sy = toScreenY(wy);
-        var color = pointOpts.color || '#fcc419';
+        var color = pointOpts.color || '#996600';
         var name = pointOpts.layer || 'pts';
         var g = sublayer(name);
         g.appendChild(el('circle', { cx: sx.toFixed(1), cy: sy.toFixed(1),
@@ -800,7 +800,7 @@
        */
       tangent: function (fn, wx, tanOpts) {
         tanOpts = tanOpts || {};
-        var color = tanOpts.color || '#fcc419';
+        var color = tanOpts.color || '#996600';
         var name = tanOpts.layer || 'tangent';
         clearSublayer(name);
         var g = sublayer(name);
@@ -853,7 +853,7 @@
         // Filled triangle
         g.appendChild(el('polygon', {
           points: sx1.toFixed(1)+','+sy1.toFixed(1)+' '+sCorner.x.toFixed(1)+','+sCorner.y.toFixed(1)+' '+sx2.toFixed(1)+','+sy2.toFixed(1),
-          fill: '#ffffff', 'fill-opacity': '0.07', stroke: 'none'
+          fill: '#DDDAD0', stroke: 'none'
         }));
 
         // Run (horizontal)
@@ -1015,8 +1015,8 @@
     if (opts.showCosine !== false) { layer.appendChild(cosineLine); layer.appendChild(cosLabel); }
 
     // Angle arc
-    var angleArcEl = el('path', { fill:'none', stroke:'#fcc419', 'stroke-width':'1.5' });
-    var angleLabel = txt('θ', { 'font-size':'13', fill:'#fcc419', 'font-weight':'bold' });
+    var angleArcEl = el('path', { fill:'none', stroke:'#996600', 'stroke-width':'1.5' });
+    var angleLabel = txt('θ', { 'font-size':'13', fill:'#996600', 'font-weight':'bold' });
     layer.appendChild(angleArcEl);
     layer.appendChild(angleLabel);
 
@@ -1034,10 +1034,10 @@
     if (opts.showValues !== false) {
       var rx = W * 0.74, ry = H * 0.25;
       layer.appendChild(el('rect', { x:rx-2, y:ry-16, width:W*0.24, height:72,
-        rx:6, fill:'#000', 'fill-opacity':'0.5', stroke:'#3a3a6a', 'stroke-width':'1' }));
-      readoutEls.angle = el('text', { x:rx+4, y:ry,    'font-family':'sans-serif', 'font-size':'12', fill:'#fcc419', 'dominant-baseline':'central' }); layer.appendChild(readoutEls.angle);
-      readoutEls.sin   = el('text', { x:rx+4, y:ry+22, 'font-family':'sans-serif', 'font-size':'12', fill:'#ff6b35', 'dominant-baseline':'central' }); layer.appendChild(readoutEls.sin);
-      readoutEls.cos   = el('text', { x:rx+4, y:ry+44, 'font-family':'sans-serif', 'font-size':'12', fill:'#4dabf7', 'dominant-baseline':'central' }); layer.appendChild(readoutEls.cos);
+        rx:2, fill:'#FFFFFF', stroke:'#2D2D2D', 'stroke-width':'1' }));
+      readoutEls.angle = el('text', { x:rx+4, y:ry,    'font-family':'sans-serif', 'font-size':'12', fill:'#996600', 'dominant-baseline':'central' }); layer.appendChild(readoutEls.angle);
+      readoutEls.sin   = el('text', { x:rx+4, y:ry+22, 'font-family':'sans-serif', 'font-size':'12', fill:'#D84315', 'dominant-baseline':'central' }); layer.appendChild(readoutEls.sin);
+      readoutEls.cos   = el('text', { x:rx+4, y:ry+44, 'font-family':'sans-serif', 'font-size':'12', fill:'#0B5FFF', 'dominant-baseline':'central' }); layer.appendChild(readoutEls.cos);
     }
 
     if (opts.title) layer.appendChild(txt(opts.title, { x:W/2, y:16, 'font-size':'14', 'font-weight':'bold' }));

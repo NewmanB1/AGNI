@@ -3,7 +3,7 @@
 // Aggregate cohort coverage by UTU and by skill for governance reporting.
 // Consumes lesson index (sidecar-like entries) and mastery summary.
 
-var MASTERY_THRESHOLD = 0.6;
+const MASTERY_THRESHOLD = 0.6;
 
 /**
  * Aggregate coverage: how many lessons/skills in the index fall under each UTU bucket,
@@ -16,14 +16,19 @@ var MASTERY_THRESHOLD = 0.6;
  */
 function aggregateCohortCoverage(lessonIndex, masterySummary, policy) {
   policy = policy || {};
-  var students = masterySummary.students || {};
-  var studentIds = Object.keys(students);
-  var byUtu = {};
-  var bySkill = {};
+  const students = masterySummary.students || {};
+  const studentIds = Object.keys(students);
+  const byUtu = {};
+  const bySkill = {};
 
   lessonIndex.forEach(function (lesson) {
-    var utu = lesson.utu;
-    var utuKey = utu && utu.class ? (utu.class + (typeof utu.band === 'number' ? '-B' + utu.band : '')) : '_no_utu';
+    const utu = lesson.utu;
+    let utuKey = '_no_utu';
+    if (utu && utu.class) {
+      utuKey = utu.class;
+      if (typeof utu.band === 'number') utuKey += '-B' + utu.band;
+      if (typeof utu.protocol === 'number') utuKey += '-P' + utu.protocol;
+    }
 
     if (!byUtu[utuKey]) {
       byUtu[utuKey] = { lessons: 0, skills: [], studentMasteryCount: 0 };
@@ -31,7 +36,7 @@ function aggregateCohortCoverage(lessonIndex, masterySummary, policy) {
     byUtu[utuKey].lessons += 1;
 
     (lesson.skillsProvided || []).forEach(function (p) {
-      var skillId = typeof p === 'string' ? p : p.skill;
+      const skillId = typeof p === 'string' ? p : p.skill;
       if (!skillId) return;
       if (!bySkill[skillId]) {
         bySkill[skillId] = { lessons: 0, studentMasteryCount: 0 };
@@ -43,13 +48,13 @@ function aggregateCohortCoverage(lessonIndex, masterySummary, policy) {
 
   // Dedupe UTU skills per bucket
   Object.keys(byUtu).forEach(function (k) {
-    var arr = byUtu[k].skills;
+    const arr = byUtu[k].skills;
     byUtu[k].skills = arr.filter(function (s, i) { return arr.indexOf(s) === i; });
   });
 
   // Count students who have mastered each skill (above threshold)
   studentIds.forEach(function (pseudoId) {
-    var skills = students[pseudoId] || {};
+    const skills = students[pseudoId] || {};
     Object.keys(skills).forEach(function (skillId) {
       if ((skills[skillId] || 0) >= MASTERY_THRESHOLD) {
         if (bySkill[skillId]) bySkill[skillId].studentMasteryCount += 1;
@@ -59,10 +64,10 @@ function aggregateCohortCoverage(lessonIndex, masterySummary, policy) {
 
   // For each UTU bucket, count students who have mastered at least one skill in that bucket
   Object.keys(byUtu).forEach(function (utuKey) {
-    var skillList = byUtu[utuKey].skills;
+    const skillList = byUtu[utuKey].skills;
     studentIds.forEach(function (pseudoId) {
-      var skills = students[pseudoId] || {};
-      var hasMastered = skillList.some(function (skillId) {
+      const skills = students[pseudoId] || {};
+      const hasMastered = skillList.some(function (skillId) {
         return (skills[skillId] || 0) >= MASTERY_THRESHOLD;
       });
       if (hasMastered) byUtu[utuKey].studentMasteryCount += 1;

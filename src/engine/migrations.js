@@ -9,10 +9,7 @@
 
 'use strict';
 
-var DEFAULT_EMBEDDING_DIM = parseInt(process.env.AGNI_EMBEDDING_DIM || '16', 10);
-var DEFAULT_FORGETTING = parseFloat(process.env.AGNI_FORGETTING || '0.98');
-var DEFAULT_EMBEDDING_LR = parseFloat(process.env.AGNI_EMBEDDING_LR || '0.01');
-var DEFAULT_EMBEDDING_REG = parseFloat(process.env.AGNI_EMBEDDING_REG || '0.001');
+var envConfig = require('../utils/env-config');
 
 /**
  * Ensure a plain object; return {} if missing or not an object.
@@ -50,7 +47,7 @@ function ensureNumber(v, def, bounds) {
  */
 function migrateLMSState(raw, opts) {
   opts = opts || {};
-  var dim = opts.embeddingDim != null ? opts.embeddingDim : DEFAULT_EMBEDDING_DIM;
+  var dim = opts.embeddingDim != null ? opts.embeddingDim : envConfig.embeddingDim;
   var migrated = false;
 
   var root = ensureObject(raw);
@@ -96,9 +93,9 @@ function migrateLMSState(raw, opts) {
   // ── Embedding ─────────────────────────────────────────────────────────────
   var embDim = ensureNumber(embedding.dim, dim, { min: 4, max: 256 });
   if (embedding.dim !== embDim) migrated = true;
-  var embLr = ensureNumber(embedding.lr, DEFAULT_EMBEDDING_LR, { min: 1e-6, max: 1 });
-  var embReg = ensureNumber(embedding.reg, DEFAULT_EMBEDDING_REG, { min: 0, max: 1 });
-  var embForgetting = ensureNumber(embedding.forgetting, DEFAULT_FORGETTING, { min: 0, max: 1 });
+  var embLr = ensureNumber(embedding.lr, envConfig.embeddingLr, { min: 1e-6, max: 1 });
+  var embReg = ensureNumber(embedding.reg, envConfig.embeddingReg, { min: 0, max: 1 });
+  var embForgetting = ensureNumber(embedding.forgetting, envConfig.forgetting, { min: 0, max: 1 });
 
   var embStudents = ensureObject(embedding.students);
   var embLessons = ensureObject(embedding.lessons);
@@ -143,7 +140,7 @@ function migrateLMSState(raw, opts) {
     migrated = true;
   }
   var observationCount = ensureNumber(bandit.observationCount, 0, { min: 0 });
-  var banditForgetting = ensureNumber(bandit.forgetting, DEFAULT_FORGETTING, { min: 0, max: 1 });
+  var banditForgetting = ensureNumber(bandit.forgetting, envConfig.forgetting, { min: 0, max: 1 });
 
   var A = Array.isArray(bandit.A) ? bandit.A : [];
   var b = Array.isArray(bandit.b) ? bandit.b : [];

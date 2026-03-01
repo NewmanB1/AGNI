@@ -8,7 +8,10 @@
 const fs = require('fs');
 
 const LEVELS = { debug: 10, info: 20, warn: 30, error: 40 };
-const MIN_LEVEL = LEVELS[process.env.AGNI_LOG_LEVEL || 'info'] || LEVELS.info;
+
+let _envLogLevel;
+try { _envLogLevel = require('./env-config').logLevel; } catch (_) { _envLogLevel = process.env.AGNI_LOG_LEVEL || 'info'; }
+const MIN_LEVEL = LEVELS[_envLogLevel] || LEVELS.info;
 
 /**
  * Create a logger instance with a fixed component tag.
