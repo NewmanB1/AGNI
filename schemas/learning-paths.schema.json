@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agni-project.org/schemas/learning-paths.schema.json",
+  "title": "AGNI Learning Paths",
+  "description": "Teacher-defined sequences of skills that guide students through a curriculum progression.",
+  "type": "object",
+  "required": ["paths"],
+  "additionalProperties": false,
+  "properties": {
+    "paths": {
+      "type": "array",
+      "description": "List of learning paths.",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "skills"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique path identifier (e.g. 'path-1772368205480')."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable path name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional summary of the path's learning objective."
+          },
+          "skills": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Ordered list of skill identifiers the path covers."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp when the path was created."
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "Role or identifier of the creator (e.g. 'teacher')."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp when the path was last modified."
+          }
+        }
+      }
+    }
+  }
+}

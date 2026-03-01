@@ -46,17 +46,21 @@
 
 const fs   = require('fs');
 const path = require('path');
+const { createLogger }   = require('../utils/logger');
 
-const signContent        = require('../utils/crypto').signContent;
+const log = createLogger('html-builder');
+
+const { signContent, canonicalJSON } = require('../utils/crypto');
 const io                 = require('../utils/io');
 const ensureDir          = io.ensureDir;
 const copyIfNewer        = io.copyIfNewer;
 const escapeHtml         = io.escapeHtml;
 const compiler           = require('../compiler');
-const lessonAssembly     = require('../services/lessonAssembly');
+const lessonAssembly     = require('../services/lesson-assembly');
 const buildLessonIR      = compiler.buildLessonIR;
 const buildLessonSidecar = compiler.buildLessonSidecar;
 const buildKatexCss      = require('../utils/katex-css-builder').buildKatexCss;
+const { resolveFactoryPath } = require('../utils/runtimeManifest');
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -83,7 +87,7 @@ function readPublicKeySpki(publicKeyPath) {
     const derBuffer  = keyObject.export({ type: 'spki', format: 'der' });
     return derBuffer.toString('base64');
   } catch (err) {
-    console.warn('\u26A0\uFE0F  Could not read public key: ' + err.message);
+    log.warn('Could not read public key: ' + err.message);
     return null;
   }
 }
@@ -100,8 +104,8 @@ function readPublicKeySpki(publicKeyPath) {
  *                                (new in v1.9.1, required for Phase 4 verification)
  */
 async function buildHtml(lessonData, options) {
-  console.log('[HTML] Building lesson:', (lessonData.meta && lessonData.meta.title) || 'Unnamed');
-  console.log('[HTML] Device:', options.deviceId || 'Unbound (Development Mode)');
+  log.info('Building lesson: ' + ((lessonData.meta && lessonData.meta.title) || 'Unnamed'));
+  log.info('Device: ' + (options.deviceId || 'Unbound (Development Mode)'));
 
   // -- 1. Build the canonical IR -----------------------------------------------
   const ir = await buildLessonIR(lessonData, options);
@@ -112,7 +116,7 @@ async function buildHtml(lessonData, options) {
   const sidecarPath = options.output.replace(/\.html$/, '-ir.json');
   ensureDir(outputDir);
   fs.writeFileSync(sidecarPath, JSON.stringify(sidecar, null, 2));
-  console.log('[HTML] Sidecar written:', sidecarPath);
+  log.info('Sidecar written: ' + sidecarPath);
 
   // -- 3. Write KaTeX CSS assets -----------------------------------------------
   buildKatexCss(ir.inferredFeatures.katexAssets, outputDir);
@@ -120,13 +124,13 @@ async function buildHtml(lessonData, options) {
   // -- 4. Read runtime files ---------------------------------------------------
   const runtimeDir = path.join(__dirname, '../runtime');
 
-  const playerJs        = fs.readFileSync(path.join(runtimeDir, 'player.js'),         'utf8');
-  const factoryLoaderJs = fs.readFileSync(path.join(runtimeDir, 'factory-loader.js'), 'utf8');
+  const playerJs        = fs.readFileSync(resolveFactoryPath(runtimeDir, 'player.js'),         'utf8');
+  const factoryLoaderJs = fs.readFileSync(resolveFactoryPath(runtimeDir, 'factory-loader.js'), 'utf8');
   const styles          = fs.readFileSync(path.join(runtimeDir, 'style.css'),          'utf8');
 
   // -- 5a. binary-utils.js (load before shared-runtime; Backlog task 13) -------
   const binaryUtilsOutput = path.join(outputDir, 'binary-utils.js');
-  const binaryUtilsSource = path.join(runtimeDir, 'binary-utils.js');
+  const binaryUtilsSource = resolveFactoryPath(runtimeDir, 'binary-utils.js');
   if (fs.existsSync(binaryUtilsSource)) {
     fs.writeFileSync(binaryUtilsOutput, fs.readFileSync(binaryUtilsSource, 'utf8'));
   }
@@ -136,14 +140,15 @@ async function buildHtml(lessonData, options) {
   const sharedSource = path.join(runtimeDir, 'shared-runtime.js');
 
   if (copyIfNewer(sharedSource, sharedOutput)) {
-    console.log('[HTML] Shared runtime written:', sharedOutput);
+    log.info('Shared runtime written: ' + sharedOutput);
   } else {
-    console.log('[HTML] Shared runtime up-to-date');
+    log.info('Shared runtime up-to-date');
   }
 
   // -- 6. Build the factory dependency list ------------------------------------
   // binary-utils.js first (sets OLS_BINARY), then shared-runtime.js (AGNI_SHARED).
-  const RUNTIME_VERSION = '1.9.1';
+  var pkgVersion = require('../../package.json').version;
+  var RUNTIME_VERSION = pkgVersion;
 
   const factoryDeps = [];
   if (fs.existsSync(binaryUtilsSource)) {
@@ -159,8 +164,17 @@ async function buildHtml(lessonData, options) {
   ir.requires = { factories: factoryDeps };
 
   // -- 7. Serialize and sign lesson data ---------------------------------------
-  const dataString = JSON.stringify(ir);
-  const signature  = signContent(dataString, options.deviceId, options.privateKey);
+  // Use canonical JSON for signing so browser verification (which also uses
+  // canonical JSON) produces the same hash regardless of key ordering. [R10 P1.5]
+  const canonicalData = canonicalJSON(ir);
+  let signature = null;
+  if (options.skipSigning) {
+    log.info('Signing skipped (--skip-signing)');
+  } else if (options.deviceId && options.privateKey) {
+    signature = signContent(canonicalData, options.deviceId, options.privateKey);
+  } else if (options.deviceId) {
+    throw new Error('Device binding requested but --private-key not provided. Use --skip-signing for unsigned builds.');
+  }
 
   // -- 8. Read and encode the Hub's Ed25519 public key (Phase 4) --------------
   // This is the key that the browser uses to verify the signature.
@@ -168,12 +182,12 @@ async function buildHtml(lessonData, options) {
   const publicKeySpki = readPublicKeySpki(options.publicKey);
 
   if (options.deviceId && !publicKeySpki) {
-    console.warn('\u26A0\uFE0F  Device binding requested but public key not available.');
-    console.warn('   Runtime verification will fail. Pass --public-key <path>.');
+    log.warn('Device binding requested but public key not available.');
+    log.warn('Runtime verification will fail. Pass --public-key <path>.');
   }
 
   if (publicKeySpki) {
-    console.log('[HTML] Public key embedded (SPKI DER, ' +
+    log.info('Public key embedded (SPKI DER, ' +
       Buffer.from(publicKeySpki, 'base64').length + ' bytes)');
   }
 
@@ -212,10 +226,10 @@ async function buildHtml(lessonData, options) {
   fs.writeFileSync(options.output, html);
 
   const sizeKB = (Buffer.byteLength(html) / 1024).toFixed(1);
-  console.log('\u2705 Lesson HTML: ' + options.output + ' (' + sizeKB + ' KB)');
+  log.info('Lesson HTML: ' + options.output + ' (' + sizeKB + ' KB)');
 
   if (parseFloat(sizeKB) > 500) {
-    console.warn('\u26A0\uFE0F  Lesson HTML exceeds 500KB (' + sizeKB + ' KB)');
+    log.warn('Lesson HTML exceeds 500KB (' + sizeKB + ' KB)');
   }
 }
 

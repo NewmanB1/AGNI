@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agni-project.org/schemas/feature-flags.schema.json",
+  "title": "AGNI Feature Flags",
+  "description": "A/B feature flags with rollout percentages and deterministic student assignment. Used for controlled experiments and gradual feature rollouts.",
+  "type": "object",
+  "required": ["flags"],
+  "additionalProperties": false,
+  "properties": {
+    "flags": {
+      "type": "object",
+      "description": "Map of flag name to flag definition.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["enabled", "rollout", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the flag is globally active."
+          },
+          "rollout": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Percentage of students included in the treatment group (0–100)."
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the flag's purpose."
+          },
+          "metric": {
+            "type": ["string", "null"],
+            "description": "Telemetry metric used to evaluate the flag (e.g. 'mastery', 'completion_rate', 'frustration_score')."
+          }
+        }
+      }
+    }
+  }
+}

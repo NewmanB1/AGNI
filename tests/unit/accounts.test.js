@@ -48,7 +48,7 @@ describe('registerCreator', () => {
   it('rejects short password', async () => {
     const r = await accounts.registerCreator({ name: 'X', email: 'y@y.com', password: '123' });
     assert.ok(r.error);
-    assert.ok(r.error.includes('6 characters'));
+    assert.ok(r.error.includes('8 characters'));
   });
 });
 

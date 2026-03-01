@@ -10,9 +10,9 @@ const readline = require('readline');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const DATA_DIR = path.join(REPO_ROOT, 'data');
-const CONFIG_PATH = path.join(DATA_DIR, 'hub_config.json');
-const POLICY_PATH = path.join(DATA_DIR, 'governance_policy.json');
-const CATALOG_PATH = path.join(DATA_DIR, 'approved_catalog.json');
+const CONFIG_PATH = path.join(DATA_DIR, 'hub-config.json');
+const POLICY_PATH = path.join(DATA_DIR, 'governance-policy.json');
+const CATALOG_PATH = path.join(DATA_DIR, 'approved-catalog.json');
 
 function prompt(rl, question, defaultVal) {
   const def = defaultVal !== undefined && defaultVal !== '' ? ` [${defaultVal}]` : '';
@@ -30,7 +30,7 @@ async function run() {
 
   const exists = fs.existsSync(CONFIG_PATH);
   if (exists) {
-    const cont = await prompt(rl, 'hub_config.json already exists. Overwrite? (y/n)', 'n');
+    const cont = await prompt(rl, 'hub-config.json already exists. Overwrite? (y/n)', 'n');
     if (cont.toLowerCase() !== 'y' && cont.toLowerCase() !== 'yes') {
       console.log('Aborted.');
       rl.close();

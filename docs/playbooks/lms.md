@@ -23,7 +23,7 @@ Use this when changing adaptive selection, Rasch, embeddings, bandit, or federat
 
 - Bypass `src/services/lms.js` from theta or HTTP; keep a single entry point for the engine.
 - Change `featureDim` or embedding dim without a migration path for existing `lms_state.json` (or document “delete state file” as the upgrade path).
-- Add new dependencies inside `src/engine/` without ensuring Node 14 compatibility (village hub target).
+- Add new dependencies inside `src/engine/` without ensuring Node 18+ compatibility (village hub target).
 
 ## Types
 

@@ -24,7 +24,7 @@ const {
   SERVE_DIR, LESSON_INDEX, PORT,
   MIN_RESIDUAL, MASTERY_THRESHOLD, MIN_CONFIDENCE,
   MIN_LOCAL_SAMPLE_SIZE, MIN_LOCAL_EDGE_COUNT,
-  thetaCache, governanceService
+  thetaCache, governanceService, accountsService
 } = ctx;
 
 // ── LMS engine status ──────────────────────────────────────────────────────
@@ -160,12 +160,19 @@ function computeLessonTheta(lesson, pseudoId, baseCosts, masterySummary, graphWe
     }
   });
   if (repBaseCost === 0) { repBaseCost = Math.min(1, (lesson.difficulty || 2) / 5); repResidual = 1.0; }
-  const theta = Math.round(repBaseCost * repResidual * 1000) / 1000;
+  const inf = lesson.inferredFeatures || {};
+  const coherence = typeof inf.coherence === 'number' ? inf.coherence : 0;
+  const COHERENCE_WEIGHT = 0.08;
+  const coherenceBonus = Math.round(coherence * COHERENCE_WEIGHT * 1000) / 1000;
+
+  const theta = Math.round(Math.max(0.001, repBaseCost * repResidual - coherenceBonus) * 1000) / 1000;
   return {
     lessonId: lesson.lessonId, slug: lesson.slug, title: lesson.title, theta,
     baseCost: Math.round(repBaseCost * 1000) / 1000,
     residualFactor: Math.round(repResidual * 1000) / 1000,
     transferBenefit: Math.round((1 - repResidual) * 1000) / 1000,
+    coherenceBonus: coherenceBonus,
+    archetypeId: inf.archetypeId || null,
     alreadyMastered, difficulty: lesson.difficulty || 2,
     description: lesson.description || '', is_group: !!lesson.is_group,
     teaching_mode: lesson.teaching_mode || null,
@@ -251,10 +258,23 @@ async function getLessonsSortedByTheta(pseudoId) {
   const results = computeLessonOrder(candidates, skillGraph, baseCosts, graphWeights, masterySummary, pseudoId, scheduledSkills);
 
   // Frustration-to-theta feedback loop: penalize lessons with historically frustrating steps
+  // Indexed by pseudoId to avoid O(n) scan on every request [R10 P4.4]
   const FRUSTRATION_PENALTY_WEIGHT = 0.10;
   try {
     const telData = await ctx.loadTelemetryEventsAsync();
-    const studentEvents = (telData.events || []).filter(e => e.pseudoId === pseudoId);
+    if (!telData._indexByPseudoId) {
+      const idx = {};
+      const evts = telData.events || [];
+      for (let ti = 0; ti < evts.length; ti++) {
+        const pid = evts[ti].pseudoId;
+        if (pid) {
+          if (!idx[pid]) idx[pid] = [];
+          idx[pid].push(evts[ti]);
+        }
+      }
+      telData._indexByPseudoId = idx;
+    }
+    const studentEvents = telData._indexByPseudoId[pseudoId] || [];
     if (studentEvents.length > 0) {
       const frustrationByLesson = {};
       for (const ev of studentEvents) {
@@ -268,8 +288,8 @@ async function getLessonsSortedByTheta(pseudoId) {
       for (const r of results) {
         const fData = frustrationByLesson[r.lessonId];
         if (fData && fData.count > 0) {
-          var avgFrustration = fData.total / fData.count;
-          var penalty = Math.min(0.5, avgFrustration * 0.1) * FRUSTRATION_PENALTY_WEIGHT;
+          const avgFrustration = fData.total / fData.count;
+          const penalty = Math.min(0.5, avgFrustration * 0.1) * FRUSTRATION_PENALTY_WEIGHT;
           r.theta = Math.round((r.theta + penalty) * 1000) / 1000;
           r.frustrationPenalty = Math.round(penalty * 1000) / 1000;
         }
@@ -460,6 +480,9 @@ function startApi(port) {
 // ── Startup ──────────────────────────────────────────────────────────────
 if (require.main === module) {
   (async () => {
+    const pinResult = await accountsService.migrateLegacyPins();
+    if (pinResult.migrated > 0) log.info('Migrated legacy PINs to scrypt', { count: pinResult.migrated });
+    if (pinResult.legacySha256 > 0) log.warn('Students with unsalted SHA-256 PINs (will migrate on next verification)', { count: pinResult.legacySha256 });
     await rebuildLessonIndex();
     const server = startApi(PORT);
     const HUB_TRANSFORM_PATH = path.join(__dirname, '../server/hub-transform.js');

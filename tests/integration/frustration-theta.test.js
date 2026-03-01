@@ -7,7 +7,7 @@ const path = require('path');
 const fs = require('fs');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
-const TEL_PATH = path.join(DATA_DIR, 'telemetry_events.json');
+const TEL_PATH = path.join(DATA_DIR, 'telemetry-events.json');
 
 function post(baseUrl, urlPath, body) {
   const url = new URL(urlPath, baseUrl);

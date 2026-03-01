@@ -9,7 +9,7 @@ before(() => {
   const app = makeElement('div');
   dom.setById('app', app);
 });
-require('../../src/runtime/gate-renderer');
+require('../../src/runtime/rendering/gate-renderer');
 const gates = globalThis.AGNI_GATES;
 after(() => teardownGlobals());
 

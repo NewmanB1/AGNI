@@ -1,0 +1,133 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agni-project.org/schemas/archetypes.schema.json",
+  "title": "AGNI Pedagogical Archetypes v1.0",
+  "description": "Defines coherent pedagogical archetype clusters across UTU, Bloom's taxonomy, VARK modalities, and teaching philosophy. Used by the compiler for coherence validation and by theta for lesson scoring.",
+  "type": "object",
+  "required": ["version", "archetypes"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version for this archetype definition file."
+    },
+    "archetypes": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/archetype" },
+      "minItems": 1
+    }
+  },
+  "definitions": {
+    "archetype": {
+      "type": "object",
+      "required": ["id", "name", "category", "bandRange", "protocols", "blooms", "varkProfile", "teachingModes", "stepPattern", "thetaModifier", "designHints"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Unique kebab-case identifier for this archetype."
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable archetype name."
+        },
+        "description": {
+          "type": "string",
+          "description": "One-sentence description of the pedagogical intent."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["core", "specialty"],
+          "description": "Core archetypes map 1:1 to a Band-group × Protocol cell. Specialty archetypes span multiple cells or represent cross-cutting patterns."
+        },
+        "bandRange": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1, "maximum": 6 },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Inclusive [min, max] UTU band range for this archetype."
+        },
+        "protocols": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "minItems": 1,
+          "description": "UTU protocols this archetype applies to."
+        },
+        "blooms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["remember", "understand", "apply", "analyze", "evaluate", "create"]
+          },
+          "minItems": 1,
+          "description": "Bloom's taxonomy levels this archetype naturally targets."
+        },
+        "varkProfile": {
+          "$ref": "#/definitions/varkWeights",
+          "description": "Expected VARK modality distribution (weights should sum to ~1.0). Used for cosine-similarity alignment scoring."
+        },
+        "teachingModes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["socratic", "didactic", "guided_discovery", "narrative", "constructivist", "direct"]
+          },
+          "minItems": 1,
+          "description": "Teaching modes that are pedagogically coherent with this archetype. First entry is the primary recommendation."
+        },
+        "stepPattern": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 2,
+          "description": "Recommended step-type sequence. Entries are step types from the OLS spec; '|' denotes alternatives (e.g. 'ordering|matching'). Serves as authoring guidance, not a hard constraint."
+        },
+        "thetaModifier": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 1.5,
+          "description": "Multiplier applied to the coherence bonus in theta scoring. 1.0 = neutral. >1.0 = amplifies the bonus for high-coherence matches. <1.0 = dampens it (use for archetypes where dimension alignment is less predictive of quality)."
+        },
+        "designHints": {
+          "type": "object",
+          "required": ["opening", "assessment", "visual"],
+          "additionalProperties": false,
+          "properties": {
+            "opening": {
+              "type": "string",
+              "description": "Guidance for the lesson's first 1-2 steps."
+            },
+            "assessment": {
+              "type": "string",
+              "description": "Preferred assessment strategy and step types."
+            },
+            "visual": {
+              "type": "string",
+              "description": "SVG factory and visualization guidance."
+            },
+            "antipatterns": {
+              "type": "string",
+              "description": "What to avoid — common mistakes for this archetype."
+            }
+          }
+        },
+        "relatedArchetypes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "IDs of archetypes that are close neighbors in the pedagogical space. Used for partial-credit scoring."
+        }
+      }
+    },
+    "varkWeights": {
+      "type": "object",
+      "required": ["visual", "auditory", "readWrite", "kinesthetic"],
+      "additionalProperties": false,
+      "properties": {
+        "visual":      { "type": "number", "minimum": 0, "maximum": 1 },
+        "auditory":    { "type": "number", "minimum": 0, "maximum": 1 },
+        "readWrite":   { "type": "number", "minimum": 0, "maximum": 1 },
+        "kinesthetic": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}

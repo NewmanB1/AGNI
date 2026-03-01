@@ -48,9 +48,9 @@ describe('Theta API integration tests', () => {
     process.env.AGNI_SERVE_DIR = path.join(dataDir, 'serve');
     fs.mkdirSync(process.env.AGNI_SERVE_DIR, { recursive: true });
 
-    fs.writeFileSync(path.join(dataDir, 'mastery_summary.json'), JSON.stringify({ students: {} }));
-    fs.writeFileSync(path.join(dataDir, 'lesson_index.json'), JSON.stringify([]));
-    fs.writeFileSync(path.join(dataDir, 'approved_catalog.json'), JSON.stringify({ lessonIds: [] }));
+    fs.writeFileSync(path.join(dataDir, 'mastery-summary.json'), JSON.stringify({ students: {} }));
+    fs.writeFileSync(path.join(dataDir, 'lesson-index.json'), JSON.stringify([]));
+    fs.writeFileSync(path.join(dataDir, 'approved-catalog.json'), JSON.stringify({ lessonIds: [] }));
 
     const theta = require('../../hub-tools/theta');
     server = theta.startApi(0);

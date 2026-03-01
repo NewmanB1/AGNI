@@ -9,9 +9,19 @@ node_modules/
 agni.env
 
 # Sensitive data files (contain password hashes, session tokens, PINs)
-data/creator_accounts.json
+data/creator-accounts.json
 data/sessions.json
-data/student_accounts.json
+data/student-accounts.json
+
+# Runtime state files (created at first run; must not be tracked)
+data/groups.json
+data/mastery-summary.json
+data/review-schedule.json
+data/telemetry-events.json
+data/learning-paths.json
+data/feature-flags.json
+data/parent-links.json
+data/recommendation-overrides.json
 
 # Cryptographic keys
 *.pem
@@ -37,11 +47,11 @@ coverage/
 test-output.txt
 temp.json
 
-# Compiled engine output (built from src/engine/index.ts)
-src/engine/index.js
-src/engine/index.js.map
-src/engine/index.d.ts
-src/engine/index.d.ts.map
-
 # Build artifacts
 serve/
+*.tsbuildinfo
+
+# Test/tool output
+playwright-report/
+test-results/
+.playwright/

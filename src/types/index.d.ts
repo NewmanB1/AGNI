@@ -98,6 +98,10 @@ export interface InferredFeatures {
   dominantTeachingStyle: string;
   stepTypeCounts: Record<string, number>;
   difficulty: number;
+  /** Best-fit pedagogical archetype ID (e.g. 'embodied-discovery'). Set by compiler via archetypeMatch. */
+  archetypeId?: string | null;
+  /** Archetype coherence score (0–~1.38). Higher = lesson's dimensions are more pedagogically aligned. */
+  coherence?: number;
   // Open-ended extension point for future inference fields.
   [key: string]: unknown;
 }

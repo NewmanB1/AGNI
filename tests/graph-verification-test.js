@@ -66,16 +66,16 @@ async function runTest() {
   process.env.AGNI_MIN_LOCAL_SAMPLE_SIZE = '1';
 
   try {
-    writeJson(path.join(tmpDir, 'lesson_index.json'), LESSON_INDEX);
-    writeJson(path.join(tmpDir, 'graph_weights.json'), GRAPH_WEIGHTS);
-    writeJson(path.join(tmpDir, 'base_costs.json'), BASE_COSTS);
+    writeJson(path.join(tmpDir, 'lesson-index.json'), LESSON_INDEX);
+    writeJson(path.join(tmpDir, 'graph-weights.json'), GRAPH_WEIGHTS);
+    writeJson(path.join(tmpDir, 'base-costs.json'), BASE_COSTS);
     writeJson(path.join(tmpDir, 'schedules.json'), SCHEDULES);
     writeJson(path.join(tmpDir, 'curriculum.json'), CURRICULUM);
 
     const theta = require('../hub-tools/theta.js');
 
     // Weaver: high weaving:patterns, low farming:seasons → loops should be cheaper (first).
-    writeJson(path.join(tmpDir, 'mastery_summary.json'), {
+    writeJson(path.join(tmpDir, 'mastery-summary.json'), {
       students: {
         weaver: {
           'ols.weaving:patterns': 0.9,
@@ -87,7 +87,7 @@ async function runTest() {
     const weaverFirst = weaverLessons && weaverLessons.length > 0 ? weaverLessons[0].lessonId : null;
 
     // Farmer: high farming:seasons, low weaving:patterns → modulo should be cheaper (first).
-    writeJson(path.join(tmpDir, 'mastery_summary.json'), {
+    writeJson(path.join(tmpDir, 'mastery-summary.json'), {
       students: {
         farmer: {
           'ols.weaving:patterns': 0.2,

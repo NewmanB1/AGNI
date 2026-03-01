@@ -119,7 +119,7 @@
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'hub_config.json';
+    a.download = 'hub-config.json';
     a.click();
     URL.revokeObjectURL(a.href);
   }
@@ -134,7 +134,7 @@
 </nav>
 
 <h1>Hub Setup (A1)</h1>
-<p class="subtitle">Configure data paths, ports, and cache. Save to hub or download env/hub_config.json.</p>
+<p class="subtitle">Configure data paths, ports, and cache. Save to hub or download env/hub-config.json.</p>
 
 {#if loading}
   <p>Loading config…</p>
@@ -174,7 +174,7 @@
     </div>
     <div class="form-group">
       <label>Approved catalog path (AGNI_APPROVED_CATALOG)</label>
-      <input type="text" bind:value={config.approvedCatalog} placeholder="e.g. data/approved_catalog.json" />
+      <input type="text" bind:value={config.approvedCatalog} placeholder="e.g. data/approved-catalog.json" />
     </div>
 
     <h2>Ports</h2>
@@ -210,7 +210,7 @@
         {saving ? 'Saving…' : 'Save to Hub'}
       </button>
       <button class="secondary" onclick={downloadEnv}>Download .env snippet</button>
-      <button class="secondary" onclick={downloadJson}>Download hub_config.json</button>
+      <button class="secondary" onclick={downloadJson}>Download hub-config.json</button>
     </div>
   </div>
 {/if}

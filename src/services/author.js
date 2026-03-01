@@ -12,8 +12,8 @@ const yaml = require('js-yaml');
 const compilerService = require('./compiler');
 const safeYamlLoad = compilerService.safeYamlLoad;
 const buildIRWithSidecar = compilerService.buildIRWithSidecar;
-const lessonSchema = require('./lessonSchema');
-const lessonChain = require('./lessonChain');
+const lessonSchema = require('./lesson-schema');
+const lessonChain = require('./lesson-chain');
 const envConfig = require('../utils/env-config');
 
 const DEFAULT_YAML_DIR = envConfig.yamlDir;

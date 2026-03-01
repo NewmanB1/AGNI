@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const { setupGlobals, teardownGlobals, makeElement } = require('../helpers/browser-globals');
 
 before(() => setupGlobals());
-require('../../src/runtime/frustration');
+require('../../src/runtime/ui/frustration');
 const frust = globalThis.AGNI_FRUSTRATION;
 after(() => teardownGlobals());
 

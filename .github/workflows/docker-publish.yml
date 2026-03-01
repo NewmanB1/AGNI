@@ -33,6 +33,10 @@ jobs:
         with:
           cosign-release: 'v2.2.2'
 
+      # QEMU for cross-platform ARM builds (Pi target) [R10 P3.2]
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -61,8 +65,18 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          # Multi-arch: amd64 + ARM for Raspberry Pi [R10 P3.2]
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Sign the image with cosign keyless (GitHub OIDC) [R10 P3.1]
+      - name: Sign the published Docker image
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          DIGEST: ${{ steps.build-and-push.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}

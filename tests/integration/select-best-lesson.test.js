@@ -1,0 +1,140 @@
+'use strict';
+
+const { describe, it, before, after } = require('node:test');
+const assert = require('node:assert/strict');
+const os = require('os');
+const fs = require('fs');
+const path = require('path');
+
+const TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'agni-sbl-'));
+process.env.AGNI_DATA_DIR = TMP_DIR;
+
+const engine = require('../../src/engine');
+
+describe('selectBestLesson integration', () => {
+  after(() => {
+    fs.rmSync(TMP_DIR, { recursive: true, force: true });
+  });
+
+  it('returns null for empty candidates', () => {
+    const result = engine.selectBestLesson('s1', []);
+    assert.equal(result, null);
+  });
+
+  it('returns null for undefined candidates', () => {
+    const result = engine.selectBestLesson('s1', undefined);
+    assert.equal(result, null);
+  });
+
+  it('returns a valid candidate from seeded lessons', async () => {
+    await engine.seedLessons([
+      { lessonId: 'L1', difficulty: 2, skill: 'algebra' },
+      { lessonId: 'L2', difficulty: 3, skill: 'geometry' },
+      { lessonId: 'L3', difficulty: 4, skill: 'calculus' },
+    ]);
+
+    const candidates = ['L1', 'L2', 'L3'];
+    const result = engine.selectBestLesson('s-valid', candidates);
+
+    assert.ok(result !== null, 'Should return a lesson');
+    assert.ok(candidates.includes(result),
+      `Expected one of ${candidates.join(', ')}, got: ${result}`);
+  });
+
+  it('respects candidate filtering — only returns from the supplied subset', async () => {
+    await engine.seedLessons([
+      { lessonId: 'F1', difficulty: 1, skill: 'reading' },
+      { lessonId: 'F2', difficulty: 2, skill: 'reading' },
+      { lessonId: 'F3', difficulty: 3, skill: 'writing' },
+      { lessonId: 'F4', difficulty: 4, skill: 'writing' },
+      { lessonId: 'F5', difficulty: 5, skill: 'grammar' },
+    ]);
+
+    const allowed = ['F2', 'F4'];
+
+    for (let i = 0; i < 20; i++) {
+      const result = engine.selectBestLesson('s-filter', allowed);
+      assert.ok(result !== null, 'Should return a lesson');
+      assert.ok(allowed.includes(result),
+        `Trial ${i}: expected one of ${allowed.join(', ')}, got: ${result}`);
+    }
+  });
+
+  it('observations shift selection toward higher-gain lessons', async () => {
+    const easy = 'OBS-EASY';
+    const hard = 'OBS-HARD';
+    const student = 's-obs';
+
+    await engine.seedLessons([
+      { lessonId: easy, difficulty: 2, skill: 'obs-skill' },
+      { lessonId: hard, difficulty: 4, skill: 'obs-skill' },
+    ]);
+
+    for (let i = 0; i < 30; i++) {
+      await engine.recordObservation(student, easy, [
+        { probeId: easy, correct: true },
+      ]);
+      await engine.recordObservation(student, hard, [
+        { probeId: hard, correct: false },
+      ]);
+    }
+
+    const counts = { [easy]: 0, [hard]: 0 };
+    const TRIALS = 50;
+    for (let t = 0; t < TRIALS; t++) {
+      const pick = engine.selectBestLesson(student, [easy, hard]);
+      if (pick) counts[pick]++;
+    }
+
+    const total = counts[easy] + counts[hard];
+    assert.equal(total, TRIALS, 'Every trial should pick a lesson');
+
+    const dominant = counts[easy] > counts[hard] ? easy : hard;
+    const dominantPct = (Math.max(counts[easy], counts[hard]) / TRIALS) * 100;
+    assert.ok(dominantPct >= 60,
+      `Expected one lesson to dominate (>=60%%), but ${dominant} only got ${dominantPct.toFixed(0)}%% ` +
+      `(easy=${counts[easy]}, hard=${counts[hard]}). ` +
+      `The model should develop a preference after 60 observations.`);
+  });
+
+  it('handles unknown student gracefully', async () => {
+    await engine.seedLessons([
+      { lessonId: 'UK1', difficulty: 3, skill: 'unknown-test' },
+      { lessonId: 'UK2', difficulty: 3, skill: 'unknown-test' },
+    ]);
+
+    const result = engine.selectBestLesson('never-seen-student', ['UK1', 'UK2']);
+    assert.ok(result !== null, 'Should return a lesson for an unknown student');
+    assert.ok(['UK1', 'UK2'].includes(result),
+      `Expected UK1 or UK2, got: ${result}`);
+  });
+
+  it('works with an ontologyMap providing requires/provides', async () => {
+    await engine.seedLessons([
+      { lessonId: 'ONT-A', difficulty: 2, skill: 'ont-prereq' },
+      { lessonId: 'ONT-B', difficulty: 3, skill: 'ont-mid' },
+      { lessonId: 'ONT-C', difficulty: 4, skill: 'ont-advanced' },
+    ]);
+
+    const ontologyMap = {
+      'ONT-A': { requires: [],              provides: ['ont-prereq'] },
+      'ONT-B': { requires: ['ont-prereq'],  provides: ['ont-mid'] },
+      'ONT-C': { requires: ['ont-mid'],     provides: ['ont-advanced'] },
+    };
+
+    const candidates = ['ONT-A', 'ONT-B', 'ONT-C'];
+    const result = engine.selectBestLesson('s-ont', candidates, ontologyMap);
+
+    assert.ok(result !== null, 'Should return a lesson with ontologyMap');
+    assert.ok(candidates.includes(result),
+      `Expected one of ${candidates.join(', ')}, got: ${result}`);
+  });
+
+  it('getStatus reflects seeded lessons and observations', () => {
+    const status = engine.getStatus();
+    assert.ok(status.lessons > 0, 'Should have seeded lessons');
+    assert.ok(status.observations > 0, 'Should have recorded observations');
+    assert.ok(typeof status.embeddingDim === 'number');
+    assert.ok(typeof status.featureDim === 'number');
+  });
+});

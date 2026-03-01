@@ -17,7 +17,7 @@ async function run() {
     node src/cli.js hub init --wizard    # First-run: minimal config
     node src/cli.js deploy setup --wizard # Deployment: hub ID, home URL, ports, USB
     node src/cli.js sync setup --wizard   # Sync: transport, home URL, USB path
-    node src/cli.js lms-repair   # Migrate/repair LMS state file (data/lms_state.json)
+    node src/cli.js lms-repair   # Migrate/repair LMS state file (data/lms-state.json)
     npm run build   # if using package.json script
 
   Options:
@@ -62,7 +62,7 @@ async function run() {
   if (firstArg === 'lms-repair') {
     const engine = require('./engine');
     engine.reloadState();
-    console.log('LMS state reloaded; migration applied if needed. State path: AGNI_DATA_DIR/data/lms_state.json');
+    console.log('LMS state reloaded; migration applied if needed. State path: AGNI_DATA_DIR/data/lms-state.json');
     return;
   }
 

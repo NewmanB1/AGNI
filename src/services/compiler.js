@@ -14,11 +14,14 @@
 const fs   = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
+const { createLogger } = require('../utils/logger');
+
+const log = createLogger('compiler');
 
 const buildHtml   = require('../builders/html');
 const buildNative = require('../builders/native');
-const inferFeatures = require('../utils/featureInference').inferFeatures;
-const lessonSchema = require('./lessonSchema');
+const inferFeatures = require('../utils/feature-inference').inferFeatures;
+const lessonSchema = require('./lesson-schema');
 const compiler = require('../compiler');
 const buildLessonIR = compiler.buildLessonIR;
 const buildLessonSidecar = compiler.buildLessonSidecar;
@@ -98,13 +101,12 @@ function maybeLogFeatureInference(lessonData, inputPath) {
   try {
     const result = inferFeatures(lessonData);
     const title  = (lessonData.meta && lessonData.meta.title) || 'Unnamed lesson';
-    console.log('\n[FEATURE INFERENCE] ' + title + ' (' + inputPath + ')');
-    console.log(JSON.stringify(result, null, 2));
+    log.info('Feature inference: ' + title + ' (' + inputPath + ')', result);
     // Preserve current CLI behaviour: attach result to lessonData for future
     // consumers, even though buildLessonIR runs its own inference.
     lessonData.inferredFeatures = result;
   } catch (err) {
-    console.warn('[Warning] Feature inference failed: ' + err.message);
+    log.warn('Feature inference failed: ' + err.message);
   }
 }
 
@@ -166,11 +168,11 @@ async function compileLessonFromYamlFile(inputPath, options) {
     throw new Error('Validation failed: ' + validation.errors.join('; '));
   }
   if (validation.warnings && validation.warnings.length > 0) {
-    validation.warnings.forEach(function (w) { console.warn('[Compiler]', w); });
+    validation.warnings.forEach(function (w) { log.warn(w); });
   }
 
   if (options.dev) {
-    console.log('⚠️  Developer mode enabled — not for distribution');
+    log.warn('Developer mode enabled — not for distribution');
   }
 
   if (options.logFeatures) {

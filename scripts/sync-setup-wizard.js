@@ -9,7 +9,7 @@ const path = require('path');
 const readline = require('readline');
 
 const DATA_DIR = path.join(__dirname, '../data');
-const CONFIG_PATH = path.join(DATA_DIR, 'hub_config.json');
+const CONFIG_PATH = path.join(DATA_DIR, 'hub-config.json');
 
 function prompt(rl, question, defaultVal) {
   const def = defaultVal !== undefined && defaultVal !== '' ? ` [${defaultVal}]` : '';

@@ -24,16 +24,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'   # Caches node_modules using package-lock.json
+          node-version-file: '.nvmrc'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci    # Uses package-lock.json for exact, clean installs
-
-      - name: Validate JSON schemas load
-        run: npm run codegen:validate-schemas
-      - name: Build LMS engine (TypeScript)
-        run: npm run build:engine
 
       - name: Run unit tests
         run: npm test
@@ -46,34 +41,6 @@ jobs:
         run: npm run build:native
         # This runs: node src/compiler.js lessons/gravity.yaml --format=native --output-dir=dist/native-gravity
 
-      # ── DEBUG STEP ──
-      # This helps us see exactly what files were created
-      - name: Debug - Check build output
-        run: |
-          echo "Current working directory:"
-          pwd
-          echo ""
-          echo "Files in root:"
-          ls -la
-          echo ""
-          echo "Files in dist/ (if exists):"
-          ls -la dist/ 2>/dev/null || echo "→ dist/ folder does NOT exist or is empty"
-          echo ""
-          if [ -f dist/gravity.html ]; then
-            echo "→ gravity.html EXISTS!"
-            echo "First few lines of gravity.html:"
-            head -n 8 dist/gravity.html
-          else
-            echo "→ gravity.html NOT found"
-          fi
-          echo ""
-          if [ -d dist/native-gravity ]; then
-            echo "→ native-gravity directory exists"
-            ls -la dist/native-gravity/
-          else
-            echo "→ native-gravity NOT found"
-          fi
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -81,10 +48,5 @@ jobs:
           path: |
             dist/gravity.html
             dist/native-gravity/
-          if-no-files-found: warn   # Changed to warn so job stays green for debugging
+          if-no-files-found: error
           retention-days: 7
-
-      - name: Show build summary
-        run: |
-          echo "Build artifacts should be available below (if files were created)"
-          ls -lh dist/ 2>/dev/null || echo "No dist/ folder found"

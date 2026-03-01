@@ -26,7 +26,60 @@ on:
   workflow_dispatch:
 jobs:
   validate:
-    name: Validate YAML & Graph Weights
+    name: Validate (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 22]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Initialize data files
+        run: npm run init:data
+      - name: Audit dependencies for vulnerabilities
+        run: npm audit --audit-level=high
+      - name: Lint
+        run: npm run lint
+      - name: Format check
+        run: npx prettier --check "src/**/*.{js,ts}" "hub-tools/**/*.js" "server/**/*.js" "tests/**/*.js"
+      - name: Type check
+        run: npm run typecheck
+      - name: Validate JSON schemas load (Ajv)
+        run: npm run codegen:validate-schemas
+      - name: Run unit tests with coverage
+        run: npm run test:coverage
+      - name: Run integration tests
+        run: npm run test:integration
+      - name: Run contract tests
+        run: npm run test:contract
+      - name: Run graph verification tests
+        run: npm run test:graph
+      - name: Check runtime files for ES5 compatibility
+        run: npm run test:es5
+      - name: Validate OLS lessons and data files
+        run: node scripts/validate-schemas.js
+      # Build all lessons, not just gravity.yaml [R10 P3.4]
+      - name: Build all lessons
+        run: |
+          for f in lessons/*.yaml; do
+            slug=$(basename "$f" .yaml)
+            node src/cli.js "$f" --format=html --output="dist/${slug}.html"
+          done
+      # Verify data files unchanged after tests [R10 P5.7]
+      - name: Check data directory cleanliness
+        run: |
+          sha256sum data/*.json > /tmp/data-before.sha
+          npm run test:unit
+          sha256sum --check /tmp/data-before.sha
+  e2e:
+    name: Playwright E2E
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -38,70 +91,19 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
-      - name: Audit dependencies for vulnerabilities
-        run: npm audit --audit-level=high
-      - name: Lint
-        run: npm run lint
-      - name: Format check
-        run: npx prettier --check "src/**/*.{js,ts}" "hub-tools/**/*.js" "server/**/*.js" "tests/**/*.js"
-      - name: Dead code check (knip)
-        run: npx knip
-        continue-on-error: true
-      - name: Validate JSON schemas load (Ajv)
-        run: npm run codegen:validate-schemas
-      - name: Build LMS engine (TypeScript)
-        run: npm run build:engine
-      - name: Run unit tests with coverage
-        run: |
-          npm run test:coverage 2>&1 | tee test-output.txt
-          LINE_COV=$(node -e "
-            const fs = require('fs');
-            const out = fs.readFileSync('test-output.txt', 'utf8');
-            const m = out.match(/all files[^\\d]*(\\d+\\.?\\d*)/);
-            if (m) process.stdout.write(m[1]);
-            else process.stdout.write('0');
-          ")
-          echo "Line coverage: ${LINE_COV}%"
-          THRESHOLD=85
-          if [ "$(echo "$LINE_COV < $THRESHOLD" | bc -l)" = "1" ]; then
-            echo "FAIL: Line coverage ${LINE_COV}% is below threshold of ${THRESHOLD}%"
-            exit 1
-          fi
-          echo "PASS: Line coverage ${LINE_COV}% meets threshold of ${THRESHOLD}%"
-          rm -f test-output.txt
-      - name: Run runtime module tests
-        run: npm run test:runtime
-      - name: Run contract tests
-        run: npm run test:contract
-      - name: Run graph verification tests
-        run: npm run test:graph
-      - name: Check runtime files for ES5 compatibility
-        run: npm run test:es5
-      - name: Validate all OLS lesson files
-        run: |
-          echo "Validating all .yaml lessons..."
-          for file in lessons/*.yaml lessons/*.yml; do
-            if [ -f "$file" ]; then
-              echo "Checking $file"
-              node -e "
-                const fs = require('fs');
-                const yaml = require('js-yaml');
-                const data = yaml.load(fs.readFileSync('$file', 'utf8'));
-                console.log(JSON.stringify(data));
-              " > temp.json
-              npx ajv validate -s schemas/ols.schema.json -d temp.json -c ajv-formats || exit 1
-              rm temp.json
-            fi
-          done
-      - name: Validate graph weights fixtures
-        run: |
-          echo "Validating graph weights examples..."
-          for file in fixtures/*.json; do
-            if [ -f "$file" ]; then
-              echo "Checking $file"
-              npx ajv validate -s schemas/graph_weights.schema.json -d "$file" -c ajv-formats || exit 1
-            fi
-          done
+      - name: Initialize data files
+        run: npm run init:data
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Run e2e tests
+        run: npm run test:e2e
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
   portal:
     name: Portal (SvelteKit) checks
     runs-on: ubuntu-latest

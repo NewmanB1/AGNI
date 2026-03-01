@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agni-project.org/schemas/telemetry-events.schema.json",
+  "title": "AGNI Telemetry Events",
+  "description": "Append-only log of lesson-completion events. Each event records a student's mastery outcome, step-level detail, and skills exercised.",
+  "type": "object",
+  "required": ["events"],
+  "additionalProperties": false,
+  "properties": {
+    "events": {
+      "type": "array",
+      "description": "Chronological list of lesson-completion telemetry events.",
+      "items": {
+        "type": "object",
+        "required": ["pseudoId", "lessonId", "mastery"],
+        "additionalProperties": false,
+        "properties": {
+          "pseudoId": {
+            "type": "string",
+            "description": "Privacy-preserving student identifier."
+          },
+          "lessonId": {
+            "type": "string",
+            "description": "Identifier of the completed lesson."
+          },
+          "mastery": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Computed mastery score for this attempt (0.0–1.0)."
+          },
+          "steps": {
+            "type": "array",
+            "description": "Per-step outcome details from the lesson player.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string", "description": "Step identifier." },
+                "correct": { "type": "boolean", "description": "Whether the student answered correctly." },
+                "attempts": { "type": "integer", "minimum": 0, "description": "Number of attempts on this step." },
+                "durationMs": { "type": "integer", "minimum": 0, "description": "Time spent on this step in milliseconds." }
+              }
+            }
+          },
+          "skillsProvided": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Skills exercised by completing this lesson (from ontology.provides)."
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp when the lesson was completed."
+          }
+        }
+      }
+    }
+  }
+}

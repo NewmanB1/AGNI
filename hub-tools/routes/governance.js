@@ -22,6 +22,18 @@ function register(router, ctx) {
     return sendResponse(200, utu);
   });
 
+  router.get('/api/governance/archetypes', (req, res, { qs, sendResponse }) => {
+    const archetypeMatch = require('../../src/utils/archetype-match');
+    if (qs.band || qs.protocol) {
+      const filtered = archetypeMatch.filterArchetypes({
+        band:     qs.band ? parseInt(qs.band, 10) : undefined,
+        protocol: qs.protocol ? parseInt(qs.protocol, 10) : undefined
+      });
+      return sendResponse(200, { archetypes: filtered });
+    }
+    return sendResponse(200, { archetypes: archetypeMatch.getAllArchetypes() });
+  });
+
   router.post('/api/governance/compliance', (req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, (sidecar) => {
       const policy = governanceService.loadPolicy();

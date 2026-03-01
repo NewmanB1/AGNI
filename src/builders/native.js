@@ -1,6 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const { ensureDir } = require('../utils/io');
+const { createLogger } = require('../utils/logger');
+
+const log = createLogger('native-builder');
 
 /**
  * Build native bundle from lesson IR (Phase 6).
@@ -11,7 +14,7 @@ const { ensureDir } = require('../utils/io');
  * @param {object} options  { outputDir }
  */
 function buildNative(ir, options) {
-  console.log('📦 Building Native Bundle...');
+  log.info('Building Native Bundle...');
 
   const outputDir = options.outputDir;
   ensureDir(outputDir);
@@ -44,7 +47,7 @@ function buildNative(ir, options) {
     JSON.stringify(manifest, null, 2)
   );
 
-  console.log(`✅ Native build complete: ${outputDir}`);
+  log.info(`Native build complete: ${outputDir}`);
 }
 
 module.exports = buildNative;

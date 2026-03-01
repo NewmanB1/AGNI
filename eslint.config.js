@@ -16,7 +16,12 @@ module.exports = [
     },
     rules: {
       'no-console': 'warn',
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }]
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
+      'no-throw-literal': 'error',
+      curly: ['error', 'multi-line'],
+      'no-var': 'error',
+      'prefer-const': 'error'
     }
   },
   {
@@ -26,5 +31,15 @@ module.exports = [
   {
     files: ['src/runtime/**', 'src/cli.js', 'src/builders/**', 'src/compiler/**'],
     rules: { 'no-console': 'off' }
+  },
+  {
+    files: ['src/runtime/**'],
+    languageOptions: {
+      globals: { ...globals.browser }
+    },
+    rules: {
+      'no-var': 'off',
+      'prefer-const': 'off'
+    }
   }
 ];

@@ -6,6 +6,47 @@
 
 'use strict';
 
+const path = require('path');
+
+// ── Bare filename → subdirectory path (relative to src/runtime/) ─────────────
+// Files at the root of src/runtime/ (shared-runtime.js, style.css) are not in
+// this map — they remain at the root level.
+const FACTORY_PATH_MAP = {
+  'a11y.js':                    'ui/a11y.js',
+  'player.js':                  'ui/player.js',
+  'factory-loader.js':          'ui/factory-loader.js',
+  'export.js':                  'ui/export.js',
+  'i18n.js':                    'ui/i18n.js',
+  'frustration.js':             'ui/frustration.js',
+  'gate-renderer.js':           'rendering/gate-renderer.js',
+  'math-renderer.js':           'rendering/math-renderer.js',
+  'svg-stage.js':               'rendering/svg-stage.js',
+  'svg-factories.js':           'rendering/svg-factories.js',
+  'svg-factories-dynamic.js':   'rendering/svg-factories-dynamic.js',
+  'svg-factories-geometry.js':  'rendering/svg-factories-geometry.js',
+  'svg-registry.js':            'rendering/svg-registry.js',
+  'table-renderer.js':          'rendering/table-renderer.js',
+  'sensor-bridge.js':           'sensors/sensor-bridge.js',
+  'threshold-evaluator.js':     'sensors/threshold-evaluator.js',
+  'integrity.js':               'integrity/integrity.js',
+  'binary-utils.js':            'integrity/binary-utils.js',
+  'checkpoint.js':              'telemetry/checkpoint.js',
+  'completion.js':              'telemetry/completion.js',
+  'telemetry.js':               'telemetry/telemetry.js',
+  'navigator.js':               'engine/navigator.js'
+};
+
+/**
+ * Resolve a bare factory filename to its full filesystem path.
+ * @param {string} runtimeDir  Absolute path to src/runtime/
+ * @param {string} filename    Bare filename (e.g. 'sensor-bridge.js')
+ * @returns {string}
+ */
+function resolveFactoryPath(runtimeDir, filename) {
+  const rel = FACTORY_PATH_MAP[filename];
+  return path.join(runtimeDir, rel || filename);
+}
+
 // ── Canonical load order (after shared-runtime.js, which html/hub prepend) ─────
 // binary-utils.js is prepended by html.js before shared-runtime; not listed here.
 const FACTORY_LOAD_ORDER = [
@@ -89,8 +130,10 @@ function getOrderedFactoryFiles(capabilities) {
 }
 
 module.exports = {
-  FACTORY_LOAD_ORDER:   FACTORY_LOAD_ORDER,
-  FACTORY_FILE_MAP:     FACTORY_FILE_MAP,
-  getFileForFactoryId:  getFileForFactoryId,
-  getOrderedFactoryFiles: getOrderedFactoryFiles
+  FACTORY_LOAD_ORDER:      FACTORY_LOAD_ORDER,
+  FACTORY_FILE_MAP:        FACTORY_FILE_MAP,
+  FACTORY_PATH_MAP:        FACTORY_PATH_MAP,
+  resolveFactoryPath:      resolveFactoryPath,
+  getFileForFactoryId:     getFileForFactoryId,
+  getOrderedFactoryFiles:  getOrderedFactoryFiles
 };

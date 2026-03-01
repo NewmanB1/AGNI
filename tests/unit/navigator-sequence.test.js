@@ -3,7 +3,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 
-const nav = require('../../src/runtime/navigator');
+const nav = require('../../src/runtime/engine/navigator');
 
 describe('navigator — scoreMarkovTransitions', function () {
   it('returns empty when no transition table', function () {

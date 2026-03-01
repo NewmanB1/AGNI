@@ -6,13 +6,13 @@ function register(router, ctx) {
           MIN_LOCAL_SAMPLE_SIZE, MIN_LOCAL_EDGE_COUNT } = ctx;
 
   router.get('/api/admin/onboarding-status', (req, res, { sendResponse }) => {
-    const isFirstRun = !fs.existsSync(path.join(DATA_DIR, 'hub_config.json')) &&
-                       !fs.existsSync(path.resolve(path.join(__dirname, '../../data/hub_config.json')));
+    const isFirstRun = !fs.existsSync(path.join(DATA_DIR, 'hub-config.json')) &&
+                       !fs.existsSync(path.resolve(path.join(__dirname, '../../data/hub-config.json')));
     return sendResponse(200, { isFirstRun });
   });
 
   router.get('/api/admin/config', adminOnly(async (req, res, { sendResponse }) => {
-    const cfgPath = path.resolve(path.join(__dirname, '../../data/hub_config.json'));
+    const cfgPath = path.resolve(path.join(__dirname, '../../data/hub-config.json'));
     const cfg = await loadJSONAsync(cfgPath, {});
     const effective = {
       dataDir: DATA_DIR,
@@ -41,7 +41,7 @@ function register(router, ctx) {
       if (unknown.length > 0) {
         return sendResponse(400, { error: 'Unknown config keys: ' + unknown.join(', ') });
       }
-      const cfgPath = path.resolve(path.join(__dirname, '../../data/hub_config.json'));
+      const cfgPath = path.resolve(path.join(__dirname, '../../data/hub-config.json'));
       await saveJSONAsync(cfgPath, cfg);
       return sendResponse(200, { ok: true, message: 'Config saved. Restart hub for changes to take effect.' });
     });

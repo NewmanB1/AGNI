@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://open-lesson.org/schemas/recommendation-overrides.schema.json",
+  "title": "Recommendation Overrides",
+  "description": "Manual lesson/skill recommendation overrides set by educators.",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "description": "Keyed by student ID",
+    "properties": {
+      "forceLesson": { "type": "string" },
+      "skipSkills": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "reason": { "type": "string" },
+      "setAt": { "type": "string", "format": "date-time" },
+      "setBy": { "type": "string" }
+    },
+    "additionalProperties": false
+  }
+}

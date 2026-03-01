@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agni-project.org/schemas/hub-config.schema.json",
+  "title": "AGNI Hub Configuration",
+  "description": "Per-hub configuration for ports, directories, and hub identity. All properties are optional; defaults are resolved by env-config.js at runtime.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "thetaPort": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535,
+      "description": "TCP port for the theta (adaptive engine) server."
+    },
+    "servePort": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535,
+      "description": "TCP port for the static file / lesson-serve server."
+    },
+    "sentryPort": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535,
+      "description": "TCP port for the sentry (monitoring) server."
+    },
+    "dataDir": {
+      "type": "string",
+      "description": "Absolute path to the data directory (JSON stores, telemetry, etc.)."
+    },
+    "serveDir": {
+      "type": "string",
+      "description": "Absolute path to the compiled lesson-serve output directory."
+    },
+    "yamlDir": {
+      "type": "string",
+      "description": "Absolute path to the source YAML lesson directory."
+    },
+    "factoryDir": {
+      "type": "string",
+      "description": "Absolute path to the SVG factory output directory."
+    },
+    "katexDir": {
+      "type": "string",
+      "description": "Absolute path to the KaTeX CSS/font asset directory."
+    },
+    "hubId": {
+      "type": "string",
+      "description": "Human-readable identifier for this hub instance (e.g. 'village-pi-01')."
+    }
+  }
+}

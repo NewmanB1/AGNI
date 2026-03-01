@@ -48,7 +48,36 @@
 
 const crypto = require('crypto');
 const fs     = require('fs');
+const { createLogger } = require('./logger');
 
+const log = createLogger('crypto');
+
+let _keyCache = { path: null, mtime: 0, key: null };
+
+/**
+ * Canonical JSON: sorted keys, deterministic across platforms. [R10 P1.5]
+ * Must produce identical output to AGNI_SHARED.canonicalJSON in the browser.
+ * @param {*} obj
+ * @returns {string}
+ */
+function canonicalJSON(obj) {
+  if (obj === null || obj === undefined) return 'null';
+  const type = typeof obj;
+  if (type === 'number' || type === 'boolean') return String(obj);
+  if (type === 'string') return JSON.stringify(obj);
+  if (Array.isArray(obj)) {
+    return '[' + obj.map(canonicalJSON).join(',') + ']';
+  }
+  if (type === 'object') {
+    const keys = Object.keys(obj).sort();
+    /** @type {string[]} */
+    const pairs = keys
+      .filter(k => obj[k] !== undefined)
+      .map(k => JSON.stringify(k) + ':' + canonicalJSON(obj[k]));
+    return '{' + pairs.join(',') + '}';
+  }
+  return 'null';
+}
 
 /**
  * Signs lesson content bound to a specific device, using Ed25519.
@@ -66,7 +95,11 @@ function signContent(contentString, deviceId, privateKeyPath) {
   if (!deviceId || !privateKeyPath) return null;
 
   try {
-    const privateKey = fs.readFileSync(privateKeyPath, 'utf8');
+    const stat = fs.statSync(privateKeyPath);
+    if (_keyCache.path !== privateKeyPath || _keyCache.mtime !== stat.mtimeMs) {
+      _keyCache = { path: privateKeyPath, mtime: stat.mtimeMs, key: fs.readFileSync(privateKeyPath, 'utf8') };
+    }
+    const privateKey = _keyCache.key;
 
     // ── Step 1: canonical binding hash ───────────────────────────────────────
     // NUL separator prevents boundary-shift attacks. The browser verifier
@@ -86,10 +119,9 @@ function signContent(contentString, deviceId, privateKeyPath) {
     return signature.toString('base64');
 
   } catch (err) {
-    console.warn('\u26A0\uFE0F  Crypto Warning: ' + err.message);
-    return null;
+    throw new Error('Signing failed: ' + err.message);
   }
 }
 
 
-module.exports = { signContent };
+module.exports = { signContent, canonicalJSON };

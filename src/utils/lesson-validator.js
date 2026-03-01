@@ -12,6 +12,9 @@
  *   // issues: Array<{ severity: 'error'|'warning', step?: string, message: string }>
  */
 
+var { createLogger } = require('./logger');
+var log = createLogger('lesson-validator');
+
 // ── Known runtime constants ─────────────────────────────────────────────────
 
 const VALID_STEP_TYPES = new Set([
@@ -446,7 +449,7 @@ if (require.main === module) {
   var filePath = process.argv[2];
 
   if (!filePath) {
-    console.error('Usage: node lesson-validator.js <lesson.yaml|lesson.json>');
+    log.error('Usage: node lesson-validator.js <lesson.yaml|lesson.json>');
     process.exit(1);
   }
 
@@ -458,7 +461,7 @@ if (require.main === module) {
       var yaml = require('js-yaml');
       data = yaml.load(raw, { schema: yaml.JSON_SCHEMA });
     } catch (e) {
-      console.error('YAML parse error:', e.message);
+      log.error('YAML parse error: ' + e.message);
       process.exit(1);
     }
   } else {
@@ -468,7 +471,7 @@ if (require.main === module) {
   var results = validateLesson(data);
 
   if (results.length === 0) {
-    console.log('✓ Lesson is runtime-compatible. No issues found.');
+    log.info('Lesson is runtime-compatible. No issues found.');
     process.exit(0);
   }
 
@@ -476,19 +479,19 @@ if (require.main === module) {
   var warnings = results.filter(function (r) { return r.severity === 'warning'; });
 
   if (errors.length) {
-    console.log('\n✗ ' + errors.length + ' error(s):');
+    log.error(errors.length + ' error(s):');
     errors.forEach(function (e) {
-      console.log('  ERROR ' + (e.step ? '[' + e.step + '] ' : '') + e.message);
+      log.error('ERROR ' + (e.step ? '[' + e.step + '] ' : '') + e.message);
     });
   }
   if (warnings.length) {
-    console.log('\n⚠ ' + warnings.length + ' warning(s):');
+    log.warn(warnings.length + ' warning(s):');
     warnings.forEach(function (w) {
-      console.log('  WARN  ' + (w.step ? '[' + w.step + '] ' : '') + w.message);
+      log.warn('WARN ' + (w.step ? '[' + w.step + '] ' : '') + w.message);
     });
   }
 
-  console.log('\nTotal: ' + errors.length + ' errors, ' + warnings.length + ' warnings');
+  log.info('Total: ' + errors.length + ' errors, ' + warnings.length + ' warnings');
   process.exit(errors.length > 0 ? 1 : 0);
 }
 

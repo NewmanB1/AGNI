@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // scripts/hub-setup-wizard.js
-// A1: Interactive hub setup wizard. Writes data/hub_config.json and optionally agni.env.
+// A1: Interactive hub setup wizard. Writes data/hub-config.json and optionally agni.env.
 
 'use strict';
 
@@ -9,7 +9,7 @@ const path = require('path');
 const readline = require('readline');
 
 const DATA_DIR = path.join(__dirname, '../data');
-const CONFIG_PATH = path.join(DATA_DIR, 'hub_config.json');
+const CONFIG_PATH = path.join(DATA_DIR, 'hub-config.json');
 
 function prompt(rl, question, defaultVal) {
   const def = defaultVal !== undefined && defaultVal !== '' ? ` [${defaultVal}]` : '';

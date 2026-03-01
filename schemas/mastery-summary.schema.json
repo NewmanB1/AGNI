@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://open-lesson.org/schemas/mastery-summary.schema.json",
+  "title": "Mastery Summary",
+  "description": "Per-student skill mastery θ estimates and attempt counts.",
+  "type": "object",
+  "required": ["students"],
+  "properties": {
+    "students": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "description": "Keyed by skill ID",
+        "additionalProperties": {
+          "type": "object",
+          "required": ["theta", "attempts"],
+          "properties": {
+            "theta": { "type": "number" },
+            "attempts": { "type": "integer", "minimum": 0 },
+            "lastAttempt": { "type": "string", "format": "date-time" }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

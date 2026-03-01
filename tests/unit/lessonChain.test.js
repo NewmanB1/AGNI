@@ -7,7 +7,7 @@ const { tempDir } = require('../helpers/fixtures');
 const tmp = tempDir('chain');
 process.env.AGNI_DATA_DIR = tmp.dir;
 
-const chain = require('../../src/services/lessonChain');
+const chain = require('../../src/services/lesson-chain');
 
 after(() => {
   tmp.cleanup();

@@ -4,7 +4,7 @@ This document outlines the strategic plan to launch the Open Lesson Standard (OL
 
 **Goal:** Establish the `.ols` file standard, build the reference player, and prove the "Skill Collapse" ($\theta$) navigation model.
 
-**Sprint planning:** Prioritized tasks for the next development sprint are in **`docs/SPRINT-NEXT.md`** (Sentry/θ documentation, contract tests, authoring APIs, validation, and tech-debt items).
+**Sprint planning:** Prioritized tasks for the next development sprint are in **`docs/SPRINT-PLAN.md`** (Sentry/θ documentation, contract tests, authoring APIs, validation, and tech-debt items).
 
 **Current status (as of latest update):** The core pipeline is in place: CLI compiler, IR + sidecar, HTML and native builders, hub-transform for on-demand PWA delivery, theta (lesson graph + MLC), LMS engine (Rasch, embeddings, Thompson bandit, federation), governance (policy, compliance, cohort coverage APIs), runtime verification (Ed25519 + TweetNaCl fallback), and a typed portal API client. **Backlog completed:** LMS state migration/repair (`src/engine/migrations.js`, CLI `lms-repair`), IR/runtime types in `src/types/index.d.ts` and engine `.d.ts`, runtimeManifest (`src/utils/runtimeManifest.js`), consolidated binary utils (`src/utils/binary.js`, `src/runtime/binary-utils.js`), sneakernet export/import (`scripts/sneakernet.js`, `npm run sneakernet`). Authoring APIs (validate/preview) are implemented. Remaining: Sentry adaptation feedback loop, QR/Base45 for progress if desired, Phase 5–6 and community/launch tasks.
 

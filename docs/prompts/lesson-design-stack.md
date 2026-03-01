@@ -116,6 +116,68 @@ Do NOT use grade levels or ages. The band describes cognitive resolution, not bi
 
 ---
 
+## PROMPT 2b — SELECT THE PEDAGOGICAL ARCHETYPE
+
+Selects the coherent archetype for this lesson. Output drives step pattern, teaching mode, VARK profile, and design constraints.
+
+```
+Given the UTU coordinate from Prompt 2 and the Bloom's level from Prompt 1,
+select the best-fit pedagogical archetype.
+
+AGNI defines 24 archetypes — coherent clusters where UTU band, protocol,
+Bloom's level, VARK modality, and teaching mode naturally align. Using the
+right archetype ensures the lesson's pedagogical dimensions reinforce each
+other and gives theta (the adaptive engine) a stronger coherence signal.
+
+There are 15 CORE archetypes (Band-group × Protocol):
+
+| Band  | P1 Transmission    | P2 Guided Constr.     | P3 Apprenticeship     | P4 Dev. Sequencing      | P5 Meaning Activation    |
+|-------|--------------------|-----------------------|-----------------------|-------------------------|--------------------------|
+| B1–B2 | sensory-intake     | embodied-discovery    | motor-apprenticeship  | embodied-sequencing     | concrete-transfer        |
+| B3–B4 | procedural-intake  | structural-construction| procedural-fluency   | relational-sequencing   | applied-problem-solving  |
+| B5–B6 | formal-schema      | hypothesis-testing    | formal-practice       | systematic-consolidation| authentic-transfer       |
+
+And 9 SPECIALTY archetypes for cross-cutting patterns:
+  sensor-lab           — sensor-centric investigation (B2–4, P2–3)
+  socratic-dialogue    — question-driven exploration (B4–6, P4–5)
+  narrative-journey    — story-framed discovery (B1–3, P5)
+  cross-domain-bridge  — connecting skills across UTU spines (B3–6, P4–5)
+  scaffolded-retry     — failure-recovery with progressive hints (B1–4, P2–3)
+  peer-collaborative   — group investigation requiring coordination (B2–5, P3–5)
+  rapid-diagnostic     — quick placement/review assessment (any band, P1)
+  design-challenge     — open-ended creation task (B5–6, P5)
+  multi-modal-synthesis— deliberate multi-channel integration (B3–5, P4–5)
+
+Each archetype defines:
+  - A VARK weight profile (which modalities should dominate)
+  - Compatible teaching modes (first listed is primary recommendation)
+  - A recommended step-type pattern
+  - Design hints for opening, assessment, visuals, and antipatterns
+  - A theta modifier (how much coherence benefits adaptive scoring)
+
+Given your UTU coordinate {class, band, protocol} and Bloom's level, return:
+
+1. Selected archetype ID
+2. Why this archetype fits (1–2 sentences connecting the cognitive demand
+   to the archetype's pedagogical pattern)
+3. Teaching mode selection (pick from the archetype's compatible modes)
+4. VARK profile — which modalities will this lesson emphasize?
+   Map to meta.declared_features.vark
+5. Step pattern — the recommended step-type sequence from the archetype.
+   You will use this as the skeleton for Prompts 3–7.
+
+If a specialty archetype is a better fit than the core one, prefer it.
+For example: a B3/P2 lesson that uses phone sensors should prefer
+"sensor-lab" over "structural-construction".
+
+The compiler will automatically compute the coherence score between
+the lesson's final dimensions and the selected archetype.
+High coherence (>0.7) gives a theta bonus; low coherence (<0.3) generates
+a compiler warning.
+```
+
+---
+
 ## PROMPT 3 — DESIGN THE EXPERIENCE-FIRST ENTRY
 
 Forces epistemology before explanation. Output maps to the first 2–3 steps in the lesson.

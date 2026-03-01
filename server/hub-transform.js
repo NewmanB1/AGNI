@@ -49,12 +49,13 @@ const compiler           = require('../src/compiler');
 const buildLessonIR      = compiler.buildLessonIR;
 const buildLessonSidecar = compiler.buildLessonSidecar;
 const buildKatexCss      = require('../src/utils/katex-css-builder');
-const lessonSchema       = require('../src/services/lessonSchema');
-const signContent        = require('../src/utils/crypto').signContent;
+const lessonSchema       = require('../src/services/lesson-schema');
+const { signContent, canonicalJSON } = require('../src/utils/crypto');
 const generateNonce      = require('../src/utils/csp').generateNonce;
 const buildCspMeta       = require('../src/utils/csp').buildCspMeta;
-const lessonAssembly     = require('../src/services/lessonAssembly');
+const lessonAssembly     = require('../src/services/lesson-assembly');
 const _escapeHtml        = require('../src/utils/io').escapeHtml;
+const { resolveFactoryPath } = require('../src/utils/runtimeManifest');
 
 // ── Paths (from centralized config) ──────────────────────────────────────────
 const envConfig     = require('../src/utils/env-config');
@@ -246,13 +247,13 @@ async function _doCompile(slug, loaded, options) {
 
   // Read runtime files
   const runtimeDir      = path.join(__dirname, '../src/runtime');
-  const factoryLoaderJs = fs.readFileSync(path.join(runtimeDir, 'factory-loader.js'), 'utf8');
-  const playerJs        = fs.readFileSync(path.join(runtimeDir, 'player.js'),         'utf8');
+  const factoryLoaderJs = fs.readFileSync(resolveFactoryPath(runtimeDir, 'factory-loader.js'), 'utf8');
+  const playerJs        = fs.readFileSync(resolveFactoryPath(runtimeDir, 'player.js'),         'utf8');
   const styles          = fs.readFileSync(path.join(runtimeDir, 'style.css'),          'utf8');
 
-  // Serialize and sign; script block shared with CLI html builder (lessonAssembly)
-  const dataString = JSON.stringify(ir);
-  const signature  = signContent(dataString, options.deviceId, options.privateKey);
+  // Serialize and sign with canonical JSON for cross-platform consistency [R10 P1.5]
+  const canonicalData = canonicalJSON(ir);
+  const signature     = signContent(canonicalData, options.deviceId, options.privateKey);
   const lessonScript = lessonAssembly.buildLessonScript(ir, {
     signature:       signature,
     publicKeySpki:   options.publicKeySpki != null ? options.publicKeySpki : '',
@@ -318,7 +319,7 @@ function _buildPwaShell(ir, styles, lessonScript, nonce) {
 
   return [
     '<!DOCTYPE html>',
-    '<html lang="' + lang + '" manifest="/appcache.manifest">',
+    '<html lang="' + lang + '">',
     '<head>',
     '  <meta charset="UTF-8">',
     '  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">',
@@ -352,6 +353,13 @@ function _buildPwaShell(ir, styles, lessonScript, nonce) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
+ * Async gzip helper — avoids blocking the event loop on Pi. [R10 P3.7]
+ */
+function _gzip(buf, cb) {
+  zlib.gzip(buf, cb);
+}
+
+/**
  * Send a text/HTML or text/plain response, gzipped if accepted.
  */
 function _sendText(req, res, statusCode, contentType, body) {
@@ -362,9 +370,16 @@ function _sendText(req, res, statusCode, contentType, body) {
   if (req.headers['accept-encoding'] &&
       req.headers['accept-encoding'].indexOf('gzip') !== -1 &&
       buf.length > 1024) {
-    res.setHeader('Content-Encoding', 'gzip');
-    res.writeHead(statusCode);
-    res.end(zlib.gzipSync(buf));
+    _gzip(buf, function (err, compressed) {
+      if (err) {
+        res.writeHead(statusCode);
+        res.end(buf);
+      } else {
+        res.setHeader('Content-Encoding', 'gzip');
+        res.writeHead(statusCode);
+        res.end(compressed);
+      }
+    });
   } else {
     res.writeHead(statusCode);
     res.end(buf);
@@ -390,9 +405,16 @@ function _sendFile(req, res, filePath, contentType, maxAge) {
   if (req.headers['accept-encoding'] &&
       req.headers['accept-encoding'].indexOf('gzip') !== -1 &&
       buf.length > 1024) {
-    res.setHeader('Content-Encoding', 'gzip');
-    res.writeHead(200);
-    res.end(zlib.gzipSync(buf));
+    _gzip(buf, function (err, compressed) {
+      if (err) {
+        res.writeHead(200);
+        res.end(buf);
+      } else {
+        res.setHeader('Content-Encoding', 'gzip');
+        res.writeHead(200);
+        res.end(compressed);
+      }
+    });
   } else {
     res.writeHead(200);
     res.end(buf);
@@ -463,7 +485,7 @@ function handleRequest(req, res, options) {
       res.end('Not found');
       return true;
     }
-    const factoryPath = path.join(FACTORY_DIR, factoryFile);
+    const factoryPath = resolveFactoryPath(FACTORY_DIR, factoryFile);
     // Long cache: 7 days. Version string in factory-loader cache key forces
     // refresh when RUNTIME_VERSION bumps, so stale-while-revalidate is safe.
     _sendFile(req, res, factoryPath, MIME['.js'], 604800);
@@ -489,13 +511,6 @@ function handleRequest(req, res, options) {
   if (req.method === 'GET' && urlPath === '/manifest.json') {
     const manifestPath = path.join(__dirname, 'manifest.json');
     _sendFile(req, res, manifestPath, MIME['.json'], 86400);
-    return true;
-  }
-
-  // GET /appcache.manifest — AppCache fallback for Android 6 WebView
-  if (req.method === 'GET' && urlPath === '/appcache.manifest') {
-    const appcachePath = path.join(__dirname, 'appcache.manifest');
-    _sendFile(req, res, appcachePath, 'text/cache-manifest', 86400);
     return true;
   }
 

@@ -15,7 +15,7 @@ describe('AGNI_TELEMETRY', () => {
         return { onupgradeneeded: null, onsuccess: null, onerror: null };
       }
     };
-    require('../../src/runtime/telemetry');
+    require('../../src/runtime/telemetry/telemetry');
     telem = globalThis.AGNI_TELEMETRY;
   });
 

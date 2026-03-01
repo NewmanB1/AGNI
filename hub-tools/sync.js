@@ -12,24 +12,25 @@ const crypto = require('crypto');
 const https = require('https');
 const http = require('http');
 const { createLogger } = require('../src/utils/logger');
+const envConfig = require('../src/utils/env-config');
 
 // ── Hub config bootstrap (F1) ───────────────────────────────────────────────
 const { loadHubConfig } = require('../src/utils/hub-config');
 loadHubConfig(path.join(__dirname, '../data'));
 
 // ── Configuration ──────────────────────────────────────────────────────────
-const DATA_DIR = process.env.AGNI_DATA_DIR || path.join(__dirname, '../data');
+const DATA_DIR = envConfig.dataDir;
 const EVENTS_DIR = path.join(DATA_DIR, 'events');
-const GRAPH_WEIGHTS = path.join(DATA_DIR, 'graph_weights.json');
-const BASE_COSTS = path.join(DATA_DIR, 'base_costs.json');
-const SYNC_STATE = path.join(DATA_DIR, 'sync_state.json');
+const GRAPH_WEIGHTS = path.join(DATA_DIR, 'graph-weights.json');
+const BASE_COSTS = path.join(DATA_DIR, 'base-costs.json');
+const SYNC_STATE = path.join(DATA_DIR, 'sync-state.json');
 const SYNC_LOG = path.join(DATA_DIR, 'sync.log');
 
 const args = parseArgs(process.argv.slice(2));
-const TRANSPORT = args['transport'] || process.env.AGNI_SYNC_TRANSPORT || 'starlink';
-const HOME_URL = (args['home-url'] || process.env.AGNI_HOME_URL || '').replace(/\/$/, '');
-const USB_PATH = args['usb-path'] || process.env.AGNI_USB_PATH || '/mnt/usb/agni-sync';
-const HUB_ID = process.env.AGNI_HUB_ID || 'hub-local';
+const TRANSPORT = args['transport'] || envConfig.syncTransport || 'starlink';
+const HOME_URL = (args['home-url'] || envConfig.homeUrl || '').replace(/\/$/, '');
+const USB_PATH = args['usb-path'] || envConfig.usbPath || '/mnt/usb/agni-sync';
+const HUB_ID = envConfig.hubId;
 const IMPORT_FILE = args['import'] || null;
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -233,7 +234,7 @@ function importInbound(filePath) {
   if (incoming.graph_weights?.level && incoming.graph_weights.level !== 'village' &&
       Array.isArray(incoming.graph_weights.edges) && incoming.graph_weights.edges.length > 0) {
     const level = incoming.graph_weights.level;
-    const levelPath = path.join(DATA_DIR, `graph_weights_${level}.json`);
+    const levelPath = path.join(DATA_DIR, `graph-weights-${level}.json`);
     fs.writeFileSync(levelPath, JSON.stringify(incoming.graph_weights, null, 2));
     log.info('Stored graph weights', { level, path: levelPath, edges: incoming.graph_weights.edges.length });
   }

@@ -22,9 +22,9 @@ Dockerfile
 knip.json
 tsconfig.json
 tsconfig.engine.json
-data/creator_accounts.json
+data/creator-accounts.json
 data/sessions.json
-data/student_accounts.json
+data/student-accounts.json
 data/sentry.log
 data/sync.log
 data/events/

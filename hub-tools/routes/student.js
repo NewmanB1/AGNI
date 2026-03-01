@@ -181,23 +181,18 @@ function register(router, ctx) {
     const lessonCount = Object.keys(studentReviews).length;
     const sortedDates = collectReviewDates(studentReviews);
     const { longestStreak } = computeStreaks(sortedDates);
-    const badges = [];
-    const defs = [
-      { id: 'first_lesson', name: 'First Step', desc: 'Complete your first lesson', icon: '\u{1F31F}', check: () => lessonCount >= 1 },
-      { id: 'five_lessons', name: 'Getting Started', desc: 'Complete 5 lessons', icon: '\u{1F4DA}', check: () => lessonCount >= 5 },
-      { id: 'ten_lessons', name: 'Dedicated Learner', desc: 'Complete 10 lessons', icon: '\u{1F3C6}', check: () => lessonCount >= 10 },
-      { id: 'twentyfive_lessons', name: 'Knowledge Seeker', desc: 'Complete 25 lessons', icon: '\u{1F48E}', check: () => lessonCount >= 25 },
-      { id: 'first_skill', name: 'Skill Unlocked', desc: 'Master your first skill', icon: '\u{1F511}', check: () => skillCount >= 1 },
-      { id: 'five_skills', name: 'Multi-Skilled', desc: 'Master 5 skills', icon: '\u{2B50}', check: () => skillCount >= 5 },
-      { id: 'ten_skills', name: 'Skill Master', desc: 'Master 10 skills', icon: '\u{1F451}', check: () => skillCount >= 10 },
-      { id: 'streak_3', name: 'On a Roll', desc: '3-day learning streak', icon: '\u{1F525}', check: () => longestStreak >= 3 },
-      { id: 'streak_7', name: 'Week Warrior', desc: '7-day learning streak', icon: '\u{26A1}', check: () => longestStreak >= 7 },
-      { id: 'streak_30', name: 'Unstoppable', desc: '30-day learning streak', icon: '\u{1F680}', check: () => longestStreak >= 30 },
-      { id: 'all_skills', name: 'Completionist', desc: 'Master every skill', icon: '\u{1F396}', check: () => totalSkills.size > 0 && skillCount >= totalSkills.size }
-    ];
-    for (const def of defs) {
-      badges.push({ id: def.id, name: def.name, description: def.desc, icon: def.icon, earned: def.check() });
-    }
+    // Badge definitions loaded from data file [R10 P5.3]
+    const badgeData = await loadJSONAsync(path.join(DATA_DIR, 'badge-definitions.json'), { badges: [] });
+    const metricValues = { lessonCount, skillCount, longestStreak };
+    const badges = badgeData.badges.map(def => {
+      let earned = false;
+      if (def.metric === 'allSkills') {
+        earned = totalSkills.size > 0 && skillCount >= totalSkills.size;
+      } else {
+        earned = (metricValues[def.metric] || 0) >= def.threshold;
+      }
+      return { id: def.id, name: def.name, description: def.desc, icon: def.icon, earned };
+    });
     return sendResponse(200, { pseudoId, badges, stats: { lessons: lessonCount, skills: skillCount, longestStreak, totalSkills: totalSkills.size } });
   });
 
@@ -259,7 +254,7 @@ function register(router, ctx) {
         } catch (e) { /* non-critical */ }
       }
       try {
-        const diagPath = path.join(DATA_DIR, 'diagnostic_status.json');
+        const diagPath = path.join(DATA_DIR, 'diagnostic-status.json');
         const status = await loadJSONAsync(diagPath, {});
         status[pseudoId] = { completedAt: new Date().toISOString(), ability: bootstrapAbility };
         await saveJSONAsync(diagPath, status);

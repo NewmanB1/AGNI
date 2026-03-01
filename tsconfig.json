@@ -1,34 +1,26 @@
 {
   "compilerOptions": {
-    // ── Output ───────────────────────────────────────────────────────────────
-    // CommonJS output so theta.js can require() the compiled engine without
-    // any ESM interop shim. Node 14 is the minimum target for the village hub.
+    // Type-checking only — no emit. JS files are the source of truth.
     "target": "ES2019",
     "module": "commonjs",
-    "outDir": "src/engine/dist",
-    "rootDir": "src",
+    "noEmit": true,
 
-    // ── Type checking ─────────────────────────────────────────────────────────
-    // Strict mode catches the class of shape/null bugs this codebase is
-    // most exposed to (matrix dimension mismatches, missing state fields).
+    // Check JS files via JSDoc annotations
+    "allowJs": true,
+    "checkJs": true,
+
+    // Strict mode catches shape/null bugs (matrix dimensions, missing state fields)
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
 
-    // ── Module resolution ─────────────────────────────────────────────────────
+    // Module resolution
     "moduleResolution": "node",
     "esModuleInterop": true,
-    "resolveJsonModule": true,
-
-    // ── Source maps ───────────────────────────────────────────────────────────
-    // Inline source maps so Node stack traces point at .ts lines, not .js.
-    // Useful for hub operators reading crash logs without access to the source tree.
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true
+    "resolveJsonModule": true
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "src/engine/dist"]
+  "include": ["src/**/*.ts", "src/**/*.js"],
+  "exclude": ["node_modules", "src/runtime"]
 }

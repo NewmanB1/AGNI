@@ -1,13 +1,15 @@
-# AGNI/Dockerfile — production-hardened Node image
+# AGNI/Dockerfile — production-hardened Node image [R10 P3.5]
+# Multi-arch: amd64 + arm64 + armv7 (Raspberry Pi)
 FROM node:20-alpine AS builder
 
 WORKDIR /usr/src/app
 
 COPY package*.json ./
-RUN npm ci --production
+RUN npm ci --omit=dev
 
 FROM node:20-alpine
 
+# Non-root user for security
 RUN addgroup -S agni && adduser -S agni -G agni
 
 WORKDIR /usr/src/app
@@ -19,7 +21,7 @@ COPY hub-tools/ ./hub-tools/
 COPY server/ ./server/
 COPY schemas/ ./schemas/
 COPY scripts/ ./scripts/
-COPY data/hub_config.json data/governance_policy.json data/approved_catalog.json data/utu-constants.json ./data/
+COPY data/hub-config.json data/governance-policy.json data/approved-catalog.json data/utu-constants.json data/badge-definitions.json ./data/
 
 RUN mkdir -p data/events data/yaml serve && chown -R agni:agni /usr/src/app
 

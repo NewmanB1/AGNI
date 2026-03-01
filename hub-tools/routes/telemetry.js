@@ -1,5 +1,7 @@
 'use strict';
 
+const { updateSchedule } = require('../../src/engine/sm2');
+
 function register(router, ctx) {
   const { loadJSONAsync, saveJSONAsync, loadMasterySummaryAsync, handleJsonBody,
           lmsService: lmsEngine, log, path,
@@ -45,7 +47,7 @@ function register(router, ctx) {
         accepted.push(event.eventId || lessonId);
       }
 
-      // SM-2 spaced repetition schedule update
+      // SM-2 spaced repetition schedule update [R10 P4.1: extracted to src/engine/sm2.js]
       try {
         const schedule = await loadJSONAsync(REVIEW_SCHEDULE_PATH, { students: {} });
         for (const event of events) {
@@ -55,19 +57,14 @@ function register(router, ctx) {
           if (!schedule.students[pid]) schedule.students[pid] = {};
           const existing = schedule.students[pid][lid] || { interval: 1, easeFactor: 2.5, repetition: 0 };
           const quality = Math.round((event.mastery || 0) * 5);
-          let ef = existing.easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
-          if (ef < 1.3) ef = 1.3;
-          let interval, rep;
-          if (quality < 3) { rep = 0; interval = 1; }
-          else {
-            rep = existing.repetition + 1;
-            if (rep === 1) interval = 1;
-            else if (rep === 2) interval = 6;
-            else interval = Math.round(existing.interval * ef);
-          }
+          const result = updateSchedule(existing, quality);
           schedule.students[pid][lid] = {
-            interval, easeFactor: Math.round(ef * 100) / 100, repetition: rep,
-            lastReviewAt: Date.now(), nextReviewAt: Date.now() + interval * 86400000, quality
+            interval: result.interval,
+            easeFactor: result.easeFactor,
+            repetition: result.repetition,
+            lastReviewAt: Date.now(),
+            nextReviewAt: Date.now() + result.interval * 86400000,
+            quality: quality
           };
         }
         await saveJSONAsync(REVIEW_SCHEDULE_PATH, schedule);
@@ -85,7 +82,7 @@ function register(router, ctx) {
 
       // Persist telemetry events (capped at 10000)
       try {
-        const telPath = path.join(DATA_DIR, 'telemetry_events.json');
+        const telPath = path.join(DATA_DIR, 'telemetry-events.json');
         const telData = await loadJSONAsync(telPath, { events: [] });
         for (const event of events) {
           telData.events.push({

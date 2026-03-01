@@ -1,0 +1,509 @@
+{
+  "version": "1.0.0",
+  "archetypes": [
+
+    {
+      "id": "sensory-intake",
+      "name": "Sensory Intake",
+      "description": "Direct perceptual schema loading through concrete observation and iconic representation.",
+      "category": "core",
+      "bandRange": [1, 2],
+      "protocols": [1],
+      "blooms": ["remember", "understand"],
+      "varkProfile": { "visual": 0.40, "auditory": 0.10, "readWrite": 0.20, "kinesthetic": 0.30 },
+      "teachingModes": ["didactic", "direct"],
+      "stepPattern": ["instruction", "instruction", "quiz", "completion"],
+      "thetaModifier": 0.9,
+      "designHints": {
+        "opening": "Present a concrete phenomenon the learner can see or touch. Use clear visual aids (barGraph, numberLine) to anchor the schema.",
+        "assessment": "Use quiz or fill_blank to verify recognition. Keep assessment at recall level — the learner should identify, not analyze.",
+        "visual": "Static SVG factories (barGraph, venn, numberLine) work well. Sensor binding is optional at this level.",
+        "antipatterns": "Avoid abstract definitions or lengthy text. P1 at B1-B2 means the learner absorbs through direct sensory exposure, not reading."
+      },
+      "relatedArchetypes": ["embodied-discovery", "procedural-intake"]
+    },
+
+    {
+      "id": "embodied-discovery",
+      "name": "Embodied Discovery",
+      "description": "Learner discovers a concept through physical manipulation and sensor measurement of a surprising phenomenon.",
+      "category": "core",
+      "bandRange": [1, 2],
+      "protocols": [2],
+      "blooms": ["understand", "apply"],
+      "varkProfile": { "visual": 0.25, "auditory": 0.05, "readWrite": 0.10, "kinesthetic": 0.60 },
+      "teachingModes": ["guided_discovery", "constructivist"],
+      "stepPattern": ["instruction", "hardware_trigger", "instruction", "instruction", "ordering|matching", "completion"],
+      "thetaModifier": 1.1,
+      "designHints": {
+        "opening": "Begin with a physical action that produces a counter-intuitive observation. The learner's body is the instrument — tilt, shake, drop, rotate.",
+        "assessment": "Prefer ordering or matching over MCQ. The learner should demonstrate understanding by reconstructing the observed pattern, not selecting from options.",
+        "visual": "Use sensor-driven SVG (timeGraph, polygonDynamic, numberLineDynamic) so structure emerges from motion. The visual IS the epistemic instrument.",
+        "antipatterns": "Never explain the phenomenon before the learner encounters it. Avoid quiz steps before the exploration phase — let disequilibrium do its work."
+      },
+      "relatedArchetypes": ["sensor-lab", "motor-apprenticeship", "concrete-transfer"]
+    },
+
+    {
+      "id": "motor-apprenticeship",
+      "name": "Motor Apprenticeship",
+      "description": "Procedural skill building through repeated sensor-verified physical practice with progressive thresholds.",
+      "category": "core",
+      "bandRange": [1, 2],
+      "protocols": [3],
+      "blooms": ["apply"],
+      "varkProfile": { "visual": 0.15, "auditory": 0.05, "readWrite": 0.05, "kinesthetic": 0.75 },
+      "teachingModes": ["direct", "guided_discovery"],
+      "stepPattern": ["instruction", "hardware_trigger", "hardware_trigger", "instruction", "hardware_trigger", "completion"],
+      "thetaModifier": 1.0,
+      "designHints": {
+        "opening": "Demonstrate the target physical action once (instruction step), then immediately have the learner attempt it with sensor verification.",
+        "assessment": "Use progressive hardware_trigger steps with increasing threshold precision. The final trigger should require fluid execution, not just threshold crossing.",
+        "visual": "Use numberLineDynamic or timeGraph to give real-time feedback on approach to target. The learner should see their accuracy improve across attempts.",
+        "antipatterns": "Avoid mimicry without understanding — pair with a brief ordering step that verifies the learner grasps WHY the procedure works, not just HOW to execute it."
+      },
+      "relatedArchetypes": ["embodied-discovery", "embodied-sequencing"]
+    },
+
+    {
+      "id": "embodied-sequencing",
+      "name": "Embodied Sequencing",
+      "description": "Stabilization of embodied skills through sequenced practice that varies context while preserving the core operation.",
+      "category": "core",
+      "bandRange": [1, 2],
+      "protocols": [4],
+      "blooms": ["apply", "analyze"],
+      "varkProfile": { "visual": 0.30, "auditory": 0.05, "readWrite": 0.10, "kinesthetic": 0.55 },
+      "teachingModes": ["guided_discovery", "direct"],
+      "stepPattern": ["instruction", "hardware_trigger", "ordering", "hardware_trigger", "matching", "completion"],
+      "thetaModifier": 1.0,
+      "designHints": {
+        "opening": "Present a familiar physical task in a new configuration. The learner should recognize the underlying skill but need to adapt their approach.",
+        "assessment": "Alternate between hardware_trigger (execution) and ordering/matching (reflection). The learner must both perform and reason about sequence.",
+        "visual": "Use compose layers to show multiple representations simultaneously — e.g., sensor graph + structural diagram.",
+        "antipatterns": "Avoid rigid repetition of identical tasks. P4 at B1-B2 means varied practice, not drill. If every hardware_trigger has the same threshold, you're doing P3."
+      },
+      "relatedArchetypes": ["motor-apprenticeship", "concrete-transfer"]
+    },
+
+    {
+      "id": "concrete-transfer",
+      "name": "Concrete Transfer",
+      "description": "Applying embodied knowledge to a novel real-world scenario that requires recognizing familiar structure in unfamiliar context.",
+      "category": "core",
+      "bandRange": [1, 2],
+      "protocols": [5],
+      "blooms": ["apply", "analyze"],
+      "varkProfile": { "visual": 0.30, "auditory": 0.10, "readWrite": 0.15, "kinesthetic": 0.45 },
+      "teachingModes": ["constructivist", "narrative"],
+      "stepPattern": ["instruction", "hardware_trigger|ordering", "instruction", "matching", "completion"],
+      "thetaModifier": 1.1,
+      "designHints": {
+        "opening": "Frame a scenario that seems different from previous lessons but contains the same structural core. The learner must discover the connection through action.",
+        "assessment": "Use matching to connect old context with new context. The learner should pair observations from the transfer scenario with familiar structures.",
+        "visual": "Use arrowMap or compose to overlay familiar visual structures onto the new scenario. Show that the underlying pattern is invariant.",
+        "antipatterns": "Avoid explicitly telling the learner 'this is like what you did before.' Transfer must be discovered, not announced. Risk: Activity without Rigor."
+      },
+      "relatedArchetypes": ["embodied-discovery", "narrative-journey"]
+    },
+
+    {
+      "id": "procedural-intake",
+      "name": "Procedural Intake",
+      "description": "Schema loading for operational procedures through worked examples and structured demonstration.",
+      "category": "core",
+      "bandRange": [3, 4],
+      "protocols": [1],
+      "blooms": ["remember", "understand"],
+      "varkProfile": { "visual": 0.30, "auditory": 0.05, "readWrite": 0.50, "kinesthetic": 0.15 },
+      "teachingModes": ["didactic", "direct"],
+      "stepPattern": ["instruction", "instruction", "fill_blank", "quiz", "completion"],
+      "thetaModifier": 0.9,
+      "designHints": {
+        "opening": "Present a worked example that demonstrates the complete procedure. Use a visual scaffold (barGraph, cartesianGrid) to make the procedural structure visible.",
+        "assessment": "Use fill_blank to verify the learner can reproduce key steps. Follow with a quiz to confirm terminology/concepts. Keep at recognition level.",
+        "visual": "Use static SVGs (barGraph, cartesianGrid, numberLine) that illustrate the procedure's structure. Annotate steps visually.",
+        "antipatterns": "Avoid pure text walls. Even at P1/B3-B4, the procedure should be shown, not just described. Risk: Passive Familiarity Illusion."
+      },
+      "relatedArchetypes": ["sensory-intake", "structural-construction", "procedural-fluency"]
+    },
+
+    {
+      "id": "structural-construction",
+      "name": "Structural Construction",
+      "description": "Building relational understanding through guided exploration of patterns, connections, and structural properties.",
+      "category": "core",
+      "bandRange": [3, 4],
+      "protocols": [2],
+      "blooms": ["understand", "analyze"],
+      "varkProfile": { "visual": 0.45, "auditory": 0.05, "readWrite": 0.15, "kinesthetic": 0.35 },
+      "teachingModes": ["constructivist", "guided_discovery"],
+      "stepPattern": ["instruction", "instruction", "ordering", "matching", "completion"],
+      "thetaModifier": 1.1,
+      "designHints": {
+        "opening": "Present two or more related structures and let the learner discover what they share. Use visual exploration (cartesianGrid, compose) to make relationships navigable.",
+        "assessment": "Use ordering to test whether the learner grasps the underlying sequence/hierarchy. Use matching to test whether they see structural equivalences.",
+        "visual": "Use cartesianGrid, compose layers, or venn diagrams. The visual must expose the relational structure, not just display data.",
+        "antipatterns": "Avoid giving the structure away in the instruction. The learner must construct the relationship — P2 means the schema is built, not received."
+      },
+      "relatedArchetypes": ["embodied-discovery", "relational-sequencing", "hypothesis-testing"]
+    },
+
+    {
+      "id": "procedural-fluency",
+      "name": "Procedural Fluency",
+      "description": "Building execution speed and accuracy through deliberate practice with progressive difficulty and immediate feedback.",
+      "category": "core",
+      "bandRange": [3, 4],
+      "protocols": [3],
+      "blooms": ["apply"],
+      "varkProfile": { "visual": 0.20, "auditory": 0.05, "readWrite": 0.35, "kinesthetic": 0.40 },
+      "teachingModes": ["direct", "guided_discovery"],
+      "stepPattern": ["instruction", "fill_blank", "quiz", "fill_blank", "quiz", "completion"],
+      "thetaModifier": 1.0,
+      "designHints": {
+        "opening": "Brief recap of the procedure (1 instruction step), then immediately begin practice. The learner should spend most of the lesson executing, not reading.",
+        "assessment": "Interleave fill_blank (procedural execution) and quiz (conceptual check). Increase difficulty across the sequence. Use step weights to emphasize later items.",
+        "visual": "Minimal visual scaffolding — the focus is on execution. Use numberLine or barGraph only to show progress or accuracy trends.",
+        "antipatterns": "Avoid pure drill without conceptual checkpoints. P3 risks Mimicry — intersperse at least one quiz that verifies the learner understands the 'why' behind the procedure."
+      },
+      "relatedArchetypes": ["motor-apprenticeship", "procedural-intake", "relational-sequencing"]
+    },
+
+    {
+      "id": "relational-sequencing",
+      "name": "Relational Sequencing",
+      "description": "Stabilizing structural understanding through varied practice that requires recognizing the same relation across different representations.",
+      "category": "core",
+      "bandRange": [3, 4],
+      "protocols": [4],
+      "blooms": ["analyze", "evaluate"],
+      "varkProfile": { "visual": 0.35, "auditory": 0.05, "readWrite": 0.30, "kinesthetic": 0.30 },
+      "teachingModes": ["socratic", "guided_discovery"],
+      "stepPattern": ["instruction", "matching", "ordering", "fill_blank", "matching", "completion"],
+      "thetaModifier": 1.05,
+      "designHints": {
+        "opening": "Present the same structural relationship in a new representation. Ask a question (Socratic) that forces the learner to reconcile the two views.",
+        "assessment": "Use matching across representations (e.g., pair a graph with an equation, pair a table with a diagram). Use ordering to test sequencing of structural transformations.",
+        "visual": "Use compose to juxtapose two representations. cartesianGrid paired with barGraph, or venn with numberLine.",
+        "antipatterns": "Avoid testing only one representation. P4 at B3-B4 means the learner must see the same structure from multiple angles. Risk: Lockstep Stagnation if all tasks use the same format."
+      },
+      "relatedArchetypes": ["structural-construction", "systematic-consolidation", "socratic-dialogue"]
+    },
+
+    {
+      "id": "applied-problem-solving",
+      "name": "Applied Problem Solving",
+      "description": "Transferring operational/structural knowledge to authentic, multi-step problems that require selecting and combining procedures.",
+      "category": "core",
+      "bandRange": [3, 4],
+      "protocols": [5],
+      "blooms": ["apply", "analyze", "evaluate"],
+      "varkProfile": { "visual": 0.30, "auditory": 0.10, "readWrite": 0.30, "kinesthetic": 0.30 },
+      "teachingModes": ["constructivist", "narrative", "socratic"],
+      "stepPattern": ["instruction", "quiz", "matching", "fill_blank", "ordering", "completion"],
+      "thetaModifier": 1.1,
+      "designHints": {
+        "opening": "Present an authentic scenario (real-world framing or narrative) where the learner must choose which tools/procedures apply. Do not cue which procedure to use.",
+        "assessment": "Use a mix of step types. The learner must: identify the right approach (quiz), connect problem features to solution structures (matching), execute the procedure (fill_blank), and justify the sequence (ordering).",
+        "visual": "Use scenario-appropriate visuals — arrowMap for processes, cartesianGrid for quantitative reasoning, compose for multi-faceted problems.",
+        "antipatterns": "Avoid over-scaffolding. P5 at B3-B4 means the learner must deploy skills in context. If the step sequence telegraphs which procedure to use, it degenerates to P3. Risk: Activity without Rigor."
+      },
+      "relatedArchetypes": ["concrete-transfer", "authentic-transfer", "narrative-journey"]
+    },
+
+    {
+      "id": "formal-schema",
+      "name": "Formal Schema",
+      "description": "Introducing abstract frameworks, formal definitions, and systemic models through structured exposition.",
+      "category": "core",
+      "bandRange": [5, 6],
+      "protocols": [1],
+      "blooms": ["remember", "understand"],
+      "varkProfile": { "visual": 0.35, "auditory": 0.05, "readWrite": 0.50, "kinesthetic": 0.10 },
+      "teachingModes": ["didactic", "direct"],
+      "stepPattern": ["instruction", "instruction", "fill_blank", "quiz", "completion"],
+      "thetaModifier": 0.85,
+      "designHints": {
+        "opening": "Present the formal framework with precise language and visual scaffolding. Use equations (KaTeX) and structural diagrams to make the abstraction concrete.",
+        "assessment": "Use fill_blank for definitional recall and quiz for conceptual verification. The learner should be able to reproduce key formalisms.",
+        "visual": "Use cartesianGrid, unitCircle, or compose to visualize the formal structure. Equations rendered via KaTeX should be integrated with visual representations.",
+        "antipatterns": "Avoid treating B5-B6 as 'harder B3-B4.' Formal schema requires explicit modeling of the abstract structure — don't just present harder numbers. Risk: Passive Familiarity Illusion at the symbolic level."
+      },
+      "relatedArchetypes": ["procedural-intake", "hypothesis-testing"]
+    },
+
+    {
+      "id": "hypothesis-testing",
+      "name": "Hypothesis Testing",
+      "description": "Constructing and testing formal hypotheses through prediction, experimentation, and evidence evaluation.",
+      "category": "core",
+      "bandRange": [5, 6],
+      "protocols": [2],
+      "blooms": ["analyze", "evaluate"],
+      "varkProfile": { "visual": 0.35, "auditory": 0.05, "readWrite": 0.25, "kinesthetic": 0.35 },
+      "teachingModes": ["socratic", "constructivist"],
+      "stepPattern": ["instruction", "quiz", "hardware_trigger|instruction", "ordering", "fill_blank", "completion"],
+      "thetaModifier": 1.15,
+      "designHints": {
+        "opening": "Present a formal claim or model and ask the learner to predict what would happen under specific conditions. The prediction (quiz) must come BEFORE any data collection.",
+        "assessment": "Use ordering to sequence evidence, fill_blank to formalize conclusions. The learner should confront prediction failures and revise their model.",
+        "visual": "Use timeGraph or cartesianGrid to display experimental data. Use compose to overlay the predicted model against actual observations.",
+        "antipatterns": "Avoid confirmation bias — design the experiment so naive predictions are WRONG. P2 at B5-B6 requires genuine cognitive restructuring, not validation of existing understanding."
+      },
+      "relatedArchetypes": ["structural-construction", "sensor-lab", "socratic-dialogue"]
+    },
+
+    {
+      "id": "formal-practice",
+      "name": "Formal Practice",
+      "description": "Developing fluency with formal reasoning procedures through structured symbolic manipulation and proof-like activities.",
+      "category": "core",
+      "bandRange": [5, 6],
+      "protocols": [3],
+      "blooms": ["apply", "analyze"],
+      "varkProfile": { "visual": 0.20, "auditory": 0.05, "readWrite": 0.55, "kinesthetic": 0.20 },
+      "teachingModes": ["direct", "guided_discovery"],
+      "stepPattern": ["instruction", "fill_blank", "fill_blank", "ordering", "quiz", "completion"],
+      "thetaModifier": 1.0,
+      "designHints": {
+        "opening": "Present the formal procedure with one worked example, then immediately begin practice. Focus on symbolic manipulation — the learner should internalize the formal operations.",
+        "assessment": "Use fill_blank for symbolic completion (fill in the missing step in a derivation). Use ordering for proof sequencing. Quiz only for metacognitive checks.",
+        "visual": "Use KaTeX-rendered equations. cartesianGrid or unitCircle for visual verification of symbolic results.",
+        "antipatterns": "Avoid pure symbol pushing without meaning. Include at least one step that connects the formal procedure to a concrete interpretation. P3 at B5-B6 risks Mimicry at the symbolic level."
+      },
+      "relatedArchetypes": ["procedural-fluency", "formal-schema", "systematic-consolidation"]
+    },
+
+    {
+      "id": "systematic-consolidation",
+      "name": "Systematic Consolidation",
+      "description": "Stabilizing formal understanding by requiring the learner to navigate multiple formal representations and reconcile them systematically.",
+      "category": "core",
+      "bandRange": [5, 6],
+      "protocols": [4],
+      "blooms": ["analyze", "evaluate"],
+      "varkProfile": { "visual": 0.30, "auditory": 0.05, "readWrite": 0.40, "kinesthetic": 0.25 },
+      "teachingModes": ["socratic", "guided_discovery"],
+      "stepPattern": ["instruction", "matching", "ordering", "fill_blank", "quiz", "completion"],
+      "thetaModifier": 1.05,
+      "designHints": {
+        "opening": "Present the same formal concept via two different formalisms or notations. Ask the learner to reconcile them (Socratic: 'Are these the same thing? Prove it.').",
+        "assessment": "Use matching to pair equivalent representations. Use ordering to sequence a logical argument. fill_blank for completing the bridging step between formalisms.",
+        "visual": "Use compose to display parallel representations. cartesianGrid vs. algebraic form, or geometric vs. analytic views of the same object.",
+        "antipatterns": "Avoid testing only one formalism. P4 at B5-B6 is about systemic stability — the learner must hold multiple formal views simultaneously. Risk: Lockstep Stagnation if tasks are all from one perspective."
+      },
+      "relatedArchetypes": ["relational-sequencing", "hypothesis-testing", "socratic-dialogue"]
+    },
+
+    {
+      "id": "authentic-transfer",
+      "name": "Authentic Transfer",
+      "description": "Deploying formal reasoning in high-stakes, realistic scenarios that demand judgment, not just execution.",
+      "category": "core",
+      "bandRange": [5, 6],
+      "protocols": [5],
+      "blooms": ["evaluate", "create"],
+      "varkProfile": { "visual": 0.25, "auditory": 0.10, "readWrite": 0.35, "kinesthetic": 0.30 },
+      "teachingModes": ["constructivist", "narrative", "socratic"],
+      "stepPattern": ["instruction", "matching", "fill_blank", "ordering", "quiz", "completion"],
+      "thetaModifier": 1.15,
+      "designHints": {
+        "opening": "Present an authentic scenario (historical event, engineering problem, ethical dilemma, scientific controversy) where formal reasoning is required but insufficient alone. The learner must combine formal tools with contextual judgment.",
+        "assessment": "Use matching to connect formal models to scenario features. Use ordering to construct an argument or solution path. fill_blank for formalizing the conclusion. Quiz for metacognitive reflection.",
+        "visual": "Use scenario-appropriate visuals — arrowMap for causal reasoning, compose for multi-perspective analysis. Visuals should represent the scenario, not just the math.",
+        "antipatterns": "Avoid scenarios where the 'right answer' is obvious. P5 at B5-B6 requires genuine epistemic challenge — multiple valid approaches, trade-offs, and uncertainty. Risk: Activity without Rigor."
+      },
+      "relatedArchetypes": ["applied-problem-solving", "design-challenge", "socratic-dialogue"]
+    },
+
+    {
+      "id": "sensor-lab",
+      "name": "Sensor Lab",
+      "description": "Sensor-centric scientific investigation where the phone becomes a measurement instrument and the learner collects, visualizes, and interprets real data.",
+      "category": "specialty",
+      "bandRange": [2, 4],
+      "protocols": [2, 3],
+      "blooms": ["apply", "analyze"],
+      "varkProfile": { "visual": 0.30, "auditory": 0.05, "readWrite": 0.10, "kinesthetic": 0.55 },
+      "teachingModes": ["guided_discovery", "constructivist"],
+      "stepPattern": ["instruction", "hardware_trigger", "instruction", "instruction", "hardware_trigger", "ordering|matching", "completion"],
+      "thetaModifier": 1.15,
+      "designHints": {
+        "opening": "Set up a physical investigation: the learner positions their phone as a scientific instrument. The first hardware_trigger verifies they've produced a measurable phenomenon.",
+        "assessment": "Use a second hardware_trigger that requires reproducing a specific physical state (demonstrating understanding). Follow with ordering or matching to verify interpretation of the collected data.",
+        "visual": "Use timeGraph for streaming sensor data. Use compose to overlay multiple sensor streams. The visual record IS the data — the learner reads the SVG like a scientist reads a chart.",
+        "antipatterns": "Avoid treating the sensor as a novelty. The measurement must reveal something invisible to casual observation. If the sensor step could be replaced by 'look at the object,' the design is too shallow."
+      },
+      "relatedArchetypes": ["embodied-discovery", "hypothesis-testing"]
+    },
+
+    {
+      "id": "socratic-dialogue",
+      "name": "Socratic Dialogue",
+      "description": "Question-driven exploration where each step poses a challenge that forces the learner to confront gaps in their reasoning.",
+      "category": "specialty",
+      "bandRange": [4, 6],
+      "protocols": [4, 5],
+      "blooms": ["analyze", "evaluate"],
+      "varkProfile": { "visual": 0.25, "auditory": 0.10, "readWrite": 0.45, "kinesthetic": 0.20 },
+      "teachingModes": ["socratic"],
+      "stepPattern": ["instruction", "quiz", "instruction", "fill_blank", "matching", "completion"],
+      "thetaModifier": 1.1,
+      "designHints": {
+        "opening": "Open with a provocative question or apparent paradox. The first quiz captures the learner's initial intuition (which should often be wrong). The follow-up instruction reveals why.",
+        "assessment": "Interleave questions (quiz) with reflection tasks (fill_blank, matching). Each question should build on the previous answer, creating a chain of reasoning.",
+        "visual": "Use visuals that expose contradictions — e.g., two cartesianGrid plots that appear different but represent the same data, or a venn diagram that challenges set membership intuitions.",
+        "antipatterns": "Avoid leading questions with obvious 'right' answers. Socratic dialogue requires genuine intellectual tension. If every question has one clearly correct option, it's didactic with extra steps."
+      },
+      "relatedArchetypes": ["hypothesis-testing", "systematic-consolidation", "relational-sequencing"]
+    },
+
+    {
+      "id": "narrative-journey",
+      "name": "Narrative Journey",
+      "description": "Story-framed exploration where a narrative context motivates observation, measurement, and reasoning about a phenomenon.",
+      "category": "specialty",
+      "bandRange": [1, 3],
+      "protocols": [5],
+      "blooms": ["understand", "apply"],
+      "varkProfile": { "visual": 0.30, "auditory": 0.15, "readWrite": 0.30, "kinesthetic": 0.25 },
+      "teachingModes": ["narrative", "constructivist"],
+      "stepPattern": ["instruction", "instruction", "hardware_trigger|quiz", "matching", "completion"],
+      "thetaModifier": 1.0,
+      "designHints": {
+        "opening": "Establish a brief narrative frame (a character, a setting, a problem). The story should make the learning objective feel like a natural part of the plot, not an imposed task.",
+        "assessment": "Use matching to connect story elements to structural concepts. The learner should see that the narrative and the model describe the same reality.",
+        "visual": "Use arrowMap or compose to visualize the story's causal structure alongside the formal model. Let the narrative drive the visual exploration.",
+        "antipatterns": "Avoid using narrative as decoration. The story must be load-bearing — removing it should make the lesson harder, not easier. Risk: Activity without Rigor if the story replaces the cognitive challenge."
+      },
+      "relatedArchetypes": ["concrete-transfer", "applied-problem-solving"]
+    },
+
+    {
+      "id": "cross-domain-bridge",
+      "name": "Cross-Domain Bridge",
+      "description": "Connecting skills across UTU spines (MAC↔SCI, SCI↔SOC, MAC↔SOC) to build interdisciplinary transfer.",
+      "category": "specialty",
+      "bandRange": [3, 6],
+      "protocols": [4, 5],
+      "blooms": ["analyze", "evaluate"],
+      "varkProfile": { "visual": 0.35, "auditory": 0.05, "readWrite": 0.30, "kinesthetic": 0.30 },
+      "teachingModes": ["guided_discovery", "constructivist", "socratic"],
+      "stepPattern": ["instruction", "matching", "ordering", "fill_blank", "quiz", "completion"],
+      "thetaModifier": 1.2,
+      "designHints": {
+        "opening": "Present a problem from domain B that requires a skill from domain A. The learner must recognize that a familiar tool applies in an unfamiliar context.",
+        "assessment": "Use matching to explicitly connect concepts across domains. Use ordering to build a chain of reasoning that crosses the spine boundary.",
+        "visual": "Use compose to display domain A's representation alongside domain B's problem. Visually highlight the structural isomorphism.",
+        "antipatterns": "Avoid superficial 'math in science' connections. The bridge must be structural — the same reasoning pattern must genuinely operate in both domains. Theta modifier is high (1.2) because cross-domain coherence is especially valuable."
+      },
+      "relatedArchetypes": ["authentic-transfer", "applied-problem-solving"]
+    },
+
+    {
+      "id": "scaffolded-retry",
+      "name": "Scaffolded Retry",
+      "description": "Failure-recovery pattern with progressive hints that maintain cognitive demand while reducing frustration.",
+      "category": "specialty",
+      "bandRange": [1, 4],
+      "protocols": [2, 3],
+      "blooms": ["understand", "apply"],
+      "varkProfile": { "visual": 0.30, "auditory": 0.05, "readWrite": 0.25, "kinesthetic": 0.40 },
+      "teachingModes": ["guided_discovery", "direct"],
+      "stepPattern": ["instruction", "quiz|fill_blank", "instruction", "quiz|fill_blank", "completion"],
+      "thetaModifier": 0.95,
+      "designHints": {
+        "opening": "Present the core task directly. Use the first assessment step as a diagnostic — its on_fail routing sends the learner to a scaffold, not a dead end.",
+        "assessment": "Design two parallel assessment paths: the main path (higher difficulty) and the scaffold path (same concept, lower cognitive load). Both paths converge at the completion step.",
+        "visual": "Use the same visual in both paths but with additional annotations in the scaffold path. The learner should see what they missed, not receive a different task.",
+        "antipatterns": "Avoid making the scaffold path trivially easy. The retry should maintain the learning objective while reducing extraneous cognitive load. The theta modifier is slightly below 1.0 because scaffold-heavy lessons indicate the learner may need prerequisite review."
+      },
+      "relatedArchetypes": ["embodied-discovery", "procedural-fluency"]
+    },
+
+    {
+      "id": "peer-collaborative",
+      "name": "Peer Collaborative",
+      "description": "Group-designed lesson where multiple learners contribute to a shared investigation, requiring coordination and peer verification.",
+      "category": "specialty",
+      "bandRange": [2, 5],
+      "protocols": [3, 4, 5],
+      "blooms": ["apply", "analyze", "evaluate"],
+      "varkProfile": { "visual": 0.25, "auditory": 0.20, "readWrite": 0.20, "kinesthetic": 0.35 },
+      "teachingModes": ["constructivist", "guided_discovery"],
+      "stepPattern": ["instruction", "hardware_trigger|ordering", "instruction", "matching", "completion"],
+      "thetaModifier": 1.05,
+      "designHints": {
+        "opening": "Frame a task that requires multiple data points from different physical positions or perspectives. Each group member contributes a measurement or observation.",
+        "assessment": "Use matching or ordering to synthesize group data. The final instruction step should include a manual_verification gate where a peer or teacher confirms the group's conclusion.",
+        "visual": "Use barGraph or compose to aggregate group contributions visually. Each member's data should be distinguishable in the visualization.",
+        "antipatterns": "Avoid designs where one learner can complete the entire lesson alone. The group dependency must be structural — the task is impossible without multiple contributors. Set meta.is_group: true."
+      },
+      "relatedArchetypes": ["sensor-lab", "applied-problem-solving"]
+    },
+
+    {
+      "id": "rapid-diagnostic",
+      "name": "Rapid Diagnostic",
+      "description": "Quick assessment-only lesson for placement testing, prerequisite verification, or spaced-repetition review.",
+      "category": "specialty",
+      "bandRange": [1, 6],
+      "protocols": [1],
+      "blooms": ["remember", "understand", "apply"],
+      "varkProfile": { "visual": 0.25, "auditory": 0.05, "readWrite": 0.50, "kinesthetic": 0.20 },
+      "teachingModes": ["direct"],
+      "stepPattern": ["quiz", "quiz", "fill_blank", "completion"],
+      "thetaModifier": 0.8,
+      "designHints": {
+        "opening": "Skip the instruction step — begin directly with assessment. The learner already has the relevant schema (this is review/verification, not teaching).",
+        "assessment": "Use 3-4 rapid assessment steps that escalate in Bloom's level (remember → understand → apply). Weight later steps higher. Use the results for theta recalibration, not mastery marking.",
+        "visual": "Minimal visuals. If used, they should be part of the question, not decoration (e.g., 'which barGraph shows...').",
+        "antipatterns": "Avoid teaching in a diagnostic lesson. If the learner needs instruction, theta should route them to a full lesson. Keep total duration under 3 minutes. Theta modifier is low (0.8) because diagnostics don't teach — they measure."
+      },
+      "relatedArchetypes": ["procedural-intake", "sensory-intake"]
+    },
+
+    {
+      "id": "design-challenge",
+      "name": "Design Challenge",
+      "description": "Open-ended creation task where the learner must design, build, or compose a solution that meets specified constraints.",
+      "category": "specialty",
+      "bandRange": [5, 6],
+      "protocols": [5],
+      "blooms": ["create"],
+      "varkProfile": { "visual": 0.30, "auditory": 0.05, "readWrite": 0.30, "kinesthetic": 0.35 },
+      "teachingModes": ["constructivist", "socratic"],
+      "stepPattern": ["instruction", "fill_blank", "ordering", "matching", "instruction", "completion"],
+      "thetaModifier": 1.2,
+      "designHints": {
+        "opening": "Present a design brief with clear constraints but no prescribed solution. The learner must plan (fill_blank for design specification), sequence (ordering for implementation steps), and evaluate (matching for constraint verification).",
+        "assessment": "Use ordering to test whether the learner can sequence a valid construction plan. Use matching to verify their design meets the stated constraints. The final instruction step presents the design for manual_verification.",
+        "visual": "Use compose to provide a workspace visualization. cartesianGrid for quantitative designs, arrowMap for process designs.",
+        "antipatterns": "Avoid constraining the design so tightly that only one solution is possible. Bloom's 'create' means genuine synthesis. Theta modifier is high (1.2) because creation-level coherence is the strongest signal of deep understanding."
+      },
+      "relatedArchetypes": ["authentic-transfer", "hypothesis-testing"]
+    },
+
+    {
+      "id": "multi-modal-synthesis",
+      "name": "Multi-Modal Synthesis",
+      "description": "Lesson that deliberately activates all VARK modalities, requiring the learner to translate between sensory channels to build integrated understanding.",
+      "category": "specialty",
+      "bandRange": [3, 5],
+      "protocols": [4, 5],
+      "blooms": ["analyze", "evaluate"],
+      "varkProfile": { "visual": 0.25, "auditory": 0.25, "readWrite": 0.25, "kinesthetic": 0.25 },
+      "teachingModes": ["guided_discovery", "constructivist"],
+      "stepPattern": ["instruction", "hardware_trigger", "instruction", "matching", "ordering", "fill_blank", "completion"],
+      "thetaModifier": 1.1,
+      "designHints": {
+        "opening": "Begin with a kinesthetic experience (sensor interaction), then present the same information visually, then in text. The learner experiences the same concept through three channels before being assessed.",
+        "assessment": "Use matching to connect observations across modalities (pair the physical sensation with the visual pattern with the verbal description). Use ordering to sequence the translation chain.",
+        "visual": "Use compose layers that present visual and textual information simultaneously. timeGraph for the kinesthetic/sensor channel, barGraph or cartesianGrid for the analytical channel.",
+        "antipatterns": "Avoid treating this as three separate mini-lessons. The power of multi-modal synthesis is in the CONNECTIONS between modalities, not in experiencing each independently."
+      },
+      "relatedArchetypes": ["sensor-lab", "relational-sequencing", "cross-domain-bridge"]
+    }
+  ]
+}

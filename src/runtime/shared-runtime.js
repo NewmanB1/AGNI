@@ -330,7 +330,73 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 10. DOM & formatting helpers
+  // 10. Canonical JSON — deterministic serialization for integrity hashing
+  //     [R10 P1.5] JSON.stringify key order is implementation-dependent.
+  //     This function sorts object keys recursively so the same data
+  //     produces the same string on Node and Chrome.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function canonicalJSON(obj) {
+    if (obj === null || obj === undefined) return 'null';
+    var type = typeof obj;
+    if (type === 'number' || type === 'boolean') return String(obj);
+    if (type === 'string') return JSON.stringify(obj);
+    if (Array.isArray(obj)) {
+      var items = [];
+      for (var i = 0; i < obj.length; i++) items.push(canonicalJSON(obj[i]));
+      return '[' + items.join(',') + ']';
+    }
+    if (type === 'object') {
+      var keys = Object.keys(obj).sort();
+      var pairs = [];
+      for (var k = 0; k < keys.length; k++) {
+        var val = obj[keys[k]];
+        if (val !== undefined) {
+          pairs.push(JSON.stringify(keys[k]) + ':' + canonicalJSON(val));
+        }
+      }
+      return '{' + pairs.join(',') + '}';
+    }
+    return 'null';
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 10b. URL-derived dev mode [R10 P1.1]
+  //      Dev mode from URL parameter (?dev=1), NOT from lesson data.
+  //      Lesson data must never control its own integrity verification.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  var _urlDevMode = false;
+  try {
+    var search = global.location ? global.location.search : '';
+    _urlDevMode = search.indexOf('dev=1') !== -1;
+  } catch (e) { /* location not available */ }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 10c. innerHTML sanitizer — defense-in-depth against XSS [R10 P1.2]
+  //      Strips <script>, on* attributes, and javascript: URIs from HTML
+  //      before assigning to innerHTML. Content should already be sanitized
+  //      at compile time via rehype-sanitize, but this is a runtime backstop.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  var UNSAFE_TAG_RE = /<\s*\/?\s*script\b[^>]*>/gi;
+  var ON_ATTR_RE = /\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
+  var JS_URI_RE = /\b(href|src|action)\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi;
+
+  function sanitizeHtml(html) {
+    if (typeof html !== 'string') return '';
+    return html
+      .replace(UNSAFE_TAG_RE, '')
+      .replace(ON_ATTR_RE, '')
+      .replace(JS_URI_RE, '');
+  }
+
+  function setSafeHtml(element, html) {
+    element.innerHTML = sanitizeHtml(html);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 11. DOM & formatting helpers
   // ═══════════════════════════════════════════════════════════════════════════
 
   /** Create an element, set class/text, optionally append to parent. ES5-safe. */
@@ -403,6 +469,14 @@
     // ── Encoding (Phase 4; from binary-utils.js when present) ───────────────────
     base64ToBytes: base64ToBytes,
     concatBytes:   concatBytes,
+
+    // ── Canonical JSON & dev mode [R10 P1.1, P1.5] ─────────────────────────
+    canonicalJSON:  canonicalJSON,
+    _urlDevMode:    _urlDevMode,
+
+    // ── HTML sanitizer [R10 P1.2] ────────────────────────────────────────────
+    sanitizeHtml:   sanitizeHtml,
+    setSafeHtml:    setSafeHtml,
 
     // ── DOM & formatting helpers ─────────────────────────────────────────────
     el:                       el,

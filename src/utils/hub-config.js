@@ -2,7 +2,7 @@
 
 /**
  * Shared hub config loader.
- * Reads data/hub_config.json and applies values to process.env
+ * Reads data/hub-config.json and applies values to process.env
  * so all modules share a single config bootstrap path.
  */
 
@@ -33,7 +33,7 @@ let _config = null;
 
 function loadHubConfig(baseDir) {
   if (_loaded) return _config;
-  const cfgPath = path.join(baseDir || path.join(__dirname, '../../data'), 'hub_config.json');
+  const cfgPath = path.join(baseDir || path.join(__dirname, '../../data'), 'hub-config.json');
   if (!fs.existsSync(cfgPath)) { _loaded = true; return null; }
   try {
     const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));

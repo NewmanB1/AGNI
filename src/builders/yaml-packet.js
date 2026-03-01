@@ -17,6 +17,9 @@
 const fs = require('fs');
 const path = require('path');
 const ensureDir = require('../utils/io').ensureDir;
+const { createLogger } = require('../utils/logger');
+
+const log = createLogger('yaml-packet');
 
 /**
  * Build YAML packet from raw YAML and IR/sidecar.
@@ -47,7 +50,7 @@ function buildYamlPacket(rawYaml, ir, sidecar, options) {
     JSON.stringify(packet, null, 2)
   );
 
-  console.log('✅ YAML packet build complete: ' + outputDir);
+  log.info('YAML packet build complete: ' + outputDir);
 }
 
 module.exports = { buildYamlPacket };

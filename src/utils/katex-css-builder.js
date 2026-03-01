@@ -39,6 +39,9 @@
 const fs   = require('fs');
 const path = require('path');
 const { writeIfNewer } = require('./io');
+const { createLogger } = require('./logger');
+
+const log = createLogger('katex-css');
 
 // ── KaTeX source path ─────────────────────────────────────────────────────────
 const KATEX_CSS_SOURCE = path.join(
@@ -243,7 +246,7 @@ function buildKatexCss(assetList, outputDir) {
   assetList.forEach(function (filename) {
     const content = contentFor(filename);
     if (content === null) {
-      console.warn('[KATEX-CSS] Unknown asset filename:', filename);
+      log.warn('Unknown asset filename: ' + filename);
       return;
     }
 
@@ -257,10 +260,10 @@ function buildKatexCss(assetList, outputDir) {
   });
 
   if (written.length > 0) {
-    console.log('[KATEX-CSS] Written:', written.join(', '));
+    log.info('Written: ' + written.join(', '));
   }
   if (skipped.length > 0) {
-    console.log('[KATEX-CSS] Up-to-date:', skipped.join(', '));
+    log.info('Up-to-date: ' + skipped.join(', '));
   }
 }
 

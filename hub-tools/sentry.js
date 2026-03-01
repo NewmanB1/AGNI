@@ -14,21 +14,21 @@ const { loadHubConfig } = require('../src/utils/hub-config');
 loadHubConfig(path.join(__dirname, '../data'));
 
 // ── Configuration ──────────────────────────────────────────────────────────
-const DATA_DIR = process.env.AGNI_DATA_DIR || path.join(__dirname, '../data');
+const DATA_DIR = envConfig.dataDir;
 const EVENTS_DIR = path.join(DATA_DIR, 'events');
-const GRAPH_WEIGHTS = path.join(DATA_DIR, 'graph_weights.json');
-const MASTERY_SUMMARY = path.join(DATA_DIR, 'mastery_summary.json');
-const CONTINGENCY_TABLES = path.join(DATA_DIR, 'contingency_tables.json'); // NEW: O(1) state
-const SENTRY_STATE = path.join(DATA_DIR, 'sentry_state.json'); // NEW: Event Cursors
+const GRAPH_WEIGHTS = path.join(DATA_DIR, 'graph-weights.json');
+const MASTERY_SUMMARY = path.join(DATA_DIR, 'mastery-summary.json');
+const CONTINGENCY_TABLES = path.join(DATA_DIR, 'contingency-tables.json');
+const SENTRY_STATE = path.join(DATA_DIR, 'sentry-state.json');
 const SENTRY_LOG = path.join(DATA_DIR, 'sentry.log');
 
-const PORT = parseInt(process.env.AGNI_SENTRY_PORT || '8081', 10);
-const ANALYSE_AFTER_N = parseInt(process.env.AGNI_ANALYSE_AFTER || '50', 10);
-const ANALYSE_SCHEDULE = process.env.AGNI_ANALYSE_CRON || '02:00';
+const PORT = envConfig.sentryPort;
+const ANALYSE_AFTER_N = envConfig.analyseAfter;
+const ANALYSE_SCHEDULE = envConfig.analyseCron;
 const MIN_MS_BETWEEN_ANALYSIS = 4 * 60 * 60 * 1000;
 
 const CHI2_THRESHOLD = 3.841;
-const MASTERY_THRESHOLD = 0.6;
+const MASTERY_THRESHOLD = envConfig.masteryThreshold;
 const PASS_THRESHOLD = 0.6;
 const SCHEMA_VERSION = '1.7.0';
 const SW_VERSION = 'sentry-agent v1.7.3 (O1-incremental)';
@@ -76,10 +76,15 @@ function validateEvent(raw) {
   if (!raw || typeof raw !== 'object' || !raw.lessonId || !raw.completedAt) return null;
   if (typeof raw.mastery !== 'number' || raw.mastery < 0 || raw.mastery > 1) return null;
   if (!Array.isArray(raw.steps)) return null;
+  // Validate lessonId does not contain path separators [R10 P5.6]
+  const lessonId = String(raw.lessonId);
+  if (/[\/\\]/.test(lessonId) || lessonId.includes('..')) return null;
+  // Validate completedAt is a plausible ISO date
+  if (typeof raw.completedAt !== 'string' || isNaN(Date.parse(raw.completedAt))) return null;
   return {
     eventId: raw.eventId || ('ev-' + Date.now()),
     pseudoId: raw.pseudoId || ('px-anon-' + crypto.randomBytes(4).toString('hex')),
-    lessonId: String(raw.lessonId),
+    lessonId: lessonId,
     skillsProvided: Array.isArray(raw.skillsProvided) ? raw.skillsProvided : [],
     skillsRequired: Array.isArray(raw.skillsRequired) ? raw.skillsRequired : [],
     mastery: raw.mastery,
@@ -89,7 +94,7 @@ function validateEvent(raw) {
 
 function startReceiver() {
   const server = http.createServer((req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', envConfig.corsOrigin || '*');
+    res.setHeader('Access-Control-Allow-Origin', envConfig.corsOrigin);
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -296,7 +301,7 @@ async function runAnalysis() {
 
   const now = new Date().toISOString();
   const gw = {
-    '$schema': 'https://github.com/NewmanB1/AGNI/schemas/graph_weights.schema.json',
+    '$schema': 'https://github.com/NewmanB1/AGNI/schemas/graph-weights.schema.json',
     version: SCHEMA_VERSION,
     discovered_cohort: cohortId,
     level: 'village',

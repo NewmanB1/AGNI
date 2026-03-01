@@ -100,5 +100,3 @@ const match = "freefall > 0.2s".match(THRESHOLD_REGEX);
 
 ### 7. Next Step
 Update your Schema (`ols.schema.json`) to validate against this format.
-
-**Do you want the Regex Pattern to add to your JSON Schema now?**

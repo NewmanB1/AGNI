@@ -20,6 +20,167 @@ generated Just-in-Time (JIT) at the edge — the Village Hub.
 
 ---
 
+## 2. The Data Structure (The Source)
+
+The core of the architecture is the Lesson File. It is a YAML document designed to be
+human-readable, git-forkable, and machine-executable.
+
+### 2.1 Schema Definition
+
+An OLS file is composed of strictly defined blocks:
+
+- **`meta`:** Dublin Core metadata (subject, rights, coverage).
+- **`ontology`:** The "Skill Contract." What this lesson `requires` and what it `provides`.
+- **`gate`:** The logic block that enforces the "Zero-Trust" prerequisite check.
+- **`steps`:** The content payload (Text + Hardware Instructions + SVG parameters).
+
+### 2.2 Asset Hydration Strategy
+
+To minimize backhaul data usage, OLS files do not embed binary assets or full SVG code.
+They reference them or use parameters.
+
+- **Images:** `image: "assets/physics/earth_diagram.png"`
+- **SVGs:** Parameter-based factory calls (see SVG Factory Pattern below)
+
+#### SVG Factory Pattern (v2.1)
+
+The hub maintains a shared factory system cached on each edge device via Service Worker.
+Lessons only send parameters — the device generates visuals locally from cached code.
+
+**Implementation (as built):**
+- `shared-runtime.js` — Runtime utilities: pub/sub event system, vibration patterns,
+  device detection, sensor subscription management, visual mounting lifecycle
+  (`mountStepVisual` / `destroyStepVisual`)
+- `svg-stage.js` — Spec-driven visual rendering. Translates a declarative `step.spec`
+  object into a live SVG stage via `AGNI_SVG.fromSpec()`. Handles RAF loop, sensor
+  bindings owned by the stage, and teardown.
+
+Example lesson YAML:
+```yaml
+- type: "svg"
+  spec:
+    type: "pendulum"
+    params:
+      length: 120
+      bob_radius: 12
+      fill: "#4fc3f7"
+```
+
+At render time, `svg-stage.js` (cached on the device) generates and animates the SVG
+locally from the spec parameters.
+
+Result: After first lesson, new lessons are tiny (no duplicated code), and bandwidth is saved.
+
+---
+
+## 3. The Compiler & Hub Architecture (agni-core + Village Hub)
+
+The compiler is a modular Node.js application running on the Village Hub (e.g. Raspberry Pi).
+It transforms the YAML source into executable artifacts based on the requesting device's capabilities.
+
+### 3.1 Modular Structure
+
+```
+agni-core/
+├── src/
+│   ├── cli.js                    # Orchestration & argument parsing
+│   ├── config.js                 # Markdown/unified processor (remark + rehype-katex)
+│   ├── compiler/
+│   │   └── buildLessonIR.js      # Canonical IR layer — single source of truth for all builders
+│   ├── utils/
+│   │   ├── featureInference.js   # Build-time feature inference (uses runtimeManifest for filenames)
+│   │   ├── runtimeManifest.js   # Capability → runtime file names and load order
+│   │   ├── binary.js            # Node: base64/bytes, UTF-8 (builders/crypto)
+│   │   ├── crypto.js            # Ed25519 signing & device binding
+│   │   └── io.js                # File system & asset hydration
+│   ├── builders/
+│   │   ├── html.js               # Strategy A: The "Universal" SPA (HTML + sidecar)
+│   │   └── native.js             # Strategy B: The "Efficient" Native Bundle [Phase 6]
+│   └── runtime/                  # The player engine (compiled into lesson HTML)
+│       ├── player.js             # Core logic (state machine, sensors, routing)
+│       ├── style.css             # High-contrast UI
+│       ├── binary-utils.js       # Browser: base64/bytes, concatBytes (loaded before shared-runtime)
+│       ├── shared-runtime.js     # Cached: pub/sub, vibration, device detection, visual lifecycle
+│       ├── sensor-bridge.js      # Hardware sensor abstraction (iOS/Android motion)
+│       └── svg-stage.js          # Cached: spec-driven SVG factory + stage system
+│
+├── hub-tools/
+│   └── theta.js                  # Adaptive scheduling engine (skill graph, MLC, lesson index)
+│
+└── server/                       # Implemented: on-demand PWA delivery
+    ├── hub-transform.js          # YAML → PWA/JSON transformation (attachRoutes or standalone)
+    ├── pwa/                      # PWA shell assets
+    ├── sw.js                     # Service Worker for caching
+    └── manifest.json             # PWA manifest
+```
+
+The server runs hub-transform for on-demand lesson compilation; theta provides the API (scheduling, LMS, governance). See root `ARCHITECTURE.md` for the full directory layout including `src/services/`, `src/governance/`, and `src/engine/`.
+
+#### The IR Layer (new in Phase 2)
+
+`buildLessonIR.js` is the canonical intermediate representation layer. All builders receive
+a fully enriched IR rather than raw YAML. The IR contains:
+
+- Pre-rendered HTML for each step (Markdown processed at build time — no parsing cost at runtime)
+- `inferredFeatures` — full feature profile (difficulty, VARK, Bloom ceiling, sensor flags,
+  factory manifest, KaTeX asset list)
+- `ontology` — skill requires/provides for the theta scheduling engine
+- Compiler stamps (`_compiledAt`, `_schemaVersion`, `_devMode`, `metadata_source`)
+
+The IR builder also writes a `lesson-ir.json` sidecar alongside each compiled lesson HTML.
+The theta engine reads this file for its lesson index (see Section 7).
+
+### 3.2 Output Strategies
+
+The compiler supports dual-mode distribution:
+
+| Feature | Strategy A: HTML SPA | Strategy B: Native Bundle |
+|---------|---------------------|--------------------------|
+| Target | Browsers (Chrome, WebView, KaiOS) | OLS Android Player (Kotlin/Flutter) |
+| Format | Single HTML file + `lesson-ir.json` sidecar + cached `shared-runtime.js` | `lesson.json` + `content/*.md` + shared libraries |
+| Battery | Moderate (browser overhead) | Excellent (screen-off capability) |
+| Sensors | Standard Web APIs (DeviceMotion) | HAL Access (high fidelity) |
+| Caching | Service Worker caches shared assets + lesson data | Native caching |
+| Packet Size | ~5–500 KB per lesson (shared assets cached separately) | ~10–20 KB per new lesson |
+| Use Case | Zero-install entry point, sneakernet/Starlink | Long-term retention, pocket learning |
+| Status | **Implemented** | Implemented (native.js) |
+
+---
+
+## 4. Network Topology: The "Smart Edge"
+
+### 4.1 Bandwidth Optimization (The 99% Saving)
+
+By transmitting Source YAML instead of pre-built HTML:
+
+- **HTML Strategy:** 100 lessons = ~500 KB (with caching).
+- **YAML Strategy:** 100 lessons = ~50 KB.
+
+Result: The Hub uses its local CPU to "inflate" the content for the village.
+
+The shared runtime assets (`shared-runtime.js`, `svg-stage.js`, KaTeX CSS) are cached once
+by the Service Worker and not retransmitted per lesson. Only lesson-specific content (HTML
+packet + IR sidecar) changes between lessons.
+
+### 4.2 Content Negotiation & Delivery
+
+**On-demand delivery (implemented):**
+
+1. Device requests `GET /lessons/:slug` (or hub-transform serves it when attached to theta).
+2. Hub runs `hub-transform.js`: loads YAML → runs inference → builds IR → wraps in PWA shell (uses shared `lessonAssembly` for the script block).
+3. Hub serves the PWA bundle with CSP and nonce.
+4. Edge device loads in Chrome → Service Worker caches shared assets.
+5. Subsequent lessons only need new HTML packet + IR sidecar (shared code already cached).
+
+**Static (CLI) delivery:**
+
+1. Hub operator runs `agni` (or `node src/cli.js`) with `--input` and `--output`.
+2. Compiler builds `gravity.html` + `lesson-ir.json` sidecar via `src/services/compiler`.
+3. `shared-runtime.js` and other factory assets written to output dir; reused across all lessons.
+4. Files distributed to devices via USB/SD/sneakernet.
+
+---
+
 ## 5. Security & Governance: "Device Binding"
 
 We enforce a "Digital Chain of Custody" to prevent the spread of corrupted, unverified,
@@ -256,170 +417,9 @@ prescribing specific lesson content.
 | — | Governance (policy, compliance, cohort coverage APIs on theta); services layer; lessonAssembly | Complete |
 | — | Refactor backlog: LMS migrations, IR/runtime types, runtimeManifest, binary utils, engine `.d.ts`, sneakernet script | Complete |
 
-- **Hardware:** Android 4.0+, <2GB RAM, intermittent power. Runtime and hot paths use ES5-friendly patterns (e.g. no Map/Set in critical paths, Promise-based async) for broad device support.
+- **Hardware:** Android 6.0+ (Marshmallow), <2GB RAM, intermittent power. Runtime and hot paths use ES5-friendly patterns (e.g. no Map/Set in critical paths, Promise-based async) for broad device support.
 - **Network:** 100% Offline capability. Intermittent "Village Hub" updates via Satellite/LoRa/USB/SD.
 - **Input:** Haptic/Sensor-first (Accelerometer, Vibration) + Touch.
 - **Trust:** Hub-and-Spoke Distribution for content (security), Mesh for signaling (interaction).
 - **Epistemic Pluralism:** The system adapts learning paths based on local "Generative Metaphors"
   (e.g., prioritizing Weaving logic before Math if that aids the specific cohort).
-
----
-
-## 2. The Data Structure (The Source)
-
-The core of the architecture is the Lesson File. It is a YAML document designed to be
-human-readable, git-forkable, and machine-executable.
-
-### 2.1 Schema Definition
-
-An OLS file is composed of strictly defined blocks:
-
-- **`meta`:** Dublin Core metadata (subject, rights, coverage).
-- **`ontology`:** The "Skill Contract." What this lesson `requires` and what it `provides`.
-- **`gate`:** The logic block that enforces the "Zero-Trust" prerequisite check.
-- **`steps`:** The content payload (Text + Hardware Instructions + SVG parameters).
-
-### 2.2 Asset Hydration Strategy
-
-To minimize backhaul data usage, OLS files do not embed binary assets or full SVG code.
-They reference them or use parameters.
-
-- **Images:** `image: "assets/physics/earth_diagram.png"`
-- **SVGs:** Parameter-based factory calls (see SVG Factory Pattern below)
-
-#### SVG Factory Pattern (v2.1)
-
-The hub maintains a shared factory system cached on each edge device via Service Worker.
-Lessons only send parameters — the device generates visuals locally from cached code.
-
-**Implementation (as built):**
-- `shared-runtime.js` — Runtime utilities: pub/sub event system, vibration patterns,
-  device detection, sensor subscription management, visual mounting lifecycle
-  (`mountStepVisual` / `destroyStepVisual`)
-- `svg-stage.js` — Spec-driven visual rendering. Translates a declarative `step.spec`
-  object into a live SVG stage via `AGNI_SVG.fromSpec()`. Handles RAF loop, sensor
-  bindings owned by the stage, and teardown.
-
-Example lesson YAML:
-```yaml
-- type: "svg"
-  spec:
-    type: "pendulum"
-    params:
-      length: 120
-      bob_radius: 12
-      fill: "#4fc3f7"
-```
-
-At render time, `svg-stage.js` (cached on the device) generates and animates the SVG
-locally from the spec parameters.
-
-Result: After first lesson, new lessons are tiny (no duplicated code), and bandwidth is saved.
-
----
-
-## 3. The Compiler & Hub Architecture (agni-core + Village Hub)
-
-The compiler is a modular Node.js application running on the Village Hub (e.g. Raspberry Pi).
-It transforms the YAML source into executable artifacts based on the requesting device's capabilities.
-
-### 3.1 Modular Structure
-
-```
-agni-core/
-├── src/
-│   ├── cli.js                    # Orchestration & argument parsing
-│   ├── config.js                 # Markdown/unified processor (remark + rehype-katex)
-│   ├── compiler/
-│   │   └── buildLessonIR.js      # Canonical IR layer — single source of truth for all builders
-│   ├── utils/
-│   │   ├── featureInference.js   # Build-time feature inference (uses runtimeManifest for filenames)
-│   │   ├── runtimeManifest.js   # Capability → runtime file names and load order
-│   │   ├── binary.js            # Node: base64/bytes, UTF-8 (builders/crypto)
-│   │   ├── crypto.js            # Ed25519 signing & device binding
-│   │   └── io.js                # File system & asset hydration
-│   ├── builders/
-│   │   ├── html.js               # Strategy A: The "Universal" SPA (HTML + sidecar)
-│   │   └── native.js             # Strategy B: The "Efficient" Native Bundle [Phase 6]
-│   └── runtime/                  # The player engine (compiled into lesson HTML)
-│       ├── player.js             # Core logic (state machine, sensors, routing)
-│       ├── style.css             # High-contrast UI
-│       ├── binary-utils.js       # Browser: base64/bytes, concatBytes (loaded before shared-runtime)
-│       ├── shared-runtime.js     # Cached: pub/sub, vibration, device detection, visual lifecycle
-│       ├── sensor-bridge.js      # Hardware sensor abstraction (iOS/Android motion)
-│       └── svg-stage.js          # Cached: spec-driven SVG factory + stage system
-│
-├── hub-tools/
-│   └── theta.js                  # Adaptive scheduling engine (skill graph, MLC, lesson index)
-│
-└── server/                       # Implemented: on-demand PWA delivery
-    ├── hub-transform.js          # YAML → PWA/JSON transformation (attachRoutes or standalone)
-    ├── pwa/                      # PWA shell assets
-    ├── sw.js                     # Service Worker for caching
-    └── manifest.json             # PWA manifest
-```
-
-The server runs hub-transform for on-demand lesson compilation; theta provides the API (scheduling, LMS, governance). See root `ARCHITECTURE.md` for the full directory layout including `src/services/`, `src/governance/`, and `src/engine/`.
-
-#### The IR Layer (new in Phase 2)
-
-`buildLessonIR.js` is the canonical intermediate representation layer. All builders receive
-a fully enriched IR rather than raw YAML. The IR contains:
-
-- Pre-rendered HTML for each step (Markdown processed at build time — no parsing cost at runtime)
-- `inferredFeatures` — full feature profile (difficulty, VARK, Bloom ceiling, sensor flags,
-  factory manifest, KaTeX asset list)
-- `ontology` — skill requires/provides for the theta scheduling engine
-- Compiler stamps (`_compiledAt`, `_schemaVersion`, `_devMode`, `metadata_source`)
-
-The IR builder also writes a `lesson-ir.json` sidecar alongside each compiled lesson HTML.
-The theta engine reads this file for its lesson index (see Section 7).
-
-### 3.2 Output Strategies
-
-The compiler supports dual-mode distribution:
-
-| Feature | Strategy A: HTML SPA | Strategy B: Native Bundle |
-|---------|---------------------|--------------------------|
-| Target | Browsers (Chrome, WebView, KaiOS) | OLS Android Player (Kotlin/Flutter) |
-| Format | Single HTML file + `lesson-ir.json` sidecar + cached `shared-runtime.js` | `lesson.json` + `content/*.md` + shared libraries |
-| Battery | Moderate (browser overhead) | Excellent (screen-off capability) |
-| Sensors | Standard Web APIs (DeviceMotion) | HAL Access (high fidelity) |
-| Caching | Service Worker caches shared assets + lesson data | Native caching |
-| Packet Size | ~5–500 KB per lesson (shared assets cached separately) | ~10–20 KB per new lesson |
-| Use Case | Zero-install entry point, sneakernet/Starlink | Long-term retention, pocket learning |
-| Status | **Implemented** | Implemented (native.js) |
-
----
-
-## 4. Network Topology: The "Smart Edge"
-
-### 4.1 Bandwidth Optimization (The 99% Saving)
-
-By transmitting Source YAML instead of pre-built HTML:
-
-- **HTML Strategy:** 100 lessons = ~500 KB (with caching).
-- **YAML Strategy:** 100 lessons = ~50 KB.
-
-Result: The Hub uses its local CPU to "inflate" the content for the village.
-
-The shared runtime assets (`shared-runtime.js`, `svg-stage.js`, KaTeX CSS) are cached once
-by the Service Worker and not retransmitted per lesson. Only lesson-specific content (HTML
-packet + IR sidecar) changes between lessons.
-
-### 4.2 Content Negotiation & Delivery
-
-**On-demand delivery (implemented):**
-
-1. Device requests `GET /lessons/:slug` (or hub-transform serves it when attached to theta).
-2. Hub runs `hub-transform.js`: loads YAML → runs inference → builds IR → wraps in PWA shell (uses shared `lessonAssembly` for the script block).
-3. Hub serves the PWA bundle with CSP and nonce.
-4. Edge device loads in Chrome → Service Worker caches shared assets.
-5. Subsequent lessons only need new HTML packet + IR sidecar (shared code already cached).
-
-**Static (CLI) delivery:**
-
-1. Hub operator runs `agni` (or `node src/cli.js`) with `--input` and `--output`.
-2. Compiler builds `gravity.html` + `lesson-ir.json` sidecar via `src/services/compiler`.
-3. `shared-runtime.js` and other factory assets written to output dir; reused across all lessons.
-4. Files distributed to devices via USB/SD/sneakernet.

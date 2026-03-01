@@ -7,10 +7,10 @@ const compiler       = require('./compiler');
 const lms            = require('./lms');
 const governance     = require('./governance');
 const author         = require('./author');
-const lessonAssembly = require('./lessonAssembly');
-const lessonSchema    = require('./lessonSchema');
+const lessonAssembly = require('./lesson-assembly');
+const lessonSchema    = require('./lesson-schema');
 const accounts       = require('./accounts');
-const lessonChain    = require('./lessonChain');
+const lessonChain    = require('./lesson-chain');
 
 module.exports = {
   compiler:       compiler,

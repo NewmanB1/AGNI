@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
-const { inferFeatures } = require('./src/utils/featureInference');
+const { inferFeatures } = require('./src/utils/feature-inference');
 const lessonsDir = './lessons';
 console.log('Scanning directory:', path.resolve(lessonsDir));
 try {

@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://open-lesson.org/schemas/parent-links.schema.json",
+  "title": "Parent Links",
+  "description": "Parent-student link records and pending invites.",
+  "type": "object",
+  "required": ["links", "invites"],
+  "properties": {
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["parentId", "studentId"],
+        "properties": {
+          "parentId": { "type": "string" },
+          "studentId": { "type": "string" },
+          "linkedAt": { "type": "string", "format": "date-time" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "invites": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "studentId"],
+        "properties": {
+          "code": { "type": "string" },
+          "studentId": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "expiresAt": { "type": "string", "format": "date-time" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

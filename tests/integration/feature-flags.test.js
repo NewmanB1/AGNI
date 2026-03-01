@@ -7,8 +7,8 @@ const path = require('path');
 const fs = require('fs');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
-const FLAGS_PATH = path.join(DATA_DIR, 'feature_flags.json');
-const CREATORS_PATH = path.join(DATA_DIR, 'creator_accounts.json');
+const FLAGS_PATH = path.join(DATA_DIR, 'feature-flags.json');
+const CREATORS_PATH = path.join(DATA_DIR, 'creator-accounts.json');
 const SESSIONS_PATH = path.join(DATA_DIR, 'sessions.json');
 
 function makeRequest(method, baseUrl, urlPath, body, headers) {

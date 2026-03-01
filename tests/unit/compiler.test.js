@@ -2,7 +2,7 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { buildLessonIR, buildLessonSidecar } = require('../../src/compiler/buildLessonIR');
+const { buildLessonIR, buildLessonSidecar } = require('../../src/compiler/build-lesson-ir');
 
 function minimalLesson(overrides) {
   const { minimalLesson: base } = require('../helpers/fixtures');

@@ -3,7 +3,8 @@
 // Aggregate cohort coverage by UTU and by skill for governance reporting.
 // Consumes lesson index (sidecar-like entries) and mastery summary.
 
-const MASTERY_THRESHOLD = 0.6;
+const envConfig = require('../utils/env-config');
+const MASTERY_THRESHOLD = envConfig.masteryThreshold;
 
 /**
  * Aggregate coverage: how many lessons/skills in the index fall under each UTU bucket,
@@ -46,31 +47,42 @@ function aggregateCohortCoverage(lessonIndex, masterySummary, policy) {
     });
   });
 
-  // Dedupe UTU skills per bucket
+  // Dedupe UTU skills per bucket using Set
   Object.keys(byUtu).forEach(function (k) {
-    const arr = byUtu[k].skills;
-    byUtu[k].skills = arr.filter(function (s, i) { return arr.indexOf(s) === i; });
+    var seen = {};
+    var deduped = [];
+    var arr = byUtu[k].skills;
+    for (var i = 0; i < arr.length; i++) {
+      if (!seen[arr[i]]) { seen[arr[i]] = true; deduped.push(arr[i]); }
+    }
+    byUtu[k].skills = deduped;
   });
 
-  // Count students who have mastered each skill (above threshold)
+  // Pre-compute per-student mastered skill sets (single pass)
+  var studentMasteredSkills = {};
   studentIds.forEach(function (pseudoId) {
-    const skills = students[pseudoId] || {};
+    var skills = students[pseudoId] || {};
+    var mastered = {};
     Object.keys(skills).forEach(function (skillId) {
       if ((skills[skillId] || 0) >= MASTERY_THRESHOLD) {
+        mastered[skillId] = true;
         if (bySkill[skillId]) bySkill[skillId].studentMasteryCount += 1;
       }
     });
+    studentMasteredSkills[pseudoId] = mastered;
   });
 
   // For each UTU bucket, count students who have mastered at least one skill in that bucket
   Object.keys(byUtu).forEach(function (utuKey) {
-    const skillList = byUtu[utuKey].skills;
+    var skillList = byUtu[utuKey].skills;
     studentIds.forEach(function (pseudoId) {
-      const skills = students[pseudoId] || {};
-      const hasMastered = skillList.some(function (skillId) {
-        return (skills[skillId] || 0) >= MASTERY_THRESHOLD;
-      });
-      if (hasMastered) byUtu[utuKey].studentMasteryCount += 1;
+      var mastered = studentMasteredSkills[pseudoId];
+      for (var i = 0; i < skillList.length; i++) {
+        if (mastered[skillList[i]]) {
+          byUtu[utuKey].studentMasteryCount += 1;
+          break;
+        }
+      }
     });
   });
 
