@@ -343,6 +343,29 @@
         "next_if": {
           "type": "string",
           "description": "Conditional next step override. Format: 'condition -> step_id'."
+        },
+        "svg_spec": {
+          "type": "object",
+          "description": "SVGFactory visual specification. Rendered by the player via svg-registry.js. Can be a single factory (factory + opts) or a compose layer (compose: true + layers[]).",
+          "properties": {
+            "factory": { "type": "string", "description": "Registered factory name (e.g. timeGraph, polygonDynamic, barGraph)." },
+            "opts": { "type": "object", "description": "Factory-specific options. See svg-registry.js for valid keys per factory." },
+            "compose": { "type": "boolean", "description": "If true, layers[] is used instead of factory/opts." },
+            "layers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "factory": { "type": "string" },
+                  "opts": { "type": "object" },
+                  "name": { "type": "string" }
+                }
+              },
+              "description": "Array of factory layers when compose is true."
+            },
+            "w": { "type": "integer", "description": "Viewport width override (shared across layers in compose mode)." },
+            "h": { "type": "integer", "description": "Viewport height override." }
+          }
         }
       }
     }
