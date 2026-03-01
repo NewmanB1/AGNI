@@ -1,7 +1,8 @@
 // src/runtime/shell/library.js
+// ES5 compatible — targets Android 6.0+ (Chrome 44 WebView).
 
 // 1. Mock Data (In production, this comes from fetch() or CacheStorage)
-const AVAILABLE_LESSONS = [
+var AVAILABLE_LESSONS = [
     { 
         identifier: "math:fractions", 
         title: "Fractions w/ Rhythm", 
@@ -23,29 +24,27 @@ const AVAILABLE_LESSONS = [
 ];
 
 // Mock User History (The "Kinetic Learner")
-const USER_LOG = [
+var USER_LOG = [
     { skillId: "intro:sensors", features: ["accelerometer"], score: 1.0, pace: 0.8 }
 ];
 
 // Mock Village Graph
-const GRAPH_WEIGHTS = { edges: [] };
+var GRAPH_WEIGHTS = { edges: [] };
 
-async function initLibrary() {
-    const listEl = document.getElementById('lesson-list');
+function initLibrary() {
+    var listEl = document.getElementById('lesson-list');
 
     // 1. Run the Adaptive Engine
-    // (Note: sortLessons is available globally via window.AGNI_NAVIGATOR in browser)
-    const sorted = window.AGNI_NAVIGATOR.sortLessons(AVAILABLE_LESSONS, USER_LOG, GRAPH_WEIGHTS);
+    var sorted = window.AGNI_NAVIGATOR.sortLessons(AVAILABLE_LESSONS, USER_LOG, GRAPH_WEIGHTS);
 
     // 2. Render
     listEl.innerHTML = '';
-    sorted.forEach((lesson, index) => {
-        const isRecommended = index === 0;
-        const el = document.createElement('div');
-        el.className = `card ${isRecommended ? 'recommended' : ''}`;
+    sorted.forEach(function (lesson, index) {
+        var isRecommended = index === 0;
+        var el = document.createElement('div');
+        el.className = 'card' + (isRecommended ? ' recommended' : '');
         
-        // Visualizing the Theta score for debugging/trust
-        const affinityLabel = lesson._score.components.styleBonus > 0 ? "Matches Your Style" : "";
+        var affinityLabel = lesson._score.components.styleBonus > 0 ? "Matches Your Style" : "";
 
         var h3 = document.createElement('h3');
         h3.textContent = lesson.title + (isRecommended ? ' ⭐' : '');
@@ -72,15 +71,14 @@ async function initLibrary() {
         el.appendChild(h3);
         el.appendChild(metaDiv);
         
-        el.onclick = () => launchLesson(lesson.identifier);
+        el.onclick = function () { launchLesson(lesson.identifier); };
         listEl.appendChild(el);
     });
 }
 
 function launchLesson(id) {
-    console.log(`Launching ${id}...`);
-    // In PWA mode, this would: window.location.href = `/lessons/${id}/index.html`;
-    alert(`Opening: ${id}`);
+    console.log('Launching ' + id + '...');
+    window.location.href = '/lessons/' + encodeURIComponent(id);
 }
 
 // Start

@@ -76,6 +76,16 @@ function updateEmbedding(state, studentId, lessonId, gain) {
   var lr    = state.embedding.lr;
   var reg   = state.embedding.reg;
 
+  if (typeof gamma !== 'number' || !isFinite(gamma) || gamma < 0 || gamma > 1) {
+    throw new Error('[EMBEDDING] forgetting must be a finite number in [0,1], got: ' + gamma);
+  }
+  if (typeof lr !== 'number' || !isFinite(lr) || lr <= 0) {
+    throw new Error('[EMBEDDING] lr must be a positive finite number, got: ' + lr);
+  }
+  if (typeof reg !== 'number' || !isFinite(reg) || reg < 0) {
+    throw new Error('[EMBEDDING] reg must be a non-negative finite number, got: ' + reg);
+  }
+
   var dotZW = math.dot(z, w);
   var err   = gain - dotZW;
 
@@ -84,6 +94,8 @@ function updateEmbedding(state, studentId, lessonId, gain) {
     var wk = w[k];
     var newZk = gamma * zk + lr * (err * wk - reg * zk);
     var newWk = gamma * wk + lr * (err * zk - reg * wk);
+    if (!isFinite(newZk)) newZk = 0;
+    if (!isFinite(newWk)) newWk = 0;
     z[k] = newZk;
     w[k] = newWk;
   }

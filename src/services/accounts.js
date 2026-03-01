@@ -312,7 +312,7 @@ async function saveStudents(data) {
 }
 
 function generatePseudoId() {
-  const bytes = crypto.randomBytes(8);
+  const bytes = crypto.randomBytes(16);
   return 'px-' + bytes.toString('hex');
 }
 
@@ -376,10 +376,21 @@ async function createStudentsBulk({ names, pin, createdBy } = {}) {
   });
 }
 
-/** List all student accounts. */
+function sanitizeStudent(student) {
+  return {
+    pseudoId: student.pseudoId,
+    displayName: student.displayName,
+    hasPin: !!(student.pinHash || student.pin),
+    createdAt: student.createdAt,
+    createdBy: student.createdBy,
+    active: student.active
+  };
+}
+
+/** List all student accounts (sensitive fields stripped). */
 async function listStudents() {
   const data = await loadStudents();
-  return data.students;
+  return data.students.map(sanitizeStudent);
 }
 
 /** Get a single student by pseudoId. */
@@ -416,7 +427,8 @@ async function generateTransferToken(pseudoId) {
     if (!student) return { error: 'Student not found' };
 
     const token = randomCode(8);
-    student.transferToken = token;
+    student.transferTokenHash = hashToken(token);
+    student.transferToken = null;
     student.transferExpiresAt = new Date(Date.now() + TRANSFER_TTL_MS).toISOString();
     await saveStudents(data);
     return { ok: true, pseudoId, token, expiresAt: student.transferExpiresAt };
@@ -431,15 +443,19 @@ async function claimTransferToken(token) {
   if (!token || !token.trim()) return { error: 'Token is required' };
   return withLock(STUDENTS_PATH, async () => {
     const code = token.trim().toUpperCase();
+    const codeHash = hashToken(code);
     const data = await loadStudents();
-    const student = data.students.find(s =>
-      s.transferToken === code &&
-      s.transferExpiresAt &&
-      new Date(s.transferExpiresAt).getTime() > Date.now()
-    );
+    const student = data.students.find(s => {
+      const stored = s.transferTokenHash || s.transferToken;
+      if (!stored) return false;
+      if (!s.transferExpiresAt || new Date(s.transferExpiresAt).getTime() <= Date.now()) return false;
+      if (stored.length !== codeHash.length) return false;
+      return crypto.timingSafeEqual(Buffer.from(codeHash), Buffer.from(stored));
+    });
     if (!student) return { error: 'Invalid or expired transfer token' };
 
     student.transferToken = null;
+    student.transferTokenHash = null;
     student.transferExpiresAt = null;
     await saveStudents(data);
     return { ok: true, pseudoId: student.pseudoId, displayName: student.displayName };

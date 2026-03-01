@@ -97,7 +97,7 @@
   function startEdit(student) {
     editingStudent = student.pseudoId;
     editName = student.displayName || '';
-    editPin = student.pin || '';
+    editPin = '';
   }
 
   async function saveEdit(pseudoId) {
@@ -243,7 +243,7 @@
               {:else}
                 <td>{s.displayName || '(unnamed)'}</td>
                 <td class="mono">{s.pseudoId}</td>
-                <td>{s.pin ? '****' : 'none'}</td>
+                <td>{s.hasPin ? '****' : 'none'}</td>
                 <td>{s.active ? 'Yes' : 'No'}</td>
                 <td class="muted">{new Date(s.createdAt).toLocaleDateString()}</td>
                 <td class="action-cell">

@@ -27,7 +27,8 @@ function register(router, ctx) {
         const provided = event.skillsProvided || [];
         for (const sp of provided) {
           if (!sp.skill) continue;
-          const evidenced = typeof sp.evidencedLevel === 'number' ? sp.evidencedLevel : (sp.declaredLevel || 1) * (event.mastery || 0);
+          const rawEvidence = typeof sp.evidencedLevel === 'number' ? sp.evidencedLevel : (sp.declaredLevel || 1) * (event.mastery || 0);
+          const evidenced = Math.max(0, Math.min(1, typeof rawEvidence === 'number' && isFinite(rawEvidence) ? rawEvidence : 0));
           studentSkills[sp.skill] = Math.max(studentSkills[sp.skill] || 0, Math.round(evidenced * 1000) / 1000);
         }
 
@@ -56,7 +57,8 @@ function register(router, ctx) {
           if (!pid || !lid) continue;
           if (!schedule.students[pid]) schedule.students[pid] = {};
           const existing = schedule.students[pid][lid] || { interval: 1, easeFactor: 2.5, repetition: 0 };
-          const quality = Math.round((event.mastery || 0) * 5);
+          const rawMastery = typeof event.mastery === 'number' && isFinite(event.mastery) ? event.mastery : 0;
+          const quality = Math.max(0, Math.min(5, Math.round(Math.max(0, Math.min(1, rawMastery)) * 5)));
           const result = updateSchedule(existing, quality);
           schedule.students[pid][lid] = {
             interval: result.interval,

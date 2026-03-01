@@ -268,10 +268,12 @@ async function _doCompile(slug, loaded, options) {
   const nonce = generateNonce();
   const html = _buildPwaShell(ir, styles, lessonScript, nonce);
 
-  // LRU eviction: if cache is full, remove the least recently accessed entry
-  if (_cacheSize >= MAX_CACHE_ENTRIES) {
-    let oldestSlug = null;
-    let oldestTime = Infinity;
+  var isUpdate = !!_lessonCache[slug];
+
+  // LRU eviction: if cache is full and this is a new entry, evict oldest
+  if (!isUpdate && _cacheSize >= MAX_CACHE_ENTRIES) {
+    var oldestSlug = null;
+    var oldestTime = Infinity;
     Object.keys(_lessonCache).forEach(function (s) {
       if (_lessonCache[s].lastAccessed < oldestTime) {
         oldestTime = _lessonCache[s].lastAccessed;
@@ -291,7 +293,7 @@ async function _doCompile(slug, loaded, options) {
     mtime:        loaded.mtime,
     lastAccessed: Date.now()
   };
-  _cacheSize++;
+  if (!isUpdate) _cacheSize++;
 
   return { html: html, sidecar: sidecar };
 }
@@ -392,12 +394,14 @@ function _sendJson(req, res, statusCode, payload) {
 }
 
 function _sendFile(req, res, filePath, contentType, maxAge) {
-  if (!fs.existsSync(filePath)) {
+  var buf;
+  try {
+    buf = fs.readFileSync(filePath);
+  } catch (_e) {
     res.writeHead(404);
     res.end('Not found');
     return;
   }
-  const buf = fs.readFileSync(filePath);
   res.setHeader('Access-Control-Allow-Origin', envConfig.corsOrigin || 'null');
   res.setHeader('Content-Type', contentType);
   res.setHeader('Cache-Control', 'public, max-age=' + (maxAge || 0));

@@ -66,11 +66,15 @@ function roleOnly(allowedRoles, handler) {
 }
 
 function requireHubKey(handler) {
-  const hubKey = process.env.AGNI_HUB_API_KEY || '';
   return (req, res, opts) => {
-    if (!hubKey) return handler(req, res, opts);
-    const provided = req.headers['x-hub-key'] || (opts.qs && opts.qs.hubKey) || '';
-    if (provided !== hubKey) {
+    const hubKey = process.env.AGNI_HUB_API_KEY || '';
+    if (!hubKey) {
+      return opts.sendResponse(503, { error: 'Hub API key not configured. Set AGNI_HUB_API_KEY.' });
+    }
+    const provided = req.headers['x-hub-key'] || '';
+    const providedBuf = Buffer.from(provided);
+    const keyBuf = Buffer.from(hubKey);
+    if (providedBuf.length !== keyBuf.length || !crypto.timingSafeEqual(providedBuf, keyBuf)) {
       return opts.sendResponse(401, { error: 'Invalid or missing hub API key' });
     }
     return handler(req, res, opts);

@@ -8,9 +8,12 @@
 // Depends on: AGNI_SHARED (for binary helpers + canonicalJSON)
 // Load order: after shared-runtime.js, before player.js
 //
-// SECURITY: devMode is derived from AGNI_SHARED._urlDevMode (URL parameter),
-//   NOT from LESSON_DATA._devMode. The lesson payload must never control
-//   whether its own integrity verification is skipped. [Sprint R10 P1.1]
+// SECURITY: devMode is derived from AGNI_SHARED._urlDevMode (URL parameter
+//   ?dev=1), NOT from LESSON_DATA._devMode. The lesson payload must never
+//   control whether its own integrity verification is skipped. [Sprint R10 P1.1]
+//   In devMode, missing signatures are tolerated (returns true) to support
+//   local development without a private key. In production, missing signatures
+//   always fail verification.
 //
 // ES5 only — targets Android 6.0+ (Chrome 44 WebView).
 
@@ -108,31 +111,40 @@
    * @param {object} lesson LESSON_DATA
    */
   function verify(lesson) {
-    var buildTimeDevMode = !!(global.AGNI_BUILD_DEV_MODE);
+    var devMode = isDevMode();
 
-    if (buildTimeDevMode && (!global.OLS_SIGNATURE || !global.OLS_PUBLIC_KEY)) {
-      return Promise.resolve(true);
-    }
-
-    if (!global.OLS_SIGNATURE || !global.OLS_PUBLIC_KEY || !global.OLS_INTENDED_OWNER) {
+    if (!global.OLS_SIGNATURE || !global.OLS_PUBLIC_KEY) {
+      if (devMode) {
+        return Promise.resolve(true);
+      }
       console.error('[VERIFY] Missing signature globals');
       return Promise.resolve(false);
     }
 
-    var canUseSubtle = global.crypto &&
-                       global.crypto.subtle &&
-                       typeof global.crypto.subtle.verify === 'function';
-
-    if (!canUseSubtle) {
-      return verifyWithTweetNaCl(lesson);
+    if (!global.OLS_INTENDED_OWNER) {
+      console.error('[VERIFY] Missing OLS_INTENDED_OWNER');
+      return Promise.resolve(false);
     }
 
-    return verifyWithSubtleCrypto(lesson).then(function (result) {
-      if (devMode) console.log('[VERIFY] SubtleCrypto result:', result);
-      return result;
-    }).catch(function (err) {
-      if (devMode) console.warn('[VERIFY] SubtleCrypto failed, falling back:', err.message);
-      return verifyWithTweetNaCl(lesson);
+    // Ed25519 SubtleCrypto requires Chrome 113+; target is Chrome 44 WebView.
+    // Always prefer TweetNaCl on Android Marshmallow devices.
+    return verifyWithTweetNaCl(lesson).then(function (result) {
+      if (result !== false) {
+        if (devMode) console.log('[VERIFY] TweetNaCl result:', result);
+        return result;
+      }
+      // TweetNaCl unavailable or failed — try SubtleCrypto as last resort
+      var canUseSubtle = global.crypto &&
+                         global.crypto.subtle &&
+                         typeof global.crypto.subtle.verify === 'function';
+      if (!canUseSubtle) return false;
+      return verifyWithSubtleCrypto(lesson).then(function (r) {
+        if (devMode) console.log('[VERIFY] SubtleCrypto result:', r);
+        return r;
+      }).catch(function (err) {
+        if (devMode) console.warn('[VERIFY] SubtleCrypto failed:', err.message);
+        return false;
+      });
     });
   }
 

@@ -174,17 +174,23 @@ function updateBandit(state, studentId, lessonId, gain) {
   var b = state.bandit.b;
   var gamma = state.bandit.forgetting;
 
+  if (typeof gamma !== 'number' || !isFinite(gamma) || gamma < 0 || gamma > 1) {
+    throw new Error('[BANDIT] forgetting must be a finite number in [0,1], got: ' + gamma);
+  }
+
   // A ← γA + x xᵀ
   var outerXX = math.outer(x, x);
   for (var i = 0; i < A.length; i++) {
     for (var j = 0; j < A[i].length; j++) {
-      A[i][j] = gamma * A[i][j] + outerXX[i][j];
+      var aVal = gamma * A[i][j] + outerXX[i][j];
+      A[i][j] = isFinite(aVal) ? aVal : A[i][j];
     }
   }
 
   // b ← γb + x · gain
   for (var k = 0; k < b.length; k++) {
-    b[k] = gamma * b[k] + x[k] * gain;
+    var bVal = gamma * b[k] + x[k] * gain;
+    b[k] = isFinite(bVal) ? bVal : b[k];
   }
 
   state.bandit.observationCount += 1;

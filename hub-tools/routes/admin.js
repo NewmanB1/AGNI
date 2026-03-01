@@ -41,8 +41,19 @@ function register(router, ctx) {
       if (unknown.length > 0) {
         return sendResponse(400, { error: 'Unknown config keys: ' + unknown.join(', ') });
       }
+      if ('__proto__' in cfg || 'constructor' in cfg || 'prototype' in cfg) {
+        return sendResponse(400, { error: 'Payload contains forbidden keys' });
+      }
       const cfgPath = path.resolve(path.join(__dirname, '../../data/hub-config.json'));
-      await saveJSONAsync(cfgPath, cfg);
+      const existing = await loadJSONAsync(cfgPath, {});
+      const merged = Object.create(null);
+      for (const k of Object.keys(existing)) {
+        if (ALLOWED_CONFIG_KEYS.has(k)) merged[k] = existing[k];
+      }
+      for (const k of Object.keys(cfg)) {
+        if (ALLOWED_CONFIG_KEYS.has(k)) merged[k] = cfg[k];
+      }
+      await saveJSONAsync(cfgPath, merged);
       return sendResponse(200, { ok: true, message: 'Config saved. Restart hub for changes to take effect.' });
     });
   }));
@@ -56,13 +67,20 @@ function register(router, ctx) {
     /^192\.168\./,
     /^169\.254\./,
     /^0\./,
+    /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./,
     /^::1$/,
+    /^::$/,
+    /^0+:0+:0+:0+:0+:0*:0*:0*1?$/,
     /^fc00:/i, /^fd/i, /^fe80:/i,
+    /^::ffff:(127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/i,
   ];
 
   function isPrivateHost(hostname) {
-    return PRIVATE_IP_RANGES.some(function (re) { return re.test(hostname); }) ||
-           hostname === 'localhost';
+    if (hostname === 'localhost' || hostname.endsWith('.local') || hostname.endsWith('.internal')) {
+      return true;
+    }
+    const stripped = hostname.replace(/^\[/, '').replace(/\]$/, '');
+    return PRIVATE_IP_RANGES.some(function (re) { return re.test(stripped); });
   }
 
   router.post('/api/admin/sync-test', adminOnly((req, res, { sendResponse }) => {

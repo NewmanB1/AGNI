@@ -1,8 +1,15 @@
 'use strict';
 
+var INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function isInviteExpired(invite) {
+  if (!invite.createdAt) return true;
+  return Date.now() - new Date(invite.createdAt).getTime() > INVITE_TTL_MS;
+}
+
 function register(router, ctx) {
   const { loadMasterySummaryAsync, loadOverridesAsync, loadParentLinksAsync, saveParentLinksAsync,
-          generateInviteCode, handleJsonBody, adminOnly, withRateLimit } = ctx;
+          generateInviteCode, handleJsonBody, adminOnly, withRateLimit, requireHubKey } = ctx;
 
   router.post('/api/parent/invite', adminOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
@@ -13,7 +20,7 @@ function register(router, ctx) {
         return sendResponse(404, { error: 'Student not found', pseudoId });
       }
       const data = await loadParentLinksAsync();
-      const existing = data.invites.find(inv => inv.pseudoId === pseudoId && !inv.used);
+      const existing = data.invites.find(inv => inv.pseudoId === pseudoId && !inv.used && !isInviteExpired(inv));
       if (existing) {
         return sendResponse(200, { code: existing.code, pseudoId, existing: true });
       }
@@ -31,7 +38,7 @@ function register(router, ctx) {
       if (!code) return sendResponse(400, { error: 'code required' });
       if (!parentId) return sendResponse(400, { error: 'parentId required' });
       const data = await loadParentLinksAsync();
-      const invite = data.invites.find(inv => inv.code === code && !inv.used);
+      const invite = data.invites.find(inv => inv.code === code && !inv.used && !isInviteExpired(inv));
       if (!invite) return sendResponse(404, { error: 'Invalid or expired invite code' });
       const alreadyLinked = data.links.find(l => l.parentId === parentId && l.pseudoId === invite.pseudoId);
       if (alreadyLinked) {
@@ -46,7 +53,7 @@ function register(router, ctx) {
     });
   }));
 
-  router.get('/api/parent/child/:pseudoId/progress', async (req, res, { params, qs, sendResponse }) => {
+  router.get('/api/parent/child/:pseudoId/progress', requireHubKey(async (req, res, { params, qs, sendResponse }) => {
     const pseudoId = params.pseudoId;
     const parentId = qs.parentId;
     if (!parentId) return sendResponse(400, { error: 'parentId query param required' });
@@ -65,9 +72,9 @@ function register(router, ctx) {
       completedSkills: completedCount, totalSkills,
       recommendedLessons: lessons.slice(0, 5), currentOverride: override
     });
-  });
+  }));
 
-  router.get('/api/parent/children', async (req, res, { qs, sendResponse }) => {
+  router.get('/api/parent/children', requireHubKey(async (req, res, { qs, sendResponse }) => {
     const parentId = qs.parentId;
     if (!parentId) return sendResponse(400, { error: 'parentId query param required' });
     const data = await loadParentLinksAsync();
@@ -75,7 +82,7 @@ function register(router, ctx) {
       .filter(l => l.parentId === parentId)
       .map(l => ({ pseudoId: l.pseudoId, linkedAt: l.linkedAt }));
     return sendResponse(200, { parentId, children });
-  });
+  }));
 }
 
 module.exports = { register };

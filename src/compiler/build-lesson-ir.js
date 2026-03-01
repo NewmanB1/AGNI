@@ -103,8 +103,12 @@ async function buildLessonIR(lessonData, options) {
           log.error(
             'Markdown failed for step', step.id || '(no id)', ':', err.message
           );
-          // Graceful fallback: preserve line breaks, escape nothing else
-          htmlContent = step.content.replace(/\n/g, '<br>');
+          htmlContent = step.content
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/\n/g, '<br>');
         }
       }
       return Object.assign({}, step, { htmlContent: htmlContent });

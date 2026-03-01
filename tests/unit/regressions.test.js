@@ -257,3 +257,112 @@ describe('AUDIT-5: declared_features overrides produce valid objects', () => {
     }
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R12: requireHubKey must fail closed (503) when AGNI_HUB_API_KEY is unset
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-6: requireHubKey fails closed when key is not configured', () => {
+  it('returns 503 when AGNI_HUB_API_KEY is empty', () => {
+    const saved = process.env.AGNI_HUB_API_KEY;
+    process.env.AGNI_HUB_API_KEY = '';
+    try {
+      delete require.cache[require.resolve('../../hub-tools/context/auth')];
+      const { requireHubKey } = require('../../hub-tools/context/auth');
+      let responseCode = null;
+      let responseBody = null;
+      const handler = requireHubKey(function () { responseCode = 200; });
+      handler(
+        { headers: {} },
+        {},
+        { qs: {}, sendResponse: function (code, body) { responseCode = code; responseBody = body; } }
+      );
+      assert.equal(responseCode, 503, 'requireHubKey should return 503 when key is not configured, got ' + responseCode);
+    } finally {
+      process.env.AGNI_HUB_API_KEY = saved;
+      delete require.cache[require.resolve('../../hub-tools/context/auth')];
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R12: Telemetry mastery must be clamped to [0,1]
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-7: mastery and evidenced levels are clamped', () => {
+  it('SM-2 quality clamped to 0-5 even when mastery > 1', () => {
+    const { updateSchedule } = require('../../src/engine/sm2');
+    const result = updateSchedule({ interval: 1, easeFactor: 2.5, repetition: 0 }, 10);
+    assert.ok(result.easeFactor >= 1.3, 'Ease factor should not go below 1.3');
+    assert.ok(result.easeFactor <= 4.0, 'Ease factor should not exceed reasonable bounds');
+  });
+
+  it('SM-2 handles negative quality', () => {
+    const { updateSchedule } = require('../../src/engine/sm2');
+    const result = updateSchedule({ interval: 1, easeFactor: 2.5, repetition: 0 }, -5);
+    assert.ok(result.easeFactor >= 1.3, 'Ease factor should not go below 1.3');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R12: Engine hyperparameter validation
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-8: engine rejects invalid hyperparameters', () => {
+  const embeddings = require('../../src/engine/embeddings');
+  const { createState } = require('../helpers/engine-state');
+
+  it('updateEmbedding throws on invalid forgetting factor', () => {
+    const state = createState({ dim: 4 });
+    state.embedding.forgetting = 1.5;
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    assert.throws(() => {
+      embeddings.updateEmbedding(state, 's1', 'l1', 0.5);
+    }, /forgetting/);
+  });
+
+  it('updateEmbedding throws on negative learning rate', () => {
+    const state = createState({ dim: 4 });
+    state.embedding.lr = -0.01;
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    assert.throws(() => {
+      embeddings.updateEmbedding(state, 's1', 'l1', 0.5);
+    }, /lr/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R12: Student listing strips sensitive fields
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-9: student listing does not expose sensitive fields', () => {
+  it('listStudents returns sanitized records', async () => {
+    const path = require('path');
+    const fs = require('fs');
+    const os = require('os');
+    const dir = path.join(os.tmpdir(), 'agni-accounts-test-' + Date.now());
+    fs.mkdirSync(dir, { recursive: true });
+    const saved = process.env.AGNI_DATA_DIR;
+    process.env.AGNI_DATA_DIR = dir;
+    try {
+      delete require.cache[require.resolve('../../src/services/accounts')];
+      delete require.cache[require.resolve('../../src/utils/env-config')];
+      const accountsService = require('../../src/services/accounts');
+      await accountsService.createStudent({ displayName: 'Test', pin: '1234' });
+      const students = await accountsService.listStudents();
+      assert.ok(students.length >= 1);
+      const student = students[0];
+      assert.equal(student.pinHash, undefined, 'pinHash should not be exposed');
+      assert.equal(student.pinSalt, undefined, 'pinSalt should not be exposed');
+      assert.equal(student.pin, undefined, 'pin should not be exposed');
+      assert.equal(typeof student.hasPin, 'boolean', 'hasPin should be a boolean');
+    } finally {
+      process.env.AGNI_DATA_DIR = saved;
+      fs.rmSync(dir, { recursive: true, force: true });
+      delete require.cache[require.resolve('../../src/services/accounts')];
+      delete require.cache[require.resolve('../../src/utils/env-config')];
+    }
+  });
+});

@@ -51,6 +51,7 @@ const { createLogger }   = require('../utils/logger');
 const log = createLogger('html-builder');
 
 const { signContent, canonicalJSON } = require('../utils/crypto');
+const { generateNonce, buildCspMeta } = require('../utils/csp');
 const io                 = require('../utils/io');
 const ensureDir          = io.ensureDir;
 const copyIfNewer        = io.copyIfNewer;
@@ -201,6 +202,10 @@ async function buildHtml(lessonData, options) {
   });
 
   // -- 10. Assemble HTML -------------------------------------------------------
+  const nonce = generateNonce();
+  const cspMeta = buildCspMeta(nonce);
+  const nonceAttr = ' nonce="' + nonce + '"';
+
   const html = [
     '<!DOCTYPE html>',
     '<html lang="' + escapeHtml((ir.meta && ir.meta.language) || 'en') + '">',
@@ -208,14 +213,14 @@ async function buildHtml(lessonData, options) {
     '  <meta charset="UTF-8">',
     '  <meta name="viewport" content="width=device-width, initial-scale=1.0">',
     '  <meta name="theme-color" content="#F4F1E8">',
-    '  <meta http-equiv="Content-Security-Policy" content="default-src \'self\'; script-src \'self\' \'unsafe-inline\'; style-src \'self\' \'unsafe-inline\'; img-src \'self\' data:; connect-src \'self\'; font-src \'self\'; media-src \'self\';">',
+    '  ' + cspMeta,
     '  <title>' + escapeHtml((ir.meta && ir.meta.title) || 'AGNI Lesson') + '</title>',
     '  <style>' + styles + '</style>',
     '</head>',
     '<body>',
     '  <div id="loading">Loading lesson\u2026</div>',
     '  <div id="app"></div>',
-    '  <script>',
+    '  <script' + nonceAttr + '>',
     lessonScript,
     '  </script>',
     '</body>',

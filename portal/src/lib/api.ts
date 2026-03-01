@@ -459,11 +459,11 @@ export function createHubApi(baseUrl: string) {
     },
 
     postLearningPath(body: { name: string; description?: string; skills: string[] }): Promise<{ ok: boolean; path: LearningPath }> {
-      return post<{ ok: boolean; path: LearningPath }>('api/learning-paths', body);
+      return authPost<{ ok: boolean; path: LearningPath }>('api/learning-paths', body);
     },
 
     putLearningPath(body: { id: string; name?: string; description?: string; skills?: string[] }): Promise<{ ok: boolean; path: LearningPath }> {
-      return put<{ ok: boolean; path: LearningPath }>('api/learning-paths', body);
+      return authPut<{ ok: boolean; path: LearningPath }>('api/learning-paths', body);
     },
 
     getDiagnosticProbes(): Promise<DiagnosticProbesResponse> {
@@ -498,31 +498,31 @@ export function createHubApi(baseUrl: string) {
 
     /** Phase 3: set or clear teacher recommendation override. */
     setRecommendationOverride(pseudoId: string, lessonId: string | null): Promise<{ ok: boolean; override: string | null }> {
-      return post<{ ok: boolean; override: string | null }>('api/theta/override', { pseudoId, lessonId });
+      return authPost<{ ok: boolean; override: string | null }>('api/theta/override', { pseudoId, lessonId });
     },
 
     /** Student groups (CRUD). */
     getGroups(): Promise<GroupsResponse> {
-      return get<GroupsResponse>('api/groups');
+      return authGet<GroupsResponse>('api/groups');
     },
     postGroup(body: { name: string; studentIds?: string[] }): Promise<{ ok: boolean; group: StudentGroup }> {
-      return post<{ ok: boolean; group: StudentGroup }>('api/groups', body);
+      return authPost<{ ok: boolean; group: StudentGroup }>('api/groups', body);
     },
     putGroup(body: { id: string; name?: string; studentIds?: string[] }): Promise<{ ok: boolean; group: StudentGroup }> {
-      return put<{ ok: boolean; group: StudentGroup }>('api/groups', body);
+      return authPut<{ ok: boolean; group: StudentGroup }>('api/groups', body);
     },
     assignGroupLesson(groupId: string, lessonId: string): Promise<{ ok: boolean; lessonId: string; assigned: number; skipped: number; assignedIds: string[]; skippedIds: string[] }> {
-      return post('api/groups/' + encodeURIComponent(groupId) + '/assign', { lessonId });
+      return authPost('api/groups/' + encodeURIComponent(groupId) + '/assign', { lessonId });
     },
 
     /** POST /api/parent/invite (P1): teacher creates invite code for a student. */
     postParentInvite(pseudoId: string): Promise<{ code: string; pseudoId: string; existing: boolean }> {
-      return post('api/parent/invite', { pseudoId });
+      return authPost('api/parent/invite', { pseudoId });
     },
 
     /** POST /api/parent/link (P1): parent redeems invite code. */
     postParentLink(code: string, parentId: string): Promise<{ ok: boolean; pseudoId: string; alreadyLinked: boolean }> {
-      return post('api/parent/link', { code, parentId });
+      return authPost('api/parent/link', { code, parentId });
     },
 
     /** GET /api/parent/children (P1): list children linked to a parent. */
@@ -638,17 +638,17 @@ export function createHubApi(baseUrl: string) {
 
     /** GET /api/admin/config (A1: Hub setup wizard). */
     async getAdminConfig(): Promise<HubConfig> {
-      return get<HubConfig>('api/admin/config');
+      return authGet<HubConfig>('api/admin/config');
     },
 
     /** POST /api/admin/sync-test (F2: test sync transport connection). */
     async postSyncTest(body: { transport?: string; homeUrl?: string; usbPath?: string }): Promise<{ ok: boolean; message?: string }> {
-      return post<{ ok: boolean; message?: string }>('api/admin/sync-test', body);
+      return authPost<{ ok: boolean; message?: string }>('api/admin/sync-test', body);
     },
 
     /** PUT /api/admin/config (A1: Hub setup wizard). */
     async putAdminConfig(config: HubConfig): Promise<{ ok: boolean; message?: string }> {
-      return put<{ ok: boolean; message?: string }>('api/admin/config', config);
+      return authPut<{ ok: boolean; message?: string }>('api/admin/config', config);
     },
 
     // ── Account management ────────────────────────────────────────────────
@@ -670,7 +670,7 @@ export function createHubApi(baseUrl: string) {
     },
 
     getCreators(): Promise<{ creators: CreatorAccount[] }> {
-      return get('api/accounts/creators');
+      return authGet('api/accounts/creators');
     },
 
     setCreatorApproval(creatorId: string, approved: boolean): Promise<{ ok: boolean; creatorId: string; approved: boolean }> {
@@ -686,7 +686,7 @@ export function createHubApi(baseUrl: string) {
     },
 
     getStudentAccounts(): Promise<{ students: StudentAccount[] }> {
-      return get('api/accounts/students');
+      return authGet('api/accounts/students');
     },
 
     updateStudent(pseudoId: string, updates: Partial<StudentAccount>): Promise<{ ok: boolean; student: StudentAccount }> {

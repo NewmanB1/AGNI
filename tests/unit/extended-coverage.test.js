@@ -284,9 +284,11 @@ describe('migrations edge cases', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 // 5. Extended API integration tests
 // ═══════════════════════════════════════════════════════════════════════════
+var EXT_TEST_HUB_KEY = 'test-hub-key-for-ext-tests';
+
 function apiRequest(port, method, urlPath, body, token) {
   return new Promise((resolve, reject) => {
-    const headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
+    const headers = { 'Content-Type': 'application/json', Accept: 'application/json', 'x-hub-key': EXT_TEST_HUB_KEY };
     if (token) headers['Authorization'] = 'Bearer ' + token;
     const opts = {
       hostname: '127.0.0.1', port, path: urlPath, method, headers
@@ -316,7 +318,7 @@ describe('Extended API tests', () => {
     dataDir = tempDir();
     process.env.AGNI_DATA_DIR = dataDir;
     process.env.AGNI_SERVE_DIR = path.join(dataDir, 'serve');
-    process.env.AGNI_HUB_API_KEY = '';
+    process.env.AGNI_HUB_API_KEY = EXT_TEST_HUB_KEY;
     fs.mkdirSync(process.env.AGNI_SERVE_DIR, { recursive: true });
     fs.writeFileSync(path.join(dataDir, 'mastery-summary.json'), JSON.stringify({ students: {} }));
     fs.writeFileSync(path.join(dataDir, 'lesson-index.json'), JSON.stringify([]));

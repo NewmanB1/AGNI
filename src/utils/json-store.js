@@ -46,7 +46,7 @@ function saveJSON(filePath, data, opts) {
   const json = (opts && opts.minified)
     ? JSON.stringify(data)
     : JSON.stringify(data, null, 2);
-  const tmpPath = filePath + '.tmp';
+  const tmpPath = filePath + '.tmp.' + process.pid + '.' + Date.now();
   fs.writeFileSync(tmpPath, json, 'utf8');
   fs.renameSync(tmpPath, filePath);
 }
@@ -103,7 +103,7 @@ async function saveJSONAsync(filePath, data, opts) {
   const json = (opts && opts.minified)
     ? JSON.stringify(data)
     : JSON.stringify(data, null, 2);
-  const tmpPath = filePath + '.tmp';
+  const tmpPath = filePath + '.tmp.' + process.pid + '.' + Date.now();
   await fsp.writeFile(tmpPath, json, 'utf8');
   await fsp.rename(tmpPath, filePath);
 }
