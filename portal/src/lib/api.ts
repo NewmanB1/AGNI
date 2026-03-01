@@ -106,6 +106,20 @@ export interface UtuConstants {
   bands?: Array<{ id: number; phase: string }>;
 }
 
+export interface FeatureFlag {
+  enabled: boolean;
+  rollout: number;
+  description: string;
+  metric: string | null;
+}
+
+export interface FlagResults {
+  flag: string;
+  metric: string;
+  treatment: { count: number; avg: number };
+  control: { count: number; avg: number };
+}
+
 export interface ComplianceIssue {
   message: string;
   severity: 'fail' | 'warning';
@@ -703,6 +717,20 @@ export function createHubApi(baseUrl: string) {
 
     checkForkPermission(slug: string): Promise<ForkPermission> {
       return get(`api/fork-check?slug=${encodeURIComponent(slug)}`);
+    },
+
+    // ─── Feature flags ──────────────────────────────────────────────────────────
+
+    async getFlags(): Promise<{ flags: Record<string, FeatureFlag> }> {
+      return get('api/flags');
+    },
+
+    async putFlag(name: string, flag: Partial<FeatureFlag>): Promise<{ ok: boolean; flag: FeatureFlag }> {
+      return put(`api/flags/${encodeURIComponent(name)}`, flag);
+    },
+
+    async getFlagResults(name: string): Promise<FlagResults> {
+      return get(`api/flags/${encodeURIComponent(name)}/results`);
     }
   };
 }

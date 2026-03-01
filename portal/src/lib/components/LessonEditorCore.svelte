@@ -18,6 +18,8 @@
   const TEACHING_MODES = ['socratic', 'didactic', 'guided_discovery', 'narrative', 'constructivist', 'direct'];
   const LANGUAGES = ['en', 'fr', 'es', 'pt', 'sw', 'ar', 'zh', 'hi', 'bn', 'de', 'ja', 'ko', 'ru', 'tr', 'vi'];
   const EDUCATIONAL_ROLES = ['student', 'teacher', 'parent'];
+  const BLOOMS_LEVELS = ['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create'];
+  const VARK_MODALITIES = ['visual', 'auditory', 'read_write', 'kinesthetic'];
   const LICENSE_PRESETS = [
     { label: 'CC BY-SA 4.0', value: 'CC-BY-SA-4.0' },
     { label: 'CC BY 4.0', value: 'CC-BY-4.0' },
@@ -80,6 +82,7 @@
     teaching_mode: '',
     is_group: false,
     utu: { class: '', band: 1, protocol: '' },
+    declared_features: { blooms_level: '', vark: [], teaching_style: '' },
     ontology: { requires: [], provides: [] },
     gate: null,
     fork: null,
@@ -247,6 +250,14 @@
         protocol: utuSrc.protocol || ''
       };
     }
+    const df = m.declared_features || d.declared_features;
+    if (df && typeof df === 'object') {
+      lesson.declared_features = {
+        blooms_level: df.blooms_level || '',
+        vark: Array.isArray(df.vark) ? df.vark : (df.vark ? [df.vark] : []),
+        teaching_style: df.teaching_style || ''
+      };
+    }
     if (Array.isArray(d.steps)) {
       lesson.steps = d.steps;
     }
@@ -354,6 +365,14 @@
       meta.utu = { class: lesson.utu.class, band: lesson.utu.band || 1 };
       const proto = lesson.utu.protocol;
       if (proto != null && proto !== '' && proto !== 'null') meta.utu.protocol = Number(proto);
+    }
+
+    const df = lesson.declared_features;
+    if (df.blooms_level || df.vark.length || df.teaching_style) {
+      meta.declared_features = {};
+      if (df.blooms_level) meta.declared_features.blooms_level = df.blooms_level;
+      if (df.vark.length) meta.declared_features.vark = df.vark.length === 1 ? df.vark[0] : df.vark;
+      if (df.teaching_style) meta.declared_features.teaching_style = df.teaching_style;
     }
 
     const out = {
@@ -902,6 +921,46 @@
         </label>
       </div>
     </div>
+
+    <h2>Declared Features</h2>
+    <p class="section-hint">Override inferred pedagogical features. Declared values receive full confidence (1.0).</p>
+    <div class="row">
+      <div class="form-group">
+        <label>Bloom's Level
+          <select bind:value={lesson.declared_features.blooms_level} onchange={markDirty}>
+            <option value="">— auto-infer —</option>
+            {#each BLOOMS_LEVELS as bl}
+              <option value={bl}>{bl.charAt(0).toUpperCase() + bl.slice(1)}</option>
+            {/each}
+          </select>
+        </label>
+      </div>
+      <div class="form-group">
+        <label>Teaching Style
+          <input type="text" bind:value={lesson.declared_features.teaching_style} oninput={markDirty} placeholder="e.g. socratic, didactic, guided" />
+        </label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>VARK Modalities</label>
+      <div class="checkbox-grid">
+        {#each VARK_MODALITIES as mod}
+          <label class="chip-label">
+            <input type="checkbox"
+              checked={lesson.declared_features.vark.includes(mod)}
+              onchange={(e) => {
+                if (e.target.checked) {
+                  lesson.declared_features.vark = [...lesson.declared_features.vark, mod];
+                } else {
+                  lesson.declared_features.vark = lesson.declared_features.vark.filter(v => v !== mod);
+                }
+                markDirty();
+              }} />
+            {mod.replace('_', '/')}
+          </label>
+        {/each}
+      </div>
+    </div>
     {/if}
 
     {#if activeEditorTab === 'steps'}
@@ -1068,6 +1127,9 @@
 
   .row { display: flex; gap: 1rem; flex-wrap: wrap; }
   .row .form-group { flex: 1; min-width: 140px; }
+  .section-hint { font-size: 0.85rem; opacity: 0.7; margin: 0 0 0.75rem; }
+  .checkbox-grid { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.25rem; }
+  .chip-label { display: flex; align-items: center; gap: 0.3rem; font-weight: normal; cursor: pointer; text-transform: capitalize; }
 
   .duration-row { display: flex; gap: 0.5rem; }
   .duration-row input { flex: 1; }

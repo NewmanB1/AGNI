@@ -8,8 +8,9 @@
 // ──────────────────────────────────────────────────────────────────────────────
 
 export interface UTULabel {
-  class?: string;  // e.g. "MAC-2"
-  band?: number;   // developmental band
+  class?: string;     // e.g. "MAC-2"
+  band?: number;      // developmental band (1–6)
+  protocol?: number;  // pedagogical protocol (1–5)
 }
 
 export interface LessonMeta {
@@ -23,6 +24,12 @@ export interface LessonMeta {
   teaching_mode?: string;
   /** Whether this lesson is designed for group/collaborative work. */
   is_group?: boolean;
+  /** Author-declared pedagogical feature overrides (confidence 1.0). */
+  declared_features?: {
+    blooms_level?: 'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create';
+    vark?: string | string[];
+    teaching_style?: string;
+  };
   // Additional author-defined metadata is allowed.
   [key: string]: unknown;
 }

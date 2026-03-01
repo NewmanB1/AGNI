@@ -5,6 +5,7 @@
   const isOnboarding = $derived($page.url.pathname === '/admin/onboarding');
   const isDeploy = $derived($page.url.pathname === '/admin/deploy');
   const isSync = $derived($page.url.pathname === '/admin/sync');
+  const isFlags = $derived($page.url.pathname === '/admin/flags');
 </script>
 
 <div class="admin-layout">
@@ -13,6 +14,7 @@
     <a href="/admin/hub" class:active={isHub}>Hub Setup</a>
     <a href="/admin/deploy" class:active={isDeploy}>Deploy</a>
     <a href="/admin/sync" class:active={isSync}>Sync</a>
+    <a href="/admin/flags" class:active={isFlags}>Feature Flags</a>
   </aside>
   <div class="admin-content">
     <slot />
