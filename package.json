@@ -81,6 +81,7 @@
     "test:runtime": "node --test tests/unit/checkpoint.test.js tests/unit/frustration.test.js tests/unit/gate-renderer.test.js tests/unit/telemetry.test.js tests/unit/a11y.test.js",
     "test:integration": "node --test tests/integration/*.test.js",
     "test:all": "node --test tests/unit/*.test.js && node --test tests/integration/*.test.js && node tests/contract-hub-api.js && node tests/graph-verification-test.js",
+    "generate:lesson": "node scripts/generate-lesson.js",
     "validate:lesson": "node src/utils/lesson-validator.js",
     "codegen:validate-schemas": "node scripts/codegen-validate-schemas.js",
     "dev:vite": "vite --port 5173",
