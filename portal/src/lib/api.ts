@@ -4,7 +4,7 @@
  *
  * Hub URL can be set at runtime via Settings (localStorage) or at build time via VITE_HUB_URL.
  */
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get as getStore } from 'svelte/store';
 
 // ─── Response types (match docs/api-contract.md) ─────────────────────────────
 
@@ -349,6 +349,13 @@ function ensureTrailingSlash(base: string): string {
 async function parseJson<T>(res: Response): Promise<T> {
   const text = await res.text();
   if (!res.ok) {
+    if (res.status === 401) {
+      // Session expired or invalid — clear and redirect
+      if (typeof localStorage !== 'undefined') localStorage.removeItem('agni_creator_token');
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/author/login')) {
+        window.location.href = '/author/login?expired=1';
+      }
+    }
     const err = (() => {
       try {
         return JSON.parse(text) as { error?: string };
@@ -416,6 +423,13 @@ export function createHubApi(baseUrl: string) {
   async function authPut<T>(apiPath: string, body: unknown): Promise<T> {
     const res = await fetch(base + apiPath.replace(/^\//, ''), {
       method: 'PUT', headers: authHeaders(), body: JSON.stringify(body)
+    });
+    return parseJson<T>(res);
+  }
+
+  async function authDelete<T>(apiPath: string): Promise<T> {
+    const res = await fetch(base + apiPath.replace(/^\//, ''), {
+      method: 'DELETE', headers: authHeaders()
     });
     return parseJson<T>(res);
   }
@@ -527,12 +541,12 @@ export function createHubApi(baseUrl: string) {
 
     /** GET /api/parent/children (P1): list children linked to a parent. */
     getParentChildren(parentId: string): Promise<{ parentId: string; children: { pseudoId: string; linkedAt: string }[] }> {
-      return get('api/parent/children?parentId=' + encodeURIComponent(parentId));
+      return authGet('api/parent/children?parentId=' + encodeURIComponent(parentId));
     },
 
     /** GET /api/parent/child/:pseudoId/progress (P1): parent views child progress. */
     getParentChildProgress(pseudoId: string, parentId: string): Promise<ParentChildProgress> {
-      return get('api/parent/child/' + encodeURIComponent(pseudoId) + '/progress?parentId=' + encodeURIComponent(parentId));
+      return authGet('api/parent/child/' + encodeURIComponent(pseudoId) + '/progress?parentId=' + encodeURIComponent(parentId));
     },
 
     getLmsSelect(pseudoId: string, candidateIds: string[]): Promise<LmsSelectResponse> {
@@ -565,70 +579,68 @@ export function createHubApi(baseUrl: string) {
 
     /** GET /api/author/load/:slug (E9): load saved YAML lesson for round-trip editing. */
     async getAuthorLesson(slug: string): Promise<{ slug: string; lessonData: Record<string, unknown> }> {
-      return get<{ slug: string; lessonData: Record<string, unknown> }>(`api/author/load/${encodeURIComponent(slug)}`);
+      return authGet<{ slug: string; lessonData: Record<string, unknown> }>(`api/author/load/${encodeURIComponent(slug)}`);
     },
 
     /** POST /api/author/validate: run schema + structure validation without saving. */
     async postAuthorValidate(lesson: unknown): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
-      return post<{ valid: boolean; errors: string[]; warnings: string[] }>('api/author/validate', lesson);
+      return authPost<{ valid: boolean; errors: string[]; warnings: string[] }>('api/author/validate', lesson);
     },
 
     /** POST /api/author/preview (E4): compile lesson and return IR + sidecar for preview. */
     async postAuthorPreview(lesson: unknown): Promise<{ ir: unknown; sidecar: unknown }> {
-      return post<{ ir: unknown; sidecar: unknown }>('api/author/preview', lesson);
+      return authPost<{ ir: unknown; sidecar: unknown }>('api/author/preview', lesson);
     },
 
     /** POST /api/author/save (S1): validate + write lesson YAML to hub storage. compile option triggers IR generation. */
     async postAuthorSave(lesson: unknown, opts?: { compile?: boolean }): Promise<{ ok: boolean; slug: string; path: string; compiled?: boolean; warnings: string[]; uri?: string; contentHash?: string; parentHash?: string | null }> {
       const payload = opts?.compile ? { ...lesson as Record<string, unknown>, _compile: true } : lesson;
-      return post<{ ok: boolean; slug: string; path: string; compiled?: boolean; warnings: string[]; uri?: string; contentHash?: string; parentHash?: string | null }>('api/author/save', payload);
+      return authPost<{ ok: boolean; slug: string; path: string; compiled?: boolean; warnings: string[]; uri?: string; contentHash?: string; parentHash?: string | null }>('api/author/save', payload);
     },
 
     /** DELETE /api/author/delete/:slug: remove a saved lesson and its compiled artifacts. */
-    async deleteAuthorLesson(slug: string): Promise<{ ok: boolean; deleted: string[] }> {
-      const res = await fetch(`${base}api/author/delete/${encodeURIComponent(slug)}`, { method: 'DELETE', headers: authHeaders() });
-      if (!res.ok) { const e = await res.json().catch(() => ({ error: res.statusText })); throw new Error((e as { error: string }).error || res.statusText); }
-      return res.json() as Promise<{ ok: boolean; deleted: string[] }>;
+    deleteAuthorLesson(slug: string): Promise<{ ok: boolean; deleted: string[] }> {
+      return authDelete<{ ok: boolean; deleted: string[] }>(`api/author/delete/${encodeURIComponent(slug)}`);
     },
 
     /** Planned: GET /api/governance/report. Throws if endpoint not implemented. */
     async getGovernanceReport(): Promise<GovernanceReport> {
-      return get<GovernanceReport>('api/governance/report');
+      return authGet<GovernanceReport>('api/governance/report');
     },
 
     /** Planned: GET /api/governance/policy. Throws if endpoint not implemented. */
     async getGovernancePolicy(): Promise<unknown> {
-      return get<unknown>('api/governance/policy');
+      return authGet<unknown>('api/governance/policy');
     },
 
     /** POST /api/governance/compliance. */
     async postGovernanceCompliance(sidecar: LessonSidecar): Promise<ComplianceResult> {
-      return post<ComplianceResult>('api/governance/compliance', sidecar);
+      return authPost<ComplianceResult>('api/governance/compliance', sidecar);
     },
 
     /** PUT /api/governance/policy (configuration wizard G1). */
     async putGovernancePolicy(policy: unknown): Promise<{ ok: boolean }> {
-      return put<{ ok: boolean }>('api/governance/policy', policy);
+      return authPut<{ ok: boolean }>('api/governance/policy', policy);
     },
 
     /** GET /api/governance/utu-constants (U4: Spine picker, Protocol reference). */
     async getUtuConstants(): Promise<UtuConstants> {
-      return get<UtuConstants>('api/governance/utu-constants');
+      return authGet<UtuConstants>('api/governance/utu-constants');
     },
 
     /** GET /api/governance/catalog (configuration wizard G2, G4). */
     async getGovernanceCatalog(): Promise<ApprovedCatalog> {
-      return get<ApprovedCatalog>('api/governance/catalog');
+      return authGet<ApprovedCatalog>('api/governance/catalog');
     },
 
     /** POST /api/governance/catalog (configuration wizard G2). */
     async postGovernanceCatalog(body: CatalogUpdateBody): Promise<{ ok: boolean; catalog: ApprovedCatalog }> {
-      return post<{ ok: boolean; catalog: ApprovedCatalog }>('api/governance/catalog', body);
+      return authPost<{ ok: boolean; catalog: ApprovedCatalog }>('api/governance/catalog', body);
     },
 
     /** POST /api/governance/catalog/import (configuration wizard G3). */
     async postGovernanceCatalogImport(body: CatalogImportBody): Promise<{ ok: boolean; catalog: ApprovedCatalog }> {
-      return post<{ ok: boolean; catalog: ApprovedCatalog }>('api/governance/catalog/import', body);
+      return authPost<{ ok: boolean; catalog: ApprovedCatalog }>('api/governance/catalog/import', body);
     },
 
     /** GET /api/admin/onboarding-status (A3: first-run detection). */
@@ -722,15 +734,15 @@ export function createHubApi(baseUrl: string) {
     // ─── Feature flags ──────────────────────────────────────────────────────────
 
     async getFlags(): Promise<{ flags: Record<string, FeatureFlag> }> {
-      return get('api/flags');
+      return authGet('api/flags');
     },
 
     async putFlag(name: string, flag: Partial<FeatureFlag>): Promise<{ ok: boolean; flag: FeatureFlag }> {
-      return put(`api/flags/${encodeURIComponent(name)}`, flag);
+      return authPut(`api/flags/${encodeURIComponent(name)}`, flag);
     },
 
     async getFlagResults(name: string): Promise<FlagResults> {
-      return get(`api/flags/${encodeURIComponent(name)}/results`);
+      return authGet(`api/flags/${encodeURIComponent(name)}/results`);
     }
   };
 }
@@ -780,11 +792,9 @@ export interface CreatorAccount {
 export interface StudentAccount {
   pseudoId: string;
   displayName: string | null;
-  pin: string | null;
+  hasPin: boolean;
   createdAt: string;
   createdBy: string | null;
-  transferToken: string | null;
-  transferExpiresAt: string | null;
   active: boolean;
 }
 

@@ -79,6 +79,14 @@ describe('Theta API integration tests', () => {
   after(() => {
     if (server) server.close();
     fs.rmSync(dataDir, { recursive: true, force: true });
+    delete process.env.AGNI_DATA_DIR;
+    delete process.env.AGNI_SERVE_DIR;
+    delete process.env.AGNI_HUB_API_KEY;
+    // Clear cached modules that captured env-config at require time
+    delete require.cache[require.resolve('../../src/utils/env-config')];
+    delete require.cache[require.resolve('../../src/services/accounts')];
+    delete require.cache[require.resolve('../../hub-tools/context/auth')];
+    delete require.cache[require.resolve('../../hub-tools/context/services')];
   });
 
   it('GET /api/theta requires pseudoId', async () => {

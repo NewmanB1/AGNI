@@ -1,0 +1,15 @@
+{
+  "name": "@agni/governance",
+  "version": "0.1.0",
+  "description": "AGNI governance engine: policy enforcement, lesson compliance evaluation, cohort coverage aggregation, and catalog management.",
+  "license": "AGPL-3.0",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NewmanB1/AGNI.git",
+    "directory": "packages/agni-governance"
+  },
+  "dependencies": {
+    "@agni/utils": "0.1.0"
+  }
+}

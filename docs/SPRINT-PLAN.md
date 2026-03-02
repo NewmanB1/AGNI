@@ -2,7 +2,7 @@
 
 Multi-sprint plan based on recent work. All six numbered sprints and all remediation follow-up tasks are now complete. Updated after config wizards Sprint 1 (G1–G4), common top page, tech debt Sprints 0–6, DRY refactor Sprints D7–D12, Weakness Remediation Phases 1–4, and Sprints 1–6.
 
-**Reference:** `docs/SPRINT-CONFIGURATION-WIZARDS.md`, `docs/SPRINT-TECH-DEBT.md`, `docs/SPRINT-DRY-REFACTOR.md`, `docs/YEAR2-PREP.md`, UTU Architecture spec.
+**Reference:** `docs/archive/SPRINT-CONFIGURATION-WIZARDS.md`, `docs/archive/SPRINT-TECH-DEBT.md`, `docs/archive/SPRINT-DRY-REFACTOR.md`, `docs/YEAR2-PREP.md`, UTU Architecture spec.
 
 ---
 

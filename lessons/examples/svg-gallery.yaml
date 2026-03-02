@@ -1,0 +1,273 @@
+# yaml-language-server: $schema=../../schemas/ols.schema.json
+#
+# SVG Factory Gallery — demonstrates visual elements available in AGNI.
+# Each step shows a different SVG factory with realistic parameters.
+# The svg_spec is passed to the cached factory on the learner's device;
+# no SVG markup is stored in the lesson file.
+
+version: "1.8.0"
+
+meta:
+  identifier: ols:examples:svg_gallery_v1
+  title: SVG Factory Gallery
+  description: Visual reference showing every SVG factory type with realistic data.
+  language: en
+  license: CC-BY-SA-4.0
+  created: "2026-03-01T00:00:00Z"
+  difficulty: 1
+  tags: [example, reference, svg, visual]
+  time_required: PT10M
+
+steps:
+  - id: intro
+    type: instruction
+    content: |
+      ## SVG Factory Gallery
+
+      AGNI lessons can include rich, interactive visuals rendered by
+      **SVG factories**. You define the factory name and parameters in YAML —
+      the learner's device generates the SVG at runtime.
+
+      This lesson demonstrates each factory type.
+
+  # ── BAR GRAPH ──────────────────────────────────────────────────────────────
+  - id: bar_graph_demo
+    type: instruction
+    content: |
+      ## Bar Graph
+
+      Compare values across categories. Supports vertical and horizontal bars.
+    svg_spec:
+      factory: barGraph
+      opts:
+        title: "Weekly Steps"
+        w: 400
+        h: 260
+        data:
+          - { label: Mon, value: 3200 }
+          - { label: Tue, value: 5800 }
+          - { label: Wed, value: 4100 }
+          - { label: Thu, value: 6900 }
+          - { label: Fri, value: 7200 }
+        yLabel: "Steps"
+
+  # ── PIE CHART ──────────────────────────────────────────────────────────────
+  - id: pie_chart_demo
+    type: instruction
+    content: |
+      ## Pie Chart
+
+      Show proportions. The `donut` flag hollows the centre.
+    svg_spec:
+      factory: pieChart
+      opts:
+        title: "Favourite Fruits"
+        w: 360
+        h: 280
+        data:
+          - { label: Mango, value: 45 }
+          - { label: Banana, value: 30 }
+          - { label: Orange, value: 15 }
+          - { label: Guava, value: 10 }
+        donut: true
+
+  # ── VENN DIAGRAM ───────────────────────────────────────────────────────────
+  - id: venn_demo
+    type: instruction
+    content: |
+      ## Venn Diagram
+
+      Compare two or three overlapping sets. Shared items appear in the overlap.
+    svg_spec:
+      factory: venn
+      opts:
+        title: "Land vs Water Animals"
+        w: 400
+        h: 280
+        sets:
+          - label: Land
+            items: [dog, cat, elephant, crocodile]
+            color: "#4dabf7"
+          - label: Water
+            items: [fish, whale, crocodile, dolphin]
+            color: "#ff6b35"
+
+  # ── NUMBER LINE ────────────────────────────────────────────────────────────
+  - id: number_line_demo
+    type: instruction
+    content: |
+      ## Number Line
+
+      Place marks on a number line. Useful for fractions, decimals, and estimation.
+    svg_spec:
+      factory: numberLine
+      opts:
+        title: "Fraction Placement"
+        min: 0
+        max: 1
+        step: 0.25
+        marks:
+          - { value: 0.33, label: "1/3", color: "#ff6b35" }
+          - { value: 0.5,  label: "1/2", color: "#4dabf7" }
+          - { value: 0.67, label: "2/3", color: "#51cf66" }
+
+  # ── BALANCE SCALE ──────────────────────────────────────────────────────────
+  - id: balance_demo
+    type: instruction
+    content: |
+      ## Balance Scale
+
+      A visual scale that tilts based on left/right values. Great for
+      introducing equations and inequality.
+    svg_spec:
+      factory: balanceScale
+      opts:
+        title: "Which is heavier?"
+        left: { label: "3 apples", value: 3, color: "#ff6b35" }
+        right: { label: "2 oranges", value: 2, color: "#4dabf7" }
+
+  # ── CLOCK FACE ─────────────────────────────────────────────────────────────
+  - id: clock_demo
+    type: instruction
+    content: |
+      ## Clock Face
+
+      Show a specific time on an analogue clock with optional digital readout.
+    svg_spec:
+      factory: clockFace
+      opts:
+        hours: 10
+        minutes: 35
+        showDigital: true
+        label: "School starts"
+
+  # ── FLOW MAP ───────────────────────────────────────────────────────────────
+  - id: flow_map_demo
+    type: instruction
+    content: |
+      ## Flow Map
+
+      Directed graph for processes, cycles, or concept maps.
+    svg_spec:
+      factory: flowMap
+      opts:
+        title: "Water Cycle"
+        w: 420
+        h: 280
+        nodes:
+          - { id: evap, label: Evaporation, shape: oval, color: "#4dabf7" }
+          - { id: cond, label: Condensation, shape: rect, color: "#adb5bd" }
+          - { id: prec, label: Precipitation, shape: diamond, color: "#51cf66" }
+          - { id: coll, label: Collection, shape: oval, color: "#339af0" }
+        edges:
+          - { from: evap, to: cond }
+          - { from: cond, to: prec }
+          - { from: prec, to: coll }
+          - { from: coll, to: evap }
+
+  # ── POLYGON ────────────────────────────────────────────────────────────────
+  - id: polygon_demo
+    type: instruction
+    content: |
+      ## Polygon (static)
+
+      Regular polygon with optional vertex labels. Good for geometry lessons.
+    svg_spec:
+      factory: polygon
+      opts:
+        title: "Pentagon"
+        sides: 5
+        color: "#4dabf7"
+        fillOpacity: 0.15
+        filled: true
+        vertexLabels: [A, B, C, D, E]
+
+  # ── TREE ───────────────────────────────────────────────────────────────────
+  - id: tree_demo
+    type: instruction
+    content: |
+      ## Tree (hierarchical)
+
+      Hierarchical layout for classification, family trees, or decision trees.
+    svg_spec:
+      factory: tree
+      opts:
+        title: "Animal Kingdom"
+        root:
+          label: Animals
+          children:
+            - label: Vertebrates
+              children:
+                - label: Mammals
+                - label: Birds
+                - label: Fish
+            - label: Invertebrates
+              children:
+                - label: Insects
+                - label: Arachnids
+
+  # ── CARTESIAN GRID (dynamic) ───────────────────────────────────────────────
+  - id: cartesian_demo
+    type: instruction
+    content: |
+      ## Cartesian Grid
+
+      Full coordinate plane with function plots, points, and vectors.
+      This is a **dynamic** factory — on a real device it supports
+      animated plotting and sensor-driven interaction.
+    svg_spec:
+      factory: cartesianGrid
+      opts:
+        title: "y = sin(x)"
+        w: 420
+        h: 300
+        xMin: -6.28
+        xMax: 6.28
+        yMin: -1.5
+        yMax: 1.5
+        xLabel: "x"
+        yLabel: "y"
+        showGrid: true
+        plots:
+          - { fn: "Math.sin(x)", color: "#4dabf7", width: 2.5 }
+        points:
+          - { x: 0, y: 0, color: "#ff6b35", label: "origin" }
+          - { x: 3.14, y: 0, color: "#51cf66", label: "pi" }
+
+  # ── UNIT CIRCLE (dynamic) ──────────────────────────────────────────────────
+  - id: unit_circle_demo
+    type: instruction
+    content: |
+      ## Unit Circle
+
+      Animated unit circle with sine, cosine, and tangent projections.
+      On a device with sensors, the angle can be driven by the gyroscope.
+    svg_spec:
+      factory: unitCircle
+      opts:
+        title: "Trigonometry"
+        angleDeg: 45
+        animate: false
+        showSine: true
+        showCosine: true
+        showTangent: false
+        showValues: true
+
+  - id: quiz_factories
+    type: quiz
+    content: "Which factory would you use to show overlapping groups?"
+    answer_options:
+      - "barGraph"
+      - "venn"
+      - "flowMap"
+      - "polygon"
+    correct_index: 1
+
+  - id: done
+    type: completion
+    content: |
+      ## Gallery Complete
+
+      You've seen all the SVG factories. In your own lessons, add
+      `svg_spec` to any step to include a visual element. The learner's
+      device generates the SVG — you just provide the parameters.

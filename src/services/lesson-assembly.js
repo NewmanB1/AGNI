@@ -18,7 +18,7 @@
 function buildLessonScript(ir, options) {
   options = options || {};
   const dataString     = JSON.stringify(ir);
-  const safeDataString = dataString.replace(/<\/script>/gi, '<\\/script>');
+  const safeDataString = dataString.replace(/<\/script\s*>/gi, '<\\/script>').replace(/<\/script/gi, '<\\/script');
   const signature      = options.signature != null ? options.signature : '';
   const publicKeySpki  = options.publicKeySpki != null ? options.publicKeySpki : '';
   const deviceId       = options.deviceId != null ? options.deviceId : '';
@@ -51,7 +51,7 @@ function buildLessonScript(ir, options) {
     '// Safety net: hide loading spinner if init stalls beyond 5s.',
     'window.addEventListener(\'load\', function () {',
     '  setTimeout(function () {',
-    '    const loading = document.getElementById(\'loading\');',
+    '    var loading = document.getElementById(\'loading\');',
     '    if (loading) loading.style.display = \'none\';',
     '  }, 5000);',
     '});'

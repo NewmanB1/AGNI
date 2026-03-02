@@ -1,5 +1,7 @@
 'use strict';
 
+const { withLock } = require('../../src/utils/file-lock');
+
 var INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function isInviteExpired(invite) {
@@ -9,7 +11,8 @@ function isInviteExpired(invite) {
 
 function register(router, ctx) {
   const { loadMasterySummaryAsync, loadOverridesAsync, loadParentLinksAsync, saveParentLinksAsync,
-          generateInviteCode, handleJsonBody, adminOnly, withRateLimit, requireHubKey } = ctx;
+          generateInviteCode, handleJsonBody, adminOnly, withRateLimit, requireHubKey,
+          PARENT_LINKS_PATH } = ctx;
 
   router.post('/api/parent/invite', adminOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
@@ -19,41 +22,48 @@ function register(router, ctx) {
       if (!mastery.students || !mastery.students[pseudoId]) {
         return sendResponse(404, { error: 'Student not found', pseudoId });
       }
-      const data = await loadParentLinksAsync();
-      const existing = data.invites.find(inv => inv.pseudoId === pseudoId && !inv.used && !isInviteExpired(inv));
-      if (existing) {
-        return sendResponse(200, { code: existing.code, pseudoId, existing: true });
-      }
-      const code = generateInviteCode();
-      data.invites.push({ code, pseudoId, createdAt: new Date().toISOString(), used: false });
-      await saveParentLinksAsync(data);
-      return sendResponse(201, { code, pseudoId, existing: false });
+      const result = await withLock(PARENT_LINKS_PATH, async () => {
+        const data = await loadParentLinksAsync();
+        const existing = data.invites.find(inv => inv.pseudoId === pseudoId && !inv.used && !isInviteExpired(inv));
+        if (existing) {
+          return { code: existing.code, pseudoId, existing: true, status: 200 };
+        }
+        const code = generateInviteCode();
+        data.invites.push({ code, pseudoId, createdAt: new Date().toISOString(), used: false });
+        await saveParentLinksAsync(data);
+        return { code, pseudoId, existing: false, status: 201 };
+      });
+      return sendResponse(result.status, { code: result.code, pseudoId: result.pseudoId, existing: result.existing });
     });
   }));
 
-  router.post('/api/parent/link', withRateLimit('parent-link', (req, res, { sendResponse }) => {
+  router.post('/api/parent/link', requireHubKey(withRateLimit('parent-link', (req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       const code = payload.code && String(payload.code).trim().toUpperCase();
       const parentId = payload.parentId && String(payload.parentId).trim();
       if (!code) return sendResponse(400, { error: 'code required' });
       if (!parentId) return sendResponse(400, { error: 'parentId required' });
-      const data = await loadParentLinksAsync();
-      const invite = data.invites.find(inv => inv.code === code && !inv.used && !isInviteExpired(inv));
-      if (!invite) return sendResponse(404, { error: 'Invalid or expired invite code' });
-      const alreadyLinked = data.links.find(l => l.parentId === parentId && l.pseudoId === invite.pseudoId);
-      if (alreadyLinked) {
-        return sendResponse(200, { ok: true, pseudoId: invite.pseudoId, alreadyLinked: true });
-      }
-      invite.used = true;
-      invite.usedAt = new Date().toISOString();
-      invite.usedBy = parentId;
-      data.links.push({ parentId, pseudoId: invite.pseudoId, linkedAt: new Date().toISOString() });
-      await saveParentLinksAsync(data);
-      return sendResponse(201, { ok: true, pseudoId: invite.pseudoId, alreadyLinked: false });
+      const result = await withLock(PARENT_LINKS_PATH, async () => {
+        const data = await loadParentLinksAsync();
+        const invite = data.invites.find(inv => inv.code === code && !inv.used && !isInviteExpired(inv));
+        if (!invite) return { error: 'Invalid or expired invite code', status: 404 };
+        const alreadyLinked = data.links.find(l => l.parentId === parentId && l.pseudoId === invite.pseudoId);
+        if (alreadyLinked) {
+          return { ok: true, pseudoId: invite.pseudoId, alreadyLinked: true, status: 200 };
+        }
+        invite.used = true;
+        invite.usedAt = new Date().toISOString();
+        invite.usedBy = parentId;
+        data.links.push({ parentId, pseudoId: invite.pseudoId, linkedAt: new Date().toISOString() });
+        await saveParentLinksAsync(data);
+        return { ok: true, pseudoId: invite.pseudoId, alreadyLinked: false, status: 201 };
+      });
+      if (result.error) return sendResponse(result.status, { error: result.error });
+      return sendResponse(result.status, { ok: true, pseudoId: result.pseudoId, alreadyLinked: result.alreadyLinked });
     });
-  }));
+  })));
 
-  router.get('/api/parent/child/:pseudoId/progress', requireHubKey(async (req, res, { params, qs, sendResponse }) => {
+  router.get('/api/parent/child/:pseudoId/progress', requireHubKey(withRateLimit('parent-read', async (req, res, { params, qs, sendResponse }) => {
     const pseudoId = params.pseudoId;
     const parentId = qs.parentId;
     if (!parentId) return sendResponse(400, { error: 'parentId query param required' });
@@ -72,9 +82,9 @@ function register(router, ctx) {
       completedSkills: completedCount, totalSkills,
       recommendedLessons: lessons.slice(0, 5), currentOverride: override
     });
-  }));
+  })));
 
-  router.get('/api/parent/children', requireHubKey(async (req, res, { qs, sendResponse }) => {
+  router.get('/api/parent/children', requireHubKey(withRateLimit('parent-read', async (req, res, { qs, sendResponse }) => {
     const parentId = qs.parentId;
     if (!parentId) return sendResponse(400, { error: 'parentId query param required' });
     const data = await loadParentLinksAsync();
@@ -82,7 +92,7 @@ function register(router, ctx) {
       .filter(l => l.parentId === parentId)
       .map(l => ({ pseudoId: l.pseudoId, linkedAt: l.linkedAt }));
     return sendResponse(200, { parentId, children });
-  }));
+  })));
 }
 
 module.exports = { register };

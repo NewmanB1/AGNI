@@ -103,7 +103,7 @@ Inbound `graph_weights` should conform to **`schemas/graph_weights.schema.json`*
 3. **Home server:** Receives POST /api/hub-sync; stores or processes events; may produce regional graph_weights, base_costs, curriculum, or schedules.
 4. **Inbound (optional):** Operator gets an inbound JSON (from home or manual build) and runs `sync.js --import=...` on the village hub to update base_costs, graph_weights_regional, curriculum, schedules.
 
-**LMS federation (separate from sync):** Bandit summary merge uses **POST /api/lms/federation/merge** (see `docs/api-contract.md`). That is progress/state sync, not event/graph sync. Sneakernet progress export/import is **`npm run sneakernet`** (see ARCHITECTURE.md).
+**LMS federation (separate from sync):** Bandit summary merge uses **POST /api/lms/federation/merge** (see `docs/api-contract.md`). That is progress/state sync, not event/graph sync. Sneakernet progress export/import is **`npm run sneakernet`** (see `docs/ARCHITECTURE.md`).
 
 ---
 

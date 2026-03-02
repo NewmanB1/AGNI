@@ -1,5 +1,20 @@
 <script>
   import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
+  import { isCreatorLoggedIn, creatorLoading } from '$lib/creatorAuth';
+  import { onMount } from 'svelte';
+
+  const loggedIn = $derived($isCreatorLoggedIn);
+  const loading = $derived($creatorLoading);
+
+  onMount(() => {
+    const unsub = isCreatorLoggedIn.subscribe((val) => {
+      if (!val && !$creatorLoading) {
+        goto('/author/login?redirect=' + encodeURIComponent($page.url.pathname));
+      }
+    });
+    return unsub;
+  });
 
   const isHub = $derived($page.url.pathname === '/admin/hub');
   const isOnboarding = $derived($page.url.pathname === '/admin/onboarding');
@@ -8,6 +23,11 @@
   const isFlags = $derived($page.url.pathname === '/admin/flags');
 </script>
 
+{#if loading}
+  <p>Checking authentication...</p>
+{:else if !loggedIn}
+  <p>Redirecting to login...</p>
+{:else}
 <div class="admin-layout">
   <aside class="admin-nav">
     <a href="/admin/onboarding" class:active={isOnboarding}>First-run</a>
@@ -54,3 +74,4 @@
     flex: 1;
   }
 </style>
+{/if}

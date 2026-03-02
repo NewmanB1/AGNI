@@ -42,28 +42,55 @@ function ensureDirs() {
 // ═══════════════════════════════════════════════════════════════════════════
 const log = createLogger('sentry', { logFile: SENTRY_LOG });
 
+const EVENT_BUFFER_MAX = 50000;
 let eventBuffer = [];
+let _flushing = false;
 function todayFile() { return path.join(EVENTS_DIR, new Date().toISOString().slice(0, 10) + '.ndjson'); }
 
 function appendEvents(events) {
-  eventBuffer.push(...events.map(e => JSON.stringify(e)));
+  const serialized = events.map(e => JSON.stringify(e));
+  if (eventBuffer.length + serialized.length > EVENT_BUFFER_MAX) {
+    log.warn('Event buffer full, dropping events', { dropped: serialized.length, bufferSize: eventBuffer.length });
+    return;
+  }
+  eventBuffer.push(...serialized);
 }
 
 let _flushTimer = null;
 function startFlushTimer() {
   if (_flushTimer) return;
   _flushTimer = setInterval(() => {
-    if (eventBuffer.length === 0) return;
+    if (eventBuffer.length === 0 || _flushing) return;
+    _flushing = true;
     const toWrite = eventBuffer.join('\n') + '\n';
-    const snapshot = eventBuffer.slice();
     eventBuffer = [];
     fs.appendFile(todayFile(), toWrite, 'utf8', (err) => {
+      _flushing = false;
       if (err) {
-        log.error('File write error', { error: err.message });
-        eventBuffer.unshift(...snapshot);
+        log.error('Event flush failed, data discarded', { error: err.message });
       }
     });
   }, 30000);
+}
+
+function pruneOldEvents(maxAgeDays) {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - maxAgeDays);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  try {
+    const files = fs.readdirSync(EVENTS_DIR).filter(f => f.endsWith('.ndjson'));
+    let pruned = 0;
+    for (const f of files) {
+      const datePrefix = f.slice(0, 10);
+      if (datePrefix < cutoffStr) {
+        fs.unlinkSync(path.join(EVENTS_DIR, f));
+        pruned++;
+      }
+    }
+    if (pruned > 0) log.info('Pruned old event files', { pruned, maxAgeDays });
+  } catch (e) {
+    log.warn('Event pruning failed', { error: e.message });
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -101,16 +128,19 @@ function startReceiver() {
     if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
     if (req.method === 'POST' && req.url === '/api/telemetry') {
-      let body = '';
+      const chunks = [];
+      let size = 0;
       let tooBig = false;
       req.on('data', chunk => {
         if (tooBig) return;
-        body += chunk;
-        if (body.length > 1e6) { tooBig = true; req.destroy(); }
+        size += chunk.length;
+        if (size > 1e6) { tooBig = true; req.destroy(); return; }
+        chunks.push(chunk);
       });
       req.on('end', () => {
         if (tooBig) { res.writeHead(413); res.end(); return; }
         try {
+          const body = Buffer.concat(chunks).toString('utf8');
           const payload = JSON.parse(body);
           const raw = Array.isArray(payload.events) ? payload.events : [payload];
           const valid = raw.map(validateEvent).filter(Boolean);
@@ -317,10 +347,13 @@ async function runAnalysis() {
 
   await saveJSONAsync(GRAPH_WEIGHTS, gw);
   log.info('Analysis complete', { eventsProcessed, edges: edges.length });
+
+  pruneOldEvents(envConfig.sentryRetentionDays);
 }
 
 if (require.main === module) {
   ensureDirs();
+  pruneOldEvents(envConfig.sentryRetentionDays);
   startFlushTimer();
   startReceiver();
   runAnalysis().catch(e => log.error('Startup analysis error', { error: e.message }));

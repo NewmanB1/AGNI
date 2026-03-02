@@ -8,7 +8,7 @@
  * — fix the underlying bug and verify the test passes.
  */
 
-const { describe, it } = require('node:test');
+const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -336,6 +336,700 @@ describe('AUDIT-8: engine rejects invalid hyperparameters', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // R12: Student listing strips sensitive fields
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R13: requireHubKey returns 401 for wrong key (not just missing key)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-10: requireHubKey rejects incorrect key with 401', () => {
+  it('returns 401 when wrong key is provided', () => {
+    const saved = process.env.AGNI_HUB_API_KEY;
+    process.env.AGNI_HUB_API_KEY = 'correct-secret-key';
+    try {
+      delete require.cache[require.resolve('../../hub-tools/context/auth')];
+      const { requireHubKey } = require('../../hub-tools/context/auth');
+      let responseCode = null;
+      const handler = requireHubKey(function () { responseCode = 200; });
+      handler(
+        { headers: { 'x-hub-key': 'wrong-key' } },
+        {},
+        { qs: {}, sendResponse: function (code) { responseCode = code; } }
+      );
+      assert.equal(responseCode, 401, 'requireHubKey should return 401 for wrong key, got ' + responseCode);
+    } finally {
+      process.env.AGNI_HUB_API_KEY = saved;
+      delete require.cache[require.resolve('../../hub-tools/context/auth')];
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R13: createStudent returns sanitized records (no pinHash/pinSalt)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-11: createStudent returns sanitized output', () => {
+  it('createStudent result does not contain pinHash or pinSalt', async () => {
+    const pathMod = require('path');
+    const fsMod = require('fs');
+    const osMod = require('os');
+    const dir = pathMod.join(osMod.tmpdir(), 'agni-create-test-' + Date.now());
+    fsMod.mkdirSync(dir, { recursive: true });
+    const saved = process.env.AGNI_DATA_DIR;
+    process.env.AGNI_DATA_DIR = dir;
+    try {
+      delete require.cache[require.resolve('../../src/services/accounts')];
+      delete require.cache[require.resolve('../../src/utils/env-config')];
+      const accounts = require('../../src/services/accounts');
+      const result = await accounts.createStudent({ displayName: 'Test', pin: '9999' });
+      assert.ok(result.ok, 'createStudent should succeed');
+      assert.equal(result.student.pinHash, undefined, 'pinHash should not be in response');
+      assert.equal(result.student.pinSalt, undefined, 'pinSalt should not be in response');
+      assert.equal(typeof result.student.hasPin, 'boolean', 'hasPin should be boolean');
+      assert.equal(result.student.hasPin, true, 'hasPin should be true when PIN was set');
+    } finally {
+      process.env.AGNI_DATA_DIR = saved;
+      fsMod.rmSync(dir, { recursive: true, force: true });
+      delete require.cache[require.resolve('../../src/services/accounts')];
+      delete require.cache[require.resolve('../../src/utils/env-config')];
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R13: math.js vector dimension assertions
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-12: math.js rejects mismatched vector dimensions', () => {
+  const math = require('../../src/engine/math');
+
+  it('dot throws on length mismatch', () => {
+    assert.throws(() => math.dot([1, 2], [1, 2, 3]), /length mismatch/);
+  });
+
+  it('addVec throws on length mismatch', () => {
+    assert.throws(() => math.addVec([1, 2], [1, 2, 3]), /length mismatch/);
+  });
+
+  it('matVec throws on dimension mismatch', () => {
+    assert.throws(() => math.matVec([[1, 2], [3, 4]], [1, 2, 3]), /dimension mismatch/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R13: embedding magnitude capping prevents unbounded growth
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-13: embedding updates are magnitude-capped', () => {
+  const embeddings = require('../../src/engine/embeddings');
+  const { createState } = require('../helpers/engine-state');
+
+  it('large gains do not produce vectors exceeding magnitude cap', () => {
+    const state = createState({ dim: 4 });
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    for (var i = 0; i < 100; i++) {
+      embeddings.updateEmbedding(state, 's1', 'l1', 1000);
+    }
+    var vec = state.embedding.students['s1'].vector;
+    var maxMag = Math.max.apply(null, vec.map(function (v) { return Math.abs(v); }));
+    assert.ok(maxMag <= 10, 'Vector magnitude should be capped at 10, got ' + maxMag);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R13: Cholesky jitter retry graceful degradation
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-14: sampleTheta gracefully handles near-singular A', () => {
+  const thompson = require('../../src/engine/thompson');
+  const embeddings = require('../../src/engine/embeddings');
+  const { createState } = require('../helpers/engine-state');
+
+  it('returns mean vector instead of crashing on singular A', () => {
+    const state = createState({ dim: 2 });
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    thompson.ensureBanditInitialized(state);
+    // Make A singular by zeroing the matrix
+    for (var i = 0; i < state.bandit.A.length; i++) {
+      for (var j = 0; j < state.bandit.A[i].length; j++) {
+        state.bandit.A[i][j] = 0;
+      }
+    }
+    // This should not throw — it should return the mean (which is b = [0,...0])
+    var result = thompson.selectLesson(state, 's1');
+    // selectLesson returns a lessonId or null, not a crash
+    assert.equal(typeof result === 'string' || result === null, true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R15: Thompson jitter must operate on a copy, not mutate state.bandit.A
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-15: sampleTheta jitter does not mutate state.bandit.A', () => {
+  const thompson = require('../../src/engine/thompson');
+  const embeddings = require('../../src/engine/embeddings');
+  const math = require('../../src/engine/math');
+  const { createState } = require('../helpers/engine-state');
+
+  it('state.bandit.A is unchanged after jitter retry path', () => {
+    const state = createState({ dim: 2 });
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    thompson.ensureBanditInitialized(state);
+
+    // Make A nearly singular so the first invertSPD fails and jitter fires
+    var n = state.bandit.A.length;
+    for (var i = 0; i < n; i++) {
+      for (var j = 0; j < n; j++) {
+        state.bandit.A[i][j] = 0;
+      }
+    }
+
+    // Deep-copy A before sampleTheta
+    var Abefore = state.bandit.A.map(function (row) { return row.slice(); });
+
+    // sampleTheta may succeed via jitter or fall back to mean — either way A must not change
+    thompson.selectLesson(state, 's1');
+
+    for (var r = 0; r < n; r++) {
+      for (var c = 0; c < n; c++) {
+        assert.equal(
+          state.bandit.A[r][c], Abefore[r][c],
+          'state.bandit.A[' + r + '][' + c + '] was mutated by jitter retry'
+        );
+      }
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R15: addMat dimension assertion
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-16: addMat rejects dimension mismatch', () => {
+  const math = require('../../src/engine/math');
+
+  it('throws on row count mismatch', () => {
+    assert.throws(
+      () => math.addMat([[1, 2]], [[1, 2], [3, 4]]),
+      /dimension mismatch/
+    );
+  });
+
+  it('throws on column count mismatch', () => {
+    assert.throws(
+      () => math.addMat([[1, 2], [3, 4]], [[1], [2]]),
+      /dimension mismatch/
+    );
+  });
+
+  it('accepts matching dimensions', () => {
+    var result = math.addMat([[1, 2], [3, 4]], [[5, 6], [7, 8]]);
+    assert.deepEqual(result, [[6, 8], [10, 12]]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R15: SM-2 upper bound is exactly 3.0
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-17: SM-2 ease factor is capped at 3.0', () => {
+  const { updateSchedule } = require('../../src/engine/sm2');
+
+  it('ease factor never exceeds 3.0 even with perfect quality', () => {
+    var schedule = { interval: 1, easeFactor: 2.9, repetition: 5 };
+    for (var i = 0; i < 50; i++) {
+      schedule = updateSchedule(schedule, 5);
+    }
+    assert.ok(schedule.easeFactor <= 3.0,
+      'Ease factor exceeded 3.0: ' + schedule.easeFactor);
+  });
+
+  it('ease factor reaches 3.0 from repeated perfect quality', () => {
+    var schedule = { interval: 1, easeFactor: 2.5, repetition: 0 };
+    for (var i = 0; i < 100; i++) {
+      schedule = updateSchedule(schedule, 5);
+    }
+    assert.equal(schedule.easeFactor, 3.0,
+      'Ease factor should converge to 3.0 with perfect input');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R15: Polyfill loading order — repeat must be defined before padStart
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-18: polyfills.js defines repeat before padStart', () => {
+  it('String.prototype.repeat polyfill appears before padStart in source', () => {
+    const fs = require('fs');
+    const polyfillPath = require.resolve('@agni/runtime/polyfills');
+    const src = fs.readFileSync(polyfillPath, 'utf8');
+    var repeatIdx = src.indexOf('String.prototype.repeat');
+    var padStartIdx = src.indexOf('String.prototype.padStart');
+    assert.ok(repeatIdx !== -1, 'repeat polyfill not found');
+    assert.ok(padStartIdx !== -1, 'padStart polyfill not found');
+    assert.ok(repeatIdx < padStartIdx,
+      'repeat (at ' + repeatIdx + ') must appear before padStart (at ' + padStartIdx + ')');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R15: Factory loader three-phase loading order
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-19: factory-loader loadDependencies uses three-phase loading', () => {
+  it('loadDependencies source contains phase1/phase2/phase3 sequencing', () => {
+    const fs = require('fs');
+    const loaderPath = require.resolve('@agni/runtime/ui/factory-loader');
+    const src = fs.readFileSync(loaderPath, 'utf8');
+    assert.ok(src.indexOf('phase1') !== -1, 'phase1 not found in factory-loader');
+    assert.ok(src.indexOf('phase2') !== -1, 'phase2 not found in factory-loader');
+    assert.ok(src.indexOf('phase3') !== -1, 'phase3 not found in factory-loader');
+    assert.ok(src.indexOf("'polyfills.js'") !== -1, 'polyfills.js not classified in loader');
+    assert.ok(src.indexOf("'shared-runtime.js'") !== -1, 'shared-runtime.js not classified in loader');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R15: File lock timing — retries must outlast stale timeout
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-20: file-lock MAX_RETRIES * interval exceeds STALE_TIMEOUT', () => {
+  it('lock retry window exceeds stale detection window', () => {
+    const fs = require('fs');
+    const lockSrc = fs.readFileSync(require('path').join(__dirname, '../../src/utils/file-lock.js'), 'utf8');
+    var staleMatch = lockSrc.match(/STALE_TIMEOUT_MS\s*=\s*(\d+)/);
+    var retryMatch = lockSrc.match(/RETRY_INTERVAL_MS\s*=\s*(\d+)/);
+    var maxMatch = lockSrc.match(/MAX_RETRIES\s*=\s*(\d+)/);
+    assert.ok(staleMatch && retryMatch && maxMatch, 'Could not parse lock constants');
+    var stale = parseInt(staleMatch[1], 10);
+    var interval = parseInt(retryMatch[1], 10);
+    var maxRetries = parseInt(maxMatch[1], 10);
+    var totalRetryMs = maxRetries * interval;
+    assert.ok(totalRetryMs > stale,
+      'MAX_RETRIES * RETRY_INTERVAL_MS (' + totalRetryMs + 'ms) must exceed STALE_TIMEOUT_MS (' + stale + 'ms)');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R15: Governance routes require auth — unauthenticated requests get 401
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-21: governance routes reject unauthenticated requests', () => {
+  var server, port, dataDir;
+  var EXT_TEST_HUB_KEY = 'test-hub-key-gov-' + Date.now();
+
+  before(async () => {
+    var pathMod = require('path');
+    var fsMod = require('fs');
+    var osMod = require('os');
+    dataDir = pathMod.join(osMod.tmpdir(), 'agni-gov-auth-test-' + Date.now());
+    fsMod.mkdirSync(dataDir, { recursive: true });
+    process.env.AGNI_DATA_DIR = dataDir;
+    process.env.AGNI_SERVE_DIR = pathMod.join(dataDir, 'serve');
+    process.env.AGNI_HUB_API_KEY = EXT_TEST_HUB_KEY;
+
+    var rootNorm = pathMod.resolve(__dirname, '../..').replace(/\\/g, '/');
+    Object.keys(require.cache).forEach(function (key) {
+      var norm = key.replace(/\\/g, '/');
+      if (norm.startsWith(rootNorm) && !norm.includes('node_modules')) {
+        delete require.cache[key];
+      }
+    });
+
+    fsMod.mkdirSync(process.env.AGNI_SERVE_DIR, { recursive: true });
+    fsMod.writeFileSync(pathMod.join(dataDir, 'mastery-summary.json'), JSON.stringify({ students: {} }));
+    fsMod.writeFileSync(pathMod.join(dataDir, 'lesson-index.json'), JSON.stringify([]));
+    fsMod.writeFileSync(pathMod.join(dataDir, 'approved-catalog.json'), JSON.stringify({ lessonIds: [] }));
+
+    var theta = require('../../hub-tools/theta');
+    server = theta.startApi(0);
+    await new Promise(function (resolve) { setTimeout(resolve, 200); });
+    port = server.address().port;
+  });
+
+  after(() => {
+    if (server) server.close();
+    var fsMod = require('fs');
+    fsMod.rmSync(dataDir, { recursive: true, force: true });
+    delete process.env.AGNI_DATA_DIR;
+    delete process.env.AGNI_SERVE_DIR;
+    delete process.env.AGNI_HUB_API_KEY;
+    delete require.cache[require.resolve('../../src/utils/env-config')];
+    delete require.cache[require.resolve('../../src/services/accounts')];
+    delete require.cache[require.resolve('../../hub-tools/context/auth')];
+    delete require.cache[require.resolve('../../hub-tools/context/services')];
+  });
+
+  function rawRequest(method, urlPath) {
+    var http = require('http');
+    return new Promise(function (resolve, reject) {
+      var req = http.request({ hostname: '127.0.0.1', port: port, path: urlPath, method: method }, function (res) {
+        var data = '';
+        res.on('data', function (chunk) { data += chunk; });
+        res.on('end', function () { resolve({ status: res.statusCode }); });
+      });
+      req.on('error', reject);
+      req.end();
+    });
+  }
+
+  it('GET /api/governance/report returns 401 without auth', async () => {
+    var res = await rawRequest('GET', '/api/governance/report');
+    assert.equal(res.status, 401);
+  });
+
+  it('GET /api/governance/policy returns 401 without auth', async () => {
+    var res = await rawRequest('GET', '/api/governance/policy');
+    assert.equal(res.status, 401);
+  });
+
+  it('GET /api/governance/catalog returns 401 without auth', async () => {
+    var res = await rawRequest('GET', '/api/governance/catalog');
+    assert.equal(res.status, 401);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// XSS sanitizer parity: shared.js (PWA shell) must strip the same vectors as
+// shared-runtime.js. Regression guard for the unquoted-event-handler bypass
+// (C1 carry-over from post-R15 audit).
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('C1-XSS: shared.js sanitizeHtml strips unquoted event handlers', () => {
+  const { sanitizeHtml } = require('../../server/pwa/shared.js');
+
+  const XSS_PAYLOADS = [
+    { name: 'unquoted onerror',      input: '<img onerror=alert(1) src=x>',             must_not_contain: 'onerror' },
+    { name: 'double-quoted onerror', input: '<img onerror="alert(1)" src=x>',           must_not_contain: 'onerror' },
+    { name: 'single-quoted onerror', input: "<img onerror='alert(1)' src=x>",           must_not_contain: 'onerror' },
+    { name: 'unquoted onload',       input: '<body onload=fetch("http://evil")>',        must_not_contain: 'onload' },
+    { name: 'unquoted onfocus',      input: '<input onfocus=alert(document.cookie)>',    must_not_contain: 'onfocus' },
+    { name: 'unquoted onmouseover',  input: '<div onmouseover=alert(1)>hover</div>',    must_not_contain: 'onmouseover' },
+    { name: 'script tag',            input: '<script>alert(1)</script>',                 must_not_contain: '<script' },
+    { name: 'javascript: URI',       input: '<a href="javascript:alert(1)">click</a>',  must_not_contain: 'javascript' },
+  ];
+
+  for (const { name, input, must_not_contain } of XSS_PAYLOADS) {
+    it('strips ' + name, () => {
+      const result = sanitizeHtml(input);
+      assert.ok(
+        result.toLowerCase().indexOf(must_not_contain) === -1,
+        'sanitizeHtml() failed to strip ' + name + ': ' + JSON.stringify(result)
+      );
+    });
+  }
+
+  it('preserves safe HTML', () => {
+    const safe = '<p class="info">Hello <strong>world</strong></p>';
+    assert.equal(sanitizeHtml(safe), safe);
+  });
+
+  it('returns empty string for non-string input', () => {
+    assert.equal(sanitizeHtml(null), '');
+    assert.equal(sanitizeHtml(undefined), '');
+    assert.equal(sanitizeHtml(42), '');
+  });
+});
+
+describe('C1-XSS: shared-runtime.js ON_ATTR_RE handles unquoted values', () => {
+  const fs = require('fs');
+  const runtimePath = require.resolve('@agni/runtime/shared-runtime');
+  const src = fs.readFileSync(runtimePath, 'utf8');
+
+  it('ON_ATTR_RE includes unquoted branch [^\\s>]+', () => {
+    const match = src.match(/ON_ATTR_RE\s*=\s*(\/.+\/\w*);/);
+    assert.ok(match, 'ON_ATTR_RE not found in shared-runtime.js');
+    const pattern = match[1];
+    assert.ok(
+      pattern.indexOf('[^\\s>]+') !== -1 || pattern.indexOf("[^\\s>]+") !== -1,
+      'ON_ATTR_RE is missing the unquoted-value branch [^\\s>]+ — XSS bypass via <img onerror=alert(1)>. Pattern: ' + pattern
+    );
+  });
+
+  it('ON_ATTR_RE regex actually strips unquoted handlers', () => {
+    const reMatch = src.match(/ON_ATTR_RE\s*=\s*(\/.*\/\w*);/);
+    assert.ok(reMatch, 'Could not extract ON_ATTR_RE');
+    const re = eval(reMatch[1]);
+    const input = '<img onerror=alert(1) src=x>';
+    const cleaned = input.replace(re, '');
+    assert.ok(cleaned.indexOf('onerror') === -1,
+      'ON_ATTR_RE failed to strip unquoted onerror: ' + JSON.stringify(cleaned));
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Entity-encoding bypass guard: both sanitizers must decode numeric HTML
+// entities before regex matching, so that &#106;avascript: is caught as
+// javascript:. Null bytes must also be stripped to prevent parser differentials.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('C1-ENTITY: shared.js sanitizeHtml strips entity-encoded javascript: URIs', () => {
+  delete require.cache[require.resolve('../../server/pwa/shared.js')];
+  const { sanitizeHtml } = require('../../server/pwa/shared.js');
+
+  const ENTITY_PAYLOADS = [
+    { name: 'decimal &#106; for j',       input: '<a href="&#106;avascript:alert(1)">click</a>',   banned: 'javascript' },
+    { name: 'hex &#x6A; for j',           input: '<a href="&#x6A;avascript:alert(1)">click</a>',   banned: 'javascript' },
+    { name: 'mixed decimal/hex',           input: '<a href="java&#x73;cript:alert(1)">x</a>',      banned: 'javascript' },
+    { name: 'fully hex-encoded',           input: '<a href="&#x6A;&#x61;&#x76;&#x61;&#x73;&#x63;&#x72;&#x69;&#x70;&#x74;&#x3A;alert(1)">x</a>', banned: 'javascript' },
+    { name: 'fully decimal-encoded',       input: '<a href="&#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;&#116;&#58;alert(1)">x</a>',         banned: 'javascript' },
+    { name: '&colon; for colon',           input: '<a href="javascript&colon;alert(1)">x</a>',      banned: 'javascript' },
+    { name: 'null byte in javascript',     input: '<a href="java\x00script:alert(1)">x</a>',       banned: 'javascript' },
+    { name: 'entity-encoded img src',      input: '<img src="&#x6A;avascript:alert(1)">',           banned: 'javascript' },
+    { name: 'entity in unquoted href',     input: '<a href=&#106;avascript:alert(1)>x</a>',         banned: 'javascript' },
+  ];
+
+  for (const { name, input, banned } of ENTITY_PAYLOADS) {
+    it('strips ' + name, () => {
+      const result = sanitizeHtml(input);
+      assert.ok(
+        result.toLowerCase().indexOf(banned) === -1,
+        'entity bypass: sanitizeHtml failed on ' + name + ': ' + JSON.stringify(result)
+      );
+    });
+  }
+
+  it('preserves structural entities (&lt; &gt; &amp; &quot;)', () => {
+    const html = '<p>1 &lt; 2 &amp;&amp; 3 &gt; 2</p>';
+    assert.equal(sanitizeHtml(html), html);
+  });
+
+  it('preserves numeric structural entities (&#60; &#62; &#38;)', () => {
+    const result = sanitizeHtml('<p>&#60;tag&#62; &#38; &#34;quote&#34;</p>');
+    assert.ok(result.indexOf('&#60;') !== -1, 'should preserve &#60;');
+    assert.ok(result.indexOf('&#62;') !== -1, 'should preserve &#62;');
+    assert.ok(result.indexOf('&#38;') !== -1, 'should preserve &#38;');
+  });
+
+  it('still strips plain javascript: after entity decoding', () => {
+    const result = sanitizeHtml('<a href="javascript:alert(1)">x</a>');
+    assert.ok(result.indexOf('javascript') === -1);
+  });
+});
+
+describe('C1-ENTITY: shared-runtime.js has entity decoding and global JS_URI_RE', () => {
+  const fs = require('fs');
+  const runtimePath = require.resolve('@agni/runtime/shared-runtime');
+  const src = fs.readFileSync(runtimePath, 'utf8');
+
+  it('contains _decodeNumericEntities function', () => {
+    assert.ok(
+      src.indexOf('_decodeNumericEntities') !== -1,
+      'shared-runtime.js missing _decodeNumericEntities — entity-encoded javascript: URIs bypass the sanitizer'
+    );
+  });
+
+  it('sanitizeHtml calls _decodeNumericEntities', () => {
+    const fnStart = src.indexOf('function sanitizeHtml');
+    assert.ok(fnStart !== -1, 'sanitizeHtml not found');
+    const fnBlock = src.slice(fnStart, fnStart + 400);
+    assert.ok(
+      fnBlock.indexOf('_decodeNumericEntities') !== -1,
+      'sanitizeHtml does not call _decodeNumericEntities'
+    );
+  });
+
+  it('sanitizeHtml strips null bytes', () => {
+    const fnStart = src.indexOf('function sanitizeHtml');
+    const fnBlock = src.slice(fnStart, fnStart + 400);
+    assert.ok(
+      fnBlock.indexOf('\\x00') !== -1,
+      'sanitizeHtml does not strip null bytes — parser differential bypass possible'
+    );
+  });
+
+  it('JS_URI_RE uses global javascript: pattern (not attribute-specific)', () => {
+    const match = src.match(/JS_URI_RE\s*=\s*(\/[^;]+);/);
+    assert.ok(match, 'JS_URI_RE not found');
+    assert.ok(
+      match[1].indexOf('href|src|action') === -1,
+      'JS_URI_RE still uses attribute-specific pattern — misses formaction, data, xlink:href, srcdoc. Found: ' + match[1]
+    );
+    assert.ok(
+      match[1].indexOf('javascript') !== -1,
+      'JS_URI_RE does not match javascript:. Found: ' + match[1]
+    );
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R16-C2.3: longestStreak must scan full 365-day window, not exit early
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('R16-C2.3: computeStreaks scans full history for longestStreak', () => {
+  const { computeStreaks } = require('../../src/utils/streak');
+
+  it('longestStreak finds historical max beyond current streak gap', () => {
+    const dates = [];
+    // 2-day current streak: today and yesterday
+    const today = new Date();
+    dates.push(today.toISOString().slice(0, 10));
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    dates.push(yesterday.toISOString().slice(0, 10));
+
+    // 30-day historical streak starting 60 days ago
+    for (let i = 60; i < 90; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      dates.push(d.toISOString().slice(0, 10));
+    }
+
+    const result = computeStreaks(dates.sort());
+    assert.equal(result.currentStreak, 2);
+    assert.equal(result.longestStreak, 30,
+      'longestStreak should be 30 (historical), not ' + result.longestStreak + ' (current streak only)');
+  });
+
+  it('longestStreak equals currentStreak when current is the longest', () => {
+    const dates = [];
+    const today = new Date();
+    for (let i = 0; i < 10; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      dates.push(d.toISOString().slice(0, 10));
+    }
+    const result = computeStreaks(dates.sort());
+    assert.equal(result.currentStreak, 10);
+    assert.equal(result.longestStreak, 10);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R16-C3.3: PageRank invalidateCache clears _currGraph
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('R16-C3.3: PageRank invalidateCache clears _currGraph', () => {
+  it('_currGraph is null after invalidation', () => {
+    const pagerank = require('../../src/engine/pagerank');
+    // Access internal cache via the module — invalidateCache is exported
+    pagerank.invalidateCache();
+    const fs = require('fs');
+    const resolved = require.resolve('@agni/engine/pagerank');
+    const src = fs.readFileSync(resolved, 'utf8');
+    const fnBody = src.slice(src.indexOf('function invalidateCache'), src.indexOf('function invalidateCache') + 300);
+    assert.ok(
+      fnBody.indexOf('_currGraph') !== -1,
+      'invalidateCache does not clear _currGraph — stale curriculum graph persists after invalidation'
+    );
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R16-C2.1: Sentry event buffer has a size cap
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('R16-C2.1: sentry event buffer is bounded', () => {
+  it('sentry.js source contains EVENT_BUFFER_MAX constant', () => {
+    const fs = require('fs');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../hub-tools/sentry.js'), 'utf8');
+    assert.ok(src.indexOf('EVENT_BUFFER_MAX') !== -1,
+      'sentry.js missing EVENT_BUFFER_MAX — eventBuffer can grow without limit');
+    assert.ok(src.indexOf('_flushing') !== -1,
+      'sentry.js missing _flushing guard — concurrent flushes can cause data duplication');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R16-C2.2: Sentry body parsing uses Buffer.concat (not string concatenation)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('R16-C2.2: sentry UTF-8 body parsing uses Buffer.concat', () => {
+  it('sentry.js receiver uses Buffer.concat, not body += chunk', () => {
+    const fs = require('fs');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../hub-tools/sentry.js'), 'utf8');
+    const receiverStart = src.indexOf('function startReceiver');
+    const receiverBlock = src.slice(receiverStart, receiverStart + 1200);
+    assert.ok(receiverBlock.indexOf('Buffer.concat') !== -1,
+      'sentry receiver does not use Buffer.concat — multi-byte UTF-8 at chunk boundaries will be corrupted');
+    assert.ok(receiverBlock.indexOf("body += chunk") === -1 && receiverBlock.indexOf('body+=chunk') === -1,
+      'sentry receiver still uses body += chunk string concatenation');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R16-C3.2: Sentry has event retention pruning
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('R16-C3.2: sentry has event retention pruning', () => {
+  it('sentry.js contains pruneOldEvents function', () => {
+    const fs = require('fs');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../hub-tools/sentry.js'), 'utf8');
+    assert.ok(src.indexOf('pruneOldEvents') !== -1,
+      'sentry.js missing pruneOldEvents — NDJSON files accumulate forever on Pi SD card');
+    assert.ok(src.indexOf('sentryRetentionDays') !== -1,
+      'sentry.js does not reference sentryRetentionDays config — retention is not configurable');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R16-C3.1: SW version is not hardcoded
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('R16-C3.1: service worker version uses placeholder, not hardcoded', () => {
+  it('sw.js uses __SW_VERSION__ placeholder', () => {
+    const fs = require('fs');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../server/sw.js'), 'utf8');
+    assert.ok(src.indexOf('__SW_VERSION__') !== -1,
+      'sw.js does not use __SW_VERSION__ placeholder — version is hardcoded');
+    assert.ok(src.indexOf("'agni-v1.9.0'") === -1,
+      'sw.js still contains hardcoded agni-v1.9.0');
+  });
+
+  it('hub-transform stamps __SW_VERSION__ with package version', () => {
+    const fs = require('fs');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../server/hub-transform.js'), 'utf8');
+    assert.ok(src.indexOf("'__SW_VERSION__'") !== -1 || src.indexOf('"__SW_VERSION__"') !== -1,
+      'hub-transform does not replace __SW_VERSION__ — service worker gets raw placeholder');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// R16-C1: File locking in groups, parent, checkpoint, session routes
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('R16-C1: withLock is used in all mutating route handlers', () => {
+  it('groups.js uses withLock', () => {
+    const fs = require('fs');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../hub-tools/routes/groups.js'), 'utf8');
+    assert.ok(src.indexOf('withLock') !== -1,
+      'groups.js missing withLock — concurrent group mutations can lose data');
+  });
+
+  it('parent.js uses withLock', () => {
+    const fs = require('fs');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../hub-tools/routes/parent.js'), 'utf8');
+    assert.ok(src.indexOf('withLock') !== -1,
+      'parent.js missing withLock — concurrent invite/link mutations can lose data');
+  });
+
+  it('student.js checkpoint uses withLock', () => {
+    const fs = require('fs');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../hub-tools/routes/student.js'), 'utf8');
+    const checkpointSection = src.slice(0, src.indexOf('router.get(\'/api/checkpoint'));
+    assert.ok(checkpointSection.indexOf('withLock(filePath') !== -1,
+      'student.js POST /api/checkpoint does not lock the checkpoint file');
+  });
+
+  it('accounts.js cleanExpiredSessions uses withLock', () => {
+    const fs = require('fs');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../src/services/accounts.js'), 'utf8');
+    const cleanFn = src.slice(src.indexOf('async function cleanExpiredSessions'), src.indexOf('async function destroySession'));
+    assert.ok(cleanFn.indexOf('withLock') !== -1,
+      'cleanExpiredSessions does not use withLock — races with loginCreator');
+  });
+
+  it('accounts.js destroySession uses withLock', () => {
+    const fs = require('fs');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../src/services/accounts.js'), 'utf8');
+    const destroyFn = src.slice(src.indexOf('async function destroySession'));
+    assert.ok(destroyFn.indexOf('withLock') !== -1,
+      'destroySession does not use withLock — races with loginCreator');
+  });
+});
 
 describe('AUDIT-9: student listing does not expose sensitive fields', () => {
   it('listStudents returns sanitized records', async () => {

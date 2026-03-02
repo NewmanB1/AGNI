@@ -57,10 +57,13 @@ const lessonAssembly     = require('../src/services/lesson-assembly');
 const _escapeHtml        = require('../src/utils/io').escapeHtml;
 const { resolveFactoryPath } = require('../src/utils/runtimeManifest');
 
+// ── Version (from package.json, used for SW stamping) ────────────────────────
+const PKG_VERSION   = require('../package.json').version || '0.0.0';
+
 // ── Paths (from centralized config) ──────────────────────────────────────────
 const envConfig     = require('../src/utils/env-config');
 const YAML_DIR      = envConfig.yamlDir;
-const FACTORY_DIR   = process.env.AGNI_FACTORY_DIR || path.join(__dirname, '../src/runtime');
+const FACTORY_DIR   = process.env.AGNI_FACTORY_DIR || require('@agni/runtime').RUNTIME_ROOT;
 const KATEX_DIR     = process.env.AGNI_KATEX_DIR   || path.join(__dirname, '../data/katex-css');
 const DATA_DIR      = envConfig.dataDir;
 const SERVE_PORT    = envConfig.servePort;
@@ -85,10 +88,18 @@ const MAX_CACHE_ENTRIES = parseInt(process.env.AGNI_CACHE_MAX || '100', 10);
 // await the same Promise rather than starting a new one.
 const _compilingNow  = {};
 
+// ── Shell HTML template cache ────────────────────────────────────────────
+// shell.html is read once on first request and cached in memory. The file
+// is ~500 bytes and never changes at runtime; re-reading from SD card on
+// every /shell/:slug request would block the event loop on Pi.
+const SHELL_PLACEHOLDER = '<script src="/lesson-data.js"></script>';
+let _shellTemplate = null;
+
 // ── Allowed factory files ─────────────────────────────────────────────────────
 // Whitelist prevents directory traversal. Only files in this set can be
 // served from /factories/. All are ES5-compatible IIFE scripts.
 const ALLOWED_FACTORY_FILES = new Set([
+  'polyfills.js',
   'binary-utils.js',
   'shared-runtime.js',
   'a11y.js',
@@ -199,7 +210,7 @@ async function compileLesson(slug, options) {
   if (cached && cached.mtime === loaded.mtime) {
     cached.lastAccessed = Date.now();
     if (options.dev) log.debug('Cache hit', { slug });
-    return { html: cached.html, sidecar: cached.sidecar };
+    return { html: cached.html, sidecar: cached.sidecar, lessonIR: cached.lessonIR };
   }
 
   // In-flight guard: return existing compilation Promise if one is running
@@ -231,8 +242,8 @@ async function _doCompile(slug, loaded, options) {
   const sidecar = buildLessonSidecar(ir);
 
   // Build factory dependency list (same logic as html.js Step 6)
-  const RUNTIME_VERSION = '1.9.0';
-  const factoryDeps     = [{ file: 'binary-utils.js', version: RUNTIME_VERSION }, { file: 'shared-runtime.js', version: RUNTIME_VERSION }];
+  const RUNTIME_VERSION = require('../package.json').version;
+  const factoryDeps     = [{ file: 'polyfills.js', version: RUNTIME_VERSION }, { file: 'binary-utils.js', version: RUNTIME_VERSION }, { file: 'shared-runtime.js', version: RUNTIME_VERSION }];
   const manifest        = (ir.inferredFeatures && ir.inferredFeatures.factoryManifest) || [];
   manifest.forEach(function (filename) {
     factoryDeps.push({ file: filename, version: RUNTIME_VERSION });
@@ -246,7 +257,7 @@ async function _doCompile(slug, loaded, options) {
   }
 
   // Read runtime files
-  const runtimeDir      = path.join(__dirname, '../src/runtime');
+  const runtimeDir      = require('@agni/runtime').RUNTIME_ROOT;
   const factoryLoaderJs = fs.readFileSync(resolveFactoryPath(runtimeDir, 'factory-loader.js'), 'utf8');
   const playerJs        = fs.readFileSync(resolveFactoryPath(runtimeDir, 'player.js'),         'utf8');
   const styles          = fs.readFileSync(path.join(runtimeDir, 'style.css'),          'utf8');
@@ -290,12 +301,13 @@ async function _doCompile(slug, loaded, options) {
   _lessonCache[slug] = {
     html:         html,
     sidecar:      sidecar,
+    lessonIR:     ir,
     mtime:        loaded.mtime,
     lastAccessed: Date.now()
   };
   if (!isUpdate) _cacheSize++;
 
-  return { html: html, sidecar: sidecar };
+  return { html: html, sidecar: sidecar, lessonIR: ir };
 }
 
 /**
@@ -368,6 +380,10 @@ function _sendText(req, res, statusCode, contentType, body) {
   const buf = Buffer.from(body, 'utf8');
   res.setHeader('Access-Control-Allow-Origin', envConfig.corsOrigin || 'null');
   res.setHeader('Content-Type', contentType);
+  if (contentType.indexOf('html') !== -1) {
+    res.setHeader('Content-Security-Policy', "frame-ancestors 'self'; worker-src 'self'");
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+  }
 
   if (req.headers['accept-encoding'] &&
       req.headers['accept-encoding'].indexOf('gzip') !== -1 &&
@@ -443,6 +459,47 @@ function _sendFile(req, res, filePath, contentType, maxAge) {
 function handleRequest(req, res, options) {
   const urlPath = req.url.split('?')[0];
 
+  // GET /shell/:slug — serve the PWA shell with the lesson slug injected into
+  // the lesson-data.js script tag. The template is read once and cached; only
+  // the slug query parameter differs per request.
+  const shellMatch = urlPath.match(/^\/shell\/([a-zA-Z0-9_\-]+)$/);
+  if (req.method === 'GET' && shellMatch) {
+    const shellSlug = shellMatch[1];
+    try {
+      if (_shellTemplate === null) {
+        _shellTemplate = fs.readFileSync(path.join(__dirname, 'pwa', 'shell.html'), 'utf8');
+        if (_shellTemplate.indexOf(SHELL_PLACEHOLDER) === -1) {
+          throw new Error('shell.html is missing the lesson-data.js placeholder script tag');
+        }
+      }
+      var shellHtml = _shellTemplate.replace(
+        SHELL_PLACEHOLDER,
+        '<script src="/lesson-data.js?slug=' + encodeURIComponent(shellSlug) + '"></script>'
+      );
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      _sendText(req, res, 200, 'text/html; charset=utf-8', shellHtml);
+    } catch (err) {
+      _sendText(req, res, 500, 'text/html; charset=utf-8',
+        '<h1>Shell error</h1><pre>' + _escapeHtml(err.message) + '</pre>');
+    }
+    return true;
+  }
+
+  // GET /lessons/:slug/sidecar — must be checked BEFORE the lesson HTML route
+  // because the HTML route's slug regex includes '/' and would greedily match
+  // "smoke-test/sidecar" as a slug, stealing the request.
+  const sidecarMatch = urlPath.match(/^\/lessons\/([a-zA-Z0-9_\-/]+)\/sidecar$/);
+  if (req.method === 'GET' && sidecarMatch) {
+    const sidecarSlug = sidecarMatch[1];
+    compileLesson(sidecarSlug, options || {}).then(function (result) {
+      if (!result) return _sendJson(req, res, 404, { error: 'Lesson not found' });
+      _sendJson(req, res, 200, result.sidecar);
+    }).catch(function (err) {
+      _sendJson(req, res, 500, { error: err.message });
+    });
+    return true;
+  }
+
   // GET /lessons/:slug — compile YAML on demand and stream lesson HTML
   const lessonMatch = urlPath.match(/^\/lessons\/([a-zA-Z0-9_\-/]+)$/);
   if (req.method === 'GET' && lessonMatch) {
@@ -454,27 +511,12 @@ function handleRequest(req, res, options) {
           _escapeHtml(slug) + '</p>');
         return;
       }
-      // Lesson HTML: no-cache so devices always get the current compiled version.
-      // The device-side Cache API (via factory-loader.js) handles factory caching.
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       _sendText(req, res, 200, 'text/html; charset=utf-8', result.html);
     }).catch(function (err) {
       log.error('Compile error', { slug, error: err.message });
       _sendText(req, res, 500, 'text/html; charset=utf-8',
         '<h1>Compilation error</h1><pre>' + _escapeHtml(err.message) + '</pre>');
-    });
-    return true;
-  }
-
-  // GET /lessons/:slug/sidecar — serve lesson IR sidecar for theta engine
-  const sidecarMatch = urlPath.match(/^\/lessons\/([a-zA-Z0-9_\-/]+)\/sidecar$/);
-  if (req.method === 'GET' && sidecarMatch) {
-    const sidecarSlug = sidecarMatch[1];
-    compileLesson(sidecarSlug, options || {}).then(function (result) {
-      if (!result) return _sendJson(req, res, 404, { error: 'Lesson not found' });
-      _sendJson(req, res, 200, result.sidecar);
-    }).catch(function (err) {
-      _sendJson(req, res, 500, { error: err.message });
     });
     return true;
   }
@@ -518,12 +560,65 @@ function handleRequest(req, res, options) {
     return true;
   }
 
-  // GET /sw.js — Service Worker
+  // GET /sw.js — Service Worker (version stamped from package.json)
   if (req.method === 'GET' && urlPath === '/sw.js') {
     const swPath = path.join(__dirname, 'sw.js');
-    // Service Worker must not be cached — browsers check it for updates.
-    res.setHeader('Cache-Control', 'no-cache');
-    _sendFile(req, res, swPath, MIME['.js'], 0);
+    try {
+      const raw = fs.readFileSync(swPath, 'utf8');
+      const stamped = raw.replace('__SW_VERSION__', PKG_VERSION);
+      res.setHeader('Cache-Control', 'no-cache');
+      _sendText(req, res, 200, MIME['.js'], stamped);
+    } catch (_e) {
+      res.writeHead(404);
+      res.end('Not found');
+    }
+    return true;
+  }
+
+  // GET /shared.js — PWA shared runtime helpers
+  if (req.method === 'GET' && urlPath === '/shared.js') {
+    _sendFile(req, res, path.join(__dirname, 'pwa', 'shared.js'), MIME['.js'], 86400);
+    return true;
+  }
+
+  // GET /shell-boot.js — PWA shell boot script
+  if (req.method === 'GET' && urlPath === '/shell-boot.js') {
+    _sendFile(req, res, path.join(__dirname, 'pwa', 'shell-boot.js'), MIME['.js'], 86400);
+    return true;
+  }
+
+  // GET /factory-loader.js — factory loader for PWA shell
+  if (req.method === 'GET' && urlPath === '/factory-loader.js') {
+    const loaderPath = resolveFactoryPath(FACTORY_DIR, 'factory-loader.js');
+    _sendFile(req, res, loaderPath, MIME['.js'], 86400);
+    return true;
+  }
+
+  // GET /lesson-data.js — serves lesson data as a script for the PWA shell.
+  // Accepts ?slug=<slug> query parameter, compiles the lesson, and returns
+  // a JS file that sets window.LESSON_DATA.
+  var lessonDataMatch = (req.method === 'GET' && urlPath === '/lesson-data.js');
+  if (lessonDataMatch) {
+    var qs = require('querystring');
+    var query = qs.parse((req.url.split('?')[1]) || '');
+    var slug = query.slug;
+    if (!slug) {
+      _sendText(req, res, 200, MIME['.js'],
+        'var LESSON_DATA = null; /* no slug provided */');
+      return true;
+    }
+    compileLesson(slug, options || {}).then(function (result) {
+      if (!result) {
+        _sendText(req, res, 200, MIME['.js'],
+          'var LESSON_DATA = null; /* lesson not found: ' + _escapeHtml(slug) + ' */');
+        return;
+      }
+      _sendText(req, res, 200, MIME['.js'],
+        'var LESSON_DATA = ' + JSON.stringify(result.lessonIR) + ';');
+    }).catch(function (err) {
+      _sendText(req, res, 200, MIME['.js'],
+        'var LESSON_DATA = null; /* error: ' + _escapeHtml(err.message) + ' */');
+    });
     return true;
   }
 

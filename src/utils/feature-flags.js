@@ -88,13 +88,14 @@ async function getActiveFlagsForStudent(studentId) {
  */
 function registerRoutes(router, ctx) {
   const adminOnly = ctx.adminOnly;
+  const authOnly = ctx.authOnly;
   const handleJsonBody = ctx.handleJsonBody;
   const loadTelemetryEventsAsync = ctx.loadTelemetryEventsAsync;
 
-  router.get('/api/flags', async function (req, res, opts) {
+  router.get('/api/flags', authOnly(async function (req, res, opts) {
     const data = await loadFlags();
     return opts.sendResponse(200, data);
-  });
+  }));
 
   router.put('/api/flags/:name', adminOnly(function (req, res, opts) {
     handleJsonBody(req, opts.sendResponse, async function (payload) {

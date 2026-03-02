@@ -4,26 +4,44 @@
   "title": "AGNI / Open Lesson Standard v1.8",
   "description": "A standard for offline, sensor-rich interactive lessons. Supports forking, adaptive reordering (θ), learner pacing metrics, fill-in-the-blank / matching / ordering assessments, and author-declared feature overrides. Metadata complies with Dublin Core (DC) and LRMI/Schema.org.",
   "type": "object",
-  "required": ["version", "meta", "steps"],
+  "required": [
+    "version",
+    "meta",
+    "steps"
+  ],
   "additionalProperties": false,
   "properties": {
     "version": {
       "type": "string",
-      "enum": ["1.6.0", "1.7.0", "1.8.0"],
+      "enum": [
+        "1.6.0",
+        "1.7.0",
+        "1.8.0"
+      ],
       "description": "Semver version of the OLS spec."
     },
     "meta": {
       "type": "object",
       "description": "Bibliographic, educational, and performance metadata.",
-      "required": ["identifier", "title", "language", "license", "created"],
+      "required": [
+        "identifier",
+        "title",
+        "language",
+        "license",
+        "created"
+      ],
       "additionalProperties": false,
       "properties": {
         "identifier": {
           "type": "string",
           "description": "Unique namespaced ID. Convention: ols:<domain>:<topic>_<variant>_v<N>"
         },
-        "title": { "type": "string" },
-        "description": { "type": "string" },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
         "language": {
           "type": "string",
           "pattern": "^[a-z]{2,3}(-[A-Z]{2,3})?$",
@@ -33,37 +51,68 @@
           "type": "string",
           "description": "Cultural/regional adaptation target (e.g., 'KE', 'US', 'IN-TN'). Two lessons can share a language but differ in locale."
         },
-        "license": { "type": "string" },
-        "created": { "type": "string", "format": "date-time" },
-        "updated": { "type": "string", "format": "date-time" },
+        "license": {
+          "type": "string"
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated": {
+          "type": "string",
+          "format": "date-time"
+        },
         "authors": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "name": { "type": "string" },
-              "email": { "type": "string", "format": "email" },
-              "url": { "type": "string", "format": "uri" }
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
             },
-            "required": ["name"],
+            "required": [
+              "name"
+            ],
             "additionalProperties": false
           }
         },
         "subject": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Structured subject categories (e.g., 'Physics', 'Classical Mechanics')."
         },
         "tags": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Free-form tags for discovery (e.g., 'beginner', 'indoor', 'no-drop')."
         },
         "audience": {
           "type": "object",
           "properties": {
-            "educational_role": { "type": "string", "enum": ["student", "teacher", "parent"] },
-            "typical_age_range": { "type": "string" }
+            "educational_role": {
+              "type": "string",
+              "enum": [
+                "student",
+                "teacher",
+                "parent"
+              ]
+            },
+            "typical_age_range": {
+              "type": "string"
+            }
           },
           "additionalProperties": false
         },
@@ -84,7 +133,10 @@
           "description": "SHA-256 of canonical lesson content (meta + steps, sorted keys). Computed on save; forms the basis of the immutability chain."
         },
         "parent_hash": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "pattern": "^sha256:[a-f0-9]{64}$",
           "description": "Content hash of the previous version of this lesson. Null for the first version. Forms a hash chain for immutability verification."
         },
@@ -102,16 +154,39 @@
           "description": "UTU label (3D coordinate): Spine, Band, Protocol. See docs/specs/utu-architecture.md.",
           "additionalProperties": false,
           "properties": {
-            "class": { "type": "string", "description": "Spine ID (e.g. MAC-2, SCI-1, SOC-3). Canonical: MAC-1..8, SCI-1..7, SOC-1..7." },
-            "spineId": { "type": "string", "description": "Alias for class. Spine ID for the lesson target." },
-            "band": { "type": "integer", "minimum": 1, "maximum": 6, "description": "Developmental band B1-B6." },
-            "protocol": { "type": "integer", "minimum": 1, "maximum": 5, "description": "Pedagogical protocol P1-P5: 1=Transmission, 2=Guided Construction, 3=Apprenticeship, 4=Dev. Sequencing, 5=Meaning Activation." }
+            "class": {
+              "type": "string",
+              "description": "Spine ID (e.g. MAC-2, SCI-1, SOC-3). Canonical: MAC-1..8, SCI-1..7, SOC-1..7."
+            },
+            "spineId": {
+              "type": "string",
+              "description": "Alias for class. Spine ID for the lesson target."
+            },
+            "band": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6,
+              "description": "Developmental band B1-B6."
+            },
+            "protocol": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5,
+              "description": "Pedagogical protocol P1-P5: 1=Transmission, 2=Guided Construction, 3=Apprenticeship, 4=Dev. Sequencing, 5=Meaning Activation."
+            }
           }
         },
         "teaching_mode": {
           "type": "string",
           "description": "Author-declared teaching mode.",
-          "enum": ["socratic", "didactic", "guided_discovery", "narrative", "constructivist", "direct"]
+          "enum": [
+            "socratic",
+            "didactic",
+            "guided_discovery",
+            "narrative",
+            "constructivist",
+            "direct"
+          ]
         },
         "is_group": {
           "type": "boolean",
@@ -125,13 +200,40 @@
           "properties": {
             "blooms_level": {
               "type": "string",
-              "enum": ["remember", "understand", "apply", "analyze", "evaluate", "create"],
+              "enum": [
+                "remember",
+                "understand",
+                "apply",
+                "analyze",
+                "evaluate",
+                "create"
+              ],
               "description": "Bloom's Taxonomy level declared by the author."
             },
             "vark": {
               "oneOf": [
-                { "type": "string", "enum": ["visual", "auditory", "read_write", "kinesthetic"] },
-                { "type": "array", "items": { "type": "string", "enum": ["visual", "auditory", "read_write", "kinesthetic"] }, "minItems": 1 }
+                {
+                  "type": "string",
+                  "enum": [
+                    "visual",
+                    "auditory",
+                    "read_write",
+                    "kinesthetic"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "visual",
+                      "auditory",
+                      "read_write",
+                      "kinesthetic"
+                    ]
+                  },
+                  "minItems": 1
+                }
               ],
               "description": "VARK modality or modalities declared by the author."
             },
@@ -151,7 +253,10 @@
     "fork": {
       "type": "object",
       "description": "Provenance tracking for forked lessons.",
-      "required": ["source_identifier", "source_version"],
+      "required": [
+        "source_identifier",
+        "source_version"
+      ],
       "additionalProperties": false,
       "properties": {
         "source_identifier": {
@@ -169,7 +274,12 @@
         },
         "fork_type": {
           "type": "string",
-          "enum": ["translation", "adaptation", "remix", "correction"],
+          "enum": [
+            "translation",
+            "adaptation",
+            "remix",
+            "correction"
+          ],
           "description": "What kind of fork this is. 'translation' = same content, new language. 'adaptation' = same topic, different cultural context. 'remix' = structural changes. 'correction' = bug/error fix."
         },
         "changes": {
@@ -182,14 +292,28 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "requires": { "type": "array", "items": { "$ref": "#/definitions/skillNode" } },
-        "provides": { "type": "array", "items": { "$ref": "#/definitions/skillNode" } }
+        "requires": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/skillNode"
+          }
+        },
+        "provides": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/skillNode"
+          }
+        }
       }
     },
-    "gate": { "$ref": "#/definitions/gateLogic" },
+    "gate": {
+      "$ref": "#/definitions/gateLogic"
+    },
     "steps": {
       "type": "array",
-      "items": { "$ref": "#/definitions/step" },
+      "items": {
+        "$ref": "#/definitions/step"
+      },
       "minItems": 1
     },
     "signatures": {
@@ -197,9 +321,15 @@
       "items": {
         "type": "object",
         "properties": {
-          "role": { "type": "string" },
-          "entity": { "type": "string" },
-          "signature": { "type": "string" }
+          "role": {
+            "type": "string"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "signature": {
+            "type": "string"
+          }
         },
         "additionalProperties": false
       }
@@ -208,23 +338,46 @@
   "definitions": {
     "skillNode": {
       "type": "object",
-      "required": ["skill"],
+      "required": [
+        "skill"
+      ],
       "additionalProperties": false,
       "properties": {
-        "skill": { "type": "string" },
-        "level": { "type": "integer", "default": 1 }
+        "skill": {
+          "type": "string"
+        },
+        "level": {
+          "type": "integer",
+          "default": 1
+        }
       }
     },
     "gateLogic": {
       "type": "object",
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "additionalProperties": false,
       "properties": {
-        "type": { "type": "string", "enum": ["quiz", "manual_verification"] },
-        "skill_target": { "type": "string" },
-        "question": { "type": "string" },
-        "expected_answer": { "type": "string" },
-        "on_fail": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": [
+            "quiz",
+            "manual_verification"
+          ]
+        },
+        "skill_target": {
+          "type": "string"
+        },
+        "question": {
+          "type": "string"
+        },
+        "expected_answer": {
+          "type": "string"
+        },
+        "on_fail": {
+          "type": "string"
+        },
         "passing_score": {
           "type": "number",
           "minimum": 0,
@@ -240,7 +393,10 @@
     },
     "step": {
       "type": "object",
-      "required": ["id", "type"],
+      "required": [
+        "id",
+        "type"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -250,40 +406,74 @@
         },
         "type": {
           "type": "string",
-          "enum": ["instruction", "hardware_trigger", "quiz", "fill_blank", "matching", "ordering", "completion"],
+          "enum": [
+            "instruction",
+            "hardware_trigger",
+            "quiz",
+            "fill_blank",
+            "matching",
+            "ordering",
+            "completion"
+          ],
           "description": "instruction: text/content; hardware_trigger: sensor gate; quiz: MCQ with answers; fill_blank: cloze with ___ placeholders; matching: pair left↔right items; ordering: arrange items in sequence; completion: lesson-complete screen."
         },
-        "content": { "type": "string" },
-        "sensor": { "type": "string" },
-        "threshold": { "type": "string" },
+        "content": {
+          "type": "string"
+        },
+        "sensor": {
+          "type": "string"
+        },
+        "threshold": {
+          "type": "string"
+        },
         "feedback": {
           "oneOf": [
-            { "type": "string" },
+            {
+              "type": "string"
+            },
             {
               "type": "object",
               "properties": {
-                "correct": { "type": "string" },
-                "incorrect": { "type": "string" }
+                "correct": {
+                  "type": "string"
+                },
+                "incorrect": {
+                  "type": "string"
+                }
               },
               "additionalProperties": false
             }
           ],
           "description": "Feedback text (string) or per-outcome feedback object with 'correct' and 'incorrect' messages."
         },
-        "answer_options": { "type": "array", "items": { "type": "string" } },
-        "correct_index": { "type": "integer" },
+        "answer_options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "correct_index": {
+          "type": "integer"
+        },
         "blanks": {
           "type": "array",
           "description": "For fill_blank steps: one entry per ___ placeholder in content. Each blank defines the correct answer and optional accepted alternatives.",
           "items": {
             "type": "object",
-            "required": ["answer"],
+            "required": [
+              "answer"
+            ],
             "additionalProperties": false,
             "properties": {
-              "answer": { "type": "string", "description": "Canonical correct answer." },
+              "answer": {
+                "type": "string",
+                "description": "Canonical correct answer."
+              },
               "accept": {
                 "type": "array",
-                "items": { "type": "string" },
+                "items": {
+                  "type": "string"
+                },
                 "description": "Additional accepted spellings/variants (case-insensitive match at runtime)."
               }
             }
@@ -294,23 +484,37 @@
           "description": "For matching steps: each pair links a left term to a right term. The player shuffles the right column.",
           "items": {
             "type": "object",
-            "required": ["left", "right"],
+            "required": [
+              "left",
+              "right"
+            ],
             "additionalProperties": false,
             "properties": {
-              "left": { "type": "string", "description": "Left-column item (displayed in order)." },
-              "right": { "type": "string", "description": "Right-column item (shuffled for the student)." }
+              "left": {
+                "type": "string",
+                "description": "Left-column item (displayed in order)."
+              },
+              "right": {
+                "type": "string",
+                "description": "Right-column item (shuffled for the student)."
+              }
             }
           }
         },
         "items": {
           "type": "array",
           "description": "For ordering steps: list of items to arrange. The player shuffles them; the student drags them into the correct sequence.",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "correct_order": {
           "type": "array",
           "description": "For ordering steps: zero-based indices defining the correct arrangement of 'items'. E.g. [0,1,2] means items are already in correct order.",
-          "items": { "type": "integer", "minimum": 0 }
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
         },
         "expected_duration": {
           "type": "string",
@@ -348,23 +552,64 @@
           "type": "object",
           "description": "SVGFactory visual specification. Rendered by the player via svg-registry.js. Can be a single factory (factory + opts) or a compose layer (compose: true + layers[]).",
           "properties": {
-            "factory": { "type": "string", "description": "Registered factory name (e.g. timeGraph, polygonDynamic, barGraph)." },
-            "opts": { "type": "object", "description": "Factory-specific options. See svg-registry.js for valid keys per factory." },
-            "compose": { "type": "boolean", "description": "If true, layers[] is used instead of factory/opts." },
+            "factory": {
+              "type": "string",
+              "enum": [
+                "venn",
+                "barGraph",
+                "pieChart",
+                "numberLine",
+                "balanceScale",
+                "clockFace",
+                "flowMap",
+                "polygon",
+                "axis",
+                "tree",
+                "numberLineDynamic",
+                "clockFaceDynamic",
+                "timeGraph",
+                "arrowMap",
+                "gauge",
+                "polygonDynamic",
+                "cartesianGrid",
+                "unitCircle"
+              ],
+              "description": "Registered factory name: venn, barGraph, pieChart, numberLine, balanceScale, clockFace, flowMap, polygon, axis, tree, numberLineDynamic, clockFaceDynamic, timeGraph, arrowMap, gauge, polygonDynamic, cartesianGrid, unitCircle."
+            },
+            "opts": {
+              "type": "object",
+              "description": "Factory-specific options. See svg-registry.js for valid keys per factory."
+            },
+            "compose": {
+              "type": "boolean",
+              "description": "If true, layers[] is used instead of factory/opts."
+            },
             "layers": {
               "type": "array",
               "items": {
                 "type": "object",
                 "properties": {
-                  "factory": { "type": "string" },
-                  "opts": { "type": "object" },
-                  "name": { "type": "string" }
+                  "factory": {
+                    "type": "string"
+                  },
+                  "opts": {
+                    "type": "object"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
                 }
               },
               "description": "Array of factory layers when compose is true."
             },
-            "w": { "type": "integer", "description": "Viewport width override (shared across layers in compose mode)." },
-            "h": { "type": "integer", "description": "Viewport height override." }
+            "w": {
+              "type": "integer",
+              "description": "Viewport width override (shared across layers in compose mode)."
+            },
+            "h": {
+              "type": "integer",
+              "description": "Viewport height override."
+            }
           }
         }
       }

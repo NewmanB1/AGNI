@@ -167,7 +167,7 @@ AGNI/
 
 ## Technical debt and conventions
 
-- **Architecture:** The canonical architecture doc is **`docs/ARCHITECTURE.md`**. The root **`ARCHITECTURE.md`** is the implementation overview; keep both in sync on key decisions.
+- **Architecture:** The canonical architecture doc is **`docs/ARCHITECTURE.md`**. The root `ARCHITECTURE.md` redirects there.
 - **Types:** Central place is **`src/types/index.d.ts`** (LessonIR, LessonSidecar, LMSState, etc.). Keep it aligned with `schemas/*.schema.json` and with compiler/engine usage. See **`docs/playbooks/typing-and-languages.md`** for TS vs JS and where types are enforced.
 - **Binary / base64:** **`src/utils/binary.js`** and **`src/runtime/binary-utils.js`** — use these for base64/bytes and UTF-8 helpers instead of ad-hoc logic in crypto or runtime.
 - **Validation:** Lesson builds require **schema validation** (Ajv). If validation fails with "Schema validation unavailable", run `npm install` so `ajv` and `ajv-formats` are present.

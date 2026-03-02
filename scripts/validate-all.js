@@ -12,8 +12,20 @@ const schemaPath = path.resolve(__dirname, '..', 'schemas', 'ols.schema.json');
 
 console.log('🔍 Validating all .yaml lessons...\n');
 
-const files = fs.readdirSync(lessonsDir)
-  .filter(f => f.endsWith('.yaml') || f.endsWith('.yml'));
+function collectYaml(dir, prefix) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  let result = [];
+  for (const e of entries) {
+    if (e.isDirectory()) {
+      result = result.concat(collectYaml(path.join(dir, e.name), prefix ? prefix + e.name + '/' : e.name + '/'));
+    } else if (e.name.endsWith('.yaml') || e.name.endsWith('.yml')) {
+      result.push({ rel: (prefix || '') + e.name, full: path.join(dir, e.name) });
+    }
+  }
+  return result;
+}
+
+const files = collectYaml(lessonsDir, '');
 
 if (files.length === 0) {
   console.log('No .yaml or .yml files found in lessons/');
@@ -37,9 +49,9 @@ function validateThresholds(data, file) {
   return errors;
 }
 
-files.forEach(file => {
-  const fullPath = path.join(lessonsDir, file);
-  const tmpJson = path.resolve(__dirname, '..', `tmp_${file}.json`);
+files.forEach(({ rel: file, full: fullPath }) => {
+  const safeFile = file.replace(/[\\/]/g, '_');
+  const tmpJson = path.resolve(__dirname, '..', `tmp_${safeFile}.json`);
 
   console.log(`→ Checking ${file}`);
 

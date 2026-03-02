@@ -23,7 +23,10 @@ function buildCspMeta(nonce) {
     "img-src 'self' data:; " +
     "connect-src 'self'; " +
     "font-src 'self'; " +
-    "media-src 'self'" +
+    "media-src 'self'; " +
+    "object-src 'none'; " +
+    "base-uri 'self'; " +
+    "form-action 'self'" +
     '">';
 }
 

@@ -1,0 +1,150 @@
+# yaml-language-server: $schema=../../schemas/ols.schema.json
+#
+# Comprehensive example demonstrating every OLS step type.
+# Use this as a reference when building lessons.
+
+version: "1.8.0"
+
+meta:
+  identifier: ols:examples:all_step_types_v1
+  title: All Step Types Demo
+  description: Demonstrates every step type available in OLS — instruction, quiz, fill_blank, matching, ordering, hardware_trigger, and completion.
+  language: en
+  license: CC-BY-SA-4.0
+  created: "2026-03-01T00:00:00Z"
+  difficulty: 2
+  teaching_mode: guided_discovery
+  tags: [example, reference, all-types]
+  time_required: PT15M
+  utu:
+    class: SCI-1
+    band: 2
+    protocol: 2
+
+ontology:
+  requires:
+    - skill: ols:tutorial:basics
+  provides:
+    - skill: ols:tutorial:all_step_types
+      level: 1
+
+gate:
+  type: quiz
+  skill_target: ols:tutorial:basics
+  question: What format are AGNI lessons written in?
+  expected_answer: YAML
+
+steps:
+  # ── INSTRUCTION ──────────────────────────────────────────────────────────
+  - id: intro
+    type: instruction
+    content: |
+      ## Step Types in AGNI
+
+      This lesson demonstrates every step type. Each section below
+      shows a different type so you can see how it works.
+
+      Markdown is supported: **bold**, *italic*, `code`, and lists:
+
+      1. Instruction — text content
+      2. Quiz — multiple choice
+      3. Fill-in-the-blank
+      4. Matching — pair items
+      5. Ordering — sort items
+      6. Hardware trigger — sensor challenge
+      7. Completion — lesson summary
+
+  # ── QUIZ ─────────────────────────────────────────────────────────────────
+  - id: quiz_demo
+    type: quiz
+    content: "Which planet is closest to the Sun?"
+    answer_options:
+      - Venus
+      - Mercury
+      - Earth
+      - Mars
+    correct_index: 1
+    max_attempts: 2
+    on_success: "skip_to:fill_blank_demo"
+    on_fail: "skip_to:quiz_hint"
+
+  - id: quiz_hint
+    type: instruction
+    content: |
+      **Hint:** Think about the order of planets from the Sun outward:
+      Mercury, Venus, Earth, Mars...
+
+  # ── FILL IN THE BLANK ───────────────────────────────────────────────────
+  - id: fill_blank_demo
+    type: fill_blank
+    content: "The chemical formula for water is ___."
+    blanks:
+      - answer: H2O
+        accept:
+          - h2o
+
+  # ── MATCHING ─────────────────────────────────────────────────────────────
+  - id: matching_demo
+    type: matching
+    content: "Match each planet to its position from the Sun."
+    pairs:
+      - left: Mercury
+        right: "1st"
+      - left: Venus
+        right: "2nd"
+      - left: Earth
+        right: "3rd"
+      - left: Mars
+        right: "4th"
+
+  # ── ORDERING ─────────────────────────────────────────────────────────────
+  - id: ordering_demo
+    type: ordering
+    content: "Put these steps of the scientific method in order."
+    items:
+      - Observe a phenomenon
+      - Form a hypothesis
+      - Design an experiment
+      - Collect data
+      - Draw conclusions
+    correct_order: [0, 1, 2, 3, 4]
+
+  # ── HARDWARE TRIGGER (sensor) ────────────────────────────────────────────
+  - id: sensor_demo
+    type: hardware_trigger
+    sensor: accel.total
+    threshold: "accel.total > 2.0g"
+    feedback: "vibration:short"
+    content: |
+      ## Sensor Challenge
+
+      **Shake your phone** to continue.
+
+      The accelerometer detects motion — when the total acceleration
+      exceeds 2.0g, the step advances automatically.
+    on_fail: "skip_to:sensor_skip"
+
+  - id: sensor_skip
+    type: instruction
+    content: |
+      No accelerometer available — that's okay! On devices without
+      sensors, the `on_fail` directive sends learners here instead
+      of getting stuck.
+
+  # ── COMPLETION ───────────────────────────────────────────────────────────
+  - id: done
+    type: completion
+    content: |
+      ## All Done!
+
+      You've now seen every step type in action:
+
+      - **instruction** — text with Markdown
+      - **quiz** — multiple choice with attempts and branching
+      - **fill_blank** — text input with accepted alternatives
+      - **matching** — pair-based association
+      - **ordering** — drag-to-sort sequencing
+      - **hardware_trigger** — sensor-based physical interaction
+      - **completion** — lesson wrap-up
+
+      Copy this file and replace the content to build your own lesson.

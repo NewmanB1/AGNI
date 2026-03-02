@@ -19,7 +19,7 @@ Eight phases addressing critical bugs, data integrity, configuration drift, sile
 | **R5** | **Done** | ARCHITECTURE.md section ordering fixed; 4 stale cross-references removed; hardware baseline standardized to Android 6.0+; teacher override evaluation updated; LMS playbook Node version fixed; AI artifact removed from threshold_grammar.md; version comment removed from config.js; docs/README.md index created. |
 | **R6** | **Done** | Sentry CORS wildcard fallback removed; MD5 replaced with SHA-256 in feature flags; `migrateLegacyPins` enhanced (reports SHA-256 count) and wired into theta.js startup; `generateCode` exported from accounts. 633 tests pass. |
 | **R7** | **Done** | 6 new JSON Schemas: hub-config, groups, feature-flags, learning-paths, review-schedule, telemetry-events. All data files validate. Total schema coverage: 9/13 data files (remaining: mastery_summary, parent-links, recommendation_overrides, utu-constants). |
-| **R8** | **Partial** | CI `build.yml` fixed (node-version-file); `build:engine` step removed from both CI workflows; `tsconfig.engine.json` deleted. Remaining: shared.js split, file locking, sentry retention, cursor rules. |
+| **R8** | **Partial** | CI `build.yml` fixed (node-version-file); `build:engine` step removed from both CI workflows; `tsconfig.engine.json` deleted. shared.js split done (R9 S4.8), file locking done (R9 S3.4), cursor rules done. Remaining: sentry retention (→ R16 C3.2), PageRank cache cleanup (→ R16 C3.3). |
 
 ---
 

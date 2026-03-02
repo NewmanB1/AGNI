@@ -74,6 +74,7 @@ const config = {
 
   analyseAfter:       intVal('AGNI_ANALYSE_AFTER', 50),
   analyseCron:        strVal('AGNI_ANALYSE_CRON', '02:00'),
+  sentryRetentionDays: intVal('AGNI_SENTRY_RETENTION_DAYS', 90),
 
   markovWeight:       floatVal('AGNI_MARKOV_WEIGHT', 0.15),
   pagerankWeight:     floatVal('AGNI_PAGERANK_WEIGHT', 0.10),

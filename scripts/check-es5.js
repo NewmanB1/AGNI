@@ -3,14 +3,24 @@
 
 /**
  * Validates that src/runtime/ files use strict ES5 only.
- * Checks both syntax patterns and ES6+ API usage that
- * non-updatable Android 6.0 WebViews (Chrome 44) may lack.
+ *
+ * Target: Android 6.0 Marshmallow WebView (Chrome 44).
+ *
+ * Three categories:
+ *   SYNTAX  — ES6 syntax that causes parse errors. Always an error.
+ *   API     — ES6+ APIs not available in Chrome 44 without a polyfill.
+ *             Error UNLESS covered by src/runtime/polyfills.js.
+ *   NATIVE  — APIs not in the ES5 spec but available natively in Chrome 44+.
+ *             (Promise, Map, Set, etc.) Informational only — not errors.
+ *
+ * polyfills.js is exempt from API checks because it necessarily references
+ * the APIs it is polyfilling.
  */
 
 var fs = require('fs');
 var path = require('path');
 
-var runtimeDir = path.join(__dirname, '..', 'src', 'runtime');
+var runtimeDir = require('@agni/runtime').RUNTIME_ROOT;
 
 function collectJsFiles(dir, prefix) {
   var results = [];
@@ -22,6 +32,7 @@ function collectJsFiles(dir, prefix) {
     if (stat.isDirectory()) {
       results = results.concat(collectJsFiles(full, rel));
     } else if (entries[i].endsWith('.js')) {
+      if (rel === 'index.js') continue;  // Node-only barrel — not a browser file
       results.push(rel);
     }
   }
@@ -29,12 +40,13 @@ function collectJsFiles(dir, prefix) {
 }
 var files = collectJsFiles(runtimeDir, '');
 
+// ── Syntax patterns (always errors — cause parse failures) ──────────────────
 var SYNTAX_PATTERNS = [
   { re: /\b(let|const)\s/,         name: 'let/const' },
   { re: /=>/,                       name: 'arrow function' },
   { re: /`[^`]*`/,                  name: 'template literal' },
   { re: /\bclass\s/,               name: 'class keyword' },
-  { re: /\.\.\./,                   name: 'spread/rest operator' },
+  { re: /\.\.\.\w/,                 name: 'spread/rest operator' },
   { re: /\bfor\s*\(\s*(?:var\s+)?(?:\w+)\s+of\b/, name: 'for...of loop' },
   { re: /\{\s*\[/,                  name: 'computed property' },
   { re: /\bfunction\s*\*\s/,       name: 'generator function' },
@@ -42,64 +54,120 @@ var SYNTAX_PATTERNS = [
   { re: /\bawait\s/,               name: 'await keyword' }
 ];
 
-var API_PATTERNS = [
+// ── API patterns NOT in Chrome 44 — errors unless polyfilled ────────────────
+// Polyfilled APIs (covered by src/runtime/polyfills.js) are flagged as warnings
+// in files other than polyfills.js itself, and skipped entirely in polyfills.js.
+var POLYFILLED_APIS = [
   { re: /\bObject\.assign\b/,      name: 'Object.assign' },
+  { re: /\.find\s*\(/,             name: '.find()' },
+  { re: /\.padStart\s*\(/,         name: '.padStart()' },
+  { re: /\.repeat\s*\(/,           name: '.repeat()' },
+];
+
+var UNPOLYFILLED_APIS = [
   { re: /\bObject\.entries\b/,     name: 'Object.entries' },
   { re: /\bObject\.values\b/,      name: 'Object.values' },
   { re: /\bObject\.keys\b/,        name: null },  // ES5 — skip
   { re: /\bArray\.from\b/,         name: 'Array.from' },
   { re: /\bArray\.of\b/,           name: 'Array.of' },
   { re: /\.includes\s*\(/,         name: '.includes()' },
-  { re: /\.find\s*\(/,             name: '.find()' },
   { re: /\.findIndex\s*\(/,        name: '.findIndex()' },
+  { re: /\bSymbol\b/,              name: 'Symbol' },
+  { re: /\bNumber\.isFinite\b/,    name: 'Number.isFinite' },
+  { re: /\bNumber\.isNaN\b/,       name: 'Number.isNaN' },
+  { re: /\bNumber\.isInteger\b/,   name: 'Number.isInteger' }
+];
+
+// ── APIs native to Chrome 44 but not ES5 — informational only ───────────────
+var NATIVE_44_APIS = [
   { re: /\.startsWith\s*\(/,       name: '.startsWith()' },
   { re: /\.endsWith\s*\(/,         name: '.endsWith()' },
-  { re: /\.repeat\s*\(/,           name: '.repeat()' },
-  { re: /\bSymbol\b/,              name: 'Symbol' },
   { re: /\bnew\s+Map\b/,           name: 'Map constructor' },
   { re: /\bnew\s+Set\b/,           name: 'Set constructor' },
   { re: /\bnew\s+WeakMap\b/,       name: 'WeakMap constructor' },
   { re: /\bnew\s+WeakSet\b/,       name: 'WeakSet constructor' },
   { re: /\bnew\s+Promise\b/,       name: 'Promise constructor' },
   { re: /\bPromise\.(all|race|resolve|reject)\b/, name: 'Promise static' },
-  { re: /\bNumber\.isFinite\b/,    name: 'Number.isFinite' },
-  { re: /\bNumber\.isNaN\b/,       name: 'Number.isNaN' },
-  { re: /\bNumber\.isInteger\b/,   name: 'Number.isInteger' }
 ];
 
-var allPatterns = SYNTAX_PATTERNS.concat(API_PATTERNS.filter(function (p) { return p.name !== null; }));
+function stripTrailingComment(line) {
+  var inStr = false;
+  var strCh = '';
+  for (var i = 0; i < line.length; i++) {
+    var ch = line[i];
+    if (inStr) {
+      if (ch === '\\') { i++; continue; }
+      if (ch === strCh) inStr = false;
+    } else {
+      if (ch === '"' || ch === "'") { inStr = true; strCh = ch; }
+      else if (ch === '/' && line[i + 1] === '/') return line.substring(0, i);
+    }
+  }
+  return line;
+}
 
 var failed = false;
+var warnCount = 0;
 
 files.forEach(function (file) {
+  var isPolyfillFile = (file === 'polyfills.js');
   var filePath = path.join(runtimeDir, file.replace(/\//g, path.sep));
   var content = fs.readFileSync(filePath, 'utf8');
   var lines = content.split('\n');
   var errors = [];
+  var warnings = [];
 
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i];
     if (/^\s*\/\//.test(line) || /^\s*\*/.test(line)) continue;
 
-    for (var p = 0; p < allPatterns.length; p++) {
-      if (allPatterns[p].re.test(line)) {
-        errors.push('  line ' + (i + 1) + ': ' + allPatterns[p].name + ' — ' + line.trim().substring(0, 80));
+    var codePart = stripTrailingComment(line);
+
+    var p;
+    for (p = 0; p < SYNTAX_PATTERNS.length; p++) {
+      if (SYNTAX_PATTERNS[p].re.test(codePart)) {
+        errors.push('  line ' + (i + 1) + ': [SYNTAX] ' + SYNTAX_PATTERNS[p].name + ' — ' + codePart.trim().substring(0, 80));
+      }
+    }
+
+    if (!isPolyfillFile) {
+      for (p = 0; p < POLYFILLED_APIS.length; p++) {
+        if (POLYFILLED_APIS[p].re.test(codePart)) {
+          warnings.push('  line ' + (i + 1) + ': [POLYFILLED] ' + POLYFILLED_APIS[p].name + ' — ' + codePart.trim().substring(0, 80));
+        }
+      }
+    }
+
+    for (p = 0; p < UNPOLYFILLED_APIS.length; p++) {
+      if (UNPOLYFILLED_APIS[p].name === null) continue;
+      if (UNPOLYFILLED_APIS[p].re.test(codePart)) {
+        errors.push('  line ' + (i + 1) + ': [API] ' + UNPOLYFILLED_APIS[p].name + ' — ' + codePart.trim().substring(0, 80));
       }
     }
   }
 
   if (errors.length > 0) {
-    console.error('FAIL ' + file + ' (' + errors.length + ' issues):');
+    console.error('FAIL ' + file + ' (' + errors.length + ' errors):');
     errors.forEach(function (e) { console.error(e); });
+    if (warnings.length > 0) {
+      warnings.forEach(function (w) { console.log('  ' + w.trim()); });
+    }
     failed = true;
+  } else if (warnings.length > 0) {
+    console.log('OK   ' + file + ' (' + warnings.length + ' polyfilled APIs used)');
+    warnCount += warnings.length;
   } else {
     console.log('OK   ' + file);
   }
 });
 
+console.log('');
 if (failed) {
-  console.error('\nES5 check failed. Runtime files must be strict ES5 for Chrome 44+ WebViews.');
+  console.error('ES5 check FAILED. Runtime files must be compatible with Chrome 44 WebViews.');
+  console.error('  [SYNTAX] errors = ES6 syntax that causes parse errors — must be removed.');
+  console.error('  [API] errors = ES6+ APIs not in Chrome 44 and not polyfilled — must be fixed.');
+  console.error('  [POLYFILLED] warnings = APIs covered by polyfills.js (loaded first) — OK.');
   process.exit(1);
 } else {
-  console.log('\nAll runtime files pass ES5 check.');
+  console.log('All runtime files pass ES5 check for Chrome 44.' + (warnCount > 0 ? ' (' + warnCount + ' polyfill-covered API usages noted)' : ''));
 }

@@ -1,4 +1,15 @@
-# Sprint R11: Authentication Layer, Security Remediation & Verification
+# ~~Sprint R11: Authentication Layer, Security Remediation & Verification~~
+
+> **SUPERSEDED** — This document is retired as of 2026-03-01. A verification
+> pass found that ~80% of items listed here were already fixed by R10 and R15
+> but this document was never updated. The remaining verified-still-open bugs
+> have been moved to **`docs/SPRINT-R16-OPEN-BUGS.md`** with current file paths
+> and line numbers. Do not use this document for planning.
+
+---
+
+<details>
+<summary>Original content (archived)</summary>
 
 Addresses findings from the 2026-03-01 comprehensive codebase re-audit.
 Previous sprints (R9, R10) claimed fixes that were not applied or were incomplete.
@@ -258,3 +269,5 @@ exploitable right now with zero authentication.
 - **Verification rule** — `.cursor/rules/sprint-verification.md`
 - **Existing CI gates** — `scripts/check-dead-files.js`, `scripts/check-dts-arity.js`, `scripts/check-innerhtml.js`
 - **Regression tests** — `tests/unit/regressions.test.js` (7 failing = 7 known bugs)
+
+</details>

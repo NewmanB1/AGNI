@@ -5,12 +5,14 @@ const assert = require('node:assert/strict');
 const browserGlobals = require('../helpers/browser-globals');
 const { setupGlobals, teardownGlobals, makeElement } = browserGlobals;
 
-const modulePath = require.resolve('../../src/runtime/ui/a11y');
+const shimPath = require.resolve('../../src/runtime/ui/a11y');
+const canonicalPath = require.resolve('@agni/runtime/ui/a11y');
 
 function storage() { return browserGlobals.storage; }
 
 function loadA11y() {
-  delete require.cache[modulePath];
+  delete require.cache[shimPath];
+  delete require.cache[canonicalPath];
   delete globalThis.AGNI_A11Y;
   require('../../src/runtime/ui/a11y');
   return globalThis.AGNI_A11Y;

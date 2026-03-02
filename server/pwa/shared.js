@@ -6,7 +6,7 @@
 
   function escapeAttr(val) {
     if (typeof val !== 'string') val = String(val == null ? '' : val);
-    return val.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return val.replace(/\x00/g, '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/`/g, '&#96;');
   }
 
   var svgGenerators = {
@@ -21,13 +21,50 @@
     }
   };
 
+  var SCRIPT_RE = /<script[\s>][\s\S]*?<\/script\s*>/gi;
+  var EVENT_RE = /\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
+  var JS_URI_RE = /javascript\s*:/gi;
+
+  function _decodeNumericEntities(str) {
+    return str
+      .replace(/&colon;/gi, ':')
+      .replace(/&#x([0-9a-fA-F]+);/gi, function (match, hex) {
+        var code = parseInt(hex, 16);
+        if (code === 38 || code === 60 || code === 62 || code === 34 || code === 39) return match;
+        return String.fromCharCode(code);
+      })
+      .replace(/&#(\d+);/g, function (match, dec) {
+        var code = parseInt(dec, 10);
+        if (code === 38 || code === 60 || code === 62 || code === 34 || code === 39) return match;
+        return String.fromCharCode(code);
+      });
+  }
+
+  function sanitizeHtml(html) {
+    if (typeof html !== 'string') return '';
+    var normalized = _decodeNumericEntities(html.replace(/\x00/g, ''));
+    return normalized
+      .replace(SCRIPT_RE, '')
+      .replace(EVENT_RE, '')
+      .replace(JS_URI_RE, '');
+  }
+
+  function setSafeHtml(element, html) {
+    element.innerHTML = sanitizeHtml(html);
+  }
+
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { svgGenerators: svgGenerators, escapeAttr: escapeAttr };
+    module.exports = { svgGenerators: svgGenerators, escapeAttr: escapeAttr, sanitizeHtml: sanitizeHtml };
   }
 
   if (typeof root.window !== 'undefined') {
     root.svgGenerators = svgGenerators;
     root.escapeAttr = escapeAttr;
     root.AGNI_SHARED_LOADED = true;
+    root.AGNI_SHARED = {
+      setSafeHtml: setSafeHtml,
+      sanitizeHtml: sanitizeHtml,
+      escapeAttr: escapeAttr
+    };
   }
 })(typeof self !== 'undefined' ? self : this);

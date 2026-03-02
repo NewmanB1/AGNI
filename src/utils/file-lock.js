@@ -16,7 +16,7 @@ const log = createLogger('file-lock');
 
 const STALE_TIMEOUT_MS = 10000;
 const RETRY_INTERVAL_MS = 50;
-const MAX_RETRIES = 100;
+const MAX_RETRIES = 300;
 
 function lockPath(filePath) {
   return filePath + '.lock';

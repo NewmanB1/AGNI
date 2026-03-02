@@ -74,7 +74,7 @@ A raw YAML editor gives maximum flexibility but no guardrails. Authors would nee
 - [ ] **Freeze OLS schema** — Decide which schema version is "1.0" and document it (e.g. in `schemas/ols.schema.json` or a new `docs/spec-v1.md`). Deprecate or version any fields that will change post-1.0.
 - [ ] **Document breaking vs additive** — Clarify what changes are breaking (e.g. removing a required field) vs additive (e.g. new optional meta field).
 - [ ] **Reference implementation** — AGNI is the reference implementation; ensure `npm run validate`, `npm run test`, and `npm run test:graph` pass and are required for "OLS 1.0 compliant."
-- [ ] **Changelog** — Maintain a CHANGELOG or release notes so downstream and translators see what changed between versions.
+- [ ] **Changelog** — Maintain a CHANGELOG or release notes so downstream and translators see what changed between versions. (Deferred until first tagged release; can be auto-generated from git tags.)
 
 ### References
 

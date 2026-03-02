@@ -116,5 +116,4 @@ When adding or changing behaviour, keep logic in the pure core and reserve edges
 - **Current schemas:** `schemas/ols.schema.json`, `schemas/graph_weights.schema.json`, **`schemas/governance-policy.schema.json`** (Phase 2)
 - **Types:** `src/types/index.d.ts` (today’s manual types; future: could be generated or kept in sync with schemas)
 - **API contract:** `docs/api-contract.md` (external behaviour; could be schema/OpenAPI later)
-- **Evaluation:** `docs/ARCHITECTURE-EVALUATION.md` (goals and consumer alignment)
-- **Next sprints (refactor-oriented):** **`docs/SPRINT-NEXT.md`** — section “Next sprints with an eye on the refactor” gives a phased order: Phase 1 (lock behaviour: D, E, H), Phase 2 (schema + pure pipelines: K compiler, L governance, M engine), Phase 3 (F, G, N). Use it when planning work that moves toward this vision.
+- **Sprint plan:** `docs/SPRINT-PLAN.md` — tracks all completed and planned sprints — section “Next sprints with an eye on the refactor” gives a phased order: Phase 1 (lock behaviour: D, E, H), Phase 2 (schema + pure pipelines: K compiler, L governance, M engine), Phase 3 (F, G, N). Use it when planning work that moves toward this vision.

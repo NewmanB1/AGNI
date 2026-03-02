@@ -69,6 +69,10 @@ jobs:
         run: npm run verify:dts
       - name: Verify no unsafe innerHTML in runtime
         run: npm run verify:innerhtml
+      - name: Verify factory load order (polyfills first)
+        run: npm run verify:factory-order
+      - name: Verify schema enums match plugin registry
+        run: npm run verify:schema-sync
       - name: Validate OLS lessons and data files
         run: node scripts/validate-schemas.js
       # Build all lessons, not just gravity.yaml [R10 P3.4]

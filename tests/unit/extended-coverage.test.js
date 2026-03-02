@@ -319,6 +319,17 @@ describe('Extended API tests', () => {
     process.env.AGNI_DATA_DIR = dataDir;
     process.env.AGNI_SERVE_DIR = path.join(dataDir, 'serve');
     process.env.AGNI_HUB_API_KEY = EXT_TEST_HUB_KEY;
+
+    // Clear ALL project modules from cache so env-config picks up the new DATA_DIR.
+    // The theta module tree is large — partial clearing leaves stale references.
+    var rootNorm = path.resolve(__dirname, '../..').replace(/\\/g, '/');
+    Object.keys(require.cache).forEach(function (key) {
+      var norm = key.replace(/\\/g, '/');
+      if (norm.startsWith(rootNorm) && !norm.includes('node_modules')) {
+        delete require.cache[key];
+      }
+    });
+
     fs.mkdirSync(process.env.AGNI_SERVE_DIR, { recursive: true });
     fs.writeFileSync(path.join(dataDir, 'mastery-summary.json'), JSON.stringify({ students: {} }));
     fs.writeFileSync(path.join(dataDir, 'lesson-index.json'), JSON.stringify([]));
@@ -344,6 +355,13 @@ describe('Extended API tests', () => {
   after(() => {
     if (server) server.close();
     fs.rmSync(dataDir, { recursive: true, force: true });
+    delete process.env.AGNI_DATA_DIR;
+    delete process.env.AGNI_SERVE_DIR;
+    delete process.env.AGNI_HUB_API_KEY;
+    delete require.cache[require.resolve('../../src/utils/env-config')];
+    delete require.cache[require.resolve('../../src/services/accounts')];
+    delete require.cache[require.resolve('../../hub-tools/context/auth')];
+    delete require.cache[require.resolve('../../hub-tools/context/services')];
   });
 
   it('GET /health returns status ok', async () => {
@@ -388,7 +406,7 @@ describe('Extended API tests', () => {
   });
 
   it('GET /api/governance/catalog returns catalog', async () => {
-    const res = await apiRequest(port, 'GET', '/api/governance/catalog');
+    const res = await apiRequest(port, 'GET', '/api/governance/catalog', null, adminToken);
     assert.equal(res.status, 200);
     assert.ok(Array.isArray(res.body.lessonIds));
   });

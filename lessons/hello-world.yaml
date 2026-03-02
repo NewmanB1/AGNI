@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=../schemas/ols.schema.json
+#
+# Hello World lesson — the simplest possible AGNI lesson.
+# No sensors, no gate, no ontology. Just text and a quiz.
+# Copy this file as your starting point.
+
+version: "1.8.0"
+
+meta:
+  identifier: ols:tutorial:hello_world_v1
+  title: Hello World
+  description: Your first AGNI lesson — a simple text and quiz example.
+  language: en
+  license: CC-BY-SA-4.0
+  created: "2026-03-01T00:00:00Z"
+  difficulty: 1
+  tags: [tutorial, beginner, template]
+  time_required: PT5M
+
+steps:
+  - id: welcome
+    type: instruction
+    content: |
+      ## Welcome!
+
+      This is your first AGNI lesson. Each **step** shows content
+      to the learner. Steps can be text, quizzes, or sensor challenges.
+
+      Tap **Next** to continue.
+
+  - id: what_is_agni
+    type: instruction
+    content: |
+      ## What is AGNI?
+
+      AGNI compiles YAML files into interactive lessons that run
+      offline on any phone — even a 10-year-old one.
+
+      - No internet needed
+      - No app install
+      - Works on Android 6+
+
+  - id: quiz_1
+    type: quiz
+    content: What does AGNI compile lessons from?
+    answer_options:
+      - Microsoft Word documents
+      - YAML files
+      - PDF files
+      - Video recordings
+    correct_index: 1
+
+  - id: quiz_2
+    type: quiz
+    content: Do students need internet to use AGNI lessons?
+    answer_options:
+      - "Yes, always"
+      - "No — lessons work completely offline"
+    correct_index: 1
+    max_attempts: 2
+
+  - id: done
+    type: completion
+    content: |
+      ## You did it!
+
+      You just completed your first AGNI lesson.
+      Now try writing your own — copy this file and change the content.

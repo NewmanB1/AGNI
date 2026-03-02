@@ -102,7 +102,9 @@
 
   async function saveEdit(pseudoId) {
     try {
-      await api.updateStudent(pseudoId, { displayName: editName, pin: editPin || null });
+      const updates = { displayName: editName };
+      if (editPin) updates.pin = editPin;
+      await api.updateStudent(pseudoId, updates);
       editingStudent = null;
       const st = await api.getStudentAccounts();
       students = st.students || [];
@@ -233,7 +235,7 @@
               {#if editingStudent === s.pseudoId}
                 <td><input type="text" bind:value={editName} class="edit-input" /></td>
                 <td class="mono">{s.pseudoId}</td>
-                <td><input type="text" bind:value={editPin} maxlength="6" class="pin-input" placeholder="none" /></td>
+                <td><input type="password" bind:value={editPin} maxlength="6" class="pin-input" placeholder="unchanged" autocomplete="new-password" /></td>
                 <td>{s.active ? 'Yes' : 'No'}</td>
                 <td class="muted">{new Date(s.createdAt).toLocaleDateString()}</td>
                 <td>

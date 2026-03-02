@@ -1,6 +1,6 @@
 <script>
   import SvgSpecEditor from './SvgSpecEditor.svelte';
-  import { getFactoryById } from '$lib/svg-catalog.js';
+  import { getFactoryById, EXPERIMENT_PRESETS, getExperimentById } from '$lib/svg-catalog.js';
 
   const STEP_TYPES = [
     { value: 'instruction', label: 'Instruction' },
@@ -84,6 +84,71 @@
     { label: 'Ordering', type: 'ordering', content: 'Put the steps in the correct order.', icon: 'O',
       items: ['Step 1', 'Step 2', 'Step 3'], correct_order: [0, 1, 2] },
   ];
+
+  const PHYSICS_TEMPLATES = [
+    {
+      label: 'Freefall Experiment',
+      icon: '🍎',
+      description: 'Calibration → drop → graph → quiz',
+      steps: [
+        { type: 'instruction', content: '**Freefall Experiment**\n\nHold the phone flat in your hand, screen up, about 30–50 cm above a soft surface.\n\n⚠️ **Safety:** Use a pillow or soft mat to catch the phone!' },
+        { type: 'hardware_trigger', content: 'Hold the phone **flat and still** until the sensor confirms it is level.', sensor: 'accelerometer', threshold: 'accel.z > 7.5', feedback: 'Phone is level — ready to drop!', max_attempts: 999, on_fail: 'skip_to:freefall_drop' },
+        { type: 'hardware_trigger', content: 'Now **drop the phone** onto the soft surface.\n\nThe sensor will detect when it is in freefall (weightless).', sensor: 'accelerometer', threshold: 'freefall > 0.35s', feedback: 'Freefall detected!', max_attempts: 5, on_fail: 'skip_to:freefall_explanation' },
+        { type: 'svg', content: 'Here is what the acceleration looked like during your experiment:', svg_spec: { factory: 'timeGraph', opts: { title: 'Freefall Acceleration', w: 420, h: 280, windowSeconds: 5, xLabel: 'Time (s)', streams: [{ sensor: 'accel.total', label: 'Total Accel (m/s²)', color: '#ff6b35', yMin: 0, yMax: 15 }] } } },
+        { type: 'quiz', content: 'Why did the phone read **nearly zero** acceleration during the drop?', answer_options: ['The sensor broke momentarily', 'Air resistance cancelled gravity', 'The phone was falling at the same rate as gravity — no relative force', 'The phone was too light to measure'], correct_index: 2, feedback: 'Correct! During freefall, the phone and its sensor fall together at 9.8 m/s², so no force is felt — just like astronauts in orbit.' },
+        { type: 'completion', content: '🎉 You just demonstrated weightlessness with your phone!\n\nAt rest: ~9.8 m/s² (gravity). In freefall: ~0 m/s² (weightless).' }
+      ]
+    },
+    {
+      label: 'Pendulum Lab',
+      icon: '🔄',
+      description: 'Build a pendulum, measure swing period',
+      steps: [
+        { type: 'instruction', content: '**Pendulum Lab**\n\nTie your phone to a string (use a sock or soft pouch for safety). The string should be about 30–50 cm long.\n\nYou will swing it gently and measure the period.' },
+        { type: 'svg', content: 'Watch the pendulum tracker as you swing the phone gently left and right:', svg_spec: { factory: 'numberLineDynamic', opts: { title: 'Pendulum Angle', w: 420, h: 120, min: -90, max: 90, step: 15, sensor: 'rotation.gamma', sensorMin: -90, sensorMax: 90, ballColor: '#4dabf7', marks: [{ value: 0, label: 'rest', color: '#4ade80' }] } } },
+        { type: 'svg', content: 'And here is the gyroscope graph showing the rotation rate:', svg_spec: { factory: 'timeGraph', opts: { title: 'Swing Rate', w: 420, h: 280, windowSeconds: 10, xLabel: 'Time (s)', streams: [{ sensor: 'gyro.x', label: 'Rotation (deg/s)', color: '#c084fc', yMin: -200, yMax: 200 }] } } },
+        { type: 'fill_blank', content: 'A pendulum swings back and forth at a regular rate called its ___.', blanks: [{ answer: 'period', accept: ['Period', 'frequency', 'Frequency'] }] },
+        { type: 'completion', content: '🎉 You measured a real pendulum!\n\nFun fact: Galileo discovered that a pendulum\'s period depends on its **length**, not its weight.' }
+      ]
+    },
+    {
+      label: 'Tilt & Trigonometry',
+      icon: '📐',
+      description: 'Explore sin/cos/tan by tilting the phone',
+      steps: [
+        { type: 'instruction', content: '**Tilt & Trigonometry**\n\nHold the phone flat, then slowly tilt it left and right. Watch how sine, cosine, and tangent change on the unit circle.' },
+        { type: 'svg', content: 'Tilt the phone to move the point around the unit circle:', svg_spec: { factory: 'unitCircle', opts: { title: 'Tilt to Explore', w: 320, h: 300, angleDeg: 0, sensor: 'rotation.gamma', sensorMin: -90, sensorMax: 90, showSine: true, showCosine: true, showTangent: true, showValues: true } } },
+        { type: 'quiz', content: 'At what angle are sine and cosine **equal**?', answer_options: ['0°', '30°', '45°', '90°'], correct_index: 2, feedback: 'At 45°, sin(45°) = cos(45°) ≈ 0.707. You can verify by tilting the phone to 45° and checking the readout!' },
+        { type: 'completion', content: '🎉 You just explored trigonometry with your body!\n\nTry finding the angle where tangent goes to infinity (hint: tilt to 90°).' }
+      ]
+    },
+    {
+      label: 'Force & Motion Dashboard',
+      icon: '🚀',
+      description: 'Multi-sensor display + shake challenge',
+      steps: [
+        { type: 'instruction', content: '**Force & Motion Dashboard**\n\nYour phone can measure forces in three dimensions. Let\'s explore what different motions look like on the sensors.' },
+        { type: 'svg', content: 'Watch the G-force meter as you move the phone:', svg_spec: { factory: 'gauge', opts: { title: 'G-Force', min: 0, max: 3, unit: 'g', w: 260, h: 200, ticks: 6, sensor: 'accel.total', sensorMin: 0, sensorMax: 29.43, zones: [{ from: 0, to: 0.1, color: '#60a5fa' }, { from: 0.1, to: 0.7, color: '#4ade80' }, { from: 0.7, to: 0.9, color: '#facc15' }, { from: 0.9, to: 1.0, color: '#f87171' }] } } },
+        { type: 'svg', content: 'Now look at all three axes on this live graph:', svg_spec: { factory: 'timeGraph', opts: { title: 'Acceleration (3-axis)', w: 420, h: 300, windowSeconds: 5, xLabel: 'Time (s)', streams: [{ sensor: 'accel.x', label: 'X', color: '#f87171', yMin: -15, yMax: 15 }, { sensor: 'accel.y', label: 'Y', color: '#4ade80', yMin: -15, yMax: 15 }, { sensor: 'accel.z', label: 'Z', color: '#60a5fa', yMin: -15, yMax: 15 }] } } },
+        { type: 'hardware_trigger', content: 'Challenge: **Shake the phone hard** to exceed 2g!', sensor: 'accelerometer', threshold: 'accel.total > 2.5g AND steady > 0.3s', feedback: 'Wow, that was a strong shake!', max_attempts: 10 },
+        { type: 'quiz', content: 'When you held the phone still, which axis showed ~9.8 m/s²?', answer_options: ['X (left-right)', 'Y (up-down)', 'Z (toward/away)', 'It depends on phone orientation'], correct_index: 3, feedback: 'Correct! The axis reading ~9.8 m/s² depends on which way the phone points — gravity always pulls downward.' },
+        { type: 'completion', content: '🎉 You explored Newton\'s laws with your phone as a lab instrument!' }
+      ]
+    },
+    {
+      label: 'Geometry Explorer',
+      icon: '⬡',
+      description: 'Tilt to rotate and scale shapes',
+      steps: [
+        { type: 'instruction', content: '**Geometry Explorer**\n\nHold the phone flat. Tilt it to rotate and scale the polygon. Observe how interior angles and side lengths change as you interact.' },
+        { type: 'svg', content: 'Tilt the phone to rotate and scale the shape:', svg_spec: { factory: 'polygonDynamic', opts: { title: 'Tilt Me!', w: 300, h: 300, sides: 6, r: 90, color: '#4dabf7', fillOpacity: 0.25, showAngles: true, showVertexLabels: true, rotateSensor: 'rotation.gamma', rotateSensorMin: -90, rotateSensorMax: 90, scaleSensor: 'rotation.beta', scaleMin: 0.5, scaleMax: 1.5 } } },
+        { type: 'quiz', content: 'What is the sum of interior angles in a hexagon (6 sides)?', answer_options: ['360°', '540°', '720°', '900°'], correct_index: 2, feedback: 'Correct! The formula is (n-2) × 180° = (6-2) × 180° = 720°. Each interior angle of a regular hexagon is 120°.' },
+        { type: 'completion', content: '🎉 You explored polygon geometry through physical interaction!' }
+      ]
+    }
+  ];
+
+  let showPhysicsMenu = $state(false);
 
   let { steps = $bindable([]), onchange = () => {}, onfocus = () => {} } = $props();
 
@@ -269,6 +334,17 @@
     expandedAdvanced = { ...expandedAdvanced, [sid]: !expandedAdvanced[sid] };
   }
 
+  function addPhysicsTemplate(tpl) {
+    const newSteps = tpl.steps.map(s => {
+      const step = { id: nextStepId(), ...JSON.parse(JSON.stringify(s)) };
+      return step;
+    });
+    steps = [...steps, ...newSteps];
+    showPhysicsMenu = false;
+    showAddMenu = false;
+    onchange();
+  }
+
   let showAddMenu = $state(false);
 
   let dragIdx = $state(null);
@@ -329,6 +405,18 @@
         {#each STEP_TEMPLATES as tpl}
           <button class="template-btn" onclick={() => { addFromTemplate(tpl); showAddMenu = false; }} title={tpl.content.slice(0, 60)}>
             <span class="tpl-icon">{tpl.icon}</span> {tpl.label}
+          </button>
+        {/each}
+      </div>
+      <div class="add-menu-section physics-section">
+        <span class="menu-label">🔬 Physics Experiments:</span>
+        {#each PHYSICS_TEMPLATES as ptpl}
+          <button class="template-btn physics-tpl-btn" onclick={() => addPhysicsTemplate(ptpl)} title={ptpl.description}>
+            <span class="tpl-icon physics-icon">{ptpl.icon}</span>
+            <span class="ptpl-text">
+              <strong>{ptpl.label}</strong>
+              <small>{ptpl.steps.length} steps</small>
+            </span>
           </button>
         {/each}
       </div>
@@ -855,4 +943,29 @@
     font-family: monospace;
   }
   .ref-suggestions button:hover { background: rgba(0,230,118,0.1); color: var(--accent); }
+
+  .physics-section {
+    border-top: 1px solid rgba(77,171,247,0.2);
+    padding-top: 0.4rem;
+    margin-top: 0.2rem;
+  }
+  .physics-tpl-btn {
+    border-color: rgba(77,171,247,0.25) !important;
+    background: rgba(77,171,247,0.06) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.4rem !important;
+    padding: 0.4rem 0.7rem !important;
+  }
+  .physics-tpl-btn:hover {
+    border-color: #4dabf7 !important;
+    background: rgba(77,171,247,0.12) !important;
+  }
+  .physics-icon {
+    background: rgba(77,171,247,0.15) !important;
+    color: #4dabf7 !important;
+  }
+  .ptpl-text { display: flex; flex-direction: column; text-align: left; line-height: 1.2; }
+  .ptpl-text strong { font-size: 0.82rem; }
+  .ptpl-text small { font-size: 0.68rem; opacity: 0.6; }
 </style>

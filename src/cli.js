@@ -21,6 +21,7 @@ async function run() {
     npm run build   # if using package.json script
 
   Options:
+    --validate               Validate only (no compilation) — runs schema + runtime checks
     --format=html|native|yaml-packet   Output format (default: html)
     --output=<path>          Output file path (required for html)
     --output-dir=<path>      Output directory (required for native and yaml-packet)
@@ -29,6 +30,7 @@ async function run() {
     --dev                    Enable developer mode (sensor logging, emulator controls)
 
   Examples:
+    node src/cli.js lessons/gravity.yaml --validate
     node src/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html
     node src/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html --dev
     node src/cli.js lessons/gravity.yaml --format=native --output-dir=dist/native-gravity
@@ -74,7 +76,8 @@ async function run() {
     outputDir: null,
     deviceId: null,
     privateKey: null,
-    dev: false
+    dev: false,
+    validateOnly: false
   };
 
   args.forEach((arg) => {
@@ -84,6 +87,7 @@ async function run() {
     else if (arg.startsWith('--device-id='))  params.deviceId  = arg.split('=')[1];
     else if (arg.startsWith('--private-key=')) params.privateKey = arg.split('=')[1];
     else if (arg === '--dev')                 params.dev       = true;
+    else if (arg === '--validate')            params.validateOnly = true;
     else if (!arg.startsWith('-') && !params.inputFile) {
       params.inputFile = arg;
     }
@@ -93,6 +97,60 @@ async function run() {
     console.error('Error: No input file specified.');
     console.error('Usage: node src/cli.js <input.yaml> --format=<html|native|yaml-packet> [options]');
     process.exit(1);
+  }
+
+  // ── Validate-only mode ────────────────────────────────────────────────
+  if (params.validateOnly) {
+    const yaml = require('js-yaml');
+    const lessonSchema = require('./services/lesson-schema');
+    const lessonValidator = require('./utils/lesson-validator');
+
+    const raw = fs.readFileSync(params.inputFile, 'utf8');
+    let lessonData;
+    try {
+      lessonData = yaml.load(raw);
+    } catch (e) {
+      console.error('YAML parse error:', e.message);
+      process.exit(1);
+    }
+
+    let hasErrors = false;
+    const seen = new Set();
+
+    // Layer 1: schema + structural validation
+    const schemaResult = lessonSchema.validateLessonData(lessonData);
+    if (!schemaResult.valid) {
+      for (const err of schemaResult.errors) {
+        seen.add(err);
+        console.error('ERROR', err);
+      }
+      hasErrors = true;
+    }
+    for (const w of (schemaResult.warnings || [])) {
+      seen.add(w);
+      console.warn('WARN ', w);
+    }
+
+    // Layer 2: runtime compatibility validation (deduplicated)
+    const runtimeResult = lessonValidator.validateLesson(lessonData);
+    for (const issue of runtimeResult) {
+      const msg = issue.message || '';
+      if (seen.has(msg)) continue;
+      seen.add(msg);
+      if (issue.level === 'error') {
+        console.error('ERROR [' + (issue.stepId || 'lesson') + ']', msg);
+        hasErrors = true;
+      } else {
+        console.warn('WARN  [' + (issue.stepId || 'lesson') + ']', msg);
+      }
+    }
+
+    if (hasErrors) {
+      console.error('\nValidation failed.');
+      process.exit(1);
+    }
+    console.log('Validation passed — no errors.');
+    process.exit(0);
   }
 
   // ── Dispatch to compiler service ────────────────────────────────────────

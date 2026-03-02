@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; media-src 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self';">
   <title>AGNI Lesson</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#1a1a2e">
   <style>
     body { margin: 0; font-family: sans-serif; background: #f0f0f0; }
-    #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #fff; }
+    #loading { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: #fff; }
     #app { padding: 16px; }
   </style>
 </head>
@@ -17,55 +17,10 @@
   <div id="loading">Loading lesson...</div>
   <div id="app" style="display:none"></div>
 
+  <script src="/factories/polyfills.js"></script>
   <script src="/shared.js"></script>
+  <script src="/factory-loader.js"></script>
   <script src="/lesson-data.js"></script>
-  <script>
-    // Register Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
-    }
-
-    function escapeHtml(str) {
-      if (typeof str !== 'string') return '';
-      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    function renderLesson(lesson) {
-      if (!lesson || !lesson.meta) {
-        document.getElementById('loading').textContent = 'Error: invalid lesson data';
-        return;
-      }
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('app').style.display = 'block';
-
-      var title = document.createElement('h1');
-      title.textContent = lesson.meta.title || 'Untitled';
-      document.getElementById('app').appendChild(title);
-
-      var steps = lesson.steps || [];
-      for (var i = 0; i < steps.length; i++) {
-        var step = steps[i];
-        var div = document.createElement('div');
-        if (step.htmlContent) {
-          div.innerHTML = step.htmlContent;
-        } else if (step.content) {
-          div.textContent = step.content;
-        }
-        document.getElementById('app').appendChild(div);
-
-        if (step.type === 'svg' && window.svgGenerators && window.svgGenerators[step.svg_type]) {
-          var svgContainer = document.createElement('div');
-          svgContainer.innerHTML = window.svgGenerators[step.svg_type](step.params || {});
-          document.getElementById('app').appendChild(svgContainer);
-        }
-      }
-    }
-
-    if (typeof LESSON_DATA !== 'undefined') {
-      renderLesson(LESSON_DATA);
-    } else {
-      document.getElementById('loading').textContent = 'Error loading lesson';
-    }
-  </script>
+  <script src="/shell-boot.js"></script>
 </body>
 </html>

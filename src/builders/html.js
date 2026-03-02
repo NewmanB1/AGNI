@@ -129,14 +129,21 @@ async function buildHtml(lessonData, options) {
   const factoryLoaderJs = fs.readFileSync(resolveFactoryPath(runtimeDir, 'factory-loader.js'), 'utf8');
   const styles          = fs.readFileSync(path.join(runtimeDir, 'style.css'),          'utf8');
 
-  // -- 5a. binary-utils.js (load before shared-runtime; Backlog task 13) -------
+  // -- 5a. polyfills.js (must load before everything else on Chrome 44) --------
+  const polyfillsSource = path.join(runtimeDir, 'polyfills.js');
+  const polyfillsOutput = path.join(outputDir, 'polyfills.js');
+  if (fs.existsSync(polyfillsSource)) {
+    copyIfNewer(polyfillsSource, polyfillsOutput);
+  }
+
+  // -- 5b. binary-utils.js (load before shared-runtime; Backlog task 13) -------
   const binaryUtilsOutput = path.join(outputDir, 'binary-utils.js');
   const binaryUtilsSource = resolveFactoryPath(runtimeDir, 'binary-utils.js');
   if (fs.existsSync(binaryUtilsSource)) {
     fs.writeFileSync(binaryUtilsOutput, fs.readFileSync(binaryUtilsSource, 'utf8'));
   }
 
-  // -- 5b. Handle shared-runtime.js (write once, reuse across lessons) -------
+  // -- 5c. Handle shared-runtime.js (write once, reuse across lessons) -------
   const sharedOutput = path.join(outputDir, 'shared-runtime.js');
   const sharedSource = path.join(runtimeDir, 'shared-runtime.js');
 
@@ -147,11 +154,14 @@ async function buildHtml(lessonData, options) {
   }
 
   // -- 6. Build the factory dependency list ------------------------------------
-  // binary-utils.js first (sets OLS_BINARY), then shared-runtime.js (AGNI_SHARED).
+  // polyfills.js first (ES5 shims), then binary-utils.js, then shared-runtime.js.
   var pkgVersion = require('../../package.json').version;
   var RUNTIME_VERSION = pkgVersion;
 
   const factoryDeps = [];
+  if (fs.existsSync(polyfillsSource)) {
+    factoryDeps.push({ file: 'polyfills.js', version: RUNTIME_VERSION });
+  }
   if (fs.existsSync(binaryUtilsSource)) {
     factoryDeps.push({ file: 'binary-utils.js', version: RUNTIME_VERSION });
   }

@@ -2,6 +2,11 @@
   "name": "agni-core",
   "version": "0.1.0",
   "description": "AGNI: The compiler and runtime for the Open Lesson Standard (OLS).",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "portal"
+  ],
   "bin": {
     "agni": "./src/cli.js"
   },
@@ -86,6 +91,8 @@
     "verify:dead-files": "node scripts/check-dead-files.js",
     "verify:dts": "node scripts/check-dts-arity.js",
     "verify:innerhtml": "node scripts/check-innerhtml.js",
-    "verify:all": "node scripts/check-dead-files.js && node scripts/check-dts-arity.js && node scripts/check-innerhtml.js"
+    "verify:factory-order": "node scripts/check-factory-order.js",
+    "verify:schema-sync": "node scripts/sync-schema-enums.js --check",
+    "verify:all": "node scripts/check-dead-files.js && node scripts/check-dts-arity.js && node scripts/check-innerhtml.js && node scripts/check-factory-order.js && node scripts/sync-schema-enums.js --check"
   }
 }

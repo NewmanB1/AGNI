@@ -1,0 +1,12 @@
+{
+  "name": "@agni/plugins",
+  "version": "0.1.0",
+  "description": "Plugin registry for AGNI: SVG factories, step type handlers, and sensor adapters. Single source of truth — add your thing without understanding the rest.",
+  "license": "AGPL-3.0",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NewmanB1/AGNI.git",
+    "directory": "packages/agni-plugins"
+  }
+}

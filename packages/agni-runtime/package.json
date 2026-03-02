@@ -1,0 +1,13 @@
+{
+  "name": "@agni/runtime",
+  "version": "0.1.0",
+  "description": "AGNI browser runtime: lesson player, sensor bridge, SVG factories, and UI components. ES5-compatible for Chrome 44+.",
+  "license": "AGPL-3.0",
+  "main": "index.js",
+  "browser": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NewmanB1/AGNI.git",
+    "directory": "packages/agni-runtime"
+  }
+}

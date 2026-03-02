@@ -1,0 +1,16 @@
+{
+  "name": "@ols/compiler",
+  "version": "0.1.0",
+  "description": "OLS lesson compiler: YAML parsing, IR building, and artifact generation (HTML, native, YAML-packet).",
+  "license": "AGPL-3.0",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NewmanB1/AGNI.git",
+    "directory": "packages/ols-compiler"
+  },
+  "dependencies": {
+    "@ols/schema": "0.1.0",
+    "@agni/utils": "0.1.0"
+  }
+}

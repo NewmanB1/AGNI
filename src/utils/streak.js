@@ -21,15 +21,16 @@ function computeStreaks(sortedDates) {
   let longestStreak = 0;
   let tempStreak = 0;
 
+  let currentStreakDone = false;
   for (let i = 0; i < 365; i++) {
     const d = checkDate.toISOString().slice(0, 10);
     if (dateSet.has(d)) {
       tempStreak++;
-      if (i === 0 || currentStreak > 0) currentStreak = tempStreak;
+      if (!currentStreakDone) currentStreak = tempStreak;
     } else {
       if (tempStreak > longestStreak) longestStreak = tempStreak;
       tempStreak = 0;
-      if (currentStreak > 0) break;
+      if (!currentStreakDone && currentStreak > 0) currentStreakDone = true;
     }
     checkDate.setDate(checkDate.getDate() - 1);
   }

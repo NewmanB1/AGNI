@@ -473,6 +473,18 @@ function startApi(port) {
   server.headersTimeout = 15000;
   server.keepAliveTimeout = 5000;
 
+  // Attach hub-transform routes (lesson serving, factories, PWA assets) to
+  // the same server so that tests calling startApi() get the same routing as
+  // production. Wrapped in try/catch for graceful degradation if the compiler
+  // or its dependencies are unavailable.
+  const HUB_TRANSFORM_PATH = path.join(__dirname, '../server/hub-transform.js');
+  try {
+    const hubTransform = require(HUB_TRANSFORM_PATH);
+    hubTransform.attachRoutes(server, { dev: process.env.NODE_ENV !== 'production', deviceId: null, privateKey: null });
+  } catch (err) {
+    log.warn('hub-transform not available — /lessons/, /factories/, /katex/ routes disabled', { error: err.message });
+  }
+
   server.listen(listenPort, '0.0.0.0', () => log.info('API listening', { port: server.address().port }));
   return server;
 }
@@ -485,13 +497,6 @@ if (require.main === module) {
     if (pinResult.legacySha256 > 0) log.warn('Students with unsalted SHA-256 PINs (will migrate on next verification)', { count: pinResult.legacySha256 });
     await rebuildLessonIndex();
     const server = startApi(PORT);
-    const HUB_TRANSFORM_PATH = path.join(__dirname, '../server/hub-transform.js');
-    try {
-      const hubTransform = require(HUB_TRANSFORM_PATH);
-      hubTransform.attachRoutes(server, { dev: process.env.NODE_ENV !== 'production', deviceId: null, privateKey: null });
-    } catch (err) {
-      log.warn('hub-transform not available — /lessons/, /factories/, /katex/ routes disabled', { error: err.message });
-    }
 
     function shutdown(signal) {
       log.info('Shutting down gracefully', { signal });

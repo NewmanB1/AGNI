@@ -1,8 +1,8 @@
 # 🏗️ Open Lesson Standard (OLS): System Architecture v2.2
 
-**Canonical architecture document.** This file is the single source of truth for AGNI/OLS design, phases, and governance. The root **`ARCHITECTURE.md`** is the implementation overview (directory layout, build pipeline); keep both in sync on key decisions.
+**Canonical architecture document.** This file is the single source of truth for AGNI/OLS design, phases, and governance. The root `ARCHITECTURE.md` redirects here.
 
-> Updated to reflect current implementation: hub-transform, LMS engine, governance APIs, and runtime verification are in place. **Refactor backlog completed:** LMS state migration/repair, IR and runtime types in TypeScript, runtimeManifest (feature inference decoupled from filenames), consolidated binary/base64 utilities, engine numerical modules typed via `.d.ts`, sneakernet export/import script. See root `ARCHITECTURE.md` for implementation overview and `docs/ROADMAP.md` for remaining work.
+> Updated to reflect current implementation: hub-transform, LMS engine, governance APIs, and runtime verification are in place. **Refactor backlog completed:** LMS state migration/repair, IR and runtime types in TypeScript, runtimeManifest (feature inference decoupled from filenames), consolidated binary/base64 utilities, engine numerical modules typed via `.d.ts`, sneakernet export/import script. See `docs/ROADMAP.md` for remaining work.
 
 ---
 
@@ -114,7 +114,7 @@ agni-core/
     └── manifest.json             # PWA manifest
 ```
 
-The server runs hub-transform for on-demand lesson compilation; theta provides the API (scheduling, LMS, governance). See root `ARCHITECTURE.md` for the full directory layout including `src/services/`, `src/governance/`, and `src/engine/`.
+The server runs hub-transform for on-demand lesson compilation; theta provides the API (scheduling, LMS, governance). Key directories: `src/services/` (accounts, lesson assembly), `src/governance/` (compliance evaluation), `src/engine/` (Rasch, Thompson, embeddings, PageRank).
 
 #### The IR Layer (new in Phase 2)
 

@@ -1,0 +1,305 @@
+# yaml-language-server: $schema=../../schemas/ols.schema.json
+version: "1.8.0"
+
+meta:
+  identifier: ols:physics:sensor_lab_v1
+  title: "Phone as a Physics Lab"
+  description: >
+    Turn your phone into a laboratory. Measure acceleration, detect freefall,
+    explore pendulum motion, and visualise forces — all with real sensor data
+    rendered live through SVG factories.
+  language: en
+  locale: US
+  license: AGPL-3.0
+  created: "2026-03-01T00:00:00Z"
+  updated: "2026-03-01T00:00:00Z"
+  authors:
+    - name: AGNI Team
+  subject: [Physics, Classical Mechanics, Sensors]
+  tags: [physics, sensors, freefall, pendulum, interactive, 10-16]
+  audience:
+    educational_role: student
+    typical_age_range: 10-16
+  time_required: PT20M
+  difficulty: 3
+
+ontology:
+  requires: [{skill: ols:physics:observation_basics}]
+  provides: [{skill: ols:physics:sensor_lab, level: 2}]
+
+gate:
+  type: quiz
+  skill_target: ols:physics:observation_basics
+  question: "What force keeps you on the ground?"
+  expected_answer: gravity
+  on_fail: redirect:ols:physics:observation_basics/review
+  passing_score: 1
+
+steps:
+  - id: intro
+    type: instruction
+    content: |
+      **Your Phone is a Lab**
+
+      Modern phones contain accelerometers, gyroscopes, and orientation
+      sensors — the same instruments used in real physics labs.
+
+      In this lesson you will:
+      1. Calibrate your phone's sensors
+      2. Detect **freefall** (weightlessness)
+      3. Build a **pendulum** and measure its swing
+      4. Explore 3-axis forces on a live dashboard
+
+  - id: safety
+    type: instruction
+    content: |
+      ⚠️ **Safety First**
+
+      - Use a **soft surface** (pillow, towel, or mat) to catch the phone
+      - Drop from **30–50 cm only** — do not throw
+      - For the pendulum, place the phone in a **sock or soft pouch**
+      - Work in a clear area away from hard edges
+    expected_duration: PT30S
+
+  - id: calibration
+    type: hardware_trigger
+    content: |
+      **Calibration**
+
+      Place your phone **flat on a table**, screen up.
+      The accelerometer should read ~9.8 m/s² on the Z axis (gravity).
+    sensor: accelerometer
+    threshold: "accel.total.z > 7.5"
+    feedback: "Sensor calibrated — phone is level!"
+    max_attempts: 999
+    on_fail: skip_to:freefall_graph
+
+  - id: freefall_drop
+    type: hardware_trigger
+    content: |
+      **Freefall Test**
+
+      Hold the phone 30–50 cm above the soft surface.
+      Take a breath, then **let go**.
+
+      The sensor will detect when acceleration drops to near-zero.
+    sensor: accelerometer
+    threshold: "freefall > 0.35s"
+    feedback: "Freefall detected! The phone was weightless."
+    max_attempts: 5
+    on_fail: skip_to:freefall_graph
+
+  - id: freefall_graph
+    type: instruction
+    content: |
+      **Live Acceleration**
+
+      Watch the graph as you hold, drop, and catch the phone.
+      Notice the spike on impact and the dip during freefall.
+    svg_spec:
+      factory: timeGraph
+      opts:
+        title: "Freefall Acceleration"
+        w: 420
+        h: 280
+        windowSeconds: 5
+        xLabel: "Time (s)"
+        streams:
+          - sensor: accel.total
+            label: "Total (m/s²)"
+            color: "#ff6b35"
+            yMin: 0
+            yMax: 25
+
+  - id: freefall_quiz
+    type: quiz
+    content: "During freefall, the phone read nearly 0 m/s². Why?"
+    answer_options:
+      - "The sensor switched off"
+      - "Air resistance cancelled gravity"
+      - "The phone fell at the same rate as gravity — no felt force"
+      - "The phone was too light to measure"
+    correct_index: 2
+    feedback: >
+      Correct! Both the phone and its sensor fall at 9.8 m/s² together,
+      so no relative force is measured — exactly like astronauts in orbit.
+    on_fail: redirect:freefall_graph
+
+  - id: gforce_meter
+    type: instruction
+    content: |
+      **G-Force Meter**
+
+      This gauge shows your current G-force.
+      - At rest: ~1g (gravity)
+      - Freefall: ~0g
+      - Hard shake: 2–3g
+
+      Try different motions and watch the needle.
+    svg_spec:
+      factory: gauge
+      opts:
+        title: "G-Force"
+        min: 0
+        max: 3
+        unit: "g"
+        w: 260
+        h: 200
+        ticks: 6
+        sensor: accel.total
+        sensorMin: 0
+        sensorMax: 29.43
+        zones:
+          - from: 0
+            to: 0.1
+            color: "#60a5fa"
+          - from: 0.1
+            to: 0.7
+            color: "#4ade80"
+          - from: 0.7
+            to: 0.9
+            color: "#facc15"
+          - from: 0.9
+            to: 1.0
+            color: "#f87171"
+
+  - id: pendulum_intro
+    type: instruction
+    content: |
+      **Pendulum Lab**
+
+      Place your phone in a sock or soft pouch and tie it to a string
+      (30–50 cm long). You have built a simple pendulum.
+
+      Swing it gently side to side and watch the sensors respond.
+
+  - id: pendulum_track
+    type: instruction
+    content: |
+      **Pendulum Tracker**
+
+      The ball shows your swing angle in real time.
+      Watch it oscillate back and forth around the rest position.
+    svg_spec:
+      factory: numberLineDynamic
+      opts:
+        title: "Swing Angle"
+        w: 420
+        h: 120
+        min: -90
+        max: 90
+        step: 15
+        sensor: rotation.gamma
+        sensorMin: -90
+        sensorMax: 90
+        ballColor: "#4dabf7"
+        marks:
+          - value: 0
+            label: "rest"
+            color: "#4ade80"
+
+  - id: pendulum_graph
+    type: instruction
+    content: |
+      **Rotation Rate**
+
+      This graph shows the gyroscope reading — the rate of rotation.
+      Notice the sinusoidal wave pattern of a pendulum swing.
+    svg_spec:
+      factory: timeGraph
+      opts:
+        title: "Pendulum Rotation"
+        w: 420
+        h: 280
+        windowSeconds: 10
+        xLabel: "Time (s)"
+        streams:
+          - sensor: gyro.x
+            label: "Rotation (deg/s)"
+            color: "#c084fc"
+            yMin: -200
+            yMax: 200
+
+  - id: pendulum_quiz
+    type: fill_blank
+    content: "A pendulum swings at a regular rate called its ___."
+    blanks:
+      - answer: period
+        accept:
+          - Period
+          - frequency
+          - Frequency
+
+  - id: dashboard
+    type: instruction
+    content: |
+      **3-Axis Force Dashboard**
+
+      Move the phone in different ways and observe which axis responds:
+      - **X**: side to side
+      - **Y**: up and down
+      - **Z**: toward and away from you
+    svg_spec:
+      factory: timeGraph
+      opts:
+        title: "Acceleration (3-axis)"
+        w: 420
+        h: 300
+        windowSeconds: 5
+        xLabel: "Time (s)"
+        streams:
+          - sensor: accel.x
+            label: "X"
+            color: "#f87171"
+            yMin: -15
+            yMax: 15
+          - sensor: accel.y
+            label: "Y"
+            color: "#4ade80"
+            yMin: -15
+            yMax: 15
+          - sensor: accel.z
+            label: "Z"
+            color: "#60a5fa"
+            yMin: -15
+            yMax: 15
+
+  - id: shake_challenge
+    type: hardware_trigger
+    content: |
+      **Shake Challenge**
+
+      Shake the phone hard enough to register over 2.5g for 0.3 seconds!
+    sensor: accelerometer
+    threshold: "accel.total > 2.5g AND steady > 0.3s"
+    feedback: "Incredible force! You exceeded 2.5g."
+    max_attempts: 10
+    on_fail: skip_to:final_quiz
+
+  - id: final_quiz
+    type: quiz
+    content: "When you held the phone still, which axis showed ~9.8 m/s²?"
+    answer_options:
+      - "Always the X axis"
+      - "Always the Z axis"
+      - "Whichever axis points downward (depends on orientation)"
+      - "All three axes equally"
+    correct_index: 2
+    feedback: >
+      Correct! Gravity always pulls downward at 9.8 m/s², so the reading
+      appears on whichever axis is aligned with the vertical.
+    on_fail: redirect:dashboard
+
+  - id: done
+    type: completion
+    content: |
+      🎉 **Lab Complete!**
+
+      You used your phone to:
+      - Detect freefall (weightlessness)
+      - Track a pendulum swing
+      - Measure 3-axis acceleration
+      - Exceed 2.5g with a shake
+
+      Your phone is a real physics instrument. Try these experiments
+      at different heights, string lengths, and orientations!

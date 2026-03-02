@@ -25,7 +25,7 @@
 
 'use strict';
 
-var SW_VERSION     = 'agni-v1.9.0';
+var SW_VERSION     = 'agni-v__SW_VERSION__';
 var FACTORY_CACHE  = SW_VERSION + '-factories';
 var KATEX_CACHE    = SW_VERSION + '-katex';
 var LESSON_CACHE   = SW_VERSION + '-lessons';
@@ -35,6 +35,7 @@ var LESSON_CACHE   = SW_VERSION + '-lessons';
 // via factory-loader.js. This covers the most common set — lessons with
 // exotic factories will still trigger a runtime fetch for missing files.
 var PRECACHE_FACTORIES = [
+  '/factories/polyfills.js',
   '/factories/shared-runtime.js',
   '/factories/sensor-bridge.js',
   '/factories/svg-stage.js',

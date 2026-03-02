@@ -1,5 +1,7 @@
 'use strict';
 
+const { withLock } = require('../../src/utils/file-lock');
+
 function register(router, ctx) {
   const { loadJSONAsync, saveJSONAsync, loadLessonIndexAsync, loadMasterySummaryAsync,
           loadTelemetryEventsAsync, getStudentSkills, requireParam,
@@ -27,21 +29,23 @@ function register(router, ctx) {
       if (!fs.existsSync(resolvedDir)) fs.mkdirSync(resolvedDir, { recursive: true });
 
       const filePath = path.join(resolvedDir, lessonId.replace(/[^a-zA-Z0-9_-]/g, '_') + '.json');
-      const existing = await loadJSONAsync(filePath, null);
-      if (existing && existing.savedAt && payload.savedAt && payload.savedAt <= existing.savedAt) {
-        return sendResponse(200, { ok: true, skipped: true });
-      }
-
-      const checkpoint = {
-        version:      payload.version || 1,
-        stepIndex:    payload.stepIndex,
-        stepId:       payload.stepId || null,
-        stepOutcomes: payload.stepOutcomes || [],
-        probeResults: payload.probeResults || [],
-        savedAt:      payload.savedAt || Date.now()
-      };
-      await saveJSONAsync(filePath, checkpoint);
-      return sendResponse(200, { ok: true });
+      const result = await withLock(filePath, async () => {
+        const existing = await loadJSONAsync(filePath, null);
+        if (existing && existing.savedAt && payload.savedAt && payload.savedAt <= existing.savedAt) {
+          return { skipped: true };
+        }
+        const checkpoint = {
+          version:      payload.version || 1,
+          stepIndex:    payload.stepIndex,
+          stepId:       payload.stepId || null,
+          stepOutcomes: payload.stepOutcomes || [],
+          probeResults: payload.probeResults || [],
+          savedAt:      payload.savedAt || Date.now()
+        };
+        await saveJSONAsync(filePath, checkpoint);
+        return { skipped: false };
+      });
+      return sendResponse(200, { ok: true, skipped: result.skipped });
     });
   }));
 
@@ -232,25 +236,30 @@ function register(router, ctx) {
       const pseudoId = payload.pseudoId;
       const responses = payload.responses || [];
       if (!pseudoId) return sendResponse(400, { error: 'pseudoId required' });
-      const mastery = await loadMasterySummaryAsync();
-      if (!mastery.students) mastery.students = {};
-      if (!mastery.students[pseudoId]) mastery.students[pseudoId] = {};
-      const skills = mastery.students[pseudoId];
-      let totalDifficulty = 0;
-      let correctCount = 0;
-      for (const r of responses) {
-        const selfLevel = typeof r.answer === 'number' ? r.answer : 0;
-        const evidenced = selfLevel === 2 ? 0.8 : (selfLevel === 1 ? 0.4 : 0);
-        if (r.skill && evidenced > 0) {
-          skills[r.skill] = Math.max(skills[r.skill] || 0, evidenced);
-          correctCount++;
+
+      const result = await withLock(MASTERY_SUMMARY, async () => {
+        const mastery = await loadMasterySummaryAsync();
+        if (!mastery.students) mastery.students = {};
+        if (!mastery.students[pseudoId]) mastery.students[pseudoId] = {};
+        const skills = mastery.students[pseudoId];
+        let totalDifficulty = 0;
+        let correctCount = 0;
+        for (const r of responses) {
+          const selfLevel = typeof r.answer === 'number' ? r.answer : 0;
+          const evidenced = selfLevel === 2 ? 0.8 : (selfLevel === 1 ? 0.4 : 0);
+          if (r.skill && evidenced > 0) {
+            skills[r.skill] = Math.max(skills[r.skill] || 0, evidenced);
+            correctCount++;
+          }
+          totalDifficulty += r.difficulty || 2;
         }
-        totalDifficulty += r.difficulty || 2;
-      }
-      const bootstrapAbility = responses.length > 0
-        ? Math.round(((correctCount / responses.length) * (totalDifficulty / responses.length)) * 100) / 100
-        : 0;
-      await saveJSONAsync(MASTERY_SUMMARY, mastery);
+        const bootstrapAbility = responses.length > 0
+          ? Math.round(((correctCount / responses.length) * (totalDifficulty / responses.length)) * 100) / 100
+          : 0;
+        await saveJSONAsync(MASTERY_SUMMARY, mastery);
+        return { bootstrapAbility, skillCount: Object.keys(skills).length };
+      });
+
       if (lmsEngine.isAvailable && lmsEngine.isAvailable()) {
         try {
           const probeResults = responses
@@ -261,11 +270,13 @@ function register(router, ctx) {
       }
       try {
         const diagPath = path.join(DATA_DIR, 'diagnostic-status.json');
-        const status = await loadJSONAsync(diagPath, {});
-        status[pseudoId] = { completedAt: new Date().toISOString(), ability: bootstrapAbility };
-        await saveJSONAsync(diagPath, status);
+        await withLock(diagPath, async () => {
+          const status = await loadJSONAsync(diagPath, {});
+          status[pseudoId] = { completedAt: new Date().toISOString(), ability: result.bootstrapAbility };
+          await saveJSONAsync(diagPath, status);
+        });
       } catch (e) { /* non-critical */ }
-      return sendResponse(200, { ok: true, ability: bootstrapAbility, skillsBootstrapped: Object.keys(skills).length });
+      return sendResponse(200, { ok: true, ability: result.bootstrapAbility, skillsBootstrapped: result.skillCount });
     });
   }));
 
@@ -317,36 +328,43 @@ function register(router, ctx) {
         return sendResponse(400, { error: 'skills is required and must contain at least one skill' });
       }
 
-      const data = await loadJSONAsync(LEARNING_PATHS_PATH, { paths: [] });
-      const trimmedName = payload.name.trim();
-      const duplicate = data.paths.find(p => p.name === trimmedName);
-      const warnings = [];
-      if (duplicate) warnings.push('A path named "' + trimmedName + '" already exists');
+      const result = await withLock(LEARNING_PATHS_PATH, async () => {
+        const data = await loadJSONAsync(LEARNING_PATHS_PATH, { paths: [] });
+        const trimmedName = payload.name.trim();
+        const duplicate = data.paths.find(p => p.name === trimmedName);
+        const warnings = [];
+        if (duplicate) warnings.push('A path named "' + trimmedName + '" already exists');
 
-      const id = payload.id || 'path-' + Date.now();
-      const newPath = {
-        id, name: trimmedName, description: payload.description.trim(),
-        skills: payload.skills,
-        createdAt: new Date().toISOString(), createdBy: payload.createdBy || 'teacher'
-      };
-      data.paths.push(newPath);
-      await saveJSONAsync(LEARNING_PATHS_PATH, data);
-      const response = { ok: true, path: newPath };
-      if (warnings.length > 0) response.warnings = warnings;
+        const id = payload.id || 'path-' + Date.now();
+        const newPath = {
+          id, name: trimmedName, description: payload.description.trim(),
+          skills: payload.skills,
+          createdAt: new Date().toISOString(), createdBy: payload.createdBy || 'teacher'
+        };
+        data.paths.push(newPath);
+        await saveJSONAsync(LEARNING_PATHS_PATH, data);
+        return { newPath, warnings };
+      });
+      const response = { ok: true, path: result.newPath };
+      if (result.warnings.length > 0) response.warnings = result.warnings;
       return sendResponse(201, response);
     });
   }));
 
   router.put('/api/learning-paths', adminOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
-      const data = await loadJSONAsync(LEARNING_PATHS_PATH, { paths: [] });
-      const idx = data.paths.findIndex(p => p.id === payload.id);
-      if (idx === -1) return sendResponse(404, { error: 'Path not found' });
-      if (payload.name) data.paths[idx].name = payload.name;
-      if (payload.description !== undefined) data.paths[idx].description = payload.description;
-      if (Array.isArray(payload.skills)) data.paths[idx].skills = payload.skills;
-      await saveJSONAsync(LEARNING_PATHS_PATH, data);
-      return sendResponse(200, { ok: true, path: data.paths[idx] });
+      const result = await withLock(LEARNING_PATHS_PATH, async () => {
+        const data = await loadJSONAsync(LEARNING_PATHS_PATH, { paths: [] });
+        const idx = data.paths.findIndex(p => p.id === payload.id);
+        if (idx === -1) return { error: 'Path not found' };
+        if (payload.name) data.paths[idx].name = payload.name;
+        if (payload.description !== undefined) data.paths[idx].description = payload.description;
+        if (Array.isArray(payload.skills)) data.paths[idx].skills = payload.skills;
+        await saveJSONAsync(LEARNING_PATHS_PATH, data);
+        return { path: data.paths[idx] };
+      });
+      if (result.error) return sendResponse(404, { error: result.error });
+      return sendResponse(200, { ok: true, path: result.path });
     });
   }));
 

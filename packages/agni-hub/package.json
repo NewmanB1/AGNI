@@ -1,0 +1,19 @@
+{
+  "name": "@agni/hub",
+  "version": "0.1.0",
+  "description": "AGNI Village Hub: HTTP server, theta scheduler, account management, telemetry, and lesson serving.",
+  "license": "AGPL-3.0",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NewmanB1/AGNI.git",
+    "directory": "packages/agni-hub"
+  },
+  "dependencies": {
+    "@agni/utils": "0.1.0",
+    "@agni/engine": "0.1.0",
+    "@agni/governance": "0.1.0",
+    "@ols/schema": "0.1.0",
+    "@ols/compiler": "0.1.0"
+  }
+}

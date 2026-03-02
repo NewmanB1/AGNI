@@ -1,52 +1,56 @@
-# sv
+# AGNI Portal
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+SvelteKit web application for teachers, administrators, and governance authorities to manage Village Hub operations.
 
-## Creating a project
+## Pages
 
-If you're seeing this, you've probably already done this step. Congrats!
+| Route | Purpose |
+|-------|---------|
+| `/hub` | Teacher hub — lesson management, student overview |
+| `/students` | Student roster, progress tracking |
+| `/groups` | Student group management and lesson assignment |
+| `/governance` | Governance authority tools — policy, catalog |
+| `/learn` | Student-facing lesson view |
+| `/settings` | Hub configuration |
+| `/admin/accounts` | Creator account management |
+| `/admin/hub` | Hub status and diagnostics |
+| `/admin/sync` | Federation sync controls |
+| `/admin/flags` | Feature flag management |
+| `/admin/deploy` | Deployment tools |
+| `/admin/onboarding` | First-run setup wizard |
 
-```sh
-# create a new project
-npx sv create my-app
-```
+## Development
 
-To recreate this project with the same configuration:
+```bash
+# From the repo root — start the hub first
+node hub-tools/theta.js
 
-```sh
-# recreate this project
-npx sv create --template minimal --types ts --install npm ./
-```
-
-## Running against the hub
-
-To use real hub APIs (theta, LMS, governance, authoring) instead of mock data, set `VITE_HUB_URL` and start the dev server:
-
-```sh
+# In a separate terminal — start the portal dev server
+cd portal
 VITE_HUB_URL=http://localhost:8082 npm run dev
 ```
 
-Start the hub first from the repo root: `node hub-tools/theta.js`. See the root README and `docs/api-contract.md` for the API contract.
+With `VITE_HUB_URL` set, the portal uses real hub APIs (theta, LMS, governance, authoring) instead of mock data. Without it, the portal runs in standalone mode.
 
-## Developing
+## Scripts
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Start dev server (port 5173) |
+| `npm run build` | Production build (static adapter) |
+| `npm run preview` | Preview production build |
+| `npm run check` | TypeScript + Svelte type checking |
+| `npm run lint` | ESLint (zero warnings policy) |
+| `npm run test` | Run Vitest unit tests |
 
-```sh
-npm run dev
+## Tech Stack
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+- **SvelteKit** with static adapter (no server-side rendering — the hub is the server)
+- **TypeScript** throughout
+- **Vite** for bundling
+- API client in `src/lib/api.ts` — all hub communication goes through `authGet()` / `authPost()`
 
-## Building
+## References
 
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+- **Hub API contract:** `docs/api-contract.md`
+- **Architecture:** `docs/ARCHITECTURE.md`

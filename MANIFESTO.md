@@ -85,7 +85,7 @@ No internet needed. No app install. No login. Open and learn.
 - **Write a lesson**: Copy `lessons/gravity.yaml`, edit, validate, share.
 - **Translate a lesson**: Fork → change `language: "sw"` → translate content → done.
 - **Test on old phones**: Load compiled lessons, report what breaks.
-- **Improve the engine**: See `CONTRIBUTING.md` and `ARCHITECTURE.md`.
+- **Improve the engine**: See `CONTRIBUTING.md` and `docs/ARCHITECTURE.md`.
 
 Every child with a phone deserves a lab, a library, and a teacher who speaks
 their language. AGNI is our attempt to build that.

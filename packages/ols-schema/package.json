@@ -1,0 +1,18 @@
+{
+  "name": "@ols/schema",
+  "version": "0.1.0",
+  "description": "The Open Lesson Standard: JSON schema, validators, and threshold grammar. This is the spec itself.",
+  "license": "AGPL-3.0",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./threshold-syntax": "./threshold-syntax.js",
+    "./lesson-validator": "./lesson-validator.js",
+    "./lesson-schema": "./lesson-schema.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NewmanB1/AGNI.git",
+    "directory": "packages/ols-schema"
+  }
+}

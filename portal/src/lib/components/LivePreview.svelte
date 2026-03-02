@@ -1,6 +1,7 @@
 <script>
   import { renderMarkdown } from '$lib/renderMarkdown.js';
   import { getFactoryById } from '$lib/svg-catalog.js';
+  import SvgPreview from './SvgPreview.svelte';
 
   let { steps = [], title = '', focusStep = 0 } = $props();
 
@@ -92,15 +93,13 @@
                     {/if}
                   </div>
                 </div>
-                <div class="svg-placeholder">
-                  <span class="svg-big-icon">{desc.icon}</span>
-                  <span class="svg-hint">{desc.description}</span>
-                  {#if desc.dynamic}<span class="svg-dynamic-tag">dynamic — sensor-driven</span>{/if}
-                </div>
+                <SvgPreview spec={currentStep.svg_spec}
+                  width={currentStep.svg_spec.opts?.w || 320}
+                  height={currentStep.svg_spec.opts?.h || 220} />
               </div>
             {:else if currentStep.svg_spec.factory}
               <div class="svg-card">
-                <p>Factory: {currentStep.svg_spec.factory}</p>
+                <SvgPreview spec={currentStep.svg_spec} width={320} height={220} />
               </div>
             {/if}
           {:else if currentStep.type === 'svg'}

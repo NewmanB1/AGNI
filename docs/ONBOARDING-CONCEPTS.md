@@ -4,9 +4,40 @@ Short glossary for new contributors. Links point to where each idea is defined o
 
 ---
 
+## Monorepo structure
+
+AGNI is organized as an **npm workspaces monorepo**. Each package has a clear boundary, its own README, and declared dependencies:
+
+| Package | npm name | What it is |
+|---------|----------|------------|
+| [`packages/ols-schema`](../packages/ols-schema/) | `@ols/schema` | **The OLS standard itself:** JSON schema, validators, threshold grammar |
+| [`packages/ols-compiler`](../packages/ols-compiler/) | `@ols/compiler` | Lesson compiler: YAML → IR → HTML/native/YAML-packet |
+| [`packages/agni-utils`](../packages/agni-utils/) | `@agni/utils` | Shared utilities: logging, config, crypto, I/O (pure leaf — no deps) |
+| [`packages/agni-engine`](../packages/agni-engine/) | `@agni/engine` | Learning engine: Rasch, Thompson, embeddings, PageRank, federation |
+| [`packages/agni-runtime`](../packages/agni-runtime/) | `@agni/runtime` | Browser runtime: player, sensors, SVG factories (ES5, Chrome 44+) |
+| [`packages/agni-governance`](../packages/agni-governance/) | `@agni/governance` | Policy enforcement, compliance evaluation, catalog management |
+| [`packages/agni-hub`](../packages/agni-hub/) | `@agni/hub` | Village Hub server: HTTP routes, theta, accounts, telemetry |
+| [`portal/`](../portal/) | `agni-portal` | SvelteKit lesson editor and admin portal |
+
+**Dependency flow** (each package only depends on packages above it):
+
+```
+@agni/utils          ← pure leaf, no monorepo deps
+@agni/runtime        ← browser-only, no Node deps
+@ols/schema          ← depends on @agni/utils
+@agni/engine         ← depends on @agni/utils
+@agni/governance     ← depends on @agni/utils
+@ols/compiler        ← depends on @ols/schema + @agni/utils
+@agni/hub            ← depends on all of the above
+```
+
+Read each package's `README.md` for what's inside and how to contribute to that specific area.
+
+---
+
 ## OLS (Open Lesson Standard)
 
-The **file format and protocol** for lessons: YAML source with `meta`, `ontology`, `gate`, and `steps`. Lessons are compiled to HTML or native bundles. The schema is **`schemas/ols.schema.json`**. See **`docs/ARCHITECTURE.md`** and **`docs/REFERENCE-IMPLEMENTATION-VISION.md`**.
+The **file format and protocol** for lessons: YAML source with `meta`, `ontology`, `gate`, and `steps`. Lessons are compiled to HTML or native bundles. The schema is **`schemas/ols.schema.json`**, exposed as `@ols/schema`. See **`docs/ARCHITECTURE.md`** and **`docs/REFERENCE-IMPLEMENTATION-VISION.md`**.
 
 ---
 
@@ -48,6 +79,7 @@ The **Village Hub** is the edge server that compiles YAML to HTML or JSON on dem
 
 ## Where to go next
 
-- **Architecture:** **`docs/ARCHITECTURE.md`** (canonical), root **`ARCHITECTURE.md`** (implementation overview).
+- **Package READMEs:** Start with the package closest to your area of interest — each has a self-contained `README.md`.
+- **Architecture:** **`docs/ARCHITECTURE.md`** (canonical single source of truth).
 - **Reference implementation:** **`docs/REFERENCE-IMPLEMENTATION-VISION.md`** (schema-based, pure core, boundaries).
 - **Playbooks:** **`docs/playbooks/`** — compiler, runtime, governance, theta, thin-client targets, typing, Sentry, federation.

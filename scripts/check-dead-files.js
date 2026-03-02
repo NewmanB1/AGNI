@@ -33,6 +33,7 @@ const KNOWN_STANDALONE = new Set([
   normalize('src/runtime/style.css'),
   normalize('src/runtime/README.md'),
   normalize('src/runtime/sensors/sensorTypes.ts'),
+  normalize('src/runtime/polyfills.js'),
   normalize('src/types/index.d.ts'),
   normalize('src/engine/math.d.ts'),
   normalize('src/engine/thompson.d.ts'),
@@ -40,6 +41,9 @@ const KNOWN_STANDALONE = new Set([
   normalize('src/engine/embeddings.d.ts'),
   normalize('src/engine/federation.d.ts'),
   normalize('src/services/index.js'),
+  normalize('server/pwa/shell-boot.js'),
+  normalize('src/governance/catalog.js'),
+  normalize('src/governance/schema-store.js'),
 ]);
 
 // Runtime browser files listed in runtimeManifest.js are inlined by the HTML

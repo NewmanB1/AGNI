@@ -159,8 +159,7 @@ describe('student accounts', () => {
     assert.ok(r.ok);
     assert.ok(r.student.pseudoId.startsWith('px-'));
     assert.equal(r.student.displayName, 'Charlie');
-    assert.ok(r.student.pinHash);
-    assert.ok(r.student.pinSalt);
+    assert.equal(r.student.hasPin, true);
     assert.equal(r.student.active, true);
     studentId = r.student.pseudoId;
   });
@@ -170,7 +169,7 @@ describe('student accounts', () => {
     assert.ok(r.ok);
     assert.ok(r.student.pseudoId.startsWith('px-'));
     assert.equal(r.student.displayName, null);
-    assert.equal(r.student.pinHash, null);
+    assert.equal(r.student.hasPin, false);
   });
 
   it('createStudentsBulk creates multiple students', async () => {
@@ -205,8 +204,7 @@ describe('student accounts', () => {
     const r = await accounts.updateStudent(studentId, { displayName: 'Charles', pin: '5678' });
     assert.ok(r.ok);
     assert.equal(r.student.displayName, 'Charles');
-    assert.ok(r.student.pinHash);
-    assert.ok(r.student.pinSalt);
+    assert.equal(r.student.hasPin, true);
   });
 
   it('updateStudent can deactivate', async () => {

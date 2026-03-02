@@ -2,27 +2,27 @@
 
 function register(router, ctx) {
   const { governanceService, loadJSONAsync, loadLessonIndexAsync, loadMasterySummaryAsync,
-          handleJsonBody, adminOnly, thetaCache, DATA_DIR, path } = ctx;
+          handleJsonBody, adminOnly, authOnly, thetaCache, DATA_DIR, path } = ctx;
 
-  router.get('/api/governance/report', async (req, res, { sendResponse }) => {
+  router.get('/api/governance/report', authOnly(async (req, res, { sendResponse }) => {
     const lessonIndex = await loadLessonIndexAsync();
     const masterySummary = await loadMasterySummaryAsync();
     const report = governanceService.aggregateCohortCoverage(lessonIndex, masterySummary);
     return sendResponse(200, report);
-  });
+  }));
 
-  router.get('/api/governance/policy', (req, res, { sendResponse }) => {
+  router.get('/api/governance/policy', authOnly((req, res, { sendResponse }) => {
     const policy = governanceService.loadPolicy();
     return sendResponse(200, policy || {});
-  });
+  }));
 
-  router.get('/api/governance/utu-constants', async (req, res, { sendResponse }) => {
+  router.get('/api/governance/utu-constants', authOnly(async (req, res, { sendResponse }) => {
     const utuPath = path.join(DATA_DIR, 'utu-constants.json');
     const utu = await loadJSONAsync(utuPath, { protocols: [], spineIds: [], spines: {}, bands: [] });
     return sendResponse(200, utu);
-  });
+  }));
 
-  router.get('/api/governance/archetypes', (req, res, { qs, sendResponse }) => {
+  router.get('/api/governance/archetypes', authOnly((req, res, { qs, sendResponse }) => {
     const archetypeMatch = require('../../src/utils/archetype-match');
     if (qs.band || qs.protocol) {
       const filtered = archetypeMatch.filterArchetypes({
@@ -32,15 +32,15 @@ function register(router, ctx) {
       return sendResponse(200, { archetypes: filtered });
     }
     return sendResponse(200, { archetypes: archetypeMatch.getAllArchetypes() });
-  });
+  }));
 
-  router.post('/api/governance/compliance', (req, res, { sendResponse }) => {
+  router.post('/api/governance/compliance', authOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, (sidecar) => {
       const policy = governanceService.loadPolicy();
       const result = governanceService.evaluateLessonCompliance(sidecar, policy);
       sendResponse(200, result);
     });
-  });
+  }));
 
   router.put('/api/governance/policy', adminOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, (policy) => {
@@ -50,10 +50,10 @@ function register(router, ctx) {
     });
   }));
 
-  router.get('/api/governance/catalog', (req, res, { sendResponse }) => {
+  router.get('/api/governance/catalog', authOnly((req, res, { sendResponse }) => {
     const catalog = governanceService.loadCatalog();
     return sendResponse(200, catalog || { lessonIds: [] });
-  });
+  }));
 
   router.post('/api/governance/catalog', adminOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, (payload) => {

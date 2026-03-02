@@ -1,0 +1,15 @@
+{
+  "name": "@agni/engine",
+  "version": "0.1.0",
+  "description": "AGNI learning engine: Rasch IRT, Thompson sampling, embeddings, PageRank, Markov chains, and federation.",
+  "license": "AGPL-3.0",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NewmanB1/AGNI.git",
+    "directory": "packages/agni-engine"
+  },
+  "dependencies": {
+    "@agni/utils": "0.1.0"
+  }
+}

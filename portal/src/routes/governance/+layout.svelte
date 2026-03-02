@@ -1,5 +1,20 @@
 <script>
   import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
+  import { isCreatorLoggedIn, creatorLoading } from '$lib/creatorAuth';
+  import { onMount } from 'svelte';
+
+  const loggedIn = $derived($isCreatorLoggedIn);
+  const loading = $derived($creatorLoading);
+
+  onMount(() => {
+    const unsub = isCreatorLoggedIn.subscribe((val) => {
+      if (!val && !$creatorLoading) {
+        goto('/author/login?redirect=' + encodeURIComponent($page.url.pathname));
+      }
+    });
+    return unsub;
+  });
 
   const isSetup = $derived($page.url.pathname.includes('/governance/setup'));
   const isCatalog = $derived($page.url.pathname.includes('/governance/catalog') && !$page.url.pathname.endsWith('/import'));
@@ -7,6 +22,11 @@
   const isReport = $derived($page.url.pathname.includes('/governance/report'));
 </script>
 
+{#if loading}
+  <p>Checking authentication...</p>
+{:else if !loggedIn}
+  <p>Redirecting to login...</p>
+{:else}
 <div class="governance-layout">
   <nav class="gov-nav">
     <a href="/" class="back">← Back</a>
@@ -19,6 +39,7 @@
   </nav>
   <slot />
 </div>
+{/if}
 
 <style>
   .governance-layout {

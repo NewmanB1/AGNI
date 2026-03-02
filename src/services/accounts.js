@@ -40,7 +40,7 @@ const { withLock } = require('../utils/file-lock');
 
 function hashPassword(password, salt) {
   return new Promise((resolve, reject) => {
-    crypto.scrypt(password, salt, SCRYPT_KEYLEN, (err, key) => {
+    crypto.scrypt(password, salt, SCRYPT_KEYLEN, { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }, (err, key) => {
       if (err) reject(err);
       else resolve(key.toString('hex'));
     });
@@ -235,26 +235,30 @@ async function validateSession(token) {
 
 /** Clean up expired sessions. Call periodically from hub startup. */
 async function cleanExpiredSessions() {
-  const sessions = await loadJson(SESSIONS_PATH, { sessions: [] });
-  const before = sessions.sessions.length;
-  purgeExpiredSessions(sessions);
-  if (sessions.sessions.length < before) {
-    await saveJson(SESSIONS_PATH, sessions);
-  }
-  return { removed: before - sessions.sessions.length };
+  return withLock(SESSIONS_PATH, async () => {
+    const sessions = await loadJson(SESSIONS_PATH, { sessions: [] });
+    const before = sessions.sessions.length;
+    purgeExpiredSessions(sessions);
+    if (sessions.sessions.length < before) {
+      await saveJson(SESSIONS_PATH, sessions);
+    }
+    return { removed: before - sessions.sessions.length };
+  });
 }
 
 /** Destroy a session (logout). */
 async function destroySession(token) {
   if (!token) return;
-  const sessions = await loadJson(SESSIONS_PATH, { sessions: [] });
-  const incoming = hashToken(token);
-  sessions.sessions = sessions.sessions.filter(s => {
-    const stored = s.tokenHash || s.token;
-    if (incoming.length !== stored.length) return true;
-    return !crypto.timingSafeEqual(Buffer.from(incoming), Buffer.from(stored));
+  await withLock(SESSIONS_PATH, async () => {
+    const sessions = await loadJson(SESSIONS_PATH, { sessions: [] });
+    const incoming = hashToken(token);
+    sessions.sessions = sessions.sessions.filter(s => {
+      const stored = s.tokenHash || s.token;
+      if (incoming.length !== stored.length) return true;
+      return !crypto.timingSafeEqual(Buffer.from(incoming), Buffer.from(stored));
+    });
+    await saveJson(SESSIONS_PATH, sessions);
   });
-  await saveJson(SESSIONS_PATH, sessions);
 }
 
 /** Admin: list all creator accounts (without password hashes). */
@@ -349,7 +353,7 @@ async function createStudent({ displayName, pin, createdBy } = {}) {
     const student = buildStudentRecord({ pseudoId, displayName, pinHash: hash, pinSalt: salt, createdBy });
     data.students.push(student);
     await saveStudents(data);
-    return { ok: true, student };
+    return { ok: true, student: sanitizeStudent(student) };
   });
 }
 
@@ -372,7 +376,7 @@ async function createStudentsBulk({ names, pin, createdBy } = {}) {
       created.push(student);
     }
     await saveStudents(data);
-    return { ok: true, students: created, count: created.length };
+    return { ok: true, students: created.map(sanitizeStudent), count: created.length };
   });
 }
 
@@ -393,10 +397,10 @@ async function listStudents() {
   return data.students.map(sanitizeStudent);
 }
 
-/** Get a single student by pseudoId. */
+/** Get a single student by pseudoId (sanitized). */
 async function getStudent(pseudoId) {
   const { student } = await findStudentWithData(pseudoId);
-  return student || null;
+  return student ? sanitizeStudent(student) : null;
 }
 
 /** Update a student's display name or PIN. */
@@ -413,7 +417,7 @@ async function updateStudent(pseudoId, updates) {
     }
     if (updates.active !== undefined) student.active = !!updates.active;
     await saveStudents(data);
-    return { ok: true, student };
+    return { ok: true, student: sanitizeStudent(student) };
   });
 }
 

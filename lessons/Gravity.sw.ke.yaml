@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../schemas/ols.schema.json
 version: "1.7.0"
 meta:
   identifier: "ols:physics:gravity_intro_sw_ke_v1"
