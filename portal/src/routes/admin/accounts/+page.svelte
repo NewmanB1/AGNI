@@ -1,6 +1,6 @@
 <!-- Admin account management: creators + students -->
 <script>
-  import { hubApiStore, type CreatorAccount, type StudentAccount } from '$lib/api';
+  import { hubApiStore } from '$lib/api';
   import { onMount } from 'svelte';
 
   const api = $derived($hubApiStore);

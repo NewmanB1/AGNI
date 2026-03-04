@@ -86,13 +86,14 @@
     "generate:lesson": "node scripts/generate-lesson.js",
     "validate:lesson": "node src/utils/lesson-validator.js",
     "codegen:validate-schemas": "node scripts/codegen-validate-schemas.js",
-    "dev:vite": "npx serve dist -l 5173",
+    "dev:vite": "npx serve -l 5174 --no-port-switching dist",
     "test:es5": "node scripts/check-es5.js",
     "verify:dead-files": "node scripts/check-dead-files.js",
     "verify:dts": "node scripts/check-dts-arity.js",
     "verify:innerhtml": "node scripts/check-innerhtml.js",
     "verify:factory-order": "node scripts/check-factory-order.js",
     "verify:schema-sync": "node scripts/sync-schema-enums.js --check",
-    "verify:all": "node scripts/check-dead-files.js && node scripts/check-dts-arity.js && node scripts/check-innerhtml.js && node scripts/check-factory-order.js && node scripts/sync-schema-enums.js --check"
+    "verify:canonical": "node scripts/verify-canonical-ownership.js",
+    "verify:all": "node scripts/check-dead-files.js && node scripts/check-dts-arity.js && node scripts/check-innerhtml.js && node scripts/check-factory-order.js && node scripts/sync-schema-enums.js --check && node scripts/verify-canonical-ownership.js"
   }
 }

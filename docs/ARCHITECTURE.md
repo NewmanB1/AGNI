@@ -17,6 +17,46 @@ generated Just-in-Time (JIT) at the edge — the Village Hub.
 
 ### Core Design Constraints
 
+### 1.1 System Diagram
+
+```mermaid
+flowchart TB
+    subgraph Sources
+        YAML[YAML Lesson]
+    end
+
+    subgraph Hub["Village Hub"]
+        Compiler[Compiler / @ols/compiler]
+        IR[IR + lesson-ir.json]
+        Theta[Theta (skill graph, MLC)]
+        LMS[LMS Engine (Rasch, Thompson)]
+        HT[hub-transform]
+    end
+
+    subgraph Outputs
+        HTML[HTML bundle]
+        Native[Native bundle]
+    end
+
+    subgraph Device
+        Player[Player (browser)]
+    end
+
+    subgraph Portal["Teacher Portal"]
+        PortalUI[Portal UI]
+    end
+
+    YAML --> Compiler
+    Compiler --> IR
+    IR --> HTML
+    IR --> Native
+    IR --> Theta
+    Theta --> LMS
+    HT --> HTML
+    HTML --> Player
+    Theta --> PortalUI
+    LMS --> PortalUI
+```
 
 ---
 

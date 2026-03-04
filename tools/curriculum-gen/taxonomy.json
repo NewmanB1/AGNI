@@ -1,0 +1,514 @@
+{
+  "version": "1.0.0",
+  "description": "K-12 curriculum taxonomy for LLM lesson generation. Each unit maps to specific AGNI capabilities.",
+  "subjects": {
+    "math": {
+      "label": "Mathematics",
+      "spinePrefix": "MAC",
+      "grades": {
+        "K": {
+          "ageRange": "5-6",
+          "band": 1,
+          "units": [
+            { "id": "counting-to-20", "title": "Counting to 20", "topics": ["count forward", "count backward", "count objects", "number names"], "svgHints": ["numberLine"], "sensorHints": [] },
+            { "id": "number-recognition", "title": "Number Recognition 0-20", "topics": ["identify written numerals", "match numeral to quantity"], "svgHints": ["numberLine"], "sensorHints": [] },
+            { "id": "comparing-numbers", "title": "Comparing Numbers", "topics": ["more than", "less than", "equal to", "ordering numbers"], "svgHints": ["numberLine", "balanceScale"], "sensorHints": [] },
+            { "id": "addition-within-10", "title": "Addition Within 10", "topics": ["combining sets", "number bonds", "addition sentences"], "svgHints": ["numberLine", "barGraph"], "sensorHints": [] },
+            { "id": "subtraction-within-10", "title": "Subtraction Within 10", "topics": ["taking away", "difference", "subtraction sentences"], "svgHints": ["numberLine", "balanceScale"], "sensorHints": [] },
+            { "id": "shapes-2d", "title": "2D Shapes", "topics": ["circle", "square", "triangle", "rectangle", "hexagon"], "svgHints": ["polygon"], "sensorHints": [] },
+            { "id": "shapes-3d", "title": "3D Shapes", "topics": ["sphere", "cube", "cylinder", "cone"], "svgHints": ["polygon"], "sensorHints": [] },
+            { "id": "measurement-length", "title": "Measurement: Length", "topics": ["longer", "shorter", "taller", "compare lengths"], "svgHints": ["barGraph", "numberLine"], "sensorHints": [] },
+            { "id": "measurement-weight", "title": "Measurement: Weight", "topics": ["heavier", "lighter", "balance"], "svgHints": ["balanceScale"], "sensorHints": ["accel.total"] },
+            { "id": "patterns", "title": "Patterns", "topics": ["AB patterns", "ABC patterns", "extend patterns", "create patterns"], "svgHints": ["flowMap"], "sensorHints": [] },
+            { "id": "sorting-classifying", "title": "Sorting and Classifying", "topics": ["sort by color", "sort by shape", "sort by size"], "svgHints": ["venn"], "sensorHints": [] },
+            { "id": "positional-words", "title": "Positional Words", "topics": ["above", "below", "beside", "between", "inside", "outside"], "svgHints": ["polygon"], "sensorHints": ["rotation.beta", "rotation.gamma"] }
+          ]
+        },
+        "1": {
+          "ageRange": "6-7",
+          "band": 1,
+          "units": [
+            { "id": "addition-within-20", "title": "Addition Within 20", "topics": ["counting on", "doubles", "making 10", "three addends"], "svgHints": ["numberLine", "barGraph"], "sensorHints": [] },
+            { "id": "subtraction-within-20", "title": "Subtraction Within 20", "topics": ["counting back", "fact families", "missing addend"], "svgHints": ["numberLine", "balanceScale"], "sensorHints": [] },
+            { "id": "place-value-tens-ones", "title": "Place Value: Tens and Ones", "topics": ["tens and ones", "expanded form", "compare two-digit numbers"], "svgHints": ["barGraph", "numberLine"], "sensorHints": [] },
+            { "id": "measurement-length-units", "title": "Measurement with Units", "topics": ["measure with cubes", "inches", "centimeters", "compare lengths"], "svgHints": ["numberLine", "barGraph"], "sensorHints": [] },
+            { "id": "telling-time-hour", "title": "Telling Time to the Hour", "topics": ["hour hand", "o'clock", "half past"], "svgHints": ["clockFace"], "sensorHints": [] },
+            { "id": "data-tally-charts", "title": "Data: Tally Charts and Graphs", "topics": ["tally marks", "picture graphs", "bar graphs", "ask questions about data"], "svgHints": ["barGraph", "pieChart"], "sensorHints": [] },
+            { "id": "geometry-compose", "title": "Composing Shapes", "topics": ["combine shapes", "partition circles", "partition rectangles"], "svgHints": ["polygon"], "sensorHints": [] },
+            { "id": "fractions-intro", "title": "Introduction to Fractions", "topics": ["halves", "fourths", "equal shares"], "svgHints": ["pieChart", "polygon"], "sensorHints": [] }
+          ]
+        },
+        "2": {
+          "ageRange": "7-8",
+          "band": 2,
+          "units": [
+            { "id": "addition-within-100", "title": "Addition Within 100", "topics": ["regrouping", "mental math strategies", "estimation"], "svgHints": ["numberLine", "barGraph"], "sensorHints": [] },
+            { "id": "subtraction-within-100", "title": "Subtraction Within 100", "topics": ["regrouping", "checking with addition"], "svgHints": ["numberLine", "balanceScale"], "sensorHints": [] },
+            { "id": "place-value-1000", "title": "Place Value to 1,000", "topics": ["hundreds tens ones", "skip counting", "compare three-digit"], "svgHints": ["numberLine", "barGraph"], "sensorHints": [] },
+            { "id": "measurement-tools", "title": "Measurement Tools", "topics": ["rulers", "yardsticks", "meter sticks", "estimate lengths"], "svgHints": ["numberLine"], "sensorHints": [] },
+            { "id": "time-5-minutes", "title": "Telling Time to 5 Minutes", "topics": ["minute hand", "five-minute intervals", "AM and PM"], "svgHints": ["clockFace", "clockFaceDynamic"], "sensorHints": [] },
+            { "id": "money", "title": "Money", "topics": ["coin values", "counting coins", "making change"], "svgHints": ["barGraph", "numberLine"], "sensorHints": [] },
+            { "id": "arrays-intro", "title": "Introduction to Arrays", "topics": ["rows and columns", "repeated addition", "equal groups"], "svgHints": ["barGraph", "polygon"], "sensorHints": [] },
+            { "id": "geometry-attributes", "title": "Geometry: Shape Attributes", "topics": ["sides", "vertices", "angles intro", "quadrilaterals"], "svgHints": ["polygon", "polygonDynamic"], "sensorHints": [] }
+          ]
+        },
+        "3": {
+          "ageRange": "8-9",
+          "band": 2,
+          "units": [
+            { "id": "multiplication-facts", "title": "Multiplication Facts", "topics": ["equal groups", "arrays", "skip counting", "properties of multiplication"], "svgHints": ["barGraph", "numberLine"], "sensorHints": [] },
+            { "id": "division-facts", "title": "Division Facts", "topics": ["equal sharing", "repeated subtraction", "fact families"], "svgHints": ["pieChart", "barGraph"], "sensorHints": [] },
+            { "id": "fractions-number-line", "title": "Fractions on a Number Line", "topics": ["unit fractions", "equivalent fractions", "comparing fractions"], "svgHints": ["numberLine", "pieChart"], "sensorHints": [] },
+            { "id": "area-perimeter", "title": "Area and Perimeter", "topics": ["square units", "counting squares", "formula introduction", "perimeter"], "svgHints": ["polygon", "cartesianGrid"], "sensorHints": [] },
+            { "id": "time-elapsed", "title": "Elapsed Time", "topics": ["time intervals", "word problems", "number line strategy"], "svgHints": ["clockFace", "numberLine"], "sensorHints": [] },
+            { "id": "data-bar-graphs", "title": "Data: Scaled Bar Graphs", "topics": ["reading graphs", "creating graphs", "solving problems with data"], "svgHints": ["barGraph", "pieChart"], "sensorHints": [] },
+            { "id": "rounding-estimation", "title": "Rounding and Estimation", "topics": ["round to nearest 10", "round to nearest 100", "estimate sums and differences"], "svgHints": ["numberLine"], "sensorHints": [] },
+            { "id": "patterns-rules", "title": "Number Patterns and Rules", "topics": ["arithmetic patterns", "input-output tables", "pattern rules"], "svgHints": ["barGraph", "flowMap"], "sensorHints": [] }
+          ]
+        },
+        "4": {
+          "ageRange": "9-10",
+          "band": 3,
+          "units": [
+            { "id": "multi-digit-multiplication", "title": "Multi-Digit Multiplication", "topics": ["area model", "partial products", "standard algorithm"], "svgHints": ["barGraph", "polygon"], "sensorHints": [] },
+            { "id": "long-division", "title": "Long Division", "topics": ["quotients", "remainders", "estimation in division"], "svgHints": ["numberLine", "barGraph"], "sensorHints": [] },
+            { "id": "fractions-equivalence", "title": "Fraction Equivalence", "topics": ["equivalent fractions", "simplifying", "comparing with unlike denominators"], "svgHints": ["pieChart", "numberLine", "balanceScale"], "sensorHints": [] },
+            { "id": "decimals-intro", "title": "Introduction to Decimals", "topics": ["tenths", "hundredths", "decimal notation", "comparing decimals"], "svgHints": ["numberLine", "barGraph"], "sensorHints": [] },
+            { "id": "angles", "title": "Angles", "topics": ["measuring angles", "protractor", "right acute obtuse", "angle addition"], "svgHints": ["polygon", "polygonDynamic", "unitCircle"], "sensorHints": ["rotation.gamma"] },
+            { "id": "factors-multiples", "title": "Factors and Multiples", "topics": ["factor pairs", "prime and composite", "multiples", "divisibility"], "svgHints": ["venn", "barGraph"], "sensorHints": [] },
+            { "id": "measurement-conversion", "title": "Measurement Conversion", "topics": ["customary units", "metric units", "converting within a system"], "svgHints": ["numberLine", "balanceScale"], "sensorHints": [] },
+            { "id": "line-plots", "title": "Line Plots and Data", "topics": ["fractions on line plots", "interpreting data", "mean"], "svgHints": ["barGraph", "numberLine"], "sensorHints": [] }
+          ]
+        },
+        "5": {
+          "ageRange": "10-11",
+          "band": 3,
+          "units": [
+            { "id": "fraction-operations", "title": "Fraction Operations", "topics": ["add unlike denominators", "subtract fractions", "multiply fractions", "divide fractions"], "svgHints": ["pieChart", "numberLine", "barGraph"], "sensorHints": [] },
+            { "id": "decimal-operations", "title": "Decimal Operations", "topics": ["add decimals", "subtract decimals", "multiply decimals", "divide decimals"], "svgHints": ["numberLine", "barGraph"], "sensorHints": [] },
+            { "id": "volume", "title": "Volume", "topics": ["cubic units", "volume formula", "composite shapes", "real-world volume"], "svgHints": ["barGraph", "polygon"], "sensorHints": [] },
+            { "id": "coordinate-plane", "title": "Coordinate Plane", "topics": ["ordered pairs", "plotting points", "graphing patterns"], "svgHints": ["cartesianGrid"], "sensorHints": [] },
+            { "id": "expressions-patterns", "title": "Numerical Expressions", "topics": ["order of operations", "parentheses", "evaluate expressions"], "svgHints": ["flowMap", "tree"], "sensorHints": [] },
+            { "id": "place-value-powers", "title": "Place Value and Powers of 10", "topics": ["exponents of 10", "multiply by powers of 10", "decimal place value"], "svgHints": ["numberLine", "barGraph"], "sensorHints": [] },
+            { "id": "classifying-shapes", "title": "Classifying 2D Shapes", "topics": ["hierarchy of quadrilaterals", "properties of triangles", "coordinate geometry"], "svgHints": ["polygon", "polygonDynamic", "cartesianGrid", "venn"], "sensorHints": [] },
+            { "id": "data-analysis-5", "title": "Data Analysis", "topics": ["mean median mode", "range", "interpreting graphs"], "svgHints": ["barGraph", "pieChart"], "sensorHints": [] }
+          ]
+        },
+        "6": {
+          "ageRange": "11-12",
+          "band": 4,
+          "units": [
+            { "id": "ratios-intro", "title": "Ratios and Rates", "topics": ["ratio language", "unit rates", "ratio tables", "equivalent ratios"], "svgHints": ["barGraph", "numberLine"], "sensorHints": [] },
+            { "id": "negative-numbers", "title": "Negative Numbers", "topics": ["integers on number line", "absolute value", "coordinate plane all 4 quadrants", "ordering integers"], "svgHints": ["numberLine", "cartesianGrid"], "sensorHints": ["accel.x"] },
+            { "id": "expressions-equations-6", "title": "Expressions and Equations", "topics": ["variables", "evaluate expressions", "one-step equations", "inequalities"], "svgHints": ["balanceScale", "numberLine"], "sensorHints": [] },
+            { "id": "area-surface-area", "title": "Area and Surface Area", "topics": ["area of triangles", "area of trapezoids", "surface area of prisms", "nets"], "svgHints": ["polygon", "cartesianGrid"], "sensorHints": [] },
+            { "id": "statistics-6", "title": "Statistics: Center and Spread", "topics": ["mean", "median", "IQR", "MAD", "dot plots", "histograms", "box plots"], "svgHints": ["barGraph", "numberLine"], "sensorHints": [] },
+            { "id": "percent-intro", "title": "Understanding Percentages", "topics": ["percent of a number", "fractions decimals percents", "percent problems"], "svgHints": ["pieChart", "barGraph"], "sensorHints": [] },
+            { "id": "dividing-fractions", "title": "Dividing Fractions", "topics": ["fraction by whole number", "whole number by fraction", "fraction by fraction"], "svgHints": ["numberLine", "pieChart", "barGraph"], "sensorHints": [] },
+            { "id": "coordinate-geometry-6", "title": "Coordinate Geometry", "topics": ["distance on coordinate plane", "polygons on coordinate plane", "reflections"], "svgHints": ["cartesianGrid"], "sensorHints": [] }
+          ]
+        },
+        "7": {
+          "ageRange": "12-13",
+          "band": 4,
+          "units": [
+            { "id": "proportional-relationships", "title": "Proportional Relationships", "topics": ["constant of proportionality", "graphs of proportions", "percent problems"], "svgHints": ["cartesianGrid", "barGraph"], "sensorHints": [] },
+            { "id": "rational-operations", "title": "Operations with Rational Numbers", "topics": ["add subtract integers", "multiply divide rationals", "complex fractions"], "svgHints": ["numberLine", "balanceScale"], "sensorHints": [] },
+            { "id": "two-step-equations", "title": "Two-Step Equations and Inequalities", "topics": ["solving equations", "modeling with equations", "inequalities"], "svgHints": ["balanceScale", "numberLine"], "sensorHints": [] },
+            { "id": "probability", "title": "Probability", "topics": ["experimental probability", "theoretical probability", "compound events", "simulations"], "svgHints": ["pieChart", "barGraph", "tree"], "sensorHints": [] },
+            { "id": "geometry-7", "title": "Geometry: Angles and Triangles", "topics": ["supplementary angles", "vertical angles", "triangle angle sum", "scale drawings"], "svgHints": ["polygon", "polygonDynamic"], "sensorHints": ["rotation.gamma"] },
+            { "id": "circles-intro", "title": "Circles: Circumference and Area", "topics": ["pi", "circumference formula", "area formula", "composite figures"], "svgHints": ["unitCircle", "polygon"], "sensorHints": [] },
+            { "id": "sampling-inference", "title": "Sampling and Inference", "topics": ["random samples", "making inferences", "comparing populations"], "svgHints": ["barGraph", "pieChart"], "sensorHints": [] },
+            { "id": "surface-area-volume-7", "title": "Surface Area and Volume of Prisms", "topics": ["rectangular prisms", "triangular prisms", "cross-sections"], "svgHints": ["polygon", "barGraph"], "sensorHints": [] }
+          ]
+        },
+        "8": {
+          "ageRange": "13-14",
+          "band": 5,
+          "units": [
+            { "id": "linear-equations", "title": "Linear Equations", "topics": ["solving multi-step", "equations with variables on both sides", "no solution / infinite solutions"], "svgHints": ["cartesianGrid", "balanceScale"], "sensorHints": [] },
+            { "id": "functions-intro", "title": "Introduction to Functions", "topics": ["function definition", "function notation", "linear vs nonlinear", "rate of change"], "svgHints": ["cartesianGrid"], "sensorHints": [] },
+            { "id": "linear-graphing", "title": "Linear Relationships and Graphing", "topics": ["slope", "y-intercept", "slope-intercept form", "point-slope form"], "svgHints": ["cartesianGrid"], "sensorHints": ["rotation.beta"] },
+            { "id": "systems-equations", "title": "Systems of Equations", "topics": ["graphing method", "substitution", "elimination", "real-world systems"], "svgHints": ["cartesianGrid"], "sensorHints": [] },
+            { "id": "exponents-roots", "title": "Exponents and Roots", "topics": ["integer exponents", "scientific notation", "square roots", "cube roots"], "svgHints": ["numberLine", "barGraph"], "sensorHints": [] },
+            { "id": "pythagorean-theorem", "title": "Pythagorean Theorem", "topics": ["proof", "finding hypotenuse", "finding leg", "distance formula", "3D applications"], "svgHints": ["cartesianGrid", "polygon", "polygonDynamic"], "sensorHints": [] },
+            { "id": "transformations", "title": "Transformations", "topics": ["translations", "reflections", "rotations", "dilations", "congruence", "similarity"], "svgHints": ["cartesianGrid", "polygonDynamic"], "sensorHints": ["rotation.alpha"] },
+            { "id": "bivariate-data", "title": "Bivariate Data and Scatter Plots", "topics": ["scatter plots", "trend lines", "correlation", "two-way tables"], "svgHints": ["cartesianGrid"], "sensorHints": [] }
+          ]
+        },
+        "9": {
+          "ageRange": "14-15",
+          "band": 5,
+          "units": [
+            { "id": "algebra-foundations", "title": "Algebra Foundations", "topics": ["real number system", "properties of operations", "order of operations", "absolute value"], "svgHints": ["numberLine", "venn"], "sensorHints": [] },
+            { "id": "linear-equations-alg", "title": "Linear Equations and Functions", "topics": ["slope-intercept", "standard form", "parallel perpendicular", "piecewise functions"], "svgHints": ["cartesianGrid"], "sensorHints": [] },
+            { "id": "systems-alg", "title": "Systems of Equations and Inequalities", "topics": ["systems of linear equations", "systems of inequalities", "linear programming"], "svgHints": ["cartesianGrid"], "sensorHints": [] },
+            { "id": "quadratics", "title": "Quadratic Functions", "topics": ["factoring", "completing the square", "quadratic formula", "discriminant", "vertex form"], "svgHints": ["cartesianGrid"], "sensorHints": [] },
+            { "id": "polynomials", "title": "Polynomials", "topics": ["add subtract multiply", "factoring strategies", "polynomial division"], "svgHints": ["cartesianGrid", "barGraph"], "sensorHints": [] },
+            { "id": "exponential-functions", "title": "Exponential Functions", "topics": ["growth and decay", "exponential equations", "geometric sequences"], "svgHints": ["cartesianGrid", "barGraph"], "sensorHints": [] },
+            { "id": "radical-expressions", "title": "Radical Expressions", "topics": ["simplifying radicals", "operations with radicals", "radical equations"], "svgHints": ["numberLine", "cartesianGrid"], "sensorHints": [] },
+            { "id": "statistics-alg", "title": "Statistics", "topics": ["one-variable statistics", "normal distribution", "standard deviation", "z-scores"], "svgHints": ["barGraph", "cartesianGrid"], "sensorHints": [] }
+          ]
+        },
+        "10": {
+          "ageRange": "15-16",
+          "band": 5,
+          "units": [
+            { "id": "logic-proofs", "title": "Logic and Proofs", "topics": ["inductive reasoning", "deductive reasoning", "conditional statements", "two-column proofs"], "svgHints": ["flowMap", "tree"], "sensorHints": [] },
+            { "id": "parallel-perpendicular", "title": "Parallel and Perpendicular Lines", "topics": ["transversals", "angle relationships", "slope criteria"], "svgHints": ["cartesianGrid", "polygon"], "sensorHints": [] },
+            { "id": "triangle-congruence", "title": "Triangle Congruence", "topics": ["SSS SAS ASA AAS HL", "CPCTC", "proofs with congruent triangles"], "svgHints": ["polygon", "polygonDynamic"], "sensorHints": [] },
+            { "id": "triangle-properties", "title": "Triangle Properties", "topics": ["midsegments", "bisectors", "medians", "altitudes", "triangle inequality"], "svgHints": ["polygon", "polygonDynamic", "cartesianGrid"], "sensorHints": [] },
+            { "id": "similarity", "title": "Similarity", "topics": ["similar polygons", "AA SAS SSS similarity", "applications"], "svgHints": ["polygon", "polygonDynamic"], "sensorHints": [] },
+            { "id": "right-triangles-trig", "title": "Right Triangles and Trigonometry", "topics": ["Pythagorean theorem proofs", "special right triangles", "sin cos tan", "inverse trig"], "svgHints": ["unitCircle", "polygon", "cartesianGrid"], "sensorHints": ["rotation.beta"] },
+            { "id": "circles-geometry", "title": "Circles", "topics": ["central angles", "inscribed angles", "arc length", "sector area", "tangent lines"], "svgHints": ["unitCircle", "polygon"], "sensorHints": [] },
+            { "id": "coordinate-proofs", "title": "Coordinate Geometry Proofs", "topics": ["distance formula", "midpoint formula", "slope proofs", "equation of circle"], "svgHints": ["cartesianGrid"], "sensorHints": [] }
+          ]
+        },
+        "11": {
+          "ageRange": "16-17",
+          "band": 6,
+          "units": [
+            { "id": "polynomial-functions", "title": "Polynomial Functions", "topics": ["end behavior", "zeros", "factoring", "remainder theorem", "graphing"], "svgHints": ["cartesianGrid"], "sensorHints": [] },
+            { "id": "rational-functions", "title": "Rational Functions", "topics": ["simplifying", "asymptotes", "graphing", "equations"], "svgHints": ["cartesianGrid"], "sensorHints": [] },
+            { "id": "exponential-log", "title": "Exponential and Logarithmic Functions", "topics": ["properties of logarithms", "solving exponential equations", "natural logarithm", "applications"], "svgHints": ["cartesianGrid"], "sensorHints": [] },
+            { "id": "sequences-series", "title": "Sequences and Series", "topics": ["arithmetic sequences", "geometric sequences", "sigma notation", "partial sums"], "svgHints": ["cartesianGrid", "barGraph"], "sensorHints": [] },
+            { "id": "trigonometric-functions", "title": "Trigonometric Functions", "topics": ["unit circle", "graphing sin cos", "amplitude period phase", "inverse trig"], "svgHints": ["unitCircle", "cartesianGrid"], "sensorHints": ["rotation.alpha", "rotation.beta"] },
+            { "id": "trig-identities", "title": "Trigonometric Identities", "topics": ["Pythagorean identities", "sum and difference", "double angle", "half angle"], "svgHints": ["unitCircle", "cartesianGrid"], "sensorHints": [] },
+            { "id": "conic-sections", "title": "Conic Sections", "topics": ["circles", "ellipses", "hyperbolas", "parabolas"], "svgHints": ["cartesianGrid"], "sensorHints": [] },
+            { "id": "matrices-intro", "title": "Matrices", "topics": ["operations", "determinants", "inverses", "solving systems with matrices"], "svgHints": ["barGraph", "cartesianGrid"], "sensorHints": [] }
+          ]
+        },
+        "12": {
+          "ageRange": "17-18",
+          "band": 6,
+          "units": [
+            { "id": "limits-intro", "title": "Limits and Continuity", "topics": ["intuitive limits", "limit laws", "continuity", "intermediate value theorem"], "svgHints": ["cartesianGrid"], "sensorHints": [] },
+            { "id": "derivatives-intro", "title": "Introduction to Derivatives", "topics": ["rate of change", "definition of derivative", "differentiation rules", "chain rule"], "svgHints": ["cartesianGrid"], "sensorHints": ["accel.x"] },
+            { "id": "applications-derivatives", "title": "Applications of Derivatives", "topics": ["optimization", "related rates", "curve sketching", "L'Hopital's rule"], "svgHints": ["cartesianGrid"], "sensorHints": [] },
+            { "id": "integrals-intro", "title": "Introduction to Integrals", "topics": ["Riemann sums", "fundamental theorem", "antiderivatives", "definite integrals"], "svgHints": ["cartesianGrid", "barGraph"], "sensorHints": [] },
+            { "id": "probability-stats-12", "title": "Probability and Statistics", "topics": ["combinatorics", "probability distributions", "binomial theorem", "expected value", "hypothesis testing"], "svgHints": ["barGraph", "pieChart", "cartesianGrid"], "sensorHints": [] },
+            { "id": "vectors", "title": "Vectors", "topics": ["vector operations", "dot product", "cross product", "applications"], "svgHints": ["cartesianGrid"], "sensorHints": ["accel.x", "accel.y"] },
+            { "id": "polar-parametric", "title": "Polar and Parametric Equations", "topics": ["polar coordinates", "polar graphs", "parametric equations"], "svgHints": ["cartesianGrid", "unitCircle"], "sensorHints": [] },
+            { "id": "series-convergence", "title": "Infinite Series", "topics": ["convergence tests", "Taylor series", "Maclaurin series", "power series"], "svgHints": ["cartesianGrid"], "sensorHints": [] }
+          ]
+        }
+      }
+    },
+    "science": {
+      "label": "Science",
+      "spinePrefix": "SCI",
+      "grades": {
+        "K": {
+          "ageRange": "5-6",
+          "band": 1,
+          "units": [
+            { "id": "pushes-pulls", "title": "Pushes and Pulls", "topics": ["push makes things move", "pull makes things move", "strength of force", "direction of force"], "svgHints": ["arrowMap", "barGraph"], "sensorHints": ["accel.total", "accel.x"] },
+            { "id": "weather-patterns", "title": "Weather Patterns", "topics": ["sunny", "cloudy", "rainy", "windy", "seasons"], "svgHints": ["barGraph", "pieChart"], "sensorHints": ["temperature", "light", "pressure"] },
+            { "id": "plants-animals", "title": "Plants and Animals", "topics": ["what plants need", "what animals need", "living vs nonliving", "habitats"], "svgHints": ["flowMap", "venn"], "sensorHints": ["light"] },
+            { "id": "five-senses", "title": "The Five Senses", "topics": ["sight", "hearing", "touch", "taste", "smell", "using senses to observe"], "svgHints": ["venn", "barGraph"], "sensorHints": ["sound.level", "light", "temperature"] },
+            { "id": "earth-materials", "title": "Earth Materials", "topics": ["rocks", "soil", "water", "natural resources"], "svgHints": ["venn", "barGraph"], "sensorHints": [] },
+            { "id": "day-night", "title": "Day and Night", "topics": ["sun patterns", "shadows", "day length changes"], "svgHints": ["clockFace", "barGraph"], "sensorHints": ["light"] }
+          ]
+        },
+        "1": {
+          "ageRange": "6-7",
+          "band": 1,
+          "units": [
+            { "id": "sound-vibrations", "title": "Sound and Vibrations", "topics": ["vibrations cause sound", "loud vs quiet", "pitch", "how sound travels"], "svgHints": ["barGraph", "timeGraph"], "sensorHints": ["sound.level", "accel.total"] },
+            { "id": "light-shadows", "title": "Light and Shadows", "topics": ["light sources", "transparent translucent opaque", "shadow formation"], "svgHints": ["barGraph"], "sensorHints": ["light", "light.ambient"] },
+            { "id": "animal-parents", "title": "Animal Parents and Offspring", "topics": ["animal babies", "survival behaviors", "mimicry"], "svgHints": ["flowMap", "venn"], "sensorHints": [] },
+            { "id": "seasonal-patterns", "title": "Seasonal Patterns", "topics": ["four seasons", "animal behavior changes", "plant changes", "daylight changes"], "svgHints": ["barGraph", "clockFace"], "sensorHints": ["temperature", "light"] },
+            { "id": "motion-patterns", "title": "Patterns of Motion", "topics": ["straight line", "zigzag", "circular", "back and forth", "predict motion"], "svgHints": ["cartesianGrid", "arrowMap"], "sensorHints": ["accel.x", "accel.y", "gyro.magnitude"] }
+          ]
+        },
+        "2": {
+          "ageRange": "7-8",
+          "band": 2,
+          "units": [
+            { "id": "matter-properties", "title": "Properties of Matter", "topics": ["solid liquid gas", "observable properties", "heating cooling", "reversible changes"], "svgHints": ["venn", "barGraph"], "sensorHints": ["temperature"] },
+            { "id": "earth-surface", "title": "Earth's Surface", "topics": ["landforms", "erosion", "weathering", "water shapes land", "maps"], "svgHints": ["arrowMap", "barGraph"], "sensorHints": ["pressure"] },
+            { "id": "plants-seeds", "title": "Plants and Seeds", "topics": ["seed dispersal", "pollination", "plant life cycle", "what plants need to grow"], "svgHints": ["flowMap", "barGraph"], "sensorHints": ["light", "temperature"] },
+            { "id": "animal-habitats", "title": "Animal Habitats", "topics": ["desert", "forest", "ocean", "arctic", "adaptations"], "svgHints": ["venn", "barGraph", "arrowMap"], "sensorHints": ["temperature", "light"] },
+            { "id": "forces-motion-2", "title": "Forces and Motion", "topics": ["gravity", "friction", "inclined planes", "ramps"], "svgHints": ["arrowMap", "barGraph"], "sensorHints": ["accel.total", "accel.x", "rotation.beta"] }
+          ]
+        },
+        "3": {
+          "ageRange": "8-9",
+          "band": 2,
+          "units": [
+            { "id": "life-cycles", "title": "Life Cycles", "topics": ["butterfly", "frog", "plant", "comparing life cycles"], "svgHints": ["flowMap"], "sensorHints": [] },
+            { "id": "ecosystems-intro", "title": "Ecosystems", "topics": ["food chains", "producers consumers decomposers", "energy flow"], "svgHints": ["flowMap", "tree"], "sensorHints": [] },
+            { "id": "weather-climate", "title": "Weather and Climate", "topics": ["temperature", "precipitation", "wind", "severe weather", "climate zones"], "svgHints": ["barGraph", "timeGraph"], "sensorHints": ["temperature", "pressure", "sound.level"] },
+            { "id": "magnets-forces", "title": "Magnets and Forces", "topics": ["magnetic materials", "poles", "attract repel", "compasses"], "svgHints": ["arrowMap", "barGraph"], "sensorHints": ["mag.magnitude", "mag.x", "mag.y", "mag.z"] },
+            { "id": "fossils", "title": "Fossils", "topics": ["what fossils tell us", "types of fossils", "fossil formation", "ancient environments"], "svgHints": ["flowMap", "barGraph"], "sensorHints": [] },
+            { "id": "simple-machines", "title": "Simple Machines", "topics": ["lever", "wheel and axle", "pulley", "inclined plane", "mechanical advantage"], "svgHints": ["balanceScale", "barGraph", "arrowMap"], "sensorHints": ["accel.total"] }
+          ]
+        },
+        "4": {
+          "ageRange": "9-10",
+          "band": 3,
+          "units": [
+            { "id": "energy-forms", "title": "Forms of Energy", "topics": ["kinetic", "potential", "thermal", "sound", "light", "electrical"], "svgHints": ["barGraph", "flowMap"], "sensorHints": ["accel.total", "sound.level", "light", "temperature"] },
+            { "id": "energy-transfer", "title": "Energy Transfer", "topics": ["conduction convection radiation", "energy transformation", "conservation of energy"], "svgHints": ["flowMap", "arrowMap", "barGraph"], "sensorHints": ["temperature"] },
+            { "id": "waves", "title": "Waves", "topics": ["wave properties", "amplitude", "wavelength", "frequency", "sound waves", "light waves"], "svgHints": ["timeGraph", "barGraph"], "sensorHints": ["sound.level", "accel.total"] },
+            { "id": "earth-processes", "title": "Earth's Processes", "topics": ["earthquakes", "volcanoes", "plate tectonics intro", "rock cycle"], "svgHints": ["flowMap", "arrowMap"], "sensorHints": ["accel.total"] },
+            { "id": "body-systems-intro", "title": "Body Systems", "topics": ["skeletal", "muscular", "digestive", "circulatory", "nervous"], "svgHints": ["flowMap", "tree"], "sensorHints": [] },
+            { "id": "earth-moon-sun", "title": "Earth, Moon, and Sun", "topics": ["rotation revolution", "moon phases", "eclipses", "tides"], "svgHints": ["unitCircle", "clockFace", "arrowMap"], "sensorHints": ["light"] }
+          ]
+        },
+        "5": {
+          "ageRange": "10-11",
+          "band": 3,
+          "units": [
+            { "id": "matter-chemistry", "title": "Matter and Chemistry", "topics": ["atoms", "elements", "molecules", "chemical reactions", "conservation of mass"], "svgHints": ["barGraph", "balanceScale", "flowMap"], "sensorHints": ["temperature"] },
+            { "id": "mixtures-solutions", "title": "Mixtures and Solutions", "topics": ["mixtures", "solutions", "solubility", "separation methods"], "svgHints": ["barGraph", "venn"], "sensorHints": ["temperature"] },
+            { "id": "earth-water", "title": "Earth's Water", "topics": ["water cycle", "watersheds", "groundwater", "ocean currents"], "svgHints": ["flowMap", "arrowMap"], "sensorHints": ["temperature", "pressure"] },
+            { "id": "ecosystems-5", "title": "Ecosystems and Energy", "topics": ["food webs", "energy pyramids", "nutrient cycles", "human impact"], "svgHints": ["flowMap", "tree", "barGraph"], "sensorHints": [] },
+            { "id": "gravity-solar-system", "title": "Gravity and the Solar System", "topics": ["gravity", "orbits", "planet characteristics", "scale of solar system"], "svgHints": ["arrowMap", "barGraph"], "sensorHints": ["accel.total"] },
+            { "id": "heredity-traits", "title": "Heredity and Traits", "topics": ["inherited traits", "learned behaviors", "variation", "adaptations"], "svgHints": ["venn", "barGraph", "tree"], "sensorHints": [] }
+          ]
+        },
+        "6": {
+          "ageRange": "11-12",
+          "band": 4,
+          "units": [
+            { "id": "cells", "title": "Cells", "topics": ["cell theory", "plant vs animal cells", "organelles", "cell processes"], "svgHints": ["venn", "flowMap"], "sensorHints": [] },
+            { "id": "body-systems-6", "title": "Body Systems in Depth", "topics": ["respiratory", "circulatory", "immune", "system interactions"], "svgHints": ["flowMap", "tree", "barGraph"], "sensorHints": [] },
+            { "id": "earth-layers", "title": "Earth's Layers", "topics": ["crust mantle core", "plate boundaries", "earthquakes", "volcanoes"], "svgHints": ["flowMap", "barGraph"], "sensorHints": ["accel.total"] },
+            { "id": "weather-atmosphere", "title": "Weather and Atmosphere", "topics": ["atmospheric layers", "air pressure", "fronts", "severe weather", "climate"], "svgHints": ["barGraph", "timeGraph", "arrowMap"], "sensorHints": ["pressure", "temperature"] },
+            { "id": "energy-resources", "title": "Energy Resources", "topics": ["renewable", "nonrenewable", "fossil fuels", "solar wind hydro", "conservation"], "svgHints": ["pieChart", "barGraph"], "sensorHints": ["light"] },
+            { "id": "thermal-energy", "title": "Thermal Energy", "topics": ["temperature vs heat", "specific heat", "conduction convection radiation", "insulation"], "svgHints": ["barGraph", "timeGraph"], "sensorHints": ["temperature"] }
+          ]
+        },
+        "7": {
+          "ageRange": "12-13",
+          "band": 4,
+          "units": [
+            { "id": "genetics", "title": "Genetics", "topics": ["DNA", "genes", "Punnett squares", "dominant recessive", "mutations"], "svgHints": ["tree", "barGraph", "venn"], "sensorHints": [] },
+            { "id": "evolution", "title": "Evolution and Natural Selection", "topics": ["Darwin", "natural selection", "adaptation", "fossil evidence", "speciation"], "svgHints": ["tree", "flowMap", "barGraph"], "sensorHints": [] },
+            { "id": "ecology", "title": "Ecology", "topics": ["biomes", "symbiosis", "population dynamics", "human impact", "biodiversity"], "svgHints": ["barGraph", "flowMap", "pieChart"], "sensorHints": ["temperature", "light"] },
+            { "id": "forces-motion-7", "title": "Forces and Motion", "topics": ["Newton's laws", "balanced unbalanced forces", "friction", "gravity", "momentum"], "svgHints": ["arrowMap", "cartesianGrid", "timeGraph"], "sensorHints": ["accel.total", "accel.x", "accel.y"] },
+            { "id": "electromagnetic-spectrum", "title": "Electromagnetic Spectrum", "topics": ["radio waves", "microwaves", "infrared", "visible light", "UV", "X-rays", "gamma rays"], "svgHints": ["barGraph", "timeGraph"], "sensorHints": ["light", "light.ambient"] },
+            { "id": "chemical-reactions-7", "title": "Chemical Reactions", "topics": ["reactants products", "balancing equations", "types of reactions", "energy in reactions"], "svgHints": ["barGraph", "balanceScale", "flowMap"], "sensorHints": ["temperature"] }
+          ]
+        },
+        "8": {
+          "ageRange": "13-14",
+          "band": 5,
+          "units": [
+            { "id": "motion-graphs", "title": "Motion and Graphs", "topics": ["speed velocity acceleration", "distance-time graphs", "velocity-time graphs", "calculations"], "svgHints": ["cartesianGrid", "timeGraph"], "sensorHints": ["accel.total", "accel.x", "accel.y", "accel.z"] },
+            { "id": "newtons-laws-depth", "title": "Newton's Laws in Depth", "topics": ["inertia", "F=ma", "action-reaction", "free body diagrams", "net force"], "svgHints": ["arrowMap", "cartesianGrid", "balanceScale"], "sensorHints": ["accel.total", "accel.x"] },
+            { "id": "energy-work", "title": "Energy, Work, and Power", "topics": ["work formula", "power", "kinetic energy", "potential energy", "conservation"], "svgHints": ["barGraph", "cartesianGrid"], "sensorHints": ["accel.total"] },
+            { "id": "electricity-circuits", "title": "Electricity and Circuits", "topics": ["charge", "current", "voltage", "resistance", "Ohm's law", "series parallel"], "svgHints": ["flowMap", "barGraph"], "sensorHints": [] },
+            { "id": "periodic-table", "title": "The Periodic Table", "topics": ["elements", "atomic structure", "groups periods", "metals nonmetals", "electron configuration"], "svgHints": ["barGraph", "venn"], "sensorHints": [] },
+            { "id": "earth-space-8", "title": "Earth and Space", "topics": ["solar system", "stars", "galaxies", "universe expansion", "gravity in space"], "svgHints": ["arrowMap", "barGraph"], "sensorHints": [] }
+          ]
+        },
+        "9": {
+          "ageRange": "14-15",
+          "band": 5,
+          "units": [
+            { "id": "bio-molecules", "title": "Biological Molecules", "topics": ["carbohydrates", "lipids", "proteins", "nucleic acids", "enzymes"], "svgHints": ["flowMap", "barGraph", "venn"], "sensorHints": [] },
+            { "id": "cell-biology", "title": "Cell Biology", "topics": ["cell membrane", "osmosis diffusion", "mitosis", "meiosis", "cellular respiration"], "svgHints": ["flowMap", "venn", "barGraph"], "sensorHints": [] },
+            { "id": "photosynthesis-respiration", "title": "Photosynthesis and Respiration", "topics": ["photosynthesis equation", "cellular respiration", "ATP", "energy flow"], "svgHints": ["flowMap", "barGraph"], "sensorHints": ["light"] },
+            { "id": "genetics-9", "title": "Genetics and Biotechnology", "topics": ["DNA replication", "transcription translation", "genetic engineering", "CRISPR", "bioethics"], "svgHints": ["flowMap", "tree"], "sensorHints": [] },
+            { "id": "ecology-9", "title": "Ecology and Human Impact", "topics": ["carbon cycle", "nitrogen cycle", "climate change", "conservation", "sustainability"], "svgHints": ["flowMap", "barGraph", "pieChart", "timeGraph"], "sensorHints": ["temperature", "pressure"] },
+            { "id": "evolution-9", "title": "Evolution and Classification", "topics": ["evidence for evolution", "cladograms", "taxonomy", "speciation", "Hardy-Weinberg"], "svgHints": ["tree", "flowMap", "barGraph"], "sensorHints": [] }
+          ]
+        },
+        "10": {
+          "ageRange": "15-16",
+          "band": 5,
+          "units": [
+            { "id": "atomic-structure", "title": "Atomic Structure", "topics": ["subatomic particles", "electron configuration", "quantum numbers", "isotopes"], "svgHints": ["barGraph", "venn"], "sensorHints": [] },
+            { "id": "bonding", "title": "Chemical Bonding", "topics": ["ionic bonds", "covalent bonds", "metallic bonds", "Lewis structures", "VSEPR"], "svgHints": ["flowMap", "venn"], "sensorHints": [] },
+            { "id": "stoichiometry", "title": "Stoichiometry", "topics": ["mole concept", "molar mass", "balancing equations", "limiting reagent", "percent yield"], "svgHints": ["barGraph", "balanceScale"], "sensorHints": [] },
+            { "id": "states-of-matter-chem", "title": "States of Matter and Gas Laws", "topics": ["kinetic molecular theory", "Boyle's law", "Charles's law", "ideal gas law"], "svgHints": ["cartesianGrid", "barGraph", "timeGraph"], "sensorHints": ["pressure", "temperature"] },
+            { "id": "solutions-chem", "title": "Solutions and Concentrations", "topics": ["solubility", "molarity", "dilution", "colligative properties"], "svgHints": ["barGraph", "cartesianGrid"], "sensorHints": ["temperature"] },
+            { "id": "acids-bases", "title": "Acids, Bases, and pH", "topics": ["pH scale", "strong vs weak", "neutralization", "buffers", "titrations"], "svgHints": ["barGraph", "cartesianGrid", "numberLine"], "sensorHints": [] }
+          ]
+        },
+        "11": {
+          "ageRange": "16-17",
+          "band": 6,
+          "units": [
+            { "id": "kinematics", "title": "Kinematics", "topics": ["displacement velocity acceleration", "motion equations", "projectile motion", "relative motion"], "svgHints": ["cartesianGrid", "timeGraph", "arrowMap"], "sensorHints": ["accel.total", "accel.x", "accel.y", "accel.z"] },
+            { "id": "dynamics", "title": "Dynamics", "topics": ["Newton's laws", "free body diagrams", "friction", "circular motion", "gravitational force"], "svgHints": ["arrowMap", "cartesianGrid"], "sensorHints": ["accel.total", "accel.x", "gyro.magnitude"] },
+            { "id": "energy-work-power", "title": "Energy, Work, and Power", "topics": ["work-energy theorem", "conservation of energy", "power", "efficiency"], "svgHints": ["barGraph", "cartesianGrid"], "sensorHints": ["accel.total"] },
+            { "id": "momentum-collisions", "title": "Momentum and Collisions", "topics": ["impulse", "conservation of momentum", "elastic inelastic collisions", "explosions"], "svgHints": ["barGraph", "arrowMap", "cartesianGrid"], "sensorHints": ["accel.total", "accel.x"] },
+            { "id": "rotational-motion", "title": "Rotational Motion", "topics": ["angular velocity", "torque", "moment of inertia", "angular momentum"], "svgHints": ["unitCircle", "cartesianGrid", "timeGraph"], "sensorHints": ["gyro.x", "gyro.y", "gyro.z", "gyro.magnitude"] },
+            { "id": "waves-physics", "title": "Waves and Optics", "topics": ["wave equation", "interference", "diffraction", "reflection", "refraction", "lenses mirrors"], "svgHints": ["timeGraph", "cartesianGrid"], "sensorHints": ["light", "sound.level"] }
+          ]
+        },
+        "12": {
+          "ageRange": "17-18",
+          "band": 6,
+          "units": [
+            { "id": "electrostatics", "title": "Electrostatics", "topics": ["Coulomb's law", "electric field", "electric potential", "capacitors"], "svgHints": ["arrowMap", "cartesianGrid"], "sensorHints": [] },
+            { "id": "circuits-depth", "title": "Circuits", "topics": ["Kirchhoff's laws", "complex circuits", "RC circuits", "power dissipation"], "svgHints": ["flowMap", "barGraph"], "sensorHints": [] },
+            { "id": "magnetism-em", "title": "Magnetism and Electromagnetism", "topics": ["magnetic fields", "electromagnetic induction", "Faraday's law", "generators motors"], "svgHints": ["arrowMap", "timeGraph"], "sensorHints": ["mag.magnitude", "mag.x", "mag.y", "mag.z"] },
+            { "id": "modern-physics", "title": "Modern Physics", "topics": ["special relativity", "photoelectric effect", "wave-particle duality", "atomic models", "nuclear physics"], "svgHints": ["cartesianGrid", "barGraph"], "sensorHints": [] },
+            { "id": "thermodynamics", "title": "Thermodynamics", "topics": ["laws of thermodynamics", "heat engines", "entropy", "thermal equilibrium"], "svgHints": ["barGraph", "cartesianGrid", "timeGraph"], "sensorHints": ["temperature"] },
+            { "id": "fluid-mechanics", "title": "Fluid Mechanics", "topics": ["pressure", "Pascal's principle", "Archimedes' principle", "Bernoulli's equation"], "svgHints": ["barGraph", "arrowMap"], "sensorHints": ["pressure"] }
+          ]
+        }
+      }
+    },
+    "social_studies": {
+      "label": "Social Studies",
+      "spinePrefix": "SOC",
+      "grades": {
+        "K": {
+          "ageRange": "5-6",
+          "band": 1,
+          "units": [
+            { "id": "me-and-school", "title": "Me and My School", "topics": ["rules", "responsibilities", "school helpers", "being a good citizen"], "svgHints": ["flowMap"], "sensorHints": [] },
+            { "id": "families-communities", "title": "Families and Communities", "topics": ["family roles", "community helpers", "neighborhoods"], "svgHints": ["flowMap", "venn"], "sensorHints": [] },
+            { "id": "maps-intro", "title": "Introduction to Maps", "topics": ["map symbols", "near and far", "directions"], "svgHints": ["arrowMap"], "sensorHints": ["rotation.alpha"] },
+            { "id": "needs-wants", "title": "Needs and Wants", "topics": ["basic needs", "wants", "making choices"], "svgHints": ["venn", "barGraph"], "sensorHints": [] },
+            { "id": "holidays-traditions", "title": "Holidays and Traditions", "topics": ["national holidays", "cultural celebrations", "family traditions"], "svgHints": ["barGraph", "pieChart"], "sensorHints": [] }
+          ]
+        },
+        "1": {
+          "ageRange": "6-7",
+          "band": 1,
+          "units": [
+            { "id": "rights-responsibilities", "title": "Rights and Responsibilities", "topics": ["classroom rules", "fairness", "respect", "voting"], "svgHints": ["flowMap"], "sensorHints": [] },
+            { "id": "geography-landforms", "title": "Geography: Landforms", "topics": ["mountains", "rivers", "oceans", "deserts", "continents"], "svgHints": ["arrowMap"], "sensorHints": [] },
+            { "id": "goods-services", "title": "Goods and Services", "topics": ["producers consumers", "buying selling", "money"], "svgHints": ["flowMap", "barGraph"], "sensorHints": [] },
+            { "id": "historical-figures", "title": "Historical Figures", "topics": ["Martin Luther King Jr", "Abraham Lincoln", "national heroes"], "svgHints": ["flowMap"], "sensorHints": [] },
+            { "id": "cultures-world", "title": "Cultures Around the World", "topics": ["food", "clothing", "housing", "language", "celebrations"], "svgHints": ["barGraph", "venn", "arrowMap"], "sensorHints": [] }
+          ]
+        },
+        "2": {
+          "ageRange": "7-8",
+          "band": 2,
+          "units": [
+            { "id": "government-community", "title": "Government in Our Community", "topics": ["mayor", "city council", "laws", "services"], "svgHints": ["flowMap", "tree"], "sensorHints": [] },
+            { "id": "map-skills", "title": "Map Skills", "topics": ["map key", "compass rose", "grid coordinates", "physical maps", "political maps"], "svgHints": ["arrowMap", "cartesianGrid"], "sensorHints": ["rotation.alpha"] },
+            { "id": "economics-choices", "title": "Economics: Making Choices", "topics": ["opportunity cost", "scarcity", "trade", "supply and demand"], "svgHints": ["barGraph", "balanceScale"], "sensorHints": [] },
+            { "id": "us-symbols", "title": "American Symbols and Landmarks", "topics": ["flag", "Liberty Bell", "Statue of Liberty", "monuments"], "svgHints": ["arrowMap"], "sensorHints": [] },
+            { "id": "community-change", "title": "Communities Change Over Time", "topics": ["past present future", "technology changes", "community growth"], "svgHints": ["flowMap", "barGraph"], "sensorHints": [] }
+          ]
+        },
+        "3": {
+          "ageRange": "8-9",
+          "band": 2,
+          "units": [
+            { "id": "local-government", "title": "Local Government", "topics": ["branches of government intro", "state government", "voting process"], "svgHints": ["tree", "flowMap"], "sensorHints": [] },
+            { "id": "us-geography", "title": "United States Geography", "topics": ["regions", "states", "capitals", "natural resources", "climate zones"], "svgHints": ["arrowMap", "barGraph"], "sensorHints": [] },
+            { "id": "economics-producers", "title": "Economics: Production", "topics": ["natural resources", "human resources", "capital resources", "entrepreneurship"], "svgHints": ["flowMap", "barGraph"], "sensorHints": [] },
+            { "id": "native-americans", "title": "Native American Cultures", "topics": ["regions and tribes", "way of life", "contributions", "impact of colonization"], "svgHints": ["arrowMap", "venn"], "sensorHints": [] },
+            { "id": "exploration-colonization", "title": "Exploration and Colonization", "topics": ["European explorers", "reasons for exploration", "Columbian Exchange"], "svgHints": ["arrowMap", "flowMap"], "sensorHints": [] }
+          ]
+        },
+        "4": {
+          "ageRange": "9-10",
+          "band": 3,
+          "units": [
+            { "id": "us-regions", "title": "US Regions", "topics": ["Northeast", "Southeast", "Midwest", "Southwest", "West", "resources and economy"], "svgHints": ["arrowMap", "barGraph", "pieChart"], "sensorHints": [] },
+            { "id": "colonial-america", "title": "Colonial America", "topics": ["13 colonies", "colonial life", "self-government", "French and Indian War"], "svgHints": ["arrowMap", "flowMap"], "sensorHints": [] },
+            { "id": "american-revolution", "title": "American Revolution", "topics": ["causes", "key events", "key figures", "Declaration of Independence", "outcome"], "svgHints": ["flowMap", "arrowMap"], "sensorHints": [] },
+            { "id": "constitution-intro", "title": "The US Constitution", "topics": ["Preamble", "Bill of Rights", "three branches", "checks and balances"], "svgHints": ["tree", "flowMap"], "sensorHints": [] },
+            { "id": "economics-state", "title": "State Economics", "topics": ["state taxes", "state budget", "industries", "trade"], "svgHints": ["barGraph", "pieChart"], "sensorHints": [] }
+          ]
+        },
+        "5": {
+          "ageRange": "10-11",
+          "band": 3,
+          "units": [
+            { "id": "westward-expansion", "title": "Westward Expansion", "topics": ["Louisiana Purchase", "Lewis and Clark", "Manifest Destiny", "Trail of Tears", "Gold Rush"], "svgHints": ["arrowMap", "flowMap"], "sensorHints": [] },
+            { "id": "civil-war", "title": "Civil War", "topics": ["slavery", "abolitionism", "key battles", "Emancipation Proclamation", "Reconstruction"], "svgHints": ["flowMap", "arrowMap", "barGraph"], "sensorHints": [] },
+            { "id": "industrialization", "title": "Industrialization", "topics": ["inventions", "factories", "immigration", "urbanization", "labor movement"], "svgHints": ["barGraph", "flowMap"], "sensorHints": [] },
+            { "id": "us-government-depth", "title": "US Government in Depth", "topics": ["executive branch", "legislative branch", "judicial branch", "amendments", "civic duty"], "svgHints": ["tree", "flowMap"], "sensorHints": [] },
+            { "id": "world-geography-5", "title": "World Geography", "topics": ["continents", "oceans", "hemispheres", "latitude longitude", "major landforms"], "svgHints": ["arrowMap", "cartesianGrid"], "sensorHints": [] }
+          ]
+        },
+        "6": {
+          "ageRange": "11-12",
+          "band": 4,
+          "units": [
+            { "id": "ancient-mesopotamia", "title": "Ancient Mesopotamia", "topics": ["Fertile Crescent", "Sumerians", "cuneiform", "Hammurabi's Code", "irrigation"], "svgHints": ["arrowMap", "flowMap"], "sensorHints": [] },
+            { "id": "ancient-egypt", "title": "Ancient Egypt", "topics": ["Nile River", "pharaohs", "pyramids", "hieroglyphics", "mummification"], "svgHints": ["arrowMap", "flowMap", "barGraph"], "sensorHints": [] },
+            { "id": "ancient-greece", "title": "Ancient Greece", "topics": ["democracy", "city-states", "philosophy", "mythology", "Alexander the Great"], "svgHints": ["arrowMap", "flowMap", "venn"], "sensorHints": [] },
+            { "id": "ancient-rome", "title": "Ancient Rome", "topics": ["republic", "empire", "law", "engineering", "fall of Rome"], "svgHints": ["arrowMap", "flowMap"], "sensorHints": [] },
+            { "id": "ancient-india-china", "title": "Ancient India and China", "topics": ["Indus Valley", "Hinduism Buddhism", "dynasties", "Silk Road", "Great Wall"], "svgHints": ["arrowMap", "flowMap"], "sensorHints": [] },
+            { "id": "world-religions", "title": "World Religions", "topics": ["Judaism", "Christianity", "Islam", "Hinduism", "Buddhism", "comparison"], "svgHints": ["venn", "barGraph", "arrowMap"], "sensorHints": [] }
+          ]
+        },
+        "7": {
+          "ageRange": "12-13",
+          "band": 4,
+          "units": [
+            { "id": "medieval-europe", "title": "Medieval Europe", "topics": ["feudalism", "Crusades", "plague", "Renaissance beginnings", "Magna Carta"], "svgHints": ["flowMap", "arrowMap"], "sensorHints": [] },
+            { "id": "renaissance-reformation", "title": "Renaissance and Reformation", "topics": ["art and culture", "scientific revolution", "Protestant Reformation", "printing press"], "svgHints": ["flowMap", "arrowMap"], "sensorHints": [] },
+            { "id": "african-civilizations", "title": "African Civilizations", "topics": ["Ghana Mali Songhai", "trade routes", "culture", "Swahili coast"], "svgHints": ["arrowMap", "flowMap", "barGraph"], "sensorHints": [] },
+            { "id": "americas-pre-columbian", "title": "Pre-Columbian Americas", "topics": ["Maya", "Aztec", "Inca", "North American peoples", "achievements"], "svgHints": ["arrowMap", "flowMap"], "sensorHints": [] },
+            { "id": "age-exploration", "title": "Age of Exploration", "topics": ["motives", "routes", "Columbian Exchange", "colonialism beginnings"], "svgHints": ["arrowMap", "flowMap"], "sensorHints": [] },
+            { "id": "asian-empires", "title": "Asian Empires", "topics": ["Ottoman Empire", "Mughal Empire", "Ming/Qing China", "Tokugawa Japan"], "svgHints": ["arrowMap", "flowMap", "barGraph"], "sensorHints": [] }
+          ]
+        },
+        "8": {
+          "ageRange": "13-14",
+          "band": 5,
+          "units": [
+            { "id": "founding-era", "title": "The Founding Era", "topics": ["Constitutional Convention", "Federalists vs Anti-Federalists", "Bill of Rights", "early republic"], "svgHints": ["flowMap", "tree", "venn"], "sensorHints": [] },
+            { "id": "expansion-reform", "title": "Expansion and Reform", "topics": ["War of 1812", "Monroe Doctrine", "Jacksonian Democracy", "reform movements"], "svgHints": ["arrowMap", "flowMap"], "sensorHints": [] },
+            { "id": "slavery-civil-war-8", "title": "Slavery and Civil War", "topics": ["slavery in depth", "compromise attempts", "secession", "key battles", "Reconstruction amendments"], "svgHints": ["arrowMap", "flowMap", "barGraph"], "sensorHints": [] },
+            { "id": "gilded-age", "title": "Gilded Age and Progressive Era", "topics": ["industrialization", "robber barons", "labor unions", "progressive reforms", "women's suffrage"], "svgHints": ["barGraph", "flowMap"], "sensorHints": [] },
+            { "id": "imperialism-ww1", "title": "Imperialism and World War I", "topics": ["American imperialism", "causes of WWI", "US entry", "Treaty of Versailles"], "svgHints": ["arrowMap", "flowMap"], "sensorHints": [] },
+            { "id": "economics-8", "title": "Economic Systems", "topics": ["capitalism", "socialism", "communism", "mixed economies", "market forces"], "svgHints": ["barGraph", "venn", "flowMap"], "sensorHints": [] }
+          ]
+        },
+        "9": {
+          "ageRange": "14-15",
+          "band": 5,
+          "units": [
+            { "id": "foundations-civilization", "title": "Foundations of Civilization", "topics": ["Neolithic Revolution", "early civilizations", "trade networks", "cultural diffusion"], "svgHints": ["arrowMap", "flowMap"], "sensorHints": [] },
+            { "id": "classical-world", "title": "The Classical World", "topics": ["Greece Rome China India", "trade routes", "cultural exchange", "decline of empires"], "svgHints": ["arrowMap", "flowMap", "venn"], "sensorHints": [] },
+            { "id": "world-religions-depth", "title": "World Religions in Depth", "topics": ["monotheism polytheism", "spread of religions", "impact on governance", "art and architecture"], "svgHints": ["arrowMap", "venn"], "sensorHints": [] },
+            { "id": "medieval-world", "title": "The Medieval World", "topics": ["European feudalism", "Islamic Golden Age", "Mongol Empire", "African kingdoms", "Mesoamerica"], "svgHints": ["arrowMap", "flowMap"], "sensorHints": [] },
+            { "id": "early-modern", "title": "Early Modern Period", "topics": ["Renaissance", "Reformation", "Scientific Revolution", "Enlightenment"], "svgHints": ["flowMap", "arrowMap"], "sensorHints": [] },
+            { "id": "revolutions-9", "title": "Age of Revolutions", "topics": ["American Revolution", "French Revolution", "Haitian Revolution", "Latin American independence"], "svgHints": ["arrowMap", "flowMap"], "sensorHints": [] }
+          ]
+        },
+        "10": {
+          "ageRange": "15-16",
+          "band": 5,
+          "units": [
+            { "id": "industrialization-imperialism", "title": "Industrialization and Imperialism", "topics": ["Industrial Revolution", "European imperialism in Africa/Asia", "resistance movements"], "svgHints": ["arrowMap", "barGraph", "flowMap"], "sensorHints": [] },
+            { "id": "world-war-1", "title": "World War I", "topics": ["causes", "trench warfare", "technology", "Treaty of Versailles", "global impact"], "svgHints": ["arrowMap", "flowMap", "barGraph"], "sensorHints": [] },
+            { "id": "interwar-period", "title": "Interwar Period", "topics": ["Russian Revolution", "rise of fascism", "Great Depression", "nationalism"], "svgHints": ["barGraph", "flowMap", "arrowMap"], "sensorHints": [] },
+            { "id": "world-war-2", "title": "World War II", "topics": ["causes", "major campaigns", "Holocaust", "atomic bomb", "consequences"], "svgHints": ["arrowMap", "flowMap", "barGraph"], "sensorHints": [] },
+            { "id": "cold-war", "title": "Cold War", "topics": ["superpowers", "proxy wars", "nuclear arms race", "space race", "decolonization"], "svgHints": ["arrowMap", "flowMap", "barGraph"], "sensorHints": [] },
+            { "id": "post-cold-war", "title": "Post-Cold War World", "topics": ["globalization", "terrorism", "technology revolution", "current conflicts"], "svgHints": ["arrowMap", "flowMap", "barGraph", "pieChart"], "sensorHints": [] }
+          ]
+        },
+        "11": {
+          "ageRange": "16-17",
+          "band": 6,
+          "units": [
+            { "id": "us-gov-principles", "title": "US Government: Principles", "topics": ["popular sovereignty", "federalism", "separation of powers", "individual rights"], "svgHints": ["tree", "flowMap", "venn"], "sensorHints": [] },
+            { "id": "us-gov-branches", "title": "US Government: Branches", "topics": ["Congress", "Presidency", "Supreme Court", "checks and balances", "bureaucracy"], "svgHints": ["tree", "flowMap"], "sensorHints": [] },
+            { "id": "civil-liberties", "title": "Civil Liberties and Rights", "topics": ["Bill of Rights", "14th Amendment", "civil rights movement", "landmark cases"], "svgHints": ["flowMap", "barGraph"], "sensorHints": [] },
+            { "id": "political-participation", "title": "Political Participation", "topics": ["voting", "political parties", "interest groups", "media", "campaigns"], "svgHints": ["barGraph", "pieChart"], "sensorHints": [] },
+            { "id": "comparative-government", "title": "Comparative Government", "topics": ["democracy", "authoritarianism", "parliamentary systems", "theocracy"], "svgHints": ["venn", "barGraph", "flowMap"], "sensorHints": [] },
+            { "id": "international-relations", "title": "International Relations", "topics": ["UN", "NATO", "trade agreements", "human rights", "diplomacy"], "svgHints": ["arrowMap", "flowMap"], "sensorHints": [] }
+          ]
+        },
+        "12": {
+          "ageRange": "17-18",
+          "band": 6,
+          "units": [
+            { "id": "micro-economics", "title": "Microeconomics", "topics": ["supply and demand", "market structures", "elasticity", "market failures", "externalities"], "svgHints": ["cartesianGrid", "barGraph"], "sensorHints": [] },
+            { "id": "macro-economics", "title": "Macroeconomics", "topics": ["GDP", "inflation", "unemployment", "fiscal policy", "monetary policy"], "svgHints": ["barGraph", "cartesianGrid", "pieChart"], "sensorHints": [] },
+            { "id": "personal-finance", "title": "Personal Finance", "topics": ["budgeting", "saving investing", "credit debt", "taxes", "insurance"], "svgHints": ["barGraph", "pieChart"], "sensorHints": [] },
+            { "id": "international-economics", "title": "International Economics", "topics": ["trade", "exchange rates", "globalization", "economic development", "trade agreements"], "svgHints": ["barGraph", "arrowMap", "cartesianGrid"], "sensorHints": [] },
+            { "id": "economic-history", "title": "Economic History", "topics": ["mercantilism", "capitalism origins", "Industrial Revolution economics", "Great Depression", "post-WWII economy"], "svgHints": ["barGraph", "flowMap"], "sensorHints": [] },
+            { "id": "contemporary-issues", "title": "Contemporary Issues", "topics": ["income inequality", "environmental economics", "technology and economy", "global health", "migration"], "svgHints": ["barGraph", "pieChart", "arrowMap"], "sensorHints": [] }
+          ]
+        }
+      }
+    }
+  }
+}

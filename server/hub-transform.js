@@ -103,6 +103,7 @@ const ALLOWED_FACTORY_FILES = new Set([
   'binary-utils.js',
   'shared-runtime.js',
   'a11y.js',
+  'narration.js',
   'gate-renderer.js',
   'integrity.js',
   'checkpoint.js',

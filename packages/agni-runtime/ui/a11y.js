@@ -21,17 +21,19 @@
         osReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
       }
     } catch (e) { /* matchMedia not available */ }
-    var defaults = { fontScale: 1, highContrast: false, reducedMotion: osReducedMotion, hapticIntensity: 1 };
+    var defaults = { fontScale: 1, highContrast: false, reducedMotion: osReducedMotion, hapticIntensity: 1, autoNarrate: false };
     try {
       var fs = localStorage.getItem('agni_font_scale');
       var hc = localStorage.getItem('agni_high_contrast');
       var rm = localStorage.getItem('agni_reduced_motion');
       var hi = localStorage.getItem('agni_haptic_intensity');
+      var an = localStorage.getItem('agni_auto_narrate');
       return {
         fontScale:       fs !== null ? Math.max(0.8, Math.min(1.5, parseFloat(fs))) : 1,
         highContrast:    hc === 'true',
         reducedMotion:   rm !== null ? rm === 'true' : osReducedMotion,
-        hapticIntensity: hi !== null ? Math.max(0, Math.min(1, parseFloat(hi))) : 1
+        hapticIntensity: hi !== null ? Math.max(0, Math.min(1, parseFloat(hi))) : 1,
+        autoNarrate:     an === 'true'
       };
     } catch (e) { return defaults; }
   })();
@@ -135,6 +137,7 @@
       localStorage.setItem('agni_high_contrast', String(prefs.highContrast));
       localStorage.setItem('agni_reduced_motion', String(prefs.reducedMotion));
       localStorage.setItem('agni_haptic_intensity', String(prefs.hapticIntensity));
+      localStorage.setItem('agni_auto_narrate', String(prefs.autoNarrate));
     } catch (e) { /* quota exceeded — non-critical */ }
   }
 
@@ -258,6 +261,56 @@
     hapRow.appendChild(hapSlider);
     hapRow.appendChild(hapVal);
     panel.appendChild(hapRow);
+
+    // Auto-narrate toggle (reads everything aloud for blind/illiterate learners)
+    if (global.speechSynthesis) {
+      var narr = global.AGNI_NARRATION;
+
+      var anRow = document.createElement('div');
+      anRow.className = 'agni-settings-row agni-settings-toggle';
+      var anCheck = document.createElement('input');
+      anCheck.type = 'checkbox';
+      anCheck.id = 'agni-s-an';
+      anCheck.checked = prefs.autoNarrate;
+      var anLabel = document.createElement('label');
+      anLabel.textContent = 'Read Everything Aloud';
+      anLabel.setAttribute('for', 'agni-s-an');
+      anCheck.onchange = function () {
+        prefs.autoNarrate = anCheck.checked;
+        if (narr) narr.setEnabled(prefs.autoNarrate);
+        applyLive();
+        savePrefs();
+        if (prefs.autoNarrate && narr) narr.speakNow('Auto narration is now on. Every step will be read aloud.');
+      };
+      anRow.appendChild(anCheck);
+      anRow.appendChild(anLabel);
+      panel.appendChild(anRow);
+
+      var srRow = document.createElement('div');
+      srRow.className = 'agni-settings-row';
+      var srLabel = document.createElement('label');
+      srLabel.textContent = 'Speech Speed';
+      srLabel.setAttribute('for', 'agni-s-sr');
+      srRow.appendChild(srLabel);
+      var srSlider = document.createElement('input');
+      srSlider.type = 'range';
+      srSlider.id = 'agni-s-sr';
+      srSlider.min = '0.5';
+      srSlider.max = '2';
+      srSlider.step = '0.1';
+      srSlider.value = narr ? String(narr.getRate()) : '1';
+      var srVal = document.createElement('span');
+      srVal.className = 'agni-settings-val';
+      srVal.textContent = (narr ? narr.getRate() : 1) + 'x';
+      srSlider.oninput = function () {
+        var r = Math.round(parseFloat(srSlider.value) * 10) / 10;
+        srVal.textContent = r + 'x';
+        if (narr) narr.setRate(r);
+      };
+      srRow.appendChild(srSlider);
+      srRow.appendChild(srVal);
+      panel.appendChild(srRow);
+    }
 
     // Close button
     var closeBtn = document.createElement('button');

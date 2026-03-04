@@ -628,6 +628,22 @@ export function createHubApi(baseUrl: string) {
       return authGet<UtuConstants>('api/governance/utu-constants');
     },
 
+    /** GET /api/governance/archetypes (archetype list for creator experience). */
+    async getArchetypes(filters?: { band?: number; protocol?: number }): Promise<{ archetypes: Array<{ id: string; name: string; description: string; category: string; bandRange: number[]; protocols: number[]; designHints?: Record<string, string> }> }> {
+      const qs = filters?.band != null || filters?.protocol != null
+        ? '?' + new URLSearchParams({
+            ...(filters.band != null && { band: String(filters.band) }),
+            ...(filters.protocol != null && { protocol: String(filters.protocol) })
+          }).toString()
+        : '';
+      return authGet('api/governance/archetypes' + qs);
+    },
+
+    /** POST /api/author/generate: AI-generated lesson draft (archetype-aware). */
+    async postAuthorGenerate(body: { skillDescription: string; archetypeId?: string }): Promise<{ ok: boolean; lesson?: Record<string, unknown>; error?: string }> {
+      return authPost('api/author/generate', body);
+    },
+
     /** GET /api/governance/catalog (configuration wizard G2, G4). */
     async getGovernanceCatalog(): Promise<ApprovedCatalog> {
       return authGet<ApprovedCatalog>('api/governance/catalog');

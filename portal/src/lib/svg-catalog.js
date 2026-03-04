@@ -399,11 +399,9 @@ export const FACTORIES = [
 
 // ── Sensor catalog ──────────────────────────────────────────────────────────
 // Read from the @agni/plugins registry (single source of truth).
-// Uses createRequire because the portal is ESM and the plugin package is CJS.
+// Use namespace import; Vite handles CJS interop for browser builds.
 
-import { createRequire } from 'node:module';
-const _require = createRequire(import.meta.url);
-const _plugins = _require('@agni/plugins');
+import * as _plugins from '@agni/plugins';
 
 export const SENSOR_GROUPS = _plugins.getSensorGroups();
 export const ALL_SENSORS   = _plugins.getSensors();

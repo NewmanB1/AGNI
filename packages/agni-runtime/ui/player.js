@@ -57,6 +57,17 @@
   // i18n — use global.AGNI_I18N.t() if the i18n module is loaded, else identity
   var t = (global.AGNI_I18N && global.AGNI_I18N.t) ? global.AGNI_I18N.t : function (key) { return key; };
 
+  // Narration engine — auto-reads everything for blind/illiterate learners
+  var _narr = global.AGNI_NARRATION || {
+    isEnabled: function () { return false; }, cancel: function () {},
+    narrateStepEntry: function () {}, narrateContent: function () {},
+    narrateQuiz: function () {}, narrateFillBlank: function () {},
+    narrateMatching: function () {}, narrateOrdering: function () {},
+    narrateHardwareTrigger: function () {}, narrateFeedback: function () {},
+    narrateCompletion: function () {}, narrateSvgDescription: function () {},
+    setLang: function () {}
+  };
+
   // Refreshed at each call site after loadDependencies() resolves.
   var S = global.AGNI_SHARED || {};
 
@@ -64,6 +75,11 @@
   var steps     = lesson.steps || [];
   var history   = [];
   var stepIndex = 0;
+
+  _narr.setLang((lesson.meta && lesson.meta.language) || 'en');
+  if (lesson.meta && lesson.meta.accessibility_mode === 'audio_first') {
+    _narr.setEnabled(true);
+  }
 
   var _stepIdMap = {};
   for (var _mi = 0; _mi < steps.length; _mi++) {
@@ -257,6 +273,8 @@
 
     app.appendChild(container);
 
+    _narr.narrateHardwareTrigger(step.audio_description || (container.querySelector('.step-content') ? container.querySelector('.step-content').textContent : ''), step.threshold);
+
     // Parse the threshold to extract target value for the gauge
     var thresholdStr = step.threshold || '';
     var primarySensor = step.sensor || 'accel.total';
@@ -384,6 +402,9 @@
 
     app.appendChild(container);
 
+    var _quizText = step.audio_description || (step.htmlContent ? container.querySelector('.step-content') : null);
+    _narr.narrateQuiz(_quizText ? (_quizText.textContent || _quizText) : '', options);
+
     function handleAnswer(selectedIdx) {
       var correct = (selectedIdx === correctIdx);
       attempts++;
@@ -406,11 +427,13 @@
       }
 
       if (correct) {
+        var fbCorrectText = fb.correct || 'Correct!';
         var fbCorrectP = document.createElement('p');
         fbCorrectP.className = 'fb-correct';
-        fbCorrectP.textContent = fb.correct || 'Correct!';
+        fbCorrectP.textContent = fbCorrectText;
         feedbackEl.innerHTML = '';
         feedbackEl.appendChild(fbCorrectP);
+        _narr.narrateFeedback(fbCorrectText);
         recordStepOutcome(step, true, attempts, false);
         setTimeout(function () {
           if (step.on_success) {
@@ -423,9 +446,11 @@
         var correctText = (correctIdx >= 0 && correctIdx < options.length)
           ? (typeof options[correctIdx] === 'string' ? options[correctIdx] : options[correctIdx].text || '')
           : '';
+        var fbIncorrectText = fb.incorrect || ('The correct answer was: ' + correctText);
         var fbIncorrectP = document.createElement('p');
         fbIncorrectP.className = 'fb-incorrect';
-        fbIncorrectP.textContent = fb.incorrect || ('The correct answer was: ' + correctText);
+        fbIncorrectP.textContent = fbIncorrectText;
+        _narr.narrateFeedback(fbIncorrectText);
         feedbackEl.innerHTML = '';
         feedbackEl.appendChild(fbIncorrectP);
         recordStepOutcome(step, false, attempts, false);
@@ -452,6 +477,7 @@
         fbHintP.textContent = retryMsg;
         feedbackEl.innerHTML = '';
         feedbackEl.appendChild(fbHintP);
+        _narr.narrateFeedback(retryMsg);
         optBtns.forEach(function (btn, i) {
           if (i !== selectedIdx) {
             btn.disabled = false;
@@ -500,6 +526,8 @@
 
     app.appendChild(container);
 
+    _narr.narrateFillBlank(step.audio_description || (container.querySelector('.step-content') ? container.querySelector('.step-content').textContent : ''), blanks);
+
     submitBtn.onclick = function () {
       attempts++;
       _frust.trackRetry();
@@ -528,11 +556,13 @@
       });
 
       if (allCorrect) {
+        var fbCorrectMsg = fb.correct || 'All correct!';
         feedbackEl.innerHTML = '';
         var p = document.createElement('p');
         p.className = 'fb-correct';
-        p.textContent = fb.correct || 'All correct!';
+        p.textContent = fbCorrectMsg;
         feedbackEl.appendChild(p);
+        _narr.narrateFeedback(fbCorrectMsg);
         submitBtn.disabled = true;
         recordStepOutcome(step, true, attempts, false);
         setTimeout(function () {
@@ -544,8 +574,10 @@
         var pFail = document.createElement('p');
         pFail.className = 'fb-incorrect';
         var answers = blanks.map(function (b) { return b.answer || '?'; }).join(', ');
-        pFail.textContent = fb.incorrect || ('Correct answers: ' + answers);
+        var fbIncMsg = fb.incorrect || ('Correct answers: ' + answers);
+        pFail.textContent = fbIncMsg;
         feedbackEl.appendChild(pFail);
+        _narr.narrateFeedback(fbIncMsg);
         submitBtn.disabled = true;
         recordStepOutcome(step, false, attempts, false);
         var continueBtn = document.createElement('button');
@@ -664,6 +696,8 @@
 
     app.appendChild(container);
 
+    _narr.narrateMatching(step.audio_description || (container.querySelector('.step-content') ? container.querySelector('.step-content').textContent : ''), pairs);
+
     submitBtn.onclick = function () {
       attempts++;
       _frust.trackRetry();
@@ -682,11 +716,13 @@
       });
 
       if (allCorrect) {
+        var matchFbOk = fb.correct || 'All matched correctly!';
         feedbackEl.innerHTML = '';
         var p = document.createElement('p');
         p.className = 'fb-correct';
-        p.textContent = fb.correct || 'All matched correctly!';
+        p.textContent = matchFbOk;
         feedbackEl.appendChild(p);
+        _narr.narrateFeedback(matchFbOk);
         submitBtn.disabled = true;
         recordStepOutcome(step, true, attempts, false);
         setTimeout(function () {
@@ -694,11 +730,13 @@
           else nextStep();
         }, 1200);
       } else if (attempts >= maxAtt) {
+        var matchFbFail = fb.incorrect || (correctCount + ' of ' + pairs.length + ' correct.');
         feedbackEl.innerHTML = '';
         var pFail = document.createElement('p');
         pFail.className = 'fb-incorrect';
-        pFail.textContent = fb.incorrect || (correctCount + ' of ' + pairs.length + ' correct.');
+        pFail.textContent = matchFbFail;
         feedbackEl.appendChild(pFail);
+        _narr.narrateFeedback(matchFbFail);
         submitBtn.disabled = true;
         recordStepOutcome(step, false, attempts, false);
         var continueBtn = document.createElement('button');
@@ -822,6 +860,8 @@
 
     app.appendChild(container);
 
+    _narr.narrateOrdering(step.audio_description || (container.querySelector('.step-content') ? container.querySelector('.step-content').textContent : ''), currentOrder);
+
     submitBtn.onclick = function () {
       attempts++;
       _frust.trackRetry();
@@ -842,11 +882,13 @@
       });
 
       if (allCorrect) {
+        var ordFbOk = fb.correct || 'Correct order!';
         feedbackEl.innerHTML = '';
         var p = document.createElement('p');
         p.className = 'fb-correct';
-        p.textContent = fb.correct || 'Correct order!';
+        p.textContent = ordFbOk;
         feedbackEl.appendChild(p);
+        _narr.narrateFeedback(ordFbOk);
         submitBtn.disabled = true;
         recordStepOutcome(step, true, attempts, false);
         setTimeout(function () {
@@ -858,8 +900,10 @@
         var pFail = document.createElement('p');
         pFail.className = 'fb-incorrect';
         var correctItems = correctOrder.map(function (ci) { return items[ci]; }).join(' \u2192 ');
-        pFail.textContent = fb.incorrect || ('Correct order: ' + correctItems);
+        var ordFbFail = fb.incorrect || ('Correct order: ' + correctItems);
+        pFail.textContent = ordFbFail;
         feedbackEl.appendChild(pFail);
+        _narr.narrateFeedback(ordFbFail);
         submitBtn.disabled = true;
         recordStepOutcome(step, false, attempts, false);
         var continueBtn = document.createElement('button');
@@ -904,6 +948,7 @@
    * Render the lesson-complete screen — delegated to AGNI_COMPLETION module.
    */
   function renderCompletion() {
+    _narr.narrateCompletion();
     if (global.AGNI_COMPLETION) {
       global.AGNI_COMPLETION.render({
         lesson: lesson,
@@ -958,7 +1003,10 @@
       S.setSafeHtml(contentDiv, step.htmlContent);
       container.appendChild(contentDiv);
 
-      if ('speechSynthesis' in global && step.htmlContent.length > 80) {
+      var _contentText = step.audio_description || contentDiv.textContent || '';
+      _narr.narrateContent(_contentText);
+
+      if ('speechSynthesis' in global) {
         var readAloudBtn = document.createElement('button');
         readAloudBtn.className = 'btn btn-secondary multimodal-btn';
         readAloudBtn.textContent = '\u{1F50A} Read Aloud';
@@ -970,7 +1018,7 @@
             readAloudBtn.textContent = '\u{1F50A} Read Aloud';
             speaking = false;
           } else {
-            var text = contentDiv.textContent || '';
+            var text = _contentText;
             var utt = new SpeechSynthesisUtterance(text);
             utt.lang = (lesson.meta && lesson.meta.language) || 'en';
             utt.rate = parseFloat(localStorage.getItem('agni_speech_rate') || '1');
@@ -1003,6 +1051,8 @@
     app.appendChild(container);
 
     if (svgContainer && svgSpec) {
+      _narr.narrateSvgDescription(svgSpec.factory, svgSpec.description || step.audio_description);
+
       try {
         var SVG = global.AGNI_SVG;
         if (SVG && SVG.fromSpec) {
@@ -1078,6 +1128,9 @@
     }
     clearStepHintTimer();
     updatePaceIndicator();
+
+    _narr.cancel();
+    _narr.narrateStepEntry(stepIndex, steps.length);
 
     var renderer = STEP_RENDERERS[step.type];
     if (renderer) {

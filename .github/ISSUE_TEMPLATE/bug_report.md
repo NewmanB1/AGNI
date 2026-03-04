@@ -6,11 +6,11 @@ labels: bug
 assignees: ''
 ---
 
-**What happened?**
-A clear description of the bug.
+**Expected behavior**
+What should have happened.
 
-**What did you expect?**
-What should have happened instead.
+**Actual behavior**
+What actually happened.
 
 **Steps to reproduce**
 1. ...

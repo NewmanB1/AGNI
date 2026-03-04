@@ -193,6 +193,16 @@
           "description": "Whether this lesson is designed for group/collaborative work. When true, teachers can assign it to student groups.",
           "default": false
         },
+        "accessibility_mode": {
+          "type": "string",
+          "enum": [
+            "visual",
+            "audio_first",
+            "high_contrast",
+            "motor_adapted"
+          ],
+          "description": "Primary accessibility mode this lesson targets. 'audio_first' enables auto-narration of all steps for blind or illiterate learners. The runtime honours this by enabling AGNI_NARRATION automatically."
+        },
         "declared_features": {
           "type": "object",
           "description": "Author-declared pedagogical feature overrides. Values here take precedence over compiler-inferred features and receive confidence 1.0.",
@@ -540,6 +550,10 @@
           "type": "string",
           "description": "Action on successful completion. Can skip ahead (e.g., 'skip_to:step_id') for excelling learners."
         },
+        "audio_description": {
+          "type": "string",
+          "description": "Author-provided narration text for this step. When present, the audio-first mode speaks this instead of extracting text from HTML content. Essential for SVG-heavy or visual steps where the rendered text alone is insufficient for blind or illiterate learners."
+        },
         "condition": {
           "type": "string",
           "description": "Conditional expression for whether this step should be shown. Used for adaptive paths."
@@ -579,6 +593,10 @@
             "opts": {
               "type": "object",
               "description": "Factory-specific options. See svg-registry.js for valid keys per factory."
+            },
+            "description": {
+              "type": "string",
+              "description": "Alt-text description of this visual for screen readers and auto-narration mode. Spoken aloud when the SVG is rendered."
             },
             "compose": {
               "type": "boolean",

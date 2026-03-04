@@ -1,6 +1,7 @@
 <script>
   import SvgSpecEditor from './SvgSpecEditor.svelte';
   import { getFactoryById, EXPERIMENT_PRESETS, getExperimentById } from '$lib/svg-catalog.js';
+  import { getThresholdExamples, isSensorHeavyArchetype } from '$lib/archetypes';
 
   const STEP_TYPES = [
     { value: 'instruction', label: 'Instruction' },
@@ -150,7 +151,11 @@
 
   let showPhysicsMenu = $state(false);
 
-  let { steps = $bindable([]), onchange = () => {}, onfocus = () => {} } = $props();
+  let { steps = $bindable([]), onchange = () => {}, onfocus = () => {}, archetypeId = null } = $props();
+
+  let showThresholdHelp = $state(false);
+  const thresholdExamples = $derived(getThresholdExamples(archetypeId));
+  const isSensorHeavy = $derived(isSensorHeavyArchetype(archetypeId));
 
   let thresholdErrors = $state({});
   let contentPreview = $state({});
@@ -429,6 +434,7 @@
 
   {#each steps as step, i (step.id + '-' + i)}
     <div class="step-card"
+         data-step-id={step.id || `step_${i + 1}`}
          class:hw={step.type === 'hardware_trigger'}
          class:quiz={step.type === 'quiz'}
          class:fill-blank={step.type === 'fill_blank'}
@@ -516,13 +522,31 @@
                        placeholder="e.g. accelerometer, thermometer" />
               </label>
             </div>
-            <div class="form-group">
+            <div class="form-group threshold-group">
               <label>Threshold
-                <input type="text" value={step.threshold || ''} oninput={(e) => updateField(i, 'threshold', e.target.value)}
-                       placeholder="e.g. accel.total > 2.5g" class:input-error={thresholdErrors[step.id]} />
+                <span class="threshold-help-row">
+                  <input type="text" value={step.threshold || ''} oninput={(e) => updateField(i, 'threshold', e.target.value)}
+                         placeholder="e.g. accel.total > 2.5g" class:input-error={thresholdErrors[step.id]} />
+                  <button type="button" class="help-btn" onclick={() => showThresholdHelp = !showThresholdHelp} title="Threshold syntax help">?</button>
+                </span>
               </label>
               {#if thresholdErrors[step.id]}
                 <span class="field-error">{thresholdErrors[step.id]}</span>
+              {/if}
+              {#if showThresholdHelp}
+                <details class="threshold-help-detail" open>
+                  <summary>Syntax & examples</summary>
+                  <p class="syntax-desc">Format: <code>sensorId op value</code>. Chain with <code>AND</code>. Units: <code>g</code>, <code>s</code>, <code>deg</code>, <code>lux</code>, <code>db</code>.</p>
+                  {#if isSensorHeavy}
+                    <p class="archetype-note">Your selected archetype uses sensor steps — these examples are tailored for your lesson type:</p>
+                  {/if}
+                  <div class="threshold-examples">
+                    {#each thresholdExamples as ex}
+                      <button type="button" class="example-chip" onclick={() => { updateField(i, 'threshold', ex); showThresholdHelp = false; }}>{ex}</button>
+                    {/each}
+                  </div>
+                  <span class="spec-ref">Full spec: <code>docs/specs/threshold_grammar.md</code></span>
+                </details>
               {/if}
             </div>
           </div>
@@ -861,6 +885,31 @@
   .type-hint { font-size: 0.85rem; opacity: 0.7; font-style: italic; margin: 0 0 0.5rem; }
   .syntax-hint { font-size: 0.8rem; opacity: 0.65; margin: 0.1rem 0 0.5rem; line-height: 1.5; }
   .syntax-hint code { background: rgba(255,255,255,0.06); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.8rem; }
+
+  .threshold-group { position: relative; }
+  .threshold-help-row { display: flex; gap: 0.35rem; align-items: center; }
+  .threshold-help-row input { flex: 1; }
+  .help-btn {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(79,195,247,0.15); border: 1px solid var(--accent);
+    color: var(--accent); cursor: pointer; font-size: 0.85rem; font-weight: 700;
+  }
+  .help-btn:hover { background: rgba(79,195,247,0.3); }
+  .threshold-help-detail {
+    margin-top: 0.5rem; padding: 0.6rem; background: rgba(31,43,78,0.8);
+    border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem;
+  }
+  .threshold-help-detail summary { cursor: pointer; font-weight: 600; margin-bottom: 0.35rem; }
+  .syntax-desc { margin: 0.25rem 0; line-height: 1.5; opacity: 0.9; }
+  .archetype-note { margin: 0.35rem 0; font-size: 0.82rem; color: var(--accent); opacity: 0.9; }
+  .threshold-examples { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.4rem 0; }
+  .example-chip {
+    background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+    padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;
+    font-family: monospace; cursor: pointer; color: var(--text);
+  }
+  .example-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .spec-ref { font-size: 0.75rem; opacity: 0.6; display: block; margin-top: 0.35rem; }
 
   .row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
   .row .form-group { flex: 1; min-width: 120px; }

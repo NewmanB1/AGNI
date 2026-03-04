@@ -10,7 +10,7 @@ assignees: ''
 Describe the use case or pain point.
 
 **Proposed solution**
-How should this work? Include examples if helpful.
+How should this work? Include proposed API, behavior, or examples if helpful.
 
 **Alternatives considered**
 Other approaches you thought about and why they don't work as well.

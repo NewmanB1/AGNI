@@ -7,7 +7,7 @@ var reg = require('../registry');
 
 var COMMON_FIELDS = [
   'id', 'type', 'content', 'feedback', 'expected_duration', 'max_attempts',
-  'weight', 'on_fail', 'on_success', 'condition', 'next_if', 'svg_spec', 'spec'
+  'weight', 'on_fail', 'on_success', 'audio_description', 'condition', 'next_if', 'svg_spec', 'spec'
 ];
 
 reg.registerStepType({

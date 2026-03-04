@@ -379,6 +379,7 @@ describe('AUDIT-11: createStudent returns sanitized output', () => {
     try {
       delete require.cache[require.resolve('../../src/services/accounts')];
       delete require.cache[require.resolve('../../src/utils/env-config')];
+      delete require.cache[require.resolve('@agni/utils/env-config')];
       const accounts = require('../../src/services/accounts');
       const result = await accounts.createStudent({ displayName: 'Test', pin: '9999' });
       assert.ok(result.ok, 'createStudent should succeed');
@@ -391,6 +392,7 @@ describe('AUDIT-11: createStudent returns sanitized output', () => {
       fsMod.rmSync(dir, { recursive: true, force: true });
       delete require.cache[require.resolve('../../src/services/accounts')];
       delete require.cache[require.resolve('../../src/utils/env-config')];
+      delete require.cache[require.resolve('@agni/utils/env-config')];
     }
   });
 });
@@ -599,7 +601,9 @@ describe('AUDIT-19: factory-loader loadDependencies uses three-phase loading', (
 describe('AUDIT-20: file-lock MAX_RETRIES * interval exceeds STALE_TIMEOUT', () => {
   it('lock retry window exceeds stale detection window', () => {
     const fs = require('fs');
-    const lockSrc = fs.readFileSync(require('path').join(__dirname, '../../src/utils/file-lock.js'), 'utf8');
+    const path = require('path');
+    const lockPath = path.join(__dirname, '../../packages/agni-utils/file-lock.js');
+    const lockSrc = fs.readFileSync(lockPath, 'utf8');
     var staleMatch = lockSrc.match(/STALE_TIMEOUT_MS\s*=\s*(\d+)/);
     var retryMatch = lockSrc.match(/RETRY_INTERVAL_MS\s*=\s*(\d+)/);
     var maxMatch = lockSrc.match(/MAX_RETRIES\s*=\s*(\d+)/);
@@ -658,6 +662,7 @@ describe('AUDIT-21: governance routes reject unauthenticated requests', () => {
     delete process.env.AGNI_SERVE_DIR;
     delete process.env.AGNI_HUB_API_KEY;
     delete require.cache[require.resolve('../../src/utils/env-config')];
+    delete require.cache[require.resolve('@agni/utils/env-config')];
     delete require.cache[require.resolve('../../src/services/accounts')];
     delete require.cache[require.resolve('../../hub-tools/context/auth')];
     delete require.cache[require.resolve('../../hub-tools/context/services')];
@@ -1043,6 +1048,7 @@ describe('AUDIT-9: student listing does not expose sensitive fields', () => {
     try {
       delete require.cache[require.resolve('../../src/services/accounts')];
       delete require.cache[require.resolve('../../src/utils/env-config')];
+      delete require.cache[require.resolve('@agni/utils/env-config')];
       const accountsService = require('../../src/services/accounts');
       await accountsService.createStudent({ displayName: 'Test', pin: '1234' });
       const students = await accountsService.listStudents();
@@ -1057,6 +1063,7 @@ describe('AUDIT-9: student listing does not expose sensitive fields', () => {
       fs.rmSync(dir, { recursive: true, force: true });
       delete require.cache[require.resolve('../../src/services/accounts')];
       delete require.cache[require.resolve('../../src/utils/env-config')];
+      delete require.cache[require.resolve('@agni/utils/env-config')];
     }
   });
 });

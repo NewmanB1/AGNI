@@ -72,12 +72,21 @@ if (!allowedMatch) {
   }
 }
 
-// 3 & 4. polyfills.js is pushed to factoryDeps in html.js, before shared-runtime.js
+// 3 & 4. polyfills.js is pushed to factoryDeps/factoryFilesToCopy in html.js, before shared-runtime.js
 var htmlBuilderPath = path.join(root, 'src', 'builders', 'html.js');
 var htmlSrc = fs.readFileSync(htmlBuilderPath, 'utf8');
 
-var polyfillPushRe = /factoryDeps\.push\(\s*\{\s*file:\s*['"]polyfills\.js['"]/;
-var sharedPushRe = /factoryDeps\.push\(\s*\{\s*file:\s*['"]shared-runtime\.js['"]/;
+// Resolve canonical html builder if src re-exports from @ols/compiler
+var reExportMatch = htmlSrc.match(/module\.exports\s*=\s*require\s*\(\s*['"]@ols\/compiler\/builders\/html['"]\s*\)/);
+if (reExportMatch) {
+  var canonicalPath = path.join(root, 'packages', 'ols-compiler', 'builders', 'html.js');
+  if (fs.existsSync(canonicalPath)) {
+    htmlSrc = fs.readFileSync(canonicalPath, 'utf8');
+  }
+}
+
+var polyfillPushRe = /(?:factoryDeps|factoryFilesToCopy)\.push\(\s*(?:\{\s*file:\s*)?['"]polyfills\.js['"]/;
+var sharedPushRe = /(?:factoryDeps|factoryFilesToCopy)\.push\(\s*(?:\{\s*file:\s*)?['"]shared-runtime\.js['"]/;
 
 var polyfillPushMatch = polyfillPushRe.exec(htmlSrc);
 var sharedPushMatch = sharedPushRe.exec(htmlSrc);

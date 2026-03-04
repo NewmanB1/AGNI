@@ -44,6 +44,11 @@ const KNOWN_STANDALONE = new Set([
   normalize('server/pwa/shell-boot.js'),
   normalize('src/governance/catalog.js'),
   normalize('src/governance/schema-store.js'),
+  // Phase 1: Re-exports from @ols/compiler (canonical ownership)
+  normalize('src/builders/html.js'),
+  normalize('src/builders/native.js'),
+  normalize('src/builders/yaml-packet.js'),
+  normalize('src/markdown-pipeline.js'),
 ]);
 
 // Runtime browser files listed in runtimeManifest.js are inlined by the HTML

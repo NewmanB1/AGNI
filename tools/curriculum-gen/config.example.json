@@ -1,0 +1,15 @@
+{
+  "provider": "gemini",
+  "apiKey": "YOUR_API_KEY_HERE",
+  "model": "gemini-2.0-flash",
+  "maxTokens": 4096,
+  "temperature": 0.7,
+  "rateLimit": {
+    "requestsPerMinute": 10,
+    "delayMs": 6000
+  },
+  "maxRetries": 3,
+  "batchSize": 50,
+  "skipFailed": true,
+  "startFrom": 0
+}

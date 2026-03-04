@@ -5,6 +5,7 @@ These rules keep the codebase navigable and safe to change with tooling and LLM 
 ## Module layout
 
 - **One clear role per module.** If a file grows beyond a single responsibility, split it (e.g. player → player/state, player/navigation).
+- **Re-exports in `src/`:** When adding or editing a thin re-export file, use the standard format: `'use strict';` + `// Phase 1: Re-export from <package> (canonical ownership)` + `module.exports = require('...');`. See `.cursor/rules/canonical-ownership.md`.
 - **Public API via index.** Each logical module (`src/compiler`, `src/engine`, `src/governance`, `src/services`) exposes a small surface via an `index.js` (or `index.ts`). New public functions should be exported from that index so they're discoverable; hide helpers inside the module.
 - **Top-down entry points.** Callers (CLI, hub, portal) use the **services layer** (`src/services/*`) or documented HTTP API; they do not require compiler/engine/governance internals directly.
 

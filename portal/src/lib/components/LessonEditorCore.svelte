@@ -10,6 +10,9 @@
   import GateEditor from './GateEditor.svelte';
   import OntologyEditor from './OntologyEditor.svelte';
   import ForkEditor from './ForkEditor.svelte';
+  import ArchetypeDesignHints from './ArchetypeDesignHints.svelte';
+  import KeyboardShortcutsModal from './KeyboardShortcutsModal.svelte';
+  import { getAllArchetypes, filterArchetypesByUtu } from '$lib/archetypes';
 
   let { mode = 'new', slug = null, creatorId = null, creatorName = null } = $props();
 
@@ -65,6 +68,15 @@
   let customLangMode = $state(false);
   let customLicenseMode = $state(false);
 
+  let archetypeId = $state('');
+  let showShortcutsModal = $state(false);
+  let showForkBrowser = $state(false);
+  let forkBrowserArchetypeFilter = $state('');
+  let catalogLessons = $state([]);
+  let generatingAi = $state(false);
+  let aiSkillDescription = $state('');
+  let focusedErrorStepId = $state('');
+
   let lesson = $state({
     identifier: '',
     title: '',
@@ -94,6 +106,13 @@
     _parent_hash: '',
     _uri: ''
   });
+
+  const ARCHETYPES_LIST = $derived(getAllArchetypes());
+  const filteredArchetypes = $derived(
+    (lesson.utu?.band != null && lesson.utu.band > 0) || (lesson.utu?.protocol != null && lesson.utu.protocol !== '' && lesson.utu.protocol !== 'null')
+      ? filterArchetypesByUtu(lesson.utu?.band || undefined, lesson.utu?.protocol != null && lesson.utu.protocol !== '' ? Number(lesson.utu.protocol) : undefined)
+      : ARCHETYPES_LIST
+  );
 
   const spineIds = $derived((utuConstants.spineIds || []).length
     ? utuConstants.spineIds
@@ -184,6 +203,11 @@
   // ─── Keyboard shortcuts (#9) ───────────────────────────────────────────────
 
   function handleKeydown(e) {
+    if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      showShortcutsModal = true;
+      return;
+    }
     const mod = e.ctrlKey || e.metaKey;
     if (mod && e.key === 's') {
       e.preventDefault();
@@ -274,6 +298,8 @@
     if (d.fork && typeof d.fork === 'object') {
       lesson.fork = d.fork;
     }
+    if (d.meta?.archetype) archetypeId = d.meta.archetype;
+    else if (d.archetype) archetypeId = d.archetype;
 
     if (d.version) lesson._version = d.version;
     if (m.created) lesson._created = m.created;
@@ -421,6 +447,17 @@
 
   let preflightErrors = $state([]);
 
+  function scrollToStep(stepId) {
+    focusedErrorStepId = stepId || '';
+    const el = document.querySelector(`[data-step-id="${stepId}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function parseValidationErrorForStep(err) {
+    const m = err.match(/Step "([^"]+)"/) || err.match(/step "([^"]+)"/i);
+    return m ? m[1] : null;
+  }
+
   function runPreflightValidation() {
     const errs = [];
     if (!lesson.title.trim()) errs.push('Title is required');
@@ -473,6 +510,19 @@
   let importText = $state('');
   let importError = $state('');
 
+  function handleImportFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result || '');
+      importText = text;
+      showImport = true;
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
   function importFromText() {
     importError = '';
     const trimmed = importText.trim();
@@ -501,11 +551,23 @@
   // ─── API actions ───────────────────────────────────────────────────────────
 
   async function validate() {
-    if (!api.baseUrl) { error = 'Hub not connected.'; return; }
     validating = true;
     error = '';
     validationErrors = [];
     validationWarnings = [];
+    const pfErrors = runPreflightValidation();
+    if (pfErrors.length > 0) {
+      validationErrors = pfErrors;
+      error = 'Pre-flight validation failed.';
+      validating = false;
+      return;
+    }
+    if (!api.baseUrl) {
+      validationWarnings = ['Full validation requires hub connection. Configure in Settings for schema + threshold checks.'];
+      success = 'Pre-flight checks passed.';
+      validating = false;
+      return;
+    }
     try {
       const payload = buildPayload();
       const data = await api.postAuthorValidate(payload);
@@ -535,6 +597,52 @@
       previewError = e instanceof Error ? e.message : String(e);
     }
     previewing = false;
+  }
+
+  async function generateWithAi() {
+    if (!api.baseUrl) { error = 'Hub connection required for AI generation.'; return; }
+    const desc = aiSkillDescription.trim();
+    if (!desc) { error = 'Enter a skill or topic description.'; return; }
+    generatingAi = true;
+    error = '';
+    try {
+      const res = await api.postAuthorGenerate({
+        skillDescription: desc,
+        archetypeId: archetypeId || undefined
+      });
+      if (res.lesson) {
+        populateFromData(res.lesson);
+        success = 'AI draft loaded. Review and edit as needed.';
+        activeEditorTab = 'steps';
+        markDirty();
+      } else {
+        error = res.error || 'AI generation failed.';
+      }
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+    generatingAi = false;
+  }
+
+  async function loadLessonToFork(slugToLoad) {
+    if (!api.baseUrl) return;
+    try {
+      const res = await api.getAuthorLesson(slugToLoad);
+      populateFromData(res.lessonData);
+      if (res.lessonData?.meta?.identifier) {
+        lesson.fork = {
+          source_identifier: res.lessonData.meta.identifier,
+          source_version: res.lessonData.version || '1.7.0',
+          fork_type: 'adaptation',
+          changes: ''
+        };
+      }
+      showForkBrowser = false;
+      activeEditorTab = 'advanced';
+      markDirty();
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
   }
 
   async function deleteCurrentLesson() {
@@ -593,12 +701,13 @@
 
     try { utuConstants = await api.getUtuConstants(); } catch {}
 
-    if (mode === 'new') {
-      try {
-        const res = await api.getLessons();
-        savedLessons = res.savedSlugs || [];
-      } catch {}
+    try {
+      const res = await api.getLessons();
+      savedLessons = res.savedSlugs || [];
+      catalogLessons = res.lessons || [];
+    } catch {}
 
+    if (mode === 'new') {
       const draft = loadDraft();
       if (draft && draft.title) {
         populateFromData(draft);
@@ -685,6 +794,8 @@
 
 <svelte:window onbeforeunload={handleBeforeUnload} onkeydown={handleKeydown} />
 
+<KeyboardShortcutsModal open={showShortcutsModal} onclose={() => showShortcutsModal = false} />
+
 {#if loading}
   <p>Loading…</p>
 {:else}
@@ -695,11 +806,53 @@
     </div>
   {/if}
 
+  <div class="guide-links">
+    <a href="https://github.com/NewmanB1/AGNI/blob/main/docs/guides/LESSON-CREATORS.md" target="_blank" rel="noopener">📘 Learn how to create lessons</a>
+    <span class="sep">|</span>
+    <button type="button" class="link-btn" onclick={() => showShortcutsModal = true}>⌨️ Keyboard shortcuts</button>
+  </div>
+
   {#if error}
     <div class="card error-box">{error}</div>
   {/if}
   {#if success}
     <div class="card success-box">{success}</div>
+  {/if}
+
+  {#if mode === 'new'}
+    <div class="generate-ai-card card">
+      <h3>Generate draft with AI</h3>
+      <p class="hint">Describe the skill or topic; the AI will create a starter lesson. Optional: select an archetype above for structure.</p>
+      <div class="ai-row">
+        <input type="text" bind:value={aiSkillDescription} placeholder="e.g. Understand buoyancy through hands-on experiment"
+               onkeydown={(e) => e.key === 'Enter' && generateWithAi()} />
+        <button class="primary" onclick={generateWithAi} disabled={generatingAi || !api.baseUrl}>
+          {generatingAi ? 'Generating…' : 'Generate'}
+        </button>
+      </div>
+      {#if !api.baseUrl}
+        <p class="field-error">Hub connection required for AI generation.</p>
+      {/if}
+    </div>
+  {/if}
+
+  {#if showForkBrowser}
+    <div class="fork-browser-overlay">
+      <div class="fork-browser card">
+        <h3>Load lesson to fork</h3>
+        <p class="hint">Select a saved lesson to use as the basis. Fork provenance will be set automatically.</p>
+        {#if savedLessons.length === 0}
+          <p>No saved lessons. Save a lesson first, or import one.</p>
+        {:else}
+          <div class="fork-slug-list">
+            {#each savedLessons as s}
+              <button type="button" class="slug-btn" onclick={() => loadLessonToFork(s)}>{s}</button>
+            {/each}
+          </div>
+        {/if}
+        <button class="secondary" onclick={() => showForkBrowser = false}>Cancel</button>
+      </div>
+    </div>
   {/if}
 
   {#if mode === 'new' && savedLessons.length > 0}
@@ -889,6 +1042,19 @@
       </label>
     </div>
 
+    <h2>Archetype (optional)</h2>
+    <p class="section-hint">Choosing an archetype shows tailored design hints and threshold examples. Leave empty to infer from UTU.</p>
+    <div class="form-group">
+      <label>Pedagogical archetype
+        <select bind:value={archetypeId} onchange={markDirty}>
+          <option value="">— infer from UTU —</option>
+          {#each filteredArchetypes as a}
+            <option value={a.id}>{a.name} ({a.category})</option>
+          {/each}
+        </select>
+      </label>
+    </div>
+
     <h2>UTU Coordinates</h2>
     <div class="row">
       <div class="form-group">
@@ -964,6 +1130,9 @@
     {/if}
 
     {#if activeEditorTab === 'steps'}
+    <div class="steps-split-pane">
+      <div class="steps-editor-pane">
+        <ArchetypeDesignHints archetypeId={archetypeId || null} />
     <div class="steps-mode-toggle">
       <button class:active={stepsMode === 'wysiwyg'} onclick={() => stepsMode = 'wysiwyg'}>Visual</button>
       <button class:active={stepsMode === 'form'} onclick={() => stepsMode = 'form'}>Form</button>
@@ -971,8 +1140,14 @@
     {#if stepsMode === 'wysiwyg'}
       <WysiwygEditor bind:steps={lesson.steps} onchange={onStepsChange} />
     {:else}
-      <StepEditor bind:steps={lesson.steps} onchange={onStepsChange} />
+      <StepEditor bind:steps={lesson.steps} onchange={onStepsChange} archetypeId={archetypeId || null} onfocus={(i) => { livePreviewStep = i; }} />
     {/if}
+      </div>
+      <div class="live-preview-pane">
+        <div class="live-preview-header">Live preview</div>
+        <LivePreview steps={lesson.steps} title={lesson.title} focusStep={livePreviewStep} />
+      </div>
+    </div>
     {/if}
 
     {#if activeEditorTab === 'advanced'}
@@ -990,7 +1165,18 @@
     {#if validationErrors.length}
       <div class="validation-list errors">
         <strong>Errors ({validationErrors.length}):</strong>
-        <ul>{#each validationErrors as e}<li>{e}</li>{/each}</ul>
+        <ul>
+          {#each validationErrors as e}
+            {@const stepId = parseValidationErrorForStep(e)}
+            <li>
+              {#if stepId}
+                <button type="button" class="error-link" onclick={() => scrollToStep(stepId)}>{e}</button>
+              {:else}
+                {e}
+              {/if}
+            </li>
+          {/each}
+        </ul>
       </div>
     {/if}
     {#if validationWarnings.length}
@@ -1034,7 +1220,12 @@
         <option value="yaml">YAML</option>
         <option value="json">JSON</option>
       </select>
-      <button class="secondary" onclick={() => showImport = !showImport}>Import JSON / YAML</button>
+      <label class="import-file-btn">
+        <input type="file" accept=".yaml,.yml,.json" onchange={handleImportFile} hidden />
+        Import from file
+      </label>
+      <button class="secondary" onclick={() => showImport = !showImport}>Import paste</button>
+      <button class="secondary" onclick={() => showForkBrowser = true}>Fork from saved</button>
       {#if mode === 'edit' && slug}
         <button class="danger-btn" onclick={deleteCurrentLesson}>Delete lesson</button>
       {/if}
@@ -1175,6 +1366,65 @@
   .preview-header h2 { margin: 0; }
   .link-btn { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.9rem; }
   .link-btn:hover { text-decoration: underline; }
+
+  .guide-links { margin-bottom: 1rem; font-size: 0.9rem; opacity: 0.9; }
+  .guide-links a { color: var(--accent); text-decoration: none; }
+  .guide-links a:hover { text-decoration: underline; }
+  .guide-links .sep { margin: 0 0.5rem; opacity: 0.5; }
+
+  .steps-split-pane {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 1rem; min-height: 400px;
+  }
+  @media (max-width: 900px) {
+    .steps-split-pane { grid-template-columns: 1fr; }
+  }
+  .steps-editor-pane { overflow-y: auto; }
+  .live-preview-pane {
+    position: sticky; top: 0;
+    background: rgba(18,24,48,0.5);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem;
+    overflow-y: auto;
+    max-height: 75vh;
+  }
+  .live-preview-header {
+    font-size: 0.8rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; opacity: 0.6; margin-bottom: 0.5rem;
+  }
+
+  .generate-ai-card { margin-bottom: 1rem; }
+  .generate-ai-card h3 { margin: 0 0 0.5rem; font-size: 1rem; }
+  .ai-row { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+  .ai-row input { flex: 1; padding: 0.5rem; border-radius: 6px; background: #1a2544; border: 1px solid var(--border); color: var(--text); }
+
+  .fork-browser-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .fork-browser { max-width: 500px; width: 90%; }
+  .fork-slug-list { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.75rem 0; }
+  .slug-btn {
+    background: rgba(31,43,78,0.7); color: var(--text);
+    border: 1px solid var(--border); padding: 0.35rem 0.7rem;
+    border-radius: 5px; cursor: pointer; font-size: 0.9rem;
+  }
+  .slug-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .import-file-btn {
+    display: inline-block; padding: 0.6rem 1.2rem;
+    background: #2a2a4a; color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; cursor: pointer; font-size: 0.9rem;
+  }
+  .import-file-btn:hover { border-color: var(--accent); }
+
+  .error-link {
+    background: none; border: none; color: inherit; cursor: pointer;
+    text-align: left; text-decoration: underline;
+    padding: 0; font: inherit;
+  }
 
   .load-existing { margin-bottom: 1.5rem; }
   .load-existing summary {

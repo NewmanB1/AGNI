@@ -53,16 +53,16 @@ Check out `lessons/gravity.yaml` and `lessons/ShakeRhythm.yaml` for more complet
 
 ### Improve the Compiler or Runtime
 
-The codebase is JavaScript (Node.js). Key entry points:
+The codebase is JavaScript (Node.js). Canonical implementations live in `packages/`; `src/` re-exports for backward compatibility. See **`CODEBASE_INDEX.md`** for a full "what lives where" map.
 
-| File | Purpose |
-|------|---------|
-| `src/cli.js` | CLI entry point — parses args, calls builders |
-| `src/builders/html.js` | Compiles YAML → single-file HTML bundle |
-| `src/builders/native.js` | Compiles IR → lesson.json + content/*.md (native format) |
-| `src/builders/yaml-packet.js` | Compiles to lesson.yaml + packet.json (thin-client YAML format) |
-| `src/runtime/player.js` | In-browser lesson player with sensor bridges |
-| `src/utils/featureInference.js` | Analyzes lessons and extracts feature metadata |
+| Area | Canonical location | Purpose |
+|------|-------------------|---------|
+| CLI | `src/cli.js` | CLI entry point — parses args, calls builders |
+| Compiler | `packages/ols-compiler/` | YAML → IR → HTML/native/YAML-packet |
+| HTML builder | `packages/ols-compiler/builders/html.js` | Compiles YAML → single-file HTML bundle |
+| Native builder | `packages/ols-compiler/builders/native.js` | IR → lesson.json + content/*.md |
+| Runtime player | `packages/agni-runtime/` | In-browser player, sensors, SVG factories |
+| Feature inference | `src/utils/featureInference.js` | Analyzes lessons and extracts metadata |
 
 To get the dev environment running:
 
@@ -151,16 +151,19 @@ Use a short prefix to categorize your change:
 
 ```
 AGNI/
-├── lessons/          # OLS lesson files — this is where content lives
-├── schemas/          # JSON Schema for validating lessons
-├── src/
-│   ├── cli.js        # Compiler CLI
-│   ├── builders/     # Output generators (html, native, yaml-packet)
-│   ├── runtime/      # Browser-based lesson player
-│   └── utils/        # Shared utilities
-├── fixtures/         # Test data
+├── packages/         # Canonical implementations (@agni/*, @ols/*)
+│   ├── agni-utils/   # Utilities
+│   ├── agni-runtime/ # Browser player, sensors, SVG
+│   ├── agni-engine/  # LMS (Rasch, Thompson, embeddings)
+│   ├── ols-compiler/ # YAML → IR → HTML/native
+│   └── ...
+├── src/              # Re-exports from packages (backward compatibility)
+├── lessons/          # OLS lesson files
+├── schemas/          # JSON Schema for lessons
+├── server/           # Hub-transform (on-demand PWA)
+├── hub-tools/        # Theta, LMS routes
 ├── docs/             # Project documentation
-└── .github/workflows # CI pipelines
+└── .github/          # CI, issue templates
 ```
 
 ---

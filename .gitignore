@@ -56,3 +56,11 @@ serve/
 playwright-report/
 test-results/
 .playwright/
+
+# Curriculum generator output (large, LLM-generated)
+tools/curriculum-gen/config.json
+tools/curriculum-gen/output/lessons/
+tools/curriculum-gen/output/progress.json
+tools/curriculum-gen/output/reports/
+tools/curriculum-gen/output/previews/
+tools/curriculum-gen/node_modules/

@@ -20,7 +20,7 @@
   "definitions": {
     "archetype": {
       "type": "object",
-      "required": ["id", "name", "category", "bandRange", "protocols", "blooms", "varkProfile", "teachingModes", "stepPattern", "thetaModifier", "designHints"],
+      "required": ["id", "name", "category", "bandRange", "protocols", "blooms", "modalityWeighting", "teachingModes", "stepPattern", "thetaModifier", "designHints"],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -38,8 +38,7 @@
         },
         "category": {
           "type": "string",
-          "enum": ["core", "specialty"],
-          "description": "Core archetypes map 1:1 to a Band-group × Protocol cell. Specialty archetypes span multiple cells or represent cross-cutting patterns."
+          "description": "Core archetypes map 1:1 to a Band-group × Protocol cell. Specialty archetypes span multiple cells. Community archetypes are contributed by domain experts."
         },
         "bandRange": {
           "type": "array",
@@ -63,9 +62,9 @@
           "minItems": 1,
           "description": "Bloom's taxonomy levels this archetype naturally targets."
         },
-        "varkProfile": {
-          "$ref": "#/definitions/varkWeights",
-          "description": "Expected VARK modality distribution (weights should sum to ~1.0). Used for cosine-similarity alignment scoring."
+        "modalityWeighting": {
+          "$ref": "#/definitions/modalityWeights",
+          "description": "Expected sensory-channel distribution (weights should sum to ~1.0). Based on Dual Coding Theory (Mayer) and Cognitive Load Theory, not VARK learning styles. Used for cosine-similarity alignment scoring."
         },
         "teachingModes": {
           "type": "array",
@@ -88,6 +87,15 @@
           "maximum": 1.5,
           "description": "Multiplier applied to the coherence bonus in theta scoring. 1.0 = neutral. >1.0 = amplifies the bonus for high-coherence matches. <1.0 = dampens it (use for archetypes where dimension alignment is less predictive of quality)."
         },
+        "accessibilityPath": {
+          "type": "string",
+          "description": "UDL fallback for learners who cannot perform hardware_trigger steps (motor impairment, missing sensors). Describes the alternative cognitive pathway. Required for archetypes with hardware_trigger in stepPattern."
+        },
+        "branchingModel": {
+          "type": "string",
+          "enum": ["linear", "on_fail_scaffold", "socratic_tree", "adaptive"],
+          "description": "How steps should connect: linear (flat sequence), on_fail_scaffold (branches on failure), socratic_tree (question-chains with branching), adaptive (theta-driven reordering)."
+        },
         "designHints": {
           "type": "object",
           "required": ["opening", "assessment", "visual"],
@@ -108,6 +116,10 @@
             "antipatterns": {
               "type": "string",
               "description": "What to avoid — common mistakes for this archetype."
+            },
+            "accessibility": {
+              "type": "string",
+              "description": "UDL guidance: how to make this archetype accessible to learners with motor, visual, or cognitive impairments."
             }
           }
         },
@@ -118,7 +130,7 @@
         }
       }
     },
-    "varkWeights": {
+    "modalityWeights": {
       "type": "object",
       "required": ["visual", "auditory", "readWrite", "kinesthetic"],
       "additionalProperties": false,

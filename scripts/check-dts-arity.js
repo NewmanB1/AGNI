@@ -18,26 +18,45 @@
 const fs = require('fs');
 const path = require('path');
 
-const ENGINE_DIR = path.join(__dirname, '..', 'src', 'engine');
+const ROOT = path.join(__dirname, '..');
+const ENGINE_DTS_DIR = path.join(ROOT, 'src', 'engine');
+const PACKAGE_ENGINE_DIR = path.join(ROOT, 'packages', 'agni-engine');
 
 const errors = [];
 
-const dtsFiles = fs.readdirSync(ENGINE_DIR).filter(function (f) {
+const dtsFiles = fs.readdirSync(ENGINE_DTS_DIR).filter(function (f) {
   return f.endsWith('.d.ts') && f !== 'index.d.ts';
 });
 
+function resolveJsPath(dtsName) {
+  const jsName = dtsName.replace(/\.d\.ts$/, '.js');
+  const srcJsPath = path.join(ENGINE_DTS_DIR, jsName);
+  const pkgJsPath = path.join(PACKAGE_ENGINE_DIR, jsName);
+
+  if (!fs.existsSync(srcJsPath)) {
+    return { path: null, content: null };
+  }
+
+  const srcContent = fs.readFileSync(srcJsPath, 'utf8');
+  const reExportMatch = srcContent.match(/module\.exports\s*=\s*require\s*\(\s*['"]@agni\/engine\/[^'"]+['"]\s*\)/);
+  if (reExportMatch && fs.existsSync(pkgJsPath)) {
+    return { path: pkgJsPath, content: fs.readFileSync(pkgJsPath, 'utf8') };
+  }
+  return { path: srcJsPath, content: srcContent };
+}
+
 dtsFiles.forEach(function (dtsName) {
   const jsName = dtsName.replace(/\.d\.ts$/, '.js');
-  const dtsPath = path.join(ENGINE_DIR, dtsName);
-  const jsPath = path.join(ENGINE_DIR, jsName);
+  const dtsPath = path.join(ENGINE_DTS_DIR, dtsName);
+  const resolved = resolveJsPath(dtsName);
 
-  if (!fs.existsSync(jsPath)) {
+  if (!resolved.path || !resolved.content) {
     errors.push(dtsName + ': no corresponding .js file found (' + jsName + ')');
     return;
   }
 
   const dtsContent = fs.readFileSync(dtsPath, 'utf8');
-  const jsContent = fs.readFileSync(jsPath, 'utf8');
+  const jsContent = resolved.content;
 
   const dtsFunctions = parseDtsExports(dtsContent);
   const jsFunctions = parseJsExports(jsContent);
