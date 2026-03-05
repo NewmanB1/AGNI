@@ -76,6 +76,11 @@ const config = {
   analyseCron:        strVal('AGNI_ANALYSE_CRON', '02:00'),
   sentryRetentionDays: intVal('AGNI_SENTRY_RETENTION_DAYS', 90),
 
+  sentryChi2Threshold:   floatVal('AGNI_SENTRY_CHI2_THRESHOLD', 3.841),
+  sentryMinSample:       intVal('AGNI_SENTRY_MIN_SAMPLE', 20),
+  sentryJaccardThreshold: validRange(floatVal('AGNI_SENTRY_JACCARD_THRESHOLD', 0.5), 0, 1, 'AGNI_SENTRY_JACCARD_THRESHOLD'),
+  sentryMinClusterSize:  intVal('AGNI_SENTRY_MIN_CLUSTER_SIZE', 20),
+
   markovWeight:       floatVal('AGNI_MARKOV_WEIGHT', 0.15),
   pagerankWeight:     floatVal('AGNI_PAGERANK_WEIGHT', 0.10),
 

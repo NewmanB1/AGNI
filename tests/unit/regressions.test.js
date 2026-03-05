@@ -947,7 +947,7 @@ describe('R16-C2.2: sentry UTF-8 body parsing uses Buffer.concat', () => {
     const fs = require('fs');
     const src = fs.readFileSync(require('path').join(__dirname, '../../hub-tools/sentry.js'), 'utf8');
     const receiverStart = src.indexOf('function startReceiver');
-    const receiverBlock = src.slice(receiverStart, receiverStart + 1200);
+    const receiverBlock = src.slice(receiverStart, receiverStart + 2500);
     assert.ok(receiverBlock.indexOf('Buffer.concat') !== -1,
       'sentry receiver does not use Buffer.concat — multi-byte UTF-8 at chunk boundaries will be corrupted');
     assert.ok(receiverBlock.indexOf("body += chunk") === -1 && receiverBlock.indexOf('body+=chunk') === -1,

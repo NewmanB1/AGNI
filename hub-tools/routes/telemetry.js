@@ -1,7 +1,32 @@
 'use strict';
 
+const http = require('http');
 const { updateSchedule } = require('../../src/engine/sm2');
 const { withLock } = require('../../src/utils/file-lock');
+const envConfig = require('../../src/utils/env-config');
+
+function forwardToSentry(events) {
+  const port = envConfig.sentryPort;
+  const body = JSON.stringify({ events: events });
+  const req = http.request({
+    hostname: '127.0.0.1',
+    port: port,
+    path: '/api/telemetry',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body, 'utf8') }
+  }, function (res) {
+    if (res.statusCode !== 200) {
+      const log = require('../../src/utils/logger').createLogger('theta');
+      log.warn('Sentry forward failed', { statusCode: res.statusCode });
+    }
+  });
+  req.on('error', function (e) {
+    const log = require('../../src/utils/logger').createLogger('theta');
+    log.warn('Sentry forward error', { error: e.message });
+  });
+  req.setTimeout(5000, function () { req.destroy(); });
+  req.end(body);
+}
 
 function register(router, ctx) {
   const { loadJSONAsync, saveJSONAsync, loadMasterySummaryAsync, handleJsonBody,
@@ -102,6 +127,8 @@ function register(router, ctx) {
       } catch (e) {
         log.warn('Telemetry event persistence failed', { error: e.message });
       }
+
+      forwardToSentry(events);
 
       return sendResponse(200, { accepted, processed: events.length });
     });

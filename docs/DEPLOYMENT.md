@@ -168,7 +168,8 @@ Point the captive portal or default DNS to the Pi's IP on port 8082 so students 
 
 ```bash
 # From the Pi itself
-curl http://localhost:8082/api/health
+curl http://localhost:8082/health
+curl http://localhost:8081/health   # Sentry health
 
 # From a student phone connected to the hub's WiFi
 # Open: http://<pi-ip>:8082/

@@ -12,7 +12,16 @@ This playbook describes the **Sentry → graph_weights → theta** flow: how tel
 | **graph_weights.json** | File in `AGNI_DATA_DIR` (default `data/`) describing skill-to-skill transfer weights for a discovered cohort. Theta reads it to compute residual cost (transfer benefit). |
 | **Theta** (`hub-tools/theta.js`) | Reads `graph_weights.json` (local or regional), uses it in `getResidualCostFactor()` and `computeLessonTheta()` to order lessons by MLC. |
 
-**Data flow:** Device/runtime → `POST /api/telemetry` (Sentry) → events on disk → analysis run → `graph_weights.json` → theta reads it → lesson list sorted by θ.
+**Data flow:** Device/runtime → `POST /api/telemetry` (theta or Sentry) → events on disk → analysis run → `graph_weights.json` → theta reads it → lesson list sorted by θ.
+
+### Data Flow Options
+
+| Mode | Path | When to use |
+|------|------|-------------|
+| **Default (integrated)** | Runtime → theta `POST /api/telemetry` → theta forwards to Sentry → `data/events/*.ndjson` | Standard deployment. Runtime POSTs to theta (port 8082). Theta processes events (mastery, LMS, review schedule) and forwards a copy to Sentry (port 8081). Sentry must be running. |
+| **Standalone Sentry** | Runtime → Sentry `POST /api/telemetry` directly | When theta is not used, or when devices POST to Sentry's port directly. Set runtime `hubBase` to `http://hub:8081` or equivalent. |
+
+**Configuration:** `AGNI_SENTRY_PORT` (default 8081). When theta forwards, it POSTs to `http://127.0.0.1:AGNI_SENTRY_PORT/api/telemetry`. If Sentry is not running, the forward fails (logged) and theta continues; events are still stored in `telemetry-events.json` and mastery is updated.
 
 ---
 
@@ -20,7 +29,10 @@ This playbook describes the **Sentry → graph_weights → theta** flow: how tel
 
 ### 2.1 HTTP API
 
-- **Endpoint:** `POST /api/telemetry`
+- **Endpoints:**
+  - `GET /health` — Returns `{ ok: true }`. Use for liveness probes.
+  - `GET /api/sentry/status` — Returns `{ bufferSize, lastAnalysisAt, graphWeightsUpdatedAt }`.
+  - `POST /api/telemetry` — Submit events (see below).
 - **Port:** `AGNI_SENTRY_PORT` (default `8081`)
 - **Body:** JSON with `events` array (or single event). Each event:
   - `lessonId` (string), `completedAt` (string), `mastery` (number 0–1)
@@ -102,7 +114,7 @@ So: **Sentry produces edges (prior → target, weight, confidence); theta uses t
 | Schema compliance (weight_estimation_method, clustering_method) | Implemented (Sentry outputs them) |
 | Theta reads graph_weights, getEffectiveGraphWeights, residual in computeLessonTheta | Implemented |
 | Sync of regional graph_weights (sync.js) | Implemented (write path); deployment/orchestration is environment-specific |
-| Runtime → Sentry: who POSTs /api/telemetry | Deployment-specific (player or hub can forward events) |
+| Runtime → theta; theta forwards to Sentry | Implemented (hub-tools/routes/telemetry.js) |
 
 ---
 
@@ -111,8 +123,8 @@ So: **Sentry produces edges (prior → target, weight, confidence); theta uses t
 | Goal | File(s) |
 |------|--------|
 | Change when analysis runs | `hub-tools/sentry.js`: ANALYSE_AFTER_N, MIN_MS_BETWEEN_ANALYSIS, setInterval |
-| Change cohort size or clustering | `hub-tools/sentry.js`: jaccard threshold 0.5, min cluster size 20 |
-| Change edge thresholds (chi2, sample size) | `hub-tools/sentry.js`: CHI2_THRESHOLD, n < 20 skip, _computeConfidence |
+| Change cohort size or clustering | `env-config.js`: AGNI_SENTRY_JACCARD_THRESHOLD, AGNI_SENTRY_MIN_CLUSTER_SIZE |
+| Change edge thresholds (chi2, sample size) | `env-config.js`: AGNI_SENTRY_CHI2_THRESHOLD, AGNI_SENTRY_MIN_SAMPLE |
 | Change theta’s graph selection | `hub-tools/theta.js`: getEffectiveGraphWeights, MIN_LOCAL_SAMPLE_SIZE, MIN_LOCAL_EDGE_COUNT |
 | Change residual formula | `hub-tools/theta.js`: getResidualCostFactor, MIN_RESIDUAL, MIN_CONFIDENCE |
 | Validate graph_weights shape | `schemas/graph_weights.schema.json`; CI in `.github/workflows/validate.yml` (fixtures and Sentry output). |

@@ -1,5 +1,5 @@
 // hub-tools/sentry.js
-// AGNI Village Sentry v1.7.3 – with O(1) Memory Contingency Tables & Async Buffering
+// AGNI Village Sentry v1.8.0 – O(1) Memory, Async Buffering, Health, Shutdown, Retry
 // ─────────────────────────────────────────────────────────────────────────────
 'use strict';
 const fs = require('fs');
@@ -8,6 +8,7 @@ const http = require('http');
 const crypto = require('crypto');
 const { createLogger } = require('../src/utils/logger');
 const envConfig = require('../src/utils/env-config');
+const sentryAnalysis = require('./sentry-analysis');
 
 // ── Hub config bootstrap (F1) ───────────────────────────────────────────────
 const { loadHubConfig } = require('../src/utils/hub-config');
@@ -27,11 +28,22 @@ const ANALYSE_AFTER_N = envConfig.analyseAfter;
 const ANALYSE_SCHEDULE = envConfig.analyseCron;
 const MIN_MS_BETWEEN_ANALYSIS = 4 * 60 * 60 * 1000;
 
-const CHI2_THRESHOLD = 3.841;
+const CHI2_THRESHOLD = envConfig.sentryChi2Threshold;
+const MIN_SAMPLE = envConfig.sentryMinSample;
+const JACCARD_THRESHOLD = envConfig.sentryJaccardThreshold;
+const MIN_CLUSTER_SIZE = envConfig.sentryMinClusterSize;
 const MASTERY_THRESHOLD = envConfig.masteryThreshold;
 const PASS_THRESHOLD = 0.6;
 const SCHEMA_VERSION = '1.7.0';
-const SW_VERSION = 'sentry-agent v1.7.3 (O1-incremental)';
+const SW_VERSION = 'sentry-agent v1.8.0';
+
+const FLUSH_INTERVAL_MS = 30000;
+const FLUSH_RETRY_ATTEMPTS = 3;
+const FLUSH_RETRY_DELAY_MS = 1000;
+const SHUTDOWN_TIMEOUT_MS = 10000;
+
+let _httpServer = null;
+let _shuttingDown = false;
 
 function ensureDirs() {
   [DATA_DIR, EVENTS_DIR].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
@@ -45,6 +57,9 @@ const log = createLogger('sentry', { logFile: SENTRY_LOG });
 const EVENT_BUFFER_MAX = 50000;
 let eventBuffer = [];
 let _flushing = false;
+let _lastAnalysisAt = null;
+let _graphWeightsUpdatedAt = null;
+
 function todayFile() { return path.join(EVENTS_DIR, new Date().toISOString().slice(0, 10) + '.ndjson'); }
 
 function appendEvents(events) {
@@ -56,21 +71,38 @@ function appendEvents(events) {
   eventBuffer.push(...serialized);
 }
 
+function doFlushOnce(callback) {
+  if (eventBuffer.length === 0) return callback(null);
+  const toWrite = eventBuffer.join('\n') + '\n';
+  eventBuffer = [];
+  let attempts = 0;
+  function tryWrite() {
+    attempts++;
+    fs.appendFile(todayFile(), toWrite, 'utf8', (err) => {
+      if (err && attempts < FLUSH_RETRY_ATTEMPTS) {
+        log.warn('Flush retry', { attempt: attempts, error: err.message });
+        setTimeout(tryWrite, FLUSH_RETRY_DELAY_MS);
+      } else if (err) {
+        log.error('Event flush failed after retries, data discarded', { error: err.message });
+        callback(err);
+      } else {
+        callback(null);
+      }
+    });
+  }
+  tryWrite();
+}
+
 let _flushTimer = null;
 function startFlushTimer() {
   if (_flushTimer) return;
   _flushTimer = setInterval(() => {
-    if (eventBuffer.length === 0 || _flushing) return;
+    if (eventBuffer.length === 0 || _flushing || _shuttingDown) return;
     _flushing = true;
-    const toWrite = eventBuffer.join('\n') + '\n';
-    eventBuffer = [];
-    fs.appendFile(todayFile(), toWrite, 'utf8', (err) => {
+    doFlushOnce(() => {
       _flushing = false;
-      if (err) {
-        log.error('Event flush failed, data discarded', { error: err.message });
-      }
     });
-  }, 30000);
+  }, FLUSH_INTERVAL_MS);
 }
 
 function pruneOldEvents(maxAgeDays) {
@@ -94,38 +126,44 @@ function pruneOldEvents(maxAgeDays) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 2. HTTP receiver
+// 2. HTTP receiver & Health
 // ═══════════════════════════════════════════════════════════════════════════
 let _eventsSinceLastAnalysis = 0;
 let lastAnalysisAttempt = 0;
 
 function validateEvent(raw) {
-  if (!raw || typeof raw !== 'object' || !raw.lessonId || !raw.completedAt) return null;
-  if (typeof raw.mastery !== 'number' || raw.mastery < 0 || raw.mastery > 1) return null;
-  if (!Array.isArray(raw.steps)) return null;
-  // Validate lessonId does not contain path separators [R10 P5.6]
-  const lessonId = String(raw.lessonId);
-  if (/[\/\\]/.test(lessonId) || lessonId.includes('..')) return null;
-  // Validate completedAt is a plausible ISO date
-  if (typeof raw.completedAt !== 'string' || isNaN(Date.parse(raw.completedAt))) return null;
-  return {
-    eventId: raw.eventId || ('ev-' + Date.now()),
-    pseudoId: raw.pseudoId || ('px-anon-' + crypto.randomBytes(4).toString('hex')),
-    lessonId: lessonId,
-    skillsProvided: Array.isArray(raw.skillsProvided) ? raw.skillsProvided : [],
-    skillsRequired: Array.isArray(raw.skillsRequired) ? raw.skillsRequired : [],
-    mastery: raw.mastery,
-    completedAt: raw.completedAt
-  };
+  return sentryAnalysis.validateEvent(raw);
 }
 
 function startReceiver() {
   const server = http.createServer((req, res) => {
     res.setHeader('Access-Control-Allow-Origin', envConfig.corsOrigin);
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
+    if (req.method === 'GET' && req.url === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+      return;
+    }
+
+    if (req.method === 'GET' && req.url === '/api/sentry/status') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        bufferSize: eventBuffer.length,
+        lastAnalysisAt: _lastAnalysisAt,
+        graphWeightsUpdatedAt: _graphWeightsUpdatedAt
+      }));
+      return;
+    }
+
+    if (_shuttingDown) {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Server shutting down' }));
+      return;
+    }
 
     if (req.method === 'POST' && req.url === '/api/telemetry') {
       const chunks = [];
@@ -164,29 +202,51 @@ function startReceiver() {
     }
     res.writeHead(404); res.end();
   });
+  _httpServer = server;
   server.listen(PORT, '0.0.0.0', () => log.info('Receiver listening', { port: PORT }));
 }
+
+// ── Graceful shutdown ───────────────────────────────────────────────────────
+function shutdown() {
+  if (_shuttingDown) return;
+  _shuttingDown = true;
+  log.info('Shutdown initiated, draining buffer');
+  const timeout = setTimeout(() => {
+    log.warn('Shutdown timeout, exiting');
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT_MS);
+  doFlushOnce((err) => {
+    clearTimeout(timeout);
+    if (err) log.error('Final flush failed', { error: err.message });
+    if (_httpServer) _httpServer.close(() => process.exit(0));
+    else process.exit(0);
+  });
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 3. O(1) Memory Graph Engine & Analysis
 // ═══════════════════════════════════════════════════════════════════════════
 const { loadJSONAsync, saveJSONAsync } = require('../src/utils/json-store');
+let _graphWeightsValidator = null;
 
-function jaccardSimilarity(a, centroid) {
-  let intersection = 0, union = 0;
-  for (let i = 0; i < a.length; i++) {
-    const cVal = centroid[i] >= 0.5 ? 1 : 0; // Fixed Truthiness Bug
-    if (a[i] || cVal) union++;
-    if (a[i] && cVal) intersection++;
+function getGraphWeightsValidator() {
+  if (_graphWeightsValidator) return _graphWeightsValidator;
+  try {
+    const Ajv = require('ajv');
+    const addFormats = require('ajv-formats');
+    const schemaPath = path.join(__dirname, '../schemas/graph-weights.schema.json');
+    const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+    const ajv = new Ajv({ allErrors: true });
+    addFormats(ajv);
+    _graphWeightsValidator = ajv.compile(schema);
+    return _graphWeightsValidator;
+  } catch (e) {
+    log.warn('Could not load graph_weights schema, skipping validation', { error: e.message });
+    return null;
   }
-  return union === 0 ? 1 : intersection / union;
-}
-
-function _computeConfidence(chiSquare, n, nMin) {
-  if (chiSquare < CHI2_THRESHOLD) return 0;
-  const chiConf = 1 - 1 / (1 + (chiSquare - CHI2_THRESHOLD) / 4);
-  const nRatio = Math.min(1, n / (nMin * 2));
-  return Math.round(chiConf * nRatio * 1000) / 1000;
 }
 
 async function runAnalysis() {
@@ -197,11 +257,20 @@ async function runAnalysis() {
   const mastery = await loadJSONAsync(MASTERY_SUMMARY, { schemaVersion: '1.7.0', students: {} });
   const contingencies = await loadJSONAsync(CONTINGENCY_TABLES, {});
 
+  const opts = {
+    masteryThreshold: MASTERY_THRESHOLD,
+    passThreshold: PASS_THRESHOLD,
+    chi2Threshold: CHI2_THRESHOLD,
+    minSample: MIN_SAMPLE,
+    jaccardThreshold: JACCARD_THRESHOLD,
+    minClusterSize: MIN_CLUSTER_SIZE,
+    minVectors: 20
+  };
+
   const fsp = fs.promises;
   const files = (await fsp.readdir(EVENTS_DIR)).filter(f => f.endsWith('.ndjson')).sort();
   let eventsProcessed = 0;
 
-  // 1. Process New Events Incrementally
   for (const file of files) {
     const filePath = path.join(EVENTS_DIR, file);
     const content = await fsp.readFile(filePath, 'utf8');
@@ -211,41 +280,10 @@ async function runAnalysis() {
     for (let i = startIdx; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
-      
+
       try {
         const ev = JSON.parse(line);
-        const pid = ev.pseudoId;
-        const passedWell = ev.mastery >= PASS_THRESHOLD;
-
-        if (!mastery.students[pid]) mastery.students[pid] = {};
-        if (!contingencies[pid]) contingencies[pid] = {};
-
-        const studentSkills = mastery.students[pid];
-        const studentTables = contingencies[pid];
-
-        // A. Update Contingency Matrices BEFORE applying this event's mastery
-        (ev.skillsProvided || []).forEach(target => {
-          Object.keys(studentSkills).forEach(prior => {
-            if (prior === target.skill) return; // Ignore self-loops
-            
-            const pair = `${prior}\x00${target.skill}`;
-            if (!studentTables[pair]) studentTables[pair] = { a:0, b:0, c:0, d:0 };
-            
-            const hadPrior = studentSkills[prior] >= MASTERY_THRESHOLD;
-            if (hadPrior && passedWell) studentTables[pair].a++;
-            else if (hadPrior && !passedWell) studentTables[pair].b++;
-            else if (!hadPrior && passedWell) studentTables[pair].c++;
-            else if (!hadPrior && !passedWell) studentTables[pair].d++;
-          });
-        });
-
-        // B. Update Student Mastery AFTER matrices
-        (ev.skillsProvided || []).forEach(prov => {
-          if ((prov.evidencedLevel || 0) > (studentSkills[prov.skill] || 0)) {
-            studentSkills[prov.skill] = prov.evidencedLevel;
-          }
-        });
-
+        sentryAnalysis.processOneEvent(ev, mastery, contingencies, opts);
         state.cursors[file] = i + 1;
         eventsProcessed++;
       } catch (e) { log.warn('Skipping malformed event', { file, error: e.message }); }
@@ -258,42 +296,21 @@ async function runAnalysis() {
   await saveJSONAsync(MASTERY_SUMMARY, mastery);
   await saveJSONAsync(CONTINGENCY_TABLES, contingencies, { minified: true });
 
-  // 2. Discover Cohort using Jaccard Similarity on Current Mastery
-  const allSkills = Array.from(new Set(Object.values(mastery.students).flatMap(Object.keys))).sort();
-  const vectors = Object.entries(mastery.students).map(([pid, skills]) => ({
-    pseudoId: pid,
-    vector: allSkills.map(s => (skills[s] || 0) >= MASTERY_THRESHOLD ? 1 : 0)
-  }));
+  const cohortResult = sentryAnalysis.discoverCohort(mastery, opts);
+  if (!cohortResult) {
+    log.info('Cohort too small for graph building', { size: Object.keys(mastery.students).length });
+    _lastAnalysisAt = new Date().toISOString();
+    return;
+  }
 
-  if (vectors.length < 20) { log.info('Cohort too small for graph building', { size: vectors.length }); return; }
-
-  const clusters = [];
-  vectors.forEach(({ pseudoId, vector }) => {
-    let placed = false;
-    for (const cluster of clusters) {
-      if (jaccardSimilarity(vector, cluster.centroid) >= 0.5) {
-        cluster.members.push(pseudoId);
-        cluster.vectors.push(vector);
-        const n = cluster.vectors.length;
-        cluster.centroid = cluster.centroid.map((v, i) => cluster.vectors.reduce((s, vec) => s + vec[i], 0) / n);
-        placed = true; break;
-      }
-    }
-    if (!placed) clusters.push({ members: [pseudoId], vectors: [vector], centroid: [...vector] });
-  });
-
-  const largest = clusters.reduce((a, b) => a.members.length >= b.members.length ? a : b);
-  if (largest.members.length < 20) return;
-
-  const cohortId = 'c_' + crypto.createHash('sha256').update(largest.centroid.map(v => v.toFixed(4)).join(',')).digest('hex').slice(0, 8);
+  const { largest } = cohortResult;
   const cohortSet = new Set(largest.members);
 
-  // 3. Aggregate Matrices for the Cohort
   const globalPairs = {};
   cohortSet.forEach(pid => {
     const tables = contingencies[pid] || {};
     Object.entries(tables).forEach(([pair, counts]) => {
-      if (!globalPairs[pair]) globalPairs[pair] = { a:0, b:0, c:0, d:0 };
+      if (!globalPairs[pair]) globalPairs[pair] = { a: 0, b: 0, c: 0, d: 0 };
       globalPairs[pair].a += counts.a;
       globalPairs[pair].b += counts.b;
       globalPairs[pair].c += counts.c;
@@ -301,34 +318,9 @@ async function runAnalysis() {
     });
   });
 
-  // 4. Compute Final Graph Weights
-  const edges = [];
-  Object.entries(globalPairs).forEach(([pair, counts]) => {
-    const { a, b, c, d } = counts;
-    const n = a + b + c + d;
-    if (n < 20) return;
+  const edges = sentryAnalysis.computeEdgesFromGlobalPairs(globalPairs, opts);
 
-    const pPrior = (a + b) / n;
-    if (pPrior === 0 || pPrior === 1) return;
-
-    const nMin = Math.ceil(20 / Math.min(pPrior, 1 - pPrior));
-    const den = (a+b) * (c+d) * (a+c) * (b+d);
-    const chi2 = den > 0 ? Math.pow(Math.abs(a*d - b*c) - n/2, 2) * n / den : 0;
-    
-    const passWithPrior = (a + b) > 0 ? a / (a + b) : 0;
-    const passWithoutPrior = (c + d) > 0 ? c / (c + d) : 0;
-    const benefit = Math.max(0, passWithPrior - passWithoutPrior);
-    const weight = Math.round((1 - benefit) * 1000) / 1000;
-    
-    const [prior, target] = pair.split('\x00');
-    edges.push({
-      from: prior, to: target,
-      weight: Math.max(0, Math.min(1, weight)),
-      confidence: Math.max(0, Math.min(1, _computeConfidence(chi2, n, nMin))),
-      sample_size: n
-    });
-  });
-
+  const cohortId = 'c_' + crypto.createHash('sha256').update(largest.centroid.map(v => v.toFixed(4)).join(',')).digest('hex').slice(0, 8);
   const now = new Date().toISOString();
   const gw = {
     '$schema': 'https://github.com/NewmanB1/AGNI/schemas/graph-weights.schema.json',
@@ -345,10 +337,40 @@ async function runAnalysis() {
     metadata: { computation_date: now, software_version: SW_VERSION }
   };
 
+  const validate = getGraphWeightsValidator();
+  if (validate && !validate(gw)) {
+    log.error('Graph weights failed schema validation, not writing', { errors: validate.errors });
+    return;
+  }
+
   await saveJSONAsync(GRAPH_WEIGHTS, gw);
+  _lastAnalysisAt = now;
+  _graphWeightsUpdatedAt = now;
   log.info('Analysis complete', { eventsProcessed, edges: edges.length });
 
   pruneOldEvents(envConfig.sentryRetentionDays);
+}
+
+// ── Cron-based analysis ─────────────────────────────────────────────────────
+function parseCronTime(cronStr) {
+  if (!cronStr || typeof cronStr !== 'string') return null;
+  const m = cronStr.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  return { hour: parseInt(m[1], 10), minute: parseInt(m[2], 10) };
+}
+
+let _lastCronCheck = 0;
+function checkCronAndRunAnalysis() {
+  const cron = parseCronTime(ANALYSE_SCHEDULE);
+  if (!cron) return;
+  const now = new Date();
+  if (now.getHours() === cron.hour && now.getMinutes() === cron.minute) {
+    const key = now.getFullYear() * 10000 + now.getMonth() * 100 + now.getDate();
+    if (key !== _lastCronCheck) {
+      _lastCronCheck = key;
+      setImmediate(() => runAnalysis().catch(e => log.error('Cron analysis error', { error: e.message })));
+    }
+  }
 }
 
 if (require.main === module) {
@@ -358,4 +380,5 @@ if (require.main === module) {
   startReceiver();
   runAnalysis().catch(e => log.error('Startup analysis error', { error: e.message }));
   setInterval(() => runAnalysis().catch(e => log.error('Scheduled analysis error', { error: e.message })), MIN_MS_BETWEEN_ANALYSIS);
+  setInterval(checkCronAndRunAnalysis, 60000);
 }
