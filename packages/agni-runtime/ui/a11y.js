@@ -128,7 +128,10 @@
       '.agni-settings-toggle { display: flex; align-items: center; gap: 0.75rem; }' +
       '.agni-settings-toggle input[type="checkbox"] { width: 24px; height: 24px; }' +
       '.agni-settings-close { display: block; width: 100%; margin-top: 1rem; padding: 0.75rem; font-size: 1rem; min-height: 48px; cursor: pointer; border: 2px solid #555; border-radius: 2px; background: #0B5FFF; color: #fff; }' +
-      '.agni-high-contrast .agni-settings-close { background: #fff; color: #000; border-color: #fff; }';
+      '.agni-high-contrast .agni-settings-close { background: #fff; color: #000; border-color: #fff; }' +
+      '.agni-settings-presets { display: flex; flex-wrap: wrap; gap: 0.4rem; }' +
+      '.agni-preset-btn { padding: 0.35rem 0.5rem; font-size: 0.8rem; border: 2px solid #555; border-radius: 2px; background: #fff; cursor: pointer; }' +
+      '.agni-high-contrast .agni-preset-btn { background: #222; border-color: #fff; color: #fff; }';
     document.head.appendChild(s);
   }
 
@@ -262,6 +265,35 @@
     hapRow.appendChild(hapSlider);
     hapRow.appendChild(hapVal);
     panel.appendChild(hapRow);
+
+    // Preset chips: Off, Sensory-friendly (0.25), Low, Medium, Full
+    var presetRow = document.createElement('div');
+    presetRow.className = 'agni-settings-row agni-settings-presets';
+    var presets = [
+      { label: 'Off', value: 0 },
+      { label: 'Sensory friendly', value: 0.25 },
+      { label: 'Low', value: 0.5 },
+      { label: 'Medium', value: 0.75 },
+      { label: 'Full', value: 1 }
+    ];
+    for (var i = 0; i < presets.length; i++) {
+      var p = presets[i];
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'agni-preset-btn';
+      btn.textContent = p.label;
+      btn.onclick = (function (val) {
+        return function () {
+          prefs.hapticIntensity = val;
+          hapSlider.value = String(val);
+          hapVal.textContent = val === 0 ? 'Off' : Math.round(val * 100) + '%';
+          applyLive();
+          savePrefs();
+        };
+      })(p.value);
+      presetRow.appendChild(btn);
+    }
+    panel.appendChild(presetRow);
 
     // Auto-narrate toggle (reads everything aloud for blind/illiterate learners)
     if (global.speechSynthesis) {

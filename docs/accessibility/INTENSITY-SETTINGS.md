@@ -50,8 +50,8 @@ Currently no schema enum for feedback patterns; they are parsed from the string 
 *To be filled after haptic testing with neurodivergent volunteers.*
 
 - [x] Default `hapticIntensity` to 0 when `prefers-reduced-motion: reduce` (implemented in a11y.js, shared-runtime.js, portal)
-- [ ] Schema: add explicit feedback pattern enum in `ols.schema.json`?
-- [ ] UI: add "sensory-friendly" preset (e.g. 0.25 default)?
+- [x] Schema: add explicit feedback pattern enum in `ols.schema.json` (optional `feedback_pattern` property)
+- [x] UI: add "sensory-friendly" preset (0.25) in gear panel
 - [ ] Other: _________________
 
 ---

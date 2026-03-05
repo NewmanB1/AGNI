@@ -179,4 +179,20 @@ describe('renderSettingsPanel()', () => {
     assert.equal(storage().getItem('agni_reduced_motion'), 'true');
     assert.equal(storage().getItem('agni_haptic_intensity'), '0.5');
   });
+
+  it('sensory-friendly preset (0.25) applies and persists to localStorage', () => {
+    const a11y = loadA11y();
+    a11y.renderSettingsPanel();
+    const overlay = globalThis.document.body._children[0];
+    const panel = overlay._children[0];
+    const presetRow = panel._children.find(function (r) {
+      return r.className && r.className.indexOf('agni-settings-presets') >= 0;
+    });
+    assert.ok(presetRow, 'preset row should exist');
+    const sensoryBtn = presetRow._children[1];
+    assert.equal(sensoryBtn.textContent, 'Sensory friendly');
+    sensoryBtn.onclick();
+    assert.equal(a11y.prefs.hapticIntensity, 0.25);
+    assert.equal(storage().getItem('agni_haptic_intensity'), '0.25');
+  });
 });

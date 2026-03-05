@@ -460,6 +460,11 @@
           ],
           "description": "Feedback text (string) or per-outcome feedback object with 'correct' and 'incorrect' messages."
         },
+        "feedback_pattern": {
+          "type": "string",
+          "enum": ["vibration:short", "vibration:success_pattern"],
+          "description": "Optional haptic feedback pattern. Alternative to embedding in feedback string. Runtime prefers this when present."
+        },
         "answer_options": {
           "type": "array",
           "items": {
