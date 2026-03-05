@@ -377,10 +377,10 @@ describe('AUDIT-11: createStudent returns sanitized output', () => {
     const saved = process.env.AGNI_DATA_DIR;
     process.env.AGNI_DATA_DIR = dir;
     try {
-      delete require.cache[require.resolve('../../src/services/accounts')];
+      delete require.cache[require.resolve('@agni/services/accounts')];
       delete require.cache[require.resolve('../../src/utils/env-config')];
       delete require.cache[require.resolve('@agni/utils/env-config')];
-      const accounts = require('../../src/services/accounts');
+      const accounts = require('@agni/services/accounts');
       const result = await accounts.createStudent({ displayName: 'Test', pin: '9999' });
       assert.ok(result.ok, 'createStudent should succeed');
       assert.equal(result.student.pinHash, undefined, 'pinHash should not be in response');
@@ -390,7 +390,7 @@ describe('AUDIT-11: createStudent returns sanitized output', () => {
     } finally {
       process.env.AGNI_DATA_DIR = saved;
       fsMod.rmSync(dir, { recursive: true, force: true });
-      delete require.cache[require.resolve('../../src/services/accounts')];
+      delete require.cache[require.resolve('@agni/services/accounts')];
       delete require.cache[require.resolve('../../src/utils/env-config')];
       delete require.cache[require.resolve('@agni/utils/env-config')];
     }
@@ -663,7 +663,7 @@ describe('AUDIT-21: governance routes reject unauthenticated requests', () => {
     delete process.env.AGNI_HUB_API_KEY;
     delete require.cache[require.resolve('../../src/utils/env-config')];
     delete require.cache[require.resolve('@agni/utils/env-config')];
-    delete require.cache[require.resolve('../../src/services/accounts')];
+    delete require.cache[require.resolve('@agni/services/accounts')];
     delete require.cache[require.resolve('../../packages/agni-hub/context/auth')];
     delete require.cache[require.resolve('../../packages/agni-hub/context/services')];
   });
@@ -1022,7 +1022,7 @@ describe('R16-C1: withLock is used in all mutating route handlers', () => {
 
   it('accounts.js cleanExpiredSessions uses withLock', () => {
     const fs = require('fs');
-    const src = fs.readFileSync(require('path').join(__dirname, '../../src/services/accounts.js'), 'utf8');
+    const src = fs.readFileSync(require.resolve('@agni/services/accounts'), 'utf8');
     const cleanFn = src.slice(src.indexOf('async function cleanExpiredSessions'), src.indexOf('async function destroySession'));
     assert.ok(cleanFn.indexOf('withLock') !== -1,
       'cleanExpiredSessions does not use withLock — races with loginCreator');
@@ -1030,7 +1030,7 @@ describe('R16-C1: withLock is used in all mutating route handlers', () => {
 
   it('accounts.js destroySession uses withLock', () => {
     const fs = require('fs');
-    const src = fs.readFileSync(require('path').join(__dirname, '../../src/services/accounts.js'), 'utf8');
+    const src = fs.readFileSync(require.resolve('@agni/services/accounts'), 'utf8');
     const destroyFn = src.slice(src.indexOf('async function destroySession'));
     assert.ok(destroyFn.indexOf('withLock') !== -1,
       'destroySession does not use withLock — races with loginCreator');
@@ -1047,10 +1047,10 @@ describe('AUDIT-9: student listing does not expose sensitive fields', () => {
     const saved = process.env.AGNI_DATA_DIR;
     process.env.AGNI_DATA_DIR = dir;
     try {
-      delete require.cache[require.resolve('../../src/services/accounts')];
+      delete require.cache[require.resolve('@agni/services/accounts')];
       delete require.cache[require.resolve('../../src/utils/env-config')];
       delete require.cache[require.resolve('@agni/utils/env-config')];
-      const accountsService = require('../../src/services/accounts');
+      const accountsService = require('@agni/services/accounts');
       await accountsService.createStudent({ displayName: 'Test', pin: '1234' });
       const students = await accountsService.listStudents();
       assert.ok(students.length >= 1);
@@ -1062,7 +1062,7 @@ describe('AUDIT-9: student listing does not expose sensitive fields', () => {
     } finally {
       process.env.AGNI_DATA_DIR = saved;
       fs.rmSync(dir, { recursive: true, force: true });
-      delete require.cache[require.resolve('../../src/services/accounts')];
+      delete require.cache[require.resolve('@agni/services/accounts')];
       delete require.cache[require.resolve('../../src/utils/env-config')];
       delete require.cache[require.resolve('@agni/utils/env-config')];
     }

@@ -9,8 +9,8 @@ module.exports = {
   sync:           require('./sync'),
   shared:         require('./shared'),
   hubTransform:   require('./hub-transform'),
-  accounts:       require('../../src/services/accounts'),
-  author:         require('../../src/services/author'),
-  lessonChain:    require('../../src/services/lesson-chain'),
-  lessonAssembly: require('../../src/services/lesson-assembly'),
+  accounts:       require('@agni/services/accounts'),
+  author:         require('@agni/services/author'),
+  lessonChain:    require('@agni/services/lesson-chain'),
+  lessonAssembly: require('@agni/services/lesson-assembly'),
 };

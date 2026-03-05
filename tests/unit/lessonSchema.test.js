@@ -2,7 +2,7 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const lessonSchema = require('../../src/services/lesson-schema');
+const lessonSchema = require('@agni/services/lesson-schema');
 const { minimalLesson } = require('../helpers/fixtures');
 
 // ── validateStructure ────────────────────────────────────────────────────────

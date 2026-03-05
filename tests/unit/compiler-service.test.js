@@ -2,7 +2,7 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { parseLessonFromString, validateLessonStructure, runCompilePipeline } = require('../../src/services/compiler');
+const { parseLessonFromString, validateLessonStructure, runCompilePipeline } = require('@agni/services/compiler');
 const { minimalLesson } = require('../helpers/fixtures');
 const yaml = require('js-yaml');
 

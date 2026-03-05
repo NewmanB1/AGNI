@@ -7,7 +7,7 @@ const { tempDir } = require('../helpers/fixtures');
 const tmp = tempDir('accounts');
 process.env.AGNI_DATA_DIR = tmp.dir;
 
-const accounts = require('../../src/services/accounts');
+const accounts = require('@agni/services/accounts');
 
 after(() => {
   tmp.cleanup();

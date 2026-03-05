@@ -22,6 +22,7 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 | `@agni/engine` | `packages/agni-engine/` | LMS engine: Rasch, Thompson, embeddings, PageRank, federation |
 | `@ols/compiler` | `packages/ols-compiler/` | Lesson compiler: YAML → IR → HTML/native/YAML-packet |
 | `@agni/governance` | `packages/agni-governance/` | Policy, compliance, catalog |
+| `@agni/services` | `packages/agni-services/` | Top-down API: accounts, author, governance, LMS, lesson-chain |
 | `@agni/hub` | `packages/agni-hub/` | Hub server: theta, accounts, telemetry |
 
 **Re-exports:** `src/utils/`, `src/compiler/`, `src/builders/`, `src/engine/` often contain thin wrappers like `module.exports = require('@agni/utils/...')` or `require('@ols/compiler/...')`. When inspecting or modifying behavior, work in the **package** (e.g. `packages/agni-engine/`, `packages/ols-compiler/`), not the `src/` re-export.

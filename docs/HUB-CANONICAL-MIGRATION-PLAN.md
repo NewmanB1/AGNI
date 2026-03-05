@@ -162,9 +162,9 @@ npm test
 
 ---
 
-## Phase 3: Services Layer (src/services/*)
+## Phase 3: Services Layer — COMPLETE
 
-Services (accounts, author, lesson-chain, lesson-assembly, governance, lms) live in `src/services/`. There is no `@agni/services` package.
+**Status:** `@agni/services` package created. Services (accounts, author, lesson-chain, lesson-assembly, governance, lms) live in `packages/agni-services/`. `src/services/` are shims that re-export from `@agni/services`.
 
 ### Option A: Keep src/services for now (minimal change)
 

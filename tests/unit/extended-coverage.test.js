@@ -359,7 +359,7 @@ describe('Extended API tests', () => {
     delete process.env.AGNI_SERVE_DIR;
     delete process.env.AGNI_HUB_API_KEY;
     delete require.cache[require.resolve('../../src/utils/env-config')];
-    delete require.cache[require.resolve('../../src/services/accounts')];
+    delete require.cache[require.resolve('@agni/services/accounts')];
     delete require.cache[require.resolve('../../packages/agni-hub/context/auth')];
     delete require.cache[require.resolve('../../packages/agni-hub/context/services')];
   });

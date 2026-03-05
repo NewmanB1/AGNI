@@ -16,7 +16,8 @@ const ROOT = path.resolve(__dirname, '..');
 const PACKAGES_TO_CHECK = [
   { name: '@agni/utils', dir: 'packages/agni-utils' },
   { name: '@ols/compiler', dir: 'packages/ols-compiler' },
-  { name: '@agni/hub', dir: 'packages/agni-hub', allowSrcServices: true }
+  { name: '@agni/hub', dir: 'packages/agni-hub' },
+  { name: '@agni/services', dir: 'packages/agni-services' }
 ];
 
 // Match require('...src/...') and capture the full path for allowlist check
@@ -45,14 +46,10 @@ function checkFile(filePath, relPath, pkg) {
   } catch (_e) {
     return;
   }
-  const allowSrcServices = pkg && pkg.allowSrcServices === true;
   let m;
   SRC_REQUIRE_PATTERN.lastIndex = 0;
   while ((m = SRC_REQUIRE_PATTERN.exec(content)) !== null) {
-    const fullMatch = m[0];
-    const requirePath = m[1];
-    if (allowSrcServices && /\/src\/services\//.test(requirePath)) continue;
-    violations.push({ file: relPath, match: fullMatch });
+    violations.push({ file: relPath, match: m[0] });
   }
 }
 

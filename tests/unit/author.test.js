@@ -9,7 +9,7 @@ const { minimalLesson, tempDir: makeTempDir } = require('../helpers/fixtures');
 const tmp = makeTempDir('author');
 process.env.AGNI_DATA_DIR = tmp.dir;
 
-const author = require('../../src/services/author');
+const author = require('@agni/services/author');
 
 after(() => {
   tmp.cleanup();
@@ -180,5 +180,20 @@ describe('slugExists', () => {
 
   it('returns false for nonexistent slug', () => {
     assert.ok(!author.slugExists('nope', yamlDir));
+  });
+});
+
+describe('generateForAuthor (services improvement S1)', () => {
+  it('returns error when generateLesson is not passed', async () => {
+    const result = await author.generateForAuthor({ skillDescription: 'test', archetypeId: null });
+    assert.ok(result.error);
+    assert.ok(result.error.indexOf('generateLesson') !== -1);
+  });
+
+  it('returns error for empty skill description', async () => {
+    const mockGen = async () => ({ lesson: {}, issues: [] });
+    const result = await author.generateForAuthor({ skillDescription: '', generateLesson: mockGen });
+    assert.ok(result.error);
+    assert.equal(result.error, 'Skill description is required');
   });
 });

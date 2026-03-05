@@ -1,5 +1,14 @@
 'use strict';
 
+const path = require('path');
+const generateLesson = (function () {
+  try {
+    return require(path.join(__dirname, '../../scripts/generate-lesson')).generateLesson;
+  } catch (_) {
+    return null;
+  }
+})();
+
 function register(router, ctx) {
   const { authorService, accountsService, handleJsonBody,
           adminOnly, authOnly } = ctx;
@@ -59,7 +68,11 @@ function register(router, ctx) {
     handleJsonBody(req, sendResponse, async (body) => {
       const skillDescription = body?.skillDescription;
       const archetypeId = body?.archetypeId;
-      const result = await authorService.generateForAuthor({ skillDescription, archetypeId });
+      const result = await authorService.generateForAuthor({
+        skillDescription,
+        archetypeId,
+        generateLesson: generateLesson || undefined
+      });
       if (!result.ok) return sendResponse(400, { ok: false, error: result.error });
       sendResponse(200, { ok: true, lesson: result.lesson });
     });
