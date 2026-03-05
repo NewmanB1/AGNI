@@ -4,17 +4,15 @@
  * Account management service for AGNI.
  * Creator and student accounts, sessions, transfer tokens.
  * Storage: flat JSON under DATA_DIR.
+ *
+ * Config injection: createAccounts({ dataDir }) returns a service instance using
+ * that directory. Default (no opts) uses envConfig.dataDir.
  */
 
-const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
 const envConfig = require('@agni/utils/env-config');
-const DATA_DIR = envConfig.dataDir;
-const CREATORS_PATH = path.join(DATA_DIR, 'creator-accounts.json');
-const STUDENTS_PATH = path.join(DATA_DIR, 'student-accounts.json');
-const SESSIONS_PATH = path.join(DATA_DIR, 'sessions.json');
 
 const SCRYPT_KEYLEN = 64;
 const TOKEN_BYTES = 32;
@@ -59,7 +57,9 @@ function randomCode(len) {
 }
 
 function sanitizeCreator(creator) {
-  const { passwordHash, salt, ...safe } = creator;
+  const safe = { ...creator };
+  delete safe.passwordHash;
+  delete safe.salt;
   return safe;
 }
 
@@ -77,26 +77,40 @@ function buildStudentRecord(opts) {
   };
 }
 
-async function findStudentWithData(pseudoId) {
-  const data = await loadStudents();
-  const student = data.students.find(function(s) { return s.pseudoId === pseudoId; });
-  return { data: data, student: student };
-}
+function createAccounts(config) {
+  const dataDir = (config && config.dataDir) || envConfig.dataDir;
+  const creatorsPath = path.join(dataDir, 'creator-accounts.json');
+  const studentsPath = path.join(dataDir, 'student-accounts.json');
+  const sessionsPath = path.join(dataDir, 'sessions.json');
 
-function purgeExpiredSessions(sessions) {
-  const now = Date.now();
-  sessions.sessions = sessions.sessions.filter(function(s) { return new Date(s.expiresAt).getTime() > now; });
-}
+  async function loadCreators() {
+    return loadJson(creatorsPath, { creators: [] });
+  }
 
-async function loadCreators() {
-  return loadJson(CREATORS_PATH, { creators: [] });
-}
+  async function saveCreators(data) {
+    await saveJson(creatorsPath, data);
+  }
 
-async function saveCreators(data) {
-  await saveJson(CREATORS_PATH, data);
-}
+  async function loadStudents() {
+    return loadJson(studentsPath, { students: [] });
+  }
 
-async function registerCreator(opts) {
+  async function saveStudents(data) {
+    await saveJson(studentsPath, data);
+  }
+
+  async function findStudentWithData(pseudoId) {
+    const data = await loadStudents();
+    const student = data.students.find(function(s) { return s.pseudoId === pseudoId; });
+    return { data: data, student: student };
+  }
+
+  function purgeExpiredSessions(sessions) {
+    const now = Date.now();
+    sessions.sessions = sessions.sessions.filter(function(s) { return new Date(s.expiresAt).getTime() > now; });
+  }
+
+  async function registerCreator(opts) {
   const name = opts.name;
   const email = opts.email;
   const password = opts.password;
@@ -105,7 +119,7 @@ async function registerCreator(opts) {
   if (!/\S+@\S+\.\S+/.test(email.trim())) return { error: 'Invalid email format' };
   if (!password || password.length < 8) return { error: 'Password must be at least 8 characters' };
 
-  return withLock(CREATORS_PATH, async function() {
+  return withLock(creatorsPath, async function() {
     const normalEmail = email.trim().toLowerCase();
     const data = await loadCreators();
     if (data.creators.some(function(c) { return c.email === normalEmail; })) {
@@ -171,8 +185,8 @@ async function loginCreator(opts) {
     return { error: 'Invalid email or password' };
   }
   const token = randomHex(TOKEN_BYTES);
-  await withLock(SESSIONS_PATH, async function() {
-    const sessions = await loadJson(SESSIONS_PATH, { sessions: [] });
+  await withLock(sessionsPath, async function() {
+    const sessions = await loadJson(sessionsPath, { sessions: [] });
     purgeExpiredSessions(sessions);
     sessions.sessions.push({
       tokenHash: hashToken(token),
@@ -180,14 +194,14 @@ async function loginCreator(opts) {
       createdAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + SESSION_TTL_MS).toISOString()
     });
-    await saveJson(SESSIONS_PATH, sessions);
+    await saveJson(sessionsPath, sessions);
   });
   return { ok: true, token: token, creator: sanitizeCreator(creator) };
 }
 
 async function validateSession(token) {
   if (!token) return null;
-  const sessions = await loadJson(SESSIONS_PATH, { sessions: [] });
+  const sessions = await loadJson(sessionsPath, { sessions: [] });
   const now = Date.now();
   const incoming = hashToken(token);
   const session = sessions.sessions.find(function(s) {
@@ -204,26 +218,26 @@ async function validateSession(token) {
 }
 
 async function cleanExpiredSessions() {
-  return withLock(SESSIONS_PATH, async function() {
-    const sessions = await loadJson(SESSIONS_PATH, { sessions: [] });
+  return withLock(sessionsPath, async function() {
+    const sessions = await loadJson(sessionsPath, { sessions: [] });
     const before = sessions.sessions.length;
     purgeExpiredSessions(sessions);
-    if (sessions.sessions.length < before) await saveJson(SESSIONS_PATH, sessions);
+    if (sessions.sessions.length < before) await saveJson(sessionsPath, sessions);
     return { removed: before - sessions.sessions.length };
   });
 }
 
 async function destroySession(token) {
   if (!token) return;
-  await withLock(SESSIONS_PATH, async function() {
-    const sessions = await loadJson(SESSIONS_PATH, { sessions: [] });
+  await withLock(sessionsPath, async function() {
+    const sessions = await loadJson(sessionsPath, { sessions: [] });
     const incoming = hashToken(token);
     sessions.sessions = sessions.sessions.filter(function(s) {
       const stored = s.tokenHash || s.token;
       if (incoming.length !== stored.length) return true;
       return !crypto.timingSafeEqual(Buffer.from(incoming), Buffer.from(stored));
     });
-    await saveJson(SESSIONS_PATH, sessions);
+    await saveJson(sessionsPath, sessions);
   });
 }
 
@@ -233,7 +247,7 @@ async function listCreators() {
 }
 
 async function setCreatorApproval(creatorId, approved) {
-  return withLock(CREATORS_PATH, async function() {
+  return withLock(creatorsPath, async function() {
     const data = await loadCreators();
     const creator = data.creators.find(function(c) { return c.id === creatorId; });
     if (!creator) return { error: 'Creator not found' };
@@ -244,7 +258,7 @@ async function setCreatorApproval(creatorId, approved) {
 }
 
 async function setCreatorRole(creatorId, role) {
-  return withLock(CREATORS_PATH, async function() {
+  return withLock(creatorsPath, async function() {
     const data = await loadCreators();
     const creator = data.creators.find(function(c) { return c.id === creatorId; });
     if (!creator) return { error: 'Creator not found' };
@@ -256,24 +270,16 @@ async function setCreatorRole(creatorId, role) {
 
 async function recordLessonAuthored(creatorId, slug) {
   if (!creatorId) return;
-  return withLock(CREATORS_PATH, async function() {
+  return withLock(creatorsPath, async function() {
     const data = await loadCreators();
     const creator = data.creators.find(function(c) { return c.id === creatorId; });
     if (!creator) return;
     if (!creator.lessonsAuthored) creator.lessonsAuthored = [];
-    if (creator.lessonsAuthored.indexOf(slug) === -1) {
+    if (!creator.lessonsAuthored.includes(slug)) {
       creator.lessonsAuthored.push(slug);
       await saveCreators(data);
     }
   });
-}
-
-async function loadStudents() {
-  return loadJson(STUDENTS_PATH, { students: [] });
-}
-
-async function saveStudents(data) {
-  await saveJson(STUDENTS_PATH, data);
 }
 
 function generatePseudoId() {
@@ -310,7 +316,7 @@ function sanitizeStudent(student) {
 
 async function createStudent(opts) {
   opts = opts || {};
-  return withLock(STUDENTS_PATH, async function() {
+  return withLock(studentsPath, async function() {
     const data = await loadStudents();
     const pseudoId = generatePseudoId();
     const ph = await hashPin(opts.pin);
@@ -330,7 +336,7 @@ async function createStudent(opts) {
 async function createStudentsBulk(opts) {
   opts = opts || {};
   if (!Array.isArray(opts.names) || opts.names.length === 0) return { error: 'At least one name is required' };
-  return withLock(STUDENTS_PATH, async function() {
+  return withLock(studentsPath, async function() {
     const data = await loadStudents();
     const created = [];
     for (let i = 0; i < opts.names.length; i++) {
@@ -362,7 +368,7 @@ async function getStudent(pseudoId) {
 }
 
 async function updateStudent(pseudoId, updates) {
-  return withLock(STUDENTS_PATH, async function() {
+  return withLock(studentsPath, async function() {
     const r = await findStudentWithData(pseudoId);
     if (!r.student) return { error: 'Student not found' };
     const student = r.student;
@@ -380,7 +386,7 @@ async function updateStudent(pseudoId, updates) {
 }
 
 async function generateTransferToken(pseudoId) {
-  return withLock(STUDENTS_PATH, async function() {
+  return withLock(studentsPath, async function() {
     const r = await findStudentWithData(pseudoId);
     if (!r.student) return { error: 'Student not found' };
     const token = randomCode(8);
@@ -394,7 +400,7 @@ async function generateTransferToken(pseudoId) {
 
 async function claimTransferToken(token) {
   if (!token || !token.trim()) return { error: 'Token is required' };
-  return withLock(STUDENTS_PATH, async function() {
+  return withLock(studentsPath, async function() {
     const code = token.trim().toUpperCase();
     const codeHash = hashToken(code);
     const data = await loadStudents();
@@ -415,7 +421,7 @@ async function claimTransferToken(token) {
 }
 
 async function verifyStudentPin(pseudoId, pin) {
-  return withLock(STUDENTS_PATH, async function() {
+  return withLock(studentsPath, async function() {
     const r = await findStudentWithData(pseudoId);
     if (!r.student) return { error: 'Student not found' };
     const student = r.student;
@@ -463,24 +469,29 @@ async function migrateLegacyPins() {
   return { migrated: migrated, legacySha256: legacySha256 };
 }
 
-module.exports = {
-  registerCreator,
-  loginCreator,
-  validateSession,
-  destroySession,
-  cleanExpiredSessions,
-  listCreators,
-  setCreatorApproval,
-  setCreatorRole,
-  recordLessonAuthored,
-  createStudent,
-  createStudentsBulk,
-  listStudents,
-  getStudent,
-  updateStudent,
-  generateTransferToken,
-  claimTransferToken,
-  verifyStudentPin,
-  migrateLegacyPins,
-  generateCode: randomCode
-};
+  return {
+    registerCreator,
+    loginCreator,
+    validateSession,
+    destroySession,
+    cleanExpiredSessions,
+    listCreators,
+    setCreatorApproval,
+    setCreatorRole,
+    recordLessonAuthored,
+    createStudent,
+    createStudentsBulk,
+    listStudents,
+    getStudent,
+    updateStudent,
+    generateTransferToken,
+    claimTransferToken,
+    verifyStudentPin,
+    migrateLegacyPins,
+    generateCode: randomCode
+  };
+}
+
+const defaultService = createAccounts();
+defaultService.createAccounts = createAccounts;
+module.exports = defaultService;

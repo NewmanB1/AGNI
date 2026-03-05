@@ -23,6 +23,23 @@ const { accounts, author, lessonChain } = require('@agni/services');
 const governance = require('@agni/services/governance');
 ```
 
+## Config injection
+
+For tests or alternate data paths, use factories:
+
+```js
+const accounts = require('@agni/services/accounts');
+const chain = require('@agni/services/lesson-chain');
+
+// Default (uses envConfig.dataDir)
+const defaultAccounts = accounts;
+const defaultChain = chain;
+
+// Isolated instance with custom dataDir
+const testAccounts = accounts.createAccounts({ dataDir: '/tmp/test-data' });
+const testChain = chain.createLessonChain({ dataDir: '/tmp/test-data' });
+```
+
 ## Dependencies
 
 - `@agni/utils` — env-config, json-store, file-lock, logger

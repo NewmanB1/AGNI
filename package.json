@@ -66,8 +66,8 @@
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "prebuild": "npm run clean",
     "dev": "node --watch src/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html",
-    "lint": "eslint src/ hub-tools/ packages/agni-hub/ tests/ --max-warnings=120",
-    "lint:fix": "eslint src/ hub-tools/ packages/agni-hub/ tests/ --fix",
+    "lint": "eslint src/ hub-tools/ packages/agni-hub/ packages/agni-services/ tests/ --max-warnings=120",
+    "lint:fix": "eslint src/ hub-tools/ packages/agni-hub/ packages/agni-services/ tests/ --fix",
     "format": "prettier --write \"src/**/*.{js,ts}\" \"hub-tools/**/*.js\" \"packages/**/*.js\" \"server/**/*.js\" \"tests/**/*.js\"",
     "format:check": "prettier --check \"src/**/*.{js,ts}\" \"hub-tools/**/*.js\" \"packages/**/*.js\" \"server/**/*.js\" \"tests/**/*.js\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -104,7 +104,9 @@
     "verify:services-no-scripts": "node scripts/check-services-no-scripts.js",
     "verify:services-test-targets": "node scripts/check-services-test-targets.js",
     "verify:services-docs": "node scripts/check-services-docs.js",
+    "verify:services-lint": "eslint packages/agni-services/",
     "verify:hub-no-scripts": "node scripts/check-hub-no-scripts.js",
-    "verify:all": "node scripts/check-dead-files.js && node scripts/check-dts-arity.js && node scripts/check-innerhtml.js && node scripts/check-factory-order.js && node scripts/check-svg-tools.js && node scripts/check-known-sensors.js && node scripts/sync-schema-enums.js --check && node scripts/verify-canonical-ownership.js && node scripts/check-services-no-scripts.js && node scripts/check-services-test-targets.js && node scripts/check-services-docs.js && node scripts/check-unauthed-routes.js && node scripts/check-version-sync.js && node scripts/check-api-contract-auth.js && node scripts/check-hub-imports.js && node scripts/check-hub-no-scripts.js"
+    "verify:config-injection": "node --test tests/unit/config-injection.test.js",
+    "verify:all": "node scripts/check-dead-files.js && node scripts/check-dts-arity.js && node scripts/check-innerhtml.js && node scripts/check-factory-order.js && node scripts/check-svg-tools.js && node scripts/check-known-sensors.js && node scripts/sync-schema-enums.js --check && node scripts/verify-canonical-ownership.js && node scripts/check-services-no-scripts.js && node scripts/check-services-test-targets.js && node scripts/check-services-docs.js && eslint packages/agni-services/ && node scripts/check-unauthed-routes.js && node scripts/check-version-sync.js && node scripts/check-api-contract-auth.js && node scripts/check-hub-imports.js && node scripts/check-hub-no-scripts.js && node --test tests/unit/config-injection.test.js"
   }
 }

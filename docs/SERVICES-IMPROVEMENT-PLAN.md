@@ -224,12 +224,12 @@ npm run typecheck
   - CI gate: `verify:services-test-targets` in verify:all
 - [x] S3: hub.md, HUB-CANONICAL-MIGRATION-PLAN, CONVENTIONS updated
   - Proof: `verify:services-docs` pass; hub.md and CONVENTIONS reference @agni/services
-- [ ] S4: Type definitions added (optional)
+- [x] S4: Type definitions added (index.d.ts, types.d.ts, subpath .d.ts)
   - Proof: npm run typecheck pass
-- [ ] S5: Config injection (optional)
-  - Proof: Unit test with alternate config passes
-- [ ] S6: Style consistency (optional)
-  - Proof: npm run lint pass
+- [x] S5: Config injection (optional)
+  - Proof: tests/unit/config-injection.test.js; createAccounts/createLessonChain with { dataDir }
+- [x] S6: Style consistency (optional)
+  - Proof: verify:services-lint; packages/agni-services in lint target; ES6+ (includes, startsWith, arrows)
 
 ---
 

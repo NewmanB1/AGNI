@@ -2,6 +2,11 @@
 
 /**
  * Lesson hash-chain service — content-addressed immutability for AGNI lessons.
+ *
+ * Config injection: createLessonChain({ dataDir }) returns an instance using
+ * that directory for loadChain, appendVersion, getLatestVersion, verifyChain.
+ * Pure functions (canonicalize, computeContentHash, etc.) are stateless.
+ * Default (no opts) uses envConfig.dataDir.
  */
 
 const path = require('path');
@@ -9,8 +14,6 @@ const crypto = require('crypto');
 
 const envConfig = require('@agni/utils/env-config');
 const { loadJSONAsync, saveJSONAsync } = require('@agni/utils/json-store');
-const DATA_DIR = envConfig.dataDir;
-const CHAINS_DIR = path.join(DATA_DIR, 'chains');
 
 function canonicalize(obj) {
   if (obj === null || obj === undefined) return 'null';
@@ -19,7 +22,7 @@ function canonicalize(obj) {
     return '[' + obj.map(canonicalize).join(',') + ']';
   }
   const keys = Object.keys(obj)
-    .filter(function(k) { return k.indexOf('_') !== 0 && k !== 'content_hash' && k !== 'parent_hash' && k !== 'uri' && k !== 'chain'; })
+    .filter((k) => !k.startsWith('_') && k !== 'content_hash' && k !== 'parent_hash' && k !== 'uri' && k !== 'chain')
     .sort();
   return '{' + keys.map(function(k) { return JSON.stringify(k) + ':' + canonicalize(obj[k]); }).join(',') + '}';
 }
@@ -28,7 +31,7 @@ function stripChainFields(meta) {
   if (!meta || typeof meta !== 'object') return meta;
   const copy = {};
   for (const k of Object.keys(meta)) {
-    if (k === 'content_hash' || k === 'parent_hash' || k === 'uri' || k === 'chain' || k.indexOf('_') === 0) continue;
+    if (k === 'content_hash' || k === 'parent_hash' || k === 'uri' || k === 'chain' || k.startsWith('_')) continue;
     copy[k] = meta[k];
   }
   return copy;
@@ -72,19 +75,23 @@ function parseUri(uri) {
   return { creatorId: match[1], slug: match[2], versionHash: match[3] || undefined };
 }
 
-function chainPath(slug) {
-  return path.join(CHAINS_DIR, slug + '.chain.json');
-}
+function createLessonChain(config) {
+  const dataDir = (config && config.dataDir) || envConfig.dataDir;
+  const chainsDir = path.join(dataDir, 'chains');
 
-function loadChain(slug) {
-  return loadJSONAsync(chainPath(slug), { slug: slug, versions: [] });
-}
+  function chainPath(slug) {
+    return path.join(chainsDir, slug + '.chain.json');
+  }
 
-function saveChain(slug, chain) {
-  return saveJSONAsync(chainPath(slug), chain);
-}
+  function loadChain(slug) {
+    return loadJSONAsync(chainPath(slug), { slug: slug, versions: [] });
+  }
 
-async function appendVersion(slug, entry) {
+  function saveChain(slug, chain) {
+    return saveJSONAsync(chainPath(slug), chain);
+  }
+
+  async function appendVersion(slug, entry) {
   const chain = await loadChain(slug);
   const version = chain.versions.length + 1;
   chain.versions.push({
@@ -120,6 +127,9 @@ async function verifyChain(slug) {
     }
   }
   return { valid: errors.length === 0, errors: errors, versions: chain.versions.length };
+  }
+
+  return { loadChain, appendVersion, getLatestVersion, verifyChain };
 }
 
 function verifyContentHash(lessonData) {
@@ -147,6 +157,7 @@ function inheritedForkLicense(sourceLicense) {
   return saLicenses[sourceLicense] ? sourceLicense : null;
 }
 
+const defaultChain = createLessonChain();
 module.exports = {
   computeContentHash,
   shortHash,
@@ -154,13 +165,14 @@ module.exports = {
   buildVersionUri,
   parseUri,
   canonicalize,
-  loadChain,
-  appendVersion,
-  getLatestVersion,
-  verifyChain,
+  loadChain: defaultChain.loadChain,
+  appendVersion: defaultChain.appendVersion,
+  getLatestVersion: defaultChain.getLatestVersion,
+  verifyChain: defaultChain.verifyChain,
   verifyContentHash,
   checkForkPermission,
   inheritedForkLicense,
   FORKABLE_LICENSES,
-  NON_COMMERCIAL_LICENSES
+  NON_COMMERCIAL_LICENSES,
+  createLessonChain
 };

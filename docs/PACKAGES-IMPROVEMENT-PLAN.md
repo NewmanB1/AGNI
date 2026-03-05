@@ -208,7 +208,7 @@ grep -L "src/services/lms" packages/agni-engine/README.md  # or similar check
 - [x] P2: All packages in verify-canonical; no src/ imports
   - Proof: `npm run verify:canonical` exit 0 with expanded list
   - Break-it: add src/ require to engine → verify fails
-- [ ] P3: @agni/services types, config injection, style (optional)
+- [x] P3.1: @agni/services types (index.d.ts, types.d.ts, subpath .d.ts)
   - Proof: typecheck, test:unit, lint pass
 - [ ] P4: AGENTS.md and READMEs updated
   - Proof: grep confirms packages/ paths; no stale src/services in READMEs
