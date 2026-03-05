@@ -1,0 +1,11 @@
+{
+  "name": "@agni/lesson-gen",
+  "version": "0.1.0",
+  "description": "AGNI Lesson Generator - LLM-powered lesson authoring",
+  "license": "AGPL-3.0",
+  "main": "index.js",
+  "dependencies": {
+    "@ols/schema": "0.1.0",
+    "js-yaml": "^4.1.0"
+  }
+}

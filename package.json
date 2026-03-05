@@ -104,6 +104,7 @@
     "verify:services-no-scripts": "node scripts/check-services-no-scripts.js",
     "verify:services-test-targets": "node scripts/check-services-test-targets.js",
     "verify:services-docs": "node scripts/check-services-docs.js",
-    "verify:all": "node scripts/check-dead-files.js && node scripts/check-dts-arity.js && node scripts/check-innerhtml.js && node scripts/check-factory-order.js && node scripts/check-svg-tools.js && node scripts/check-known-sensors.js && node scripts/sync-schema-enums.js --check && node scripts/verify-canonical-ownership.js && node scripts/check-services-no-scripts.js && node scripts/check-services-test-targets.js && node scripts/check-services-docs.js && node scripts/check-unauthed-routes.js && node scripts/check-version-sync.js && node scripts/check-api-contract-auth.js && node scripts/check-hub-imports.js"
+    "verify:hub-no-scripts": "node scripts/check-hub-no-scripts.js",
+    "verify:all": "node scripts/check-dead-files.js && node scripts/check-dts-arity.js && node scripts/check-innerhtml.js && node scripts/check-factory-order.js && node scripts/check-svg-tools.js && node scripts/check-known-sensors.js && node scripts/sync-schema-enums.js --check && node scripts/verify-canonical-ownership.js && node scripts/check-services-no-scripts.js && node scripts/check-services-test-targets.js && node scripts/check-services-docs.js && node scripts/check-unauthed-routes.js && node scripts/check-version-sync.js && node scripts/check-api-contract-auth.js && node scripts/check-hub-imports.js && node scripts/check-hub-no-scripts.js"
   }
 }

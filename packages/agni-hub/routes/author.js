@@ -1,9 +1,8 @@
 'use strict';
 
-const path = require('path');
 const generateLesson = (function () {
   try {
-    return require(path.join(__dirname, '../../scripts/generate-lesson')).generateLesson;
+    return require('@agni/lesson-gen').generateLesson;
   } catch (_) {
     return null;
   }

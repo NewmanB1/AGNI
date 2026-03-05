@@ -17,7 +17,13 @@ const PACKAGES_TO_CHECK = [
   { name: '@agni/utils', dir: 'packages/agni-utils' },
   { name: '@ols/compiler', dir: 'packages/ols-compiler' },
   { name: '@agni/hub', dir: 'packages/agni-hub' },
-  { name: '@agni/services', dir: 'packages/agni-services' }
+  { name: '@agni/services', dir: 'packages/agni-services' },
+  { name: '@agni/runtime', dir: 'packages/agni-runtime' },
+  { name: '@agni/engine', dir: 'packages/agni-engine' },
+  { name: '@agni/governance', dir: 'packages/agni-governance' },
+  { name: '@ols/schema', dir: 'packages/ols-schema' },
+  { name: '@agni/plugins', dir: 'packages/agni-plugins' },
+  { name: '@agni/lesson-gen', dir: 'packages/agni-lesson-gen' }
 ];
 
 // Match require('...src/...') and capture the full path for allowlist check
