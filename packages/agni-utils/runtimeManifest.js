@@ -1,13 +1,15 @@
 // packages/agni-utils/runtimeManifest.js
-// Maps high-level runtime capabilities to concrete file names and load order.
-// Feature inference uses this to build the factory manifest; adding or
-// renaming runtime modules is done here instead of inside featureInference.
-// Backlog task 12 — ARCH §5.3.
+// Maps runtime capabilities to factory filenames and load order.
+// Used by feature-inference, html builder, and hub-transform. Adding or
+// renaming runtime modules is done here instead of inside feature-inference.
 
 'use strict';
 
 const path = require('path');
 
+// Bare filename → relative path under runtime root. Used by resolveFactoryPath.
+// Includes all runtime files; some (player, factory-loader, etc.) are loaded
+// by html builder or shared-runtime, not via getOrderedFactoryFiles.
 const FACTORY_PATH_MAP = {
   'a11y.js':                    'ui/a11y.js',
   'narration.js':               'ui/narration.js',
@@ -35,11 +37,19 @@ const FACTORY_PATH_MAP = {
   'navigator.js':               'engine/navigator.js'
 };
 
+/**
+ * Resolve a factory filename to a full path under the runtime root.
+ * @param {string} runtimeDir - Root directory of the runtime package
+ * @param {string} filename - Bare filename (e.g. 'sensor-bridge.js')
+ * @returns {string} Full path; if filename is not in FACTORY_PATH_MAP, falls back to path.join(runtimeDir, filename)
+ */
 function resolveFactoryPath(runtimeDir, filename) {
   const rel = FACTORY_PATH_MAP[filename];
-  return path.join(runtimeDir, rel || filename);
+  return rel ? path.join(runtimeDir, rel) : path.join(runtimeDir, filename);
 }
 
+// Canonical order for on-demand factory files. getOrderedFactoryFiles filters
+// this by capabilities (optional files included only when flag is true).
 const FACTORY_LOAD_ORDER = [
   'a11y.js',
   'narration.js',
@@ -58,6 +68,7 @@ const FACTORY_LOAD_ORDER = [
   'table-renderer.js'
 ];
 
+// Visual factory ID (e.g. 'barGraph') → filename. Used by getFileForFactoryId.
 const FACTORY_FILE_MAP = {
   'venn':          'svg-factories.js',
   'axis':          'svg-factories.js',
@@ -80,29 +91,32 @@ const FACTORY_FILE_MAP = {
   'unitCircle':      'svg-factories-geometry.js'
 };
 
+/**
+ * @param {string} id - Factory ID (e.g. 'barGraph', 'timeGraph')
+ * @returns {string|undefined} Filename or undefined if unknown
+ */
 function getFileForFactoryId(id) {
   return FACTORY_FILE_MAP[id];
 }
 
+// Optional files: included only when the corresponding capability flag is true
+const OPTIONAL_FILE_FLAGS = {
+  'sensor-bridge.js': 'includeSensorBridge',
+  'svg-factories-dynamic.js': 'hasDynamic',
+  'svg-factories-geometry.js': 'hasGeometry',
+  'table-renderer.js': 'includeTableRenderer'
+};
+
+/**
+ * @param {{ includeSensorBridge?: boolean, hasDynamic?: boolean, hasGeometry?: boolean, includeTableRenderer?: boolean }} capabilities
+ * @returns {string[]} Ordered list of factory filenames
+ */
 function getOrderedFactoryFiles(capabilities) {
-  const files = [
-    'a11y.js',
-    'narration.js',
-    'gate-renderer.js',
-    'integrity.js',
-    'checkpoint.js',
-    'frustration.js',
-    'completion.js'
-  ];
-  if (capabilities.includeSensorBridge) files.push('sensor-bridge.js');
-  files.push('svg-stage.js');
-  files.push('svg-helpers.js');
-  files.push('svg-factories.js');
-  if (capabilities.hasDynamic)  files.push('svg-factories-dynamic.js');
-  if (capabilities.hasGeometry) files.push('svg-factories-geometry.js');
-  files.push('svg-registry.js');
-  if (capabilities.includeTableRenderer) files.push('table-renderer.js');
-  return files;
+  return FACTORY_LOAD_ORDER.filter(function (file) {
+    const flag = OPTIONAL_FILE_FLAGS[file];
+    if (!flag) return true;
+    return !!capabilities[flag];
+  });
 }
 
 module.exports = {

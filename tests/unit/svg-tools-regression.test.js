@@ -29,7 +29,6 @@ describe('SVG-TOOLS-P1.1: svg-helpers.js is wired before svg-factories', () => {
 
   it('getOrderedFactoryFiles includes svg-helpers between svg-stage and svg-factories', () => {
     const files = getOrderedFactoryFiles({
-      specIds: ['barGraph'],
       hasDynamic: false,
       hasGeometry: false,
       includeTableRenderer: false,

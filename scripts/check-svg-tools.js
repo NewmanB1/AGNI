@@ -43,7 +43,7 @@ if (manifest.FACTORY_PATH_MAP && manifest.FACTORY_PATH_MAP['svg-helpers.js']) {
   fail('P1.1 svg-helpers.js must be in FACTORY_PATH_MAP');
 }
 
-var ordered = manifest.getOrderedFactoryFiles({ specIds: ['barGraph'], hasDynamic: false, hasGeometry: false, includeTableRenderer: false, includeSensorBridge: true });
+var ordered = manifest.getOrderedFactoryFiles({ hasDynamic: false, hasGeometry: false, includeTableRenderer: false, includeSensorBridge: true });
 var stageIdx = ordered.indexOf('svg-stage.js');
 var helpersIdx = ordered.indexOf('svg-helpers.js');
 var factoriesIdx = ordered.indexOf('svg-factories.js');

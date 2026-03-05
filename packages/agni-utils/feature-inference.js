@@ -211,14 +211,12 @@ function _collectSpecFactoryIds(steps) {
   return ids;
 }
 
-function _buildFactoryManifest(specIds, hasDynamic, hasGeometry,
-    includeTableRenderer, includeSensorBridge) {
+function _buildFactoryManifest(hasDynamic, hasGeometry, includeTableRenderer, includeSensorBridge) {
   return runtimeManifest.getOrderedFactoryFiles({
-    specIds:               specIds,
-    hasDynamic:            hasDynamic,
-    hasGeometry:           hasGeometry,
-    includeTableRenderer:  includeTableRenderer,
-    includeSensorBridge:   includeSensorBridge
+    hasDynamic: hasDynamic,
+    hasGeometry: hasGeometry,
+    includeTableRenderer: includeTableRenderer,
+    includeSensorBridge: includeSensorBridge
   });
 }
 
@@ -243,8 +241,8 @@ function inferFeatures(lessonData) {
 
   const needsSensorBridge = caps.hasVisuals || caps.hasSensors;
   const factoryManifest = caps.hasVisuals
-    ? _buildFactoryManifest(caps.specFactoryIds, caps.hasDynamicVisuals,
-        caps.hasGeometryVisuals, caps.hasTables && caps.hasVisuals, needsSensorBridge)
+    ? _buildFactoryManifest(caps.hasDynamicVisuals, caps.hasGeometryVisuals,
+        caps.hasTables && caps.hasVisuals, needsSensorBridge)
     : (caps.hasSensors ? ['sensor-bridge.js'] : []);
 
   const vark   = _profileVARK(allContent);

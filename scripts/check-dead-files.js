@@ -57,6 +57,7 @@ const KNOWN_STANDALONE = new Set([
   normalize('src/utils/katex-css-builder.js'),
   // Re-exports from @agni/utils (canonical); kept for backward compat
   normalize('src/utils/archetype-match.js'),
+  normalize('src/utils/runtimeManifest.js'),
   normalize('src/utils/env-config.js'),
   normalize('src/utils/env-validate.js'),
   normalize('src/utils/file-lock.js'),
@@ -67,9 +68,8 @@ const KNOWN_STANDALONE = new Set([
 
 // Runtime browser files listed in runtimeManifest.js are inlined by the HTML
 // builder at build time, not require()'d. Load them as known-referenced.
-const runtimeManifestPath = normalize('src/utils/runtimeManifest.js');
 try {
-  const manifest = require(path.join(ROOT, runtimeManifestPath));
+  const manifest = require('@agni/utils/runtimeManifest');
   Object.keys(manifest.FACTORY_PATH_MAP || {}).forEach(function (bare) {
     const rel = manifest.FACTORY_PATH_MAP[bare];
     KNOWN_STANDALONE.add(normalize('src/runtime/' + rel));

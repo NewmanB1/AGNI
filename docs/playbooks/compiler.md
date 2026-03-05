@@ -15,7 +15,7 @@ Use this when changing how lessons are compiled from YAML to IR or to HTML/nativ
 | Change IR shape or sidecar fields | `src/compiler/buildLessonIR.js` — keep `buildLessonSidecar()` in sync with `src/types/index.d.ts` and `docs/api-contract.md` (sidecar). |
 | Add a new YAML meta field (e.g. author, UTU) | 1) `schemas/ols.schema.json` (meta.properties). 2) `src/types/index.d.ts` (LessonMeta, LessonSidecar). 3) `buildLessonSidecar()` to pass the field through. 4) Optionally `packages/agni-hub/theta.js` when building the lesson index from sidecar. |
 | Change Markdown or math pipeline | `src/config.js` — `processMarkdown()`. Used by `buildLessonIR` only. |
-| Change what gets inferred (features, factories) | `src/utils/featureInference.js` — `inferFeatures()`, `FACTORY_LOAD_ORDER`, `FACTORY_FILE_MAP`. Keep in sync with `src/runtime/` filenames. |
+| Change what gets inferred (features, factories) | `packages/agni-utils/feature-inference.js` — `inferFeatures()`. Factory list and order: `packages/agni-utils/runtimeManifest.js` (FACTORY_LOAD_ORDER, FACTORY_FILE_MAP). Keep in sync with `packages/agni-runtime/` filenames. |
 | Change HTML output or signing | `src/builders/html.js` — shared runtime path, integrity globals, and `server/hub-transform.js` (PWA shell) should stay in sync; consider a shared lesson-assembly layer later. |
 | Change native bundle layout | `src/builders/native.js`. |
 | Change YAML packet layout | `src/builders/yaml-packet.js`. See also `docs/playbooks/thin-client-targets.md`. |
@@ -23,7 +23,7 @@ Use this when changing how lessons are compiled from YAML to IR or to HTML/nativ
 ## Do not
 
 - Put format-specific logic (e.g. HTML script tags, signing) inside `buildLessonIR.js`. IR is format-agnostic.
-- Change `FACTORY_LOAD_ORDER` or add runtime files without updating `featureInference.js` and any hub whitelist (e.g. `ALLOWED_FACTORY_FILES` in hub-transform).
+- Change `FACTORY_LOAD_ORDER` or add runtime files without updating `packages/agni-utils/runtimeManifest.js`, `feature-inference.js`, and hub whitelist (`ALLOWED_FACTORY_FILES` in `packages/agni-hub/hub-transform.js`).
 
 ## Types
 

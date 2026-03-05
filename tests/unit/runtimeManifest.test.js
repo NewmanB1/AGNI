@@ -2,10 +2,11 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
+const path = require('path');
 const {
   FACTORY_LOAD_ORDER, FACTORY_FILE_MAP,
-  getFileForFactoryId, getOrderedFactoryFiles
-} = require('../../src/utils/runtimeManifest');
+  resolveFactoryPath, getFileForFactoryId, getOrderedFactoryFiles
+} = require('@agni/utils/runtimeManifest');
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -24,6 +25,20 @@ describe('FACTORY_LOAD_ORDER', () => {
     const factoriesIdx = FACTORY_LOAD_ORDER.indexOf('svg-factories.js');
     assert.ok(stageIdx >= 0, 'svg-stage.js must be in load order');
     assert.ok(stageIdx < factoriesIdx, 'svg-stage.js must precede svg-factories.js');
+  });
+});
+
+// ── resolveFactoryPath ───────────────────────────────────────────────────────
+
+describe('resolveFactoryPath', () => {
+  it('resolves known file to path under runtime root', () => {
+    const result = resolveFactoryPath('/tmp/runtime', 'sensor-bridge.js');
+    assert.ok(result.endsWith('sensors' + path.sep + 'sensor-bridge.js'));
+  });
+
+  it('falls back to path.join for unknown filename', () => {
+    const result = resolveFactoryPath('/tmp/runtime', 'unknown.js');
+    assert.equal(result, path.join('/tmp/runtime', 'unknown.js'));
   });
 });
 
@@ -63,14 +78,14 @@ describe('getFileForFactoryId', () => {
 
 describe('getOrderedFactoryFiles', () => {
   it('always includes svg-stage.js, svg-factories.js, svg-registry.js', () => {
-    const files = getOrderedFactoryFiles({ specIds: [], hasDynamic: false, hasGeometry: false, includeTableRenderer: false, includeSensorBridge: false });
+    const files = getOrderedFactoryFiles({ hasDynamic: false, hasGeometry: false, includeTableRenderer: false, includeSensorBridge: false });
     assert.ok(files.includes('svg-stage.js'));
     assert.ok(files.includes('svg-factories.js'));
     assert.ok(files.includes('svg-registry.js'));
   });
 
   it('includes sensor-bridge.js when requested (after core modules)', () => {
-    const files = getOrderedFactoryFiles({ specIds: [], hasDynamic: false, hasGeometry: false, includeTableRenderer: false, includeSensorBridge: true });
+    const files = getOrderedFactoryFiles({ hasDynamic: false, hasGeometry: false, includeTableRenderer: false, includeSensorBridge: true });
     assert.ok(files.includes('sensor-bridge.js'));
     const coreIdx = files.indexOf('completion.js');
     const sensorIdx = files.indexOf('sensor-bridge.js');
@@ -78,34 +93,34 @@ describe('getOrderedFactoryFiles', () => {
   });
 
   it('excludes sensor-bridge.js when not requested', () => {
-    const files = getOrderedFactoryFiles({ specIds: [], hasDynamic: false, hasGeometry: false, includeTableRenderer: false, includeSensorBridge: false });
+    const files = getOrderedFactoryFiles({ hasDynamic: false, hasGeometry: false, includeTableRenderer: false, includeSensorBridge: false });
     assert.ok(!files.includes('sensor-bridge.js'));
   });
 
   it('includes dynamic factories when hasDynamic is true', () => {
-    const files = getOrderedFactoryFiles({ specIds: [], hasDynamic: true, hasGeometry: false, includeTableRenderer: false, includeSensorBridge: false });
+    const files = getOrderedFactoryFiles({ hasDynamic: true, hasGeometry: false, includeTableRenderer: false, includeSensorBridge: false });
     assert.ok(files.includes('svg-factories-dynamic.js'));
   });
 
   it('includes geometry factories when hasGeometry is true', () => {
-    const files = getOrderedFactoryFiles({ specIds: [], hasDynamic: false, hasGeometry: true, includeTableRenderer: false, includeSensorBridge: false });
+    const files = getOrderedFactoryFiles({ hasDynamic: false, hasGeometry: true, includeTableRenderer: false, includeSensorBridge: false });
     assert.ok(files.includes('svg-factories-geometry.js'));
   });
 
   it('includes table-renderer when requested', () => {
-    const files = getOrderedFactoryFiles({ specIds: [], hasDynamic: false, hasGeometry: false, includeTableRenderer: true, includeSensorBridge: false });
+    const files = getOrderedFactoryFiles({ hasDynamic: false, hasGeometry: false, includeTableRenderer: true, includeSensorBridge: false });
     assert.ok(files.includes('table-renderer.js'));
   });
 
   it('excludes optional files when not requested', () => {
-    const files = getOrderedFactoryFiles({ specIds: [], hasDynamic: false, hasGeometry: false, includeTableRenderer: false, includeSensorBridge: false });
+    const files = getOrderedFactoryFiles({ hasDynamic: false, hasGeometry: false, includeTableRenderer: false, includeSensorBridge: false });
     assert.ok(!files.includes('svg-factories-dynamic.js'));
     assert.ok(!files.includes('svg-factories-geometry.js'));
     assert.ok(!files.includes('table-renderer.js'));
   });
 
   it('maintains correct order: stage before factories', () => {
-    const files = getOrderedFactoryFiles({ specIds: [], hasDynamic: true, hasGeometry: true, includeTableRenderer: true, includeSensorBridge: true });
+    const files = getOrderedFactoryFiles({ hasDynamic: true, hasGeometry: true, includeTableRenderer: true, includeSensorBridge: true });
     const stageIdx = files.indexOf('svg-stage.js');
     const staticIdx = files.indexOf('svg-factories.js');
     const dynamicIdx = files.indexOf('svg-factories-dynamic.js');

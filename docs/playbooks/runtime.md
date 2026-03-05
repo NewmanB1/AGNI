@@ -4,7 +4,7 @@ Use this when changing the browser-side lesson player, sensors, or SVG/visual sy
 
 ## Entry points
 
-- **Loader:** Lesson HTML inlines `factory-loader.js`, which loads scripts from `LESSON_DATA.requires.factories` (order from `src/utils/featureInference.js`).
+- **Loader:** Lesson HTML inlines `factory-loader.js`, which loads scripts from `LESSON_DATA.requires.factories` (order from `packages/agni-utils/feature-inference.js` and `runtimeManifest.js`).
 - **Player:** `src/runtime/player.js` — state machine, step navigation. Loaded after factories.
 - **Backbone:** `src/runtime/shared-runtime.js` — `AGNI_SHARED` (pub/sub, device detection, visual lifecycle, module registry). Loaded first by the builder; not in the manifest.
 - **Integrity:** `src/runtime/integrity.js` — `AGNI_INTEGRITY`. Runtime verification of OLS signatures and binding hashes.
@@ -18,7 +18,7 @@ Use this when changing the browser-side lesson player, sensors, or SVG/visual sy
 
 | Goal | Files to touch |
 |------|-----------------|
-| Add a new visual factory (e.g. new SVG type) | 1) Add implementation (e.g. `src/runtime/svg-factories-*.js` or register in existing factory file). 2) `src/utils/featureInference.js`: add to `FACTORY_FILE_MAP` and, if needed, `FACTORY_LOAD_ORDER` / `_buildFactoryManifest`. 3) `server/hub-transform.js`: add new filename to `ALLOWED_FACTORY_FILES` if served from hub. |
+| Add a new visual factory (e.g. new SVG type) | 1) Add implementation (e.g. `packages/agni-runtime/rendering/svg-factories-*.js` or register in existing factory file). 2) `packages/agni-utils/runtimeManifest.js`: add to `FACTORY_FILE_MAP` and, if needed, `FACTORY_LOAD_ORDER`. 3) `packages/agni-hub/hub-transform.js`: add new filename to `ALLOWED_FACTORY_FILES` if served from hub. |
 | Change sensor behaviour or add a sensor | `src/runtime/sensor-bridge.js` — publishes into `AGNI_SHARED`. Ensure any new runtime module that needs sensors subscribes via `AGNI_SHARED` and loads after `sensor-bridge.js`. See **`sensor-toolkit-improvement-plan.md`** for planned enhancements and verification requirements. |
 | Change step navigation or gates | `src/runtime/player.js` for navigation; `src/runtime/gate-renderer.js` (`AGNI_GATES`) for gate UI, retry timers, and pass/fail feedback. |
 | Change integrity verification | `src/runtime/integrity.js` (`AGNI_INTEGRITY`) and `src/utils/crypto.js` (signContent). Binding hash contract must stay identical on both sides. |
@@ -30,7 +30,7 @@ Use this when changing the browser-side lesson player, sensors, or SVG/visual sy
 
 ## Do not
 
-- Add a script that the loader must fetch without registering it in `featureInference.js` and the hub whitelist; otherwise it won’t be in the manifest or served.
+- Add a script that the loader must fetch without registering it in `packages/agni-utils/runtimeManifest.js` / `feature-inference.js` and the hub whitelist; otherwise it won’t be in the manifest or served.
 - Break load order: `shared-runtime.js` → `sensor-bridge.js` → `svg-stage.js` → factories → `svg-registry.js` → `table-renderer.js`. See `src/runtime/README.md`.
 
 ## Types
