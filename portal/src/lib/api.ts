@@ -603,12 +603,12 @@ export function createHubApi(baseUrl: string) {
       return authDelete<{ ok: boolean; deleted: string[] }>(`api/author/delete/${encodeURIComponent(slug)}`);
     },
 
-    /** Planned: GET /api/governance/report. Throws if endpoint not implemented. */
+    /** GET /api/governance/report — compliance report (Bearer). */
     async getGovernanceReport(): Promise<GovernanceReport> {
       return authGet<GovernanceReport>('api/governance/report');
     },
 
-    /** Planned: GET /api/governance/policy. Throws if endpoint not implemented. */
+    /** GET /api/governance/policy — current policy (Bearer). */
     async getGovernancePolicy(): Promise<unknown> {
       return authGet<unknown>('api/governance/policy');
     },

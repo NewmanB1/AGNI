@@ -46,7 +46,7 @@ Create a `.env` file or set environment variables. All variables are optional �
 |----------|---------|-------------|
 | `AGNI_DATA_DIR` | `./data` | Where student data, mastery, groups, sessions are stored |
 | `AGNI_YAML_DIR` | `$DATA_DIR/yaml` | Where lesson YAML source files live |
-| `AGNI_HUB_API_KEY` | *(none)* | **Required.** Shared secret for device→hub API authentication |
+| `AGNI_HUB_API_KEY` | *(none)* | **Required.** Shared secret for device→hub API authentication. When set, all HubKey-protected endpoints (theta, telemetry, checkpoint, chain, etc.) require the `X-Hub-Key` header. When unset, those endpoints return 503. |
 | `AGNI_HUB_ID` | `hub-local` | Unique identifier for this hub (used in federation) |
 
 ### Ports

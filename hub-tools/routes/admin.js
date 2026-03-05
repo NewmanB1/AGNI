@@ -41,7 +41,9 @@ function register(router, ctx) {
       if (unknown.length > 0) {
         return sendResponse(400, { error: 'Unknown config keys: ' + unknown.join(', ') });
       }
-      if ('__proto__' in cfg || 'constructor' in cfg || 'prototype' in cfg) {
+      if (Object.prototype.hasOwnProperty.call(cfg, '__proto__') ||
+          Object.prototype.hasOwnProperty.call(cfg, 'constructor') ||
+          Object.prototype.hasOwnProperty.call(cfg, 'prototype')) {
         return sendResponse(400, { error: 'Payload contains forbidden keys' });
       }
       const cfgPath = path.resolve(path.join(__dirname, '../../data/hub-config.json'));

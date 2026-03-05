@@ -88,28 +88,28 @@ Paginated endpoints: `GET /api/lessons`, `GET /api/theta/all`, `GET /api/account
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/theta?pseudoId=` | No | Get sorted lessons for a student |
-| GET | `/api/theta/all` | No | All students' theta rankings (paginated) |
-| GET | `/api/theta/graph` | No | Effective graph weights |
-| GET | `/api/lessons` | No | Lesson index with filters (paginated) |
-| POST | `/api/theta/override` | No | Pin/clear a lesson override for a student |
+| GET | `/api/theta?pseudoId=` | HubKey | Get sorted lessons for a student |
+| GET | `/api/theta/all` | Admin | All students' theta rankings (paginated) |
+| GET | `/api/theta/graph` | HubKey | Effective graph weights |
+| GET | `/api/lessons` | HubKey | Lesson index with filters (paginated) |
+| POST | `/api/theta/override` | Admin | Pin/clear a lesson override for a student |
 
 ### Telemetry
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/telemetry` | No | Submit learning events |
+| POST | `/api/telemetry` | HubKey | Submit learning events |
 
 ### LMS (Bandit / IRT Engine)
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/lms/select?pseudoId=` | No | Bandit lesson selection |
-| POST | `/api/lms/observation` | No | Record an observation |
-| GET | `/api/lms/status` | No | Engine status |
-| POST | `/api/lms/federation/merge` | No | Merge remote bandit summary |
-| GET | `/api/lms/transitions` | No | Markov transition table |
-| GET | `/api/lms/bottlenecks` | No | Flow bottleneck analysis |
+| GET | `/api/lms/select?pseudoId=` | HubKey | Bandit lesson selection |
+| POST | `/api/lms/observation` | HubKey | Record an observation |
+| GET | `/api/lms/status` | HubKey | Engine status |
+| POST | `/api/lms/federation/merge` | Admin | Merge remote bandit summary |
+| GET | `/api/lms/transitions` | HubKey | Markov transition table |
+| GET | `/api/lms/bottlenecks` | HubKey | Flow bottleneck analysis |
 
 ### Accounts & Auth
 
@@ -125,7 +125,7 @@ Paginated endpoints: `GET /api/lessons`, `GET /api/theta/all`, `GET /api/account
 | POST | `/api/accounts/students/bulk` | Admin | Bulk create students (201) |
 | GET | `/api/accounts/students` | Admin | List students (paginated) |
 | PUT | `/api/accounts/student` | Admin | Update a student |
-| POST | `/api/accounts/student/transfer-token` | No | Generate transfer token |
+| POST | `/api/accounts/student/transfer-token` | Admin | Generate transfer token |
 | POST | `/api/accounts/student/claim` | No | Claim transfer token |
 | POST | `/api/accounts/student/verify-pin` | No | Verify student PIN |
 
@@ -133,74 +133,74 @@ Paginated endpoints: `GET /api/lessons`, `GET /api/theta/all`, `GET /api/account
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/governance/report` | No | Compliance report |
-| GET | `/api/governance/policy` | No | Current policy |
+| GET | `/api/governance/report` | Bearer | Compliance report |
+| GET | `/api/governance/policy` | Bearer | Current policy |
 | PUT | `/api/governance/policy` | Admin | Update policy |
-| GET | `/api/governance/catalog` | No | Approved lesson catalog |
+| GET | `/api/governance/catalog` | Bearer | Approved lesson catalog |
 | POST | `/api/governance/catalog` | Admin | Update catalog |
 | POST | `/api/governance/catalog/import` | Admin | Import catalog from authority |
-| GET | `/api/governance/utu-constants` | No | UTU classification constants |
-| POST | `/api/governance/compliance` | No | Evaluate compliance for lessons |
+| GET | `/api/governance/utu-constants` | Bearer | UTU classification constants |
+| POST | `/api/governance/compliance` | Bearer | Evaluate compliance for lessons |
 
 ### Author
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/author/load/:slug` | No | Load a saved lesson |
-| POST | `/api/author/validate` | No | Validate lesson YAML/JSON |
-| POST | `/api/author/save` | No | Save a lesson |
+| GET | `/api/author/load/:slug` | Bearer | Load a saved lesson |
+| POST | `/api/author/validate` | Bearer | Validate lesson YAML/JSON |
+| POST | `/api/author/save` | Bearer | Save a lesson |
 | DELETE | `/api/author/delete/:slug` | Admin | Delete a lesson |
-| POST | `/api/author/preview` | No | Preview-compile a lesson |
+| POST | `/api/author/preview` | Bearer | Preview-compile a lesson |
 
 ### Groups
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/groups` | No | List groups |
-| POST | `/api/groups` | No | Create a group (201) |
-| PUT | `/api/groups` | No | Update a group |
-| POST | `/api/groups/:id/assign` | No | Assign lessons to students in a group |
+| GET | `/api/groups` | Admin | List groups |
+| POST | `/api/groups` | Admin | Create a group (201) |
+| PUT | `/api/groups` | Admin | Update a group |
+| POST | `/api/groups/:id/assign` | Admin | Assign lessons to students in a group |
 
 ### Parent Portal
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/parent/invite` | No | Generate invite code (201 if new) |
-| POST | `/api/parent/link` | No | Link parent to student (201 if new) |
-| GET | `/api/parent/child/:pseudoId/progress` | No | Child progress summary |
-| GET | `/api/parent/children?parentId=` | No | List linked children |
+| POST | `/api/parent/invite` | Admin | Generate invite code (201 if new) |
+| POST | `/api/parent/link` | HubKey | Link parent to student (201 if new) |
+| GET | `/api/parent/child/:pseudoId/progress` | HubKey | Child progress summary |
+| GET | `/api/parent/children?parentId=` | HubKey | List linked children |
 
 ### Student Analytics
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/step-analytics?lessonId=` | No | Per-step analytics |
-| GET | `/api/mastery-history?pseudoId=` | No | Mastery snapshots over time |
-| GET | `/api/skill-graph` | No | Skill dependency graph |
-| GET | `/api/reviews?pseudoId=` | No | Spaced repetition review schedule |
-| GET | `/api/streaks?pseudoId=` | No | Learning streak data |
-| GET | `/api/badges?pseudoId=` | No | Earned badges |
-| GET | `/api/diagnostic` | No | Diagnostic probes |
-| POST | `/api/diagnostic` | No | Submit diagnostic responses |
-| GET | `/api/learning-paths` | No | List learning paths |
-| GET | `/api/learning-paths/:id` | No | Get a specific learning path |
-| POST | `/api/learning-paths` | No | Create a learning path (201) |
-| PUT | `/api/learning-paths` | No | Update a learning path |
-| GET | `/api/collab/stats` | No | Collaboration statistics |
+| GET | `/api/step-analytics?lessonId=` | HubKey | Per-step analytics |
+| GET | `/api/mastery-history?pseudoId=` | HubKey | Mastery snapshots over time |
+| GET | `/api/skill-graph` | HubKey | Skill dependency graph |
+| GET | `/api/reviews?pseudoId=` | HubKey | Spaced repetition review schedule |
+| GET | `/api/streaks?pseudoId=` | HubKey | Learning streak data |
+| GET | `/api/badges?pseudoId=` | HubKey | Earned badges |
+| GET | `/api/diagnostic` | HubKey | Diagnostic probes |
+| POST | `/api/diagnostic` | HubKey | Submit diagnostic responses |
+| GET | `/api/learning-paths` | HubKey | List learning paths |
+| GET | `/api/learning-paths/:id` | HubKey | Get a specific learning path |
+| POST | `/api/learning-paths` | Admin | Create a learning path (201) |
+| PUT | `/api/learning-paths` | Admin | Update a learning path |
+| GET | `/api/collab/stats` | HubKey | Collaboration statistics |
 
 ### Content Chain
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/chain/:slug` | No | Content hash chain for a lesson |
-| POST | `/api/chain/verify` | No | Verify chain integrity |
-| GET | `/api/fork-check?slug=` | No | Fork/license eligibility check |
+| GET | `/api/chain/:slug` | HubKey | Content hash chain for a lesson |
+| POST | `/api/chain/verify` | HubKey | Verify chain integrity |
+| GET | `/api/fork-check?slug=` | HubKey | Fork/license eligibility check |
 
 ### Admin
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/admin/onboarding-status` | No | First-run check |
+| GET | `/api/admin/onboarding-status` | No | First-run check (intentionally unauthenticated for first-run detection) |
 | GET | `/api/admin/config` | Admin | Current hub configuration |
 | PUT | `/api/admin/config` | Admin | Update hub configuration |
-| POST | `/api/admin/sync-test` | No | Test sync connectivity |
+| POST | `/api/admin/sync-test` | Admin | Test sync connectivity |

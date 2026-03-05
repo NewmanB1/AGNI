@@ -75,6 +75,12 @@ jobs:
         run: npm run verify:schema-sync
       - name: Verify canonical package ownership
         run: npm run verify:canonical
+      - name: Verify unauthed routes (hub auth)
+        run: npm run verify:unauthed-routes
+      - name: Verify version sync
+        run: npm run verify:version-sync
+      - name: Verify api-contract auth
+        run: npm run verify:api-contract-auth
       - name: Validate OLS lessons and data files
         run: node scripts/validate-schemas.js
       # Build all lessons, not just gravity.yaml [R10 P3.4]

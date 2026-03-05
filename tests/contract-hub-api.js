@@ -11,10 +11,15 @@
 
 const http = require('http');
 
-function get(baseUrl, path) {
+const CONTRACT_HUB_KEY = process.env.AGNI_HUB_API_KEY || 'contract-test-hub-key';
+
+function get(baseUrl, path, opts) {
+  opts = opts || {};
   const url = new URL(path, baseUrl);
   return new Promise((resolve, reject) => {
-    const req = http.get(url, { headers: { Accept: 'application/json' } }, (res) => {
+    const headers = { Accept: 'application/json', 'x-hub-key': CONTRACT_HUB_KEY };
+    if (opts.bearer) headers['Authorization'] = 'Bearer ' + opts.bearer;
+    const req = http.get(url, { headers }, (res) => {
       let body = '';
       res.on('data', (chunk) => { body += chunk; });
       res.on('end', () => {
@@ -31,9 +36,12 @@ function get(baseUrl, path) {
   });
 }
 
-function put(baseUrl, path, body) {
+function put(baseUrl, path, body, opts) {
+  opts = opts || {};
   const url = new URL(path, baseUrl);
   const bodyStr = JSON.stringify(body);
+  const headers = { 'Content-Type': 'application/json', Accept: 'application/json', 'Content-Length': Buffer.byteLength(bodyStr), 'x-hub-key': CONTRACT_HUB_KEY };
+  if (opts.bearer) headers['Authorization'] = 'Bearer ' + opts.bearer;
   return new Promise((resolve, reject) => {
     const req = http.request(
       {
@@ -41,7 +49,7 @@ function put(baseUrl, path, body) {
         port: url.port,
         path: url.pathname + url.search,
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'Content-Length': Buffer.byteLength(bodyStr) }
+        headers
       },
       (res) => {
         let data = '';
@@ -63,9 +71,12 @@ function put(baseUrl, path, body) {
   });
 }
 
-function post(baseUrl, path, body) {
+function post(baseUrl, path, body, opts) {
+  opts = opts || {};
   const url = new URL(path, baseUrl);
   const bodyStr = JSON.stringify(body);
+  const headers = { 'Content-Type': 'application/json', Accept: 'application/json', 'Content-Length': Buffer.byteLength(bodyStr), 'x-hub-key': CONTRACT_HUB_KEY };
+  if (opts.bearer) headers['Authorization'] = 'Bearer ' + opts.bearer;
   return new Promise((resolve, reject) => {
     const req = http.request(
       {
@@ -73,7 +84,7 @@ function post(baseUrl, path, body) {
         port: url.port,
         path: url.pathname + url.search,
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'Content-Length': Buffer.byteLength(bodyStr) }
+        headers
       },
       (res) => {
         let data = '';
@@ -95,7 +106,8 @@ function post(baseUrl, path, body) {
   });
 }
 
-async function run(baseUrl) {
+async function run(baseUrl, bearer) {
+  const auth = bearer ? { bearer } : {};
   const failures = [];
 
   // GET /api/theta?pseudoId=test
@@ -118,9 +130,9 @@ async function run(baseUrl) {
     failures.push(`/api/theta/graph: ${e.message}`);
   }
 
-  // GET /api/governance/report
+  // GET /api/governance/report (Bearer)
   try {
-    const { statusCode, data } = await get(baseUrl, '/api/governance/report');
+    const { statusCode, data } = await get(baseUrl, '/api/governance/report', auth);
     if (statusCode !== 200) failures.push(`/api/governance/report: expected 200, got ${statusCode}: ${data.error || ''}`);
     if (data && typeof data.byUtu !== 'object') failures.push(`/api/governance/report: byUtu must be object`);
     if (data && typeof data.bySkill !== 'object') failures.push(`/api/governance/report: bySkill must be object`);
@@ -128,17 +140,17 @@ async function run(baseUrl) {
     failures.push(`/api/governance/report: ${e.message}`);
   }
 
-  // GET /api/governance/policy
+  // GET /api/governance/policy (Bearer)
   try {
-    const { statusCode, data } = await get(baseUrl, '/api/governance/policy');
+    const { statusCode, data } = await get(baseUrl, '/api/governance/policy', auth);
     if (statusCode !== 200) failures.push(`/api/governance/policy: expected 200, got ${statusCode}: ${data.error || ''}`);
   } catch (e) {
     failures.push(`/api/governance/policy: ${e.message}`);
   }
 
-  // POST /api/governance/compliance (minimal sidecar)
+  // POST /api/governance/compliance (Bearer)
   try {
-    const { statusCode, data } = await post(baseUrl, '/api/governance/compliance', { identifier: 'test', slug: 'test', title: 'Test', language: 'en', difficulty: 1 });
+    const { statusCode, data } = await post(baseUrl, '/api/governance/compliance', { identifier: 'test', slug: 'test', title: 'Test', language: 'en', difficulty: 1 }, auth);
     if (statusCode !== 200) failures.push(`/api/governance/compliance: expected 200, got ${statusCode}: ${data.error || ''}`);
     if (data && typeof data.status !== 'string') failures.push(`/api/governance/compliance: status must be string`);
     if (data && !Array.isArray(data.issues)) failures.push(`/api/governance/compliance: issues must be array`);
@@ -160,10 +172,10 @@ async function run(baseUrl) {
     failures.push(`/api/lms/status: ${e.message}`);
   }
 
-  // POST /api/author/validate (Sprint C)
+  // POST /api/author/validate (Bearer)
   try {
     const minimalLesson = { meta: { title: 'Test', identifier: 'test' }, steps: [{ id: 's1', type: 'instruction', content: 'Hi' }] };
-    const { statusCode, data } = await post(baseUrl, '/api/author/validate', minimalLesson);
+    const { statusCode, data } = await post(baseUrl, '/api/author/validate', minimalLesson, auth);
     if (statusCode !== 200) failures.push(`/api/author/validate: expected 200, got ${statusCode}: ${data.error || ''}`);
     if (data && typeof data.valid !== 'boolean') failures.push(`/api/author/validate: valid must be boolean`);
     if (data && !Array.isArray(data.errors)) failures.push(`/api/author/validate: errors must be array`);
@@ -172,10 +184,14 @@ async function run(baseUrl) {
     failures.push(`/api/author/validate: ${e.message}`);
   }
 
-  // POST /api/author/preview (Sprint C)
+  // POST /api/author/preview (Bearer)
   try {
-    const minimalLesson = { meta: { title: 'Preview Test', identifier: 'preview-test' }, steps: [{ id: 's1', type: 'instruction', content: 'Preview' }] };
-    const { statusCode, data } = await post(baseUrl, '/api/author/preview', minimalLesson);
+    const minimalLesson = {
+      version: '1.7.0',
+      meta: { title: 'Preview Test', identifier: 'preview-test', language: 'en', license: 'CC-BY-SA-4.0', created: '2026-01-01T00:00:00.000Z' },
+      steps: [{ id: 's1', type: 'instruction', content: 'Preview' }]
+    };
+    const { statusCode, data } = await post(baseUrl, '/api/author/preview', minimalLesson, auth);
     if (statusCode !== 200) failures.push(`/api/author/preview: expected 200, got ${statusCode}: ${data.error || ''}`);
     if (data && data.ir === undefined) failures.push(`/api/author/preview: must return ir`);
     if (data && data.sidecar === undefined) failures.push(`/api/author/preview: must return sidecar`);
@@ -192,37 +208,37 @@ async function run(baseUrl) {
     failures.push(`/api/admin/onboarding-status: ${e.message}`);
   }
 
-  // GET /api/admin/config (A1)
+  // GET /api/admin/config (Admin)
   try {
-    const { statusCode, data } = await get(baseUrl, '/api/admin/config');
+    const { statusCode, data } = await get(baseUrl, '/api/admin/config', auth);
     if (statusCode !== 200) failures.push(`/api/admin/config: expected 200, got ${statusCode}: ${data.error || ''}`);
     if (data && typeof data !== 'object') failures.push(`/api/admin/config: must return object`);
   } catch (e) {
     failures.push(`/api/admin/config: ${e.message}`);
   }
 
-  // PUT /api/admin/config (A1)
+  // PUT /api/admin/config (Admin)
   try {
     const cfg = { thetaPort: 8082, dataDir: '' };
-    const { statusCode, data } = await put(baseUrl, '/api/admin/config', cfg);
+    const { statusCode, data } = await put(baseUrl, '/api/admin/config', cfg, auth);
     if (statusCode !== 200) failures.push(`/api/admin/config PUT: expected 200, got ${statusCode}: ${data.error || ''}`);
     if (data && data.ok !== true) failures.push(`/api/admin/config PUT: ok must be true`);
   } catch (e) {
     failures.push(`/api/admin/config PUT: ${e.message}`);
   }
 
-  // GET /api/governance/catalog (configuration wizard G2, G4)
+  // GET /api/governance/catalog (Bearer)
   try {
-    const { statusCode, data } = await get(baseUrl, '/api/governance/catalog');
+    const { statusCode, data } = await get(baseUrl, '/api/governance/catalog', auth);
     if (statusCode !== 200) failures.push(`/api/governance/catalog: expected 200, got ${statusCode}: ${data.error || ''}`);
     if (data && !Array.isArray(data.lessonIds)) failures.push(`/api/governance/catalog: lessonIds must be array`);
   } catch (e) {
     failures.push(`/api/governance/catalog: ${e.message}`);
   }
 
-  // POST /api/governance/catalog — add lesson IDs
+  // POST /api/governance/catalog (Admin)
   try {
-    const { statusCode, data } = await post(baseUrl, '/api/governance/catalog', { add: ['ols:test:lesson1'] });
+    const { statusCode, data } = await post(baseUrl, '/api/governance/catalog', { add: ['ols:test:lesson1'] }, auth);
     if (statusCode !== 200) failures.push(`/api/governance/catalog POST: expected 200, got ${statusCode}: ${data.error || ''}`);
     if (data && data.ok !== true) failures.push(`/api/governance/catalog POST: ok must be true`);
     if (data && data.catalog && !Array.isArray(data.catalog.lessonIds)) failures.push(`/api/governance/catalog POST: catalog.lessonIds must be array`);
@@ -230,28 +246,28 @@ async function run(baseUrl) {
     failures.push(`/api/governance/catalog POST: ${e.message}`);
   }
 
-  // POST /api/governance/catalog/import — replace with empty
+  // POST /api/governance/catalog/import (Admin)
   try {
-    const { statusCode, data } = await post(baseUrl, '/api/governance/catalog/import', { catalog: { lessonIds: [] }, strategy: 'replace' });
+    const { statusCode, data } = await post(baseUrl, '/api/governance/catalog/import', { catalog: { lessonIds: [] }, strategy: 'replace' }, auth);
     if (statusCode !== 200) failures.push(`/api/governance/catalog/import: expected 200, got ${statusCode}: ${data.error || ''}`);
     if (data && data.ok !== true) failures.push(`/api/governance/catalog/import: ok must be true`);
   } catch (e) {
     failures.push(`/api/governance/catalog/import: ${e.message}`);
   }
 
-  // PUT /api/governance/policy (configuration wizard G1)
+  // PUT /api/governance/policy (Admin)
   try {
     const policy = { utuTargets: [{ class: 'MAC-2', band: 4 }], minDifficulty: 1, maxDifficulty: 5 };
-    const { statusCode, data } = await put(baseUrl, '/api/governance/policy', policy);
+    const { statusCode, data } = await put(baseUrl, '/api/governance/policy', policy, auth);
     if (statusCode !== 200) failures.push(`/api/governance/policy PUT: expected 200, got ${statusCode}: ${data.error || ''}`);
     if (data && data.ok !== true) failures.push(`/api/governance/policy PUT: ok must be true`);
   } catch (e) {
     failures.push(`/api/governance/policy PUT: ${e.message}`);
   }
 
-  // POST /api/theta/override (Phase 3 / Sprint G) — clear override for test student
+  // POST /api/theta/override (Admin)
   try {
-    const { statusCode, data } = await post(baseUrl, '/api/theta/override', { pseudoId: 'test', lessonId: null });
+    const { statusCode, data } = await post(baseUrl, '/api/theta/override', { pseudoId: 'test', lessonId: null }, auth);
     if (statusCode !== 200) failures.push(`/api/theta/override: expected 200, got ${statusCode}: ${data.error || ''}`);
     if (data && data.ok !== true) failures.push(`/api/theta/override: ok must be true`);
     if (data && data.override !== undefined && data.override !== null) failures.push(`/api/theta/override: override should be null when clearing`);
@@ -259,11 +275,33 @@ async function run(baseUrl) {
     failures.push(`/api/theta/override: ${e.message}`);
   }
 
+  // Auth regression: HubKey-protected endpoints reject requests without X-Hub-Key
+  const getNoKey = (p) => {
+    const u = new URL(p, baseUrl);
+    return new Promise((resolve, reject) => {
+      const req = http.get(u, { headers: { Accept: 'application/json' } }, (res) => {
+        let b = '';
+        res.on('data', (c) => { b += c; });
+        res.on('end', () => resolve({ statusCode: res.statusCode, data: b ? JSON.parse(b) : {} }));
+      });
+      req.on('error', reject);
+    });
+  };
+  try {
+    const res = await getNoKey('/api/chain/test-slug');
+    if (res.statusCode !== 401 && res.statusCode !== 503) {
+      failures.push(`/api/chain/:slug without hub key: expected 401 or 503, got ${res.statusCode}`);
+    }
+  } catch (e) {
+    failures.push(`/api/chain auth check: ${e.message}`);
+  }
+
   return failures;
 }
 
 async function main() {
   const path = require('path');
+  process.env.AGNI_HUB_API_KEY = CONTRACT_HUB_KEY;
   const thetaPath = path.join(__dirname, '../hub-tools/theta.js');
   const theta = require(thetaPath);
 
@@ -281,7 +319,21 @@ async function main() {
   const actualPort = await port;
   const baseUrl = `http://127.0.0.1:${actualPort}`;
 
-  const failures = await run(baseUrl);
+  let bearer;
+  try {
+    const { accountsService } = require('../hub-tools/context/services');
+    const reg = await accountsService.registerCreator({ name: 'Contract Admin', email: 'contract@test.local', password: 'testpass123' });
+    if (reg.creator) {
+      await accountsService.setCreatorApproval(reg.creator.id, true);
+      await accountsService.setCreatorRole(reg.creator.id, 'admin');
+    }
+    const login = await accountsService.loginCreator({ email: 'contract@test.local', password: 'testpass123' });
+    bearer = login.token;
+  } catch (e) {
+    console.warn('[contract-hub-api] creator setup failed:', e.message);
+  }
+
+  const failures = await run(baseUrl, bearer);
   server.close();
 
   if (failures.length > 0) {

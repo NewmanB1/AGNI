@@ -26,14 +26,15 @@ This is the **top of the dependency tree**: it depends on all other packages and
 | Route | Endpoints |
 |-------|-----------|
 | `theta` | `GET /api/theta` — next lesson recommendations |
-| `lms` | `POST /api/lms/observe`, `GET /api/lms/state` — learning engine |
-| `governance` | `GET /api/governance/compliance`, `POST /api/governance/policy` |
-| `accounts` | `POST /api/accounts/register`, `POST /api/accounts/login` |
-| `student` | `GET /api/student/progress`, `GET /api/student/streaks` |
-| `parent` | `GET /api/parent/children`, `GET /api/parent/progress` |
-| `author` | `POST /api/author/compile`, `POST /api/author/publish` |
-| `telemetry` | `POST /api/telemetry/events` |
-| `admin` | `GET /api/admin/status`, `POST /api/admin/config` |
+| `lms` | `POST /api/lms/observation`, `GET /api/lms/status` — learning engine |
+| `governance` | `GET /api/governance/report`, `GET /api/governance/policy`, `POST /api/governance/compliance` |
+| `accounts` | `POST /api/auth/register`, `POST /api/auth/login` |
+| `student` | `GET /api/student/streaks`, `POST /api/checkpoint`, `GET /api/diagnostic` |
+| `parent` | `GET /api/parent/children`, `GET /api/parent/child/:pseudoId/progress` |
+| `author` | `POST /api/author/validate`, `POST /api/author/save`, `POST /api/author/preview`, `DELETE /api/author/delete/:slug` |
+| `telemetry` | `POST /api/telemetry` |
+| `chain` | `GET /api/chain/:slug`, `POST /api/chain/verify`, `GET /api/fork-check` |
+| `admin` | `GET /api/admin/config`, `PUT /api/admin/config`, `POST /api/admin/sync-test` |
 
 ### PWA Shell (`server/pwa/`)
 | File | Purpose |

@@ -1,14 +1,14 @@
 'use strict';
 
 function register(router, ctx) {
-  const { lessonChain, authorService, handleJsonBody, DATA_DIR, path } = ctx;
+  const { lessonChain, authorService, handleJsonBody, requireHubKey, DATA_DIR, path } = ctx;
 
-  router.get('/api/chain/:slug', async (req, res, { params, sendResponse }) => {
+  router.get('/api/chain/:slug', requireHubKey(async (req, res, { params, sendResponse }) => {
     const chain = await lessonChain.loadChain(params.slug);
     return sendResponse(200, chain);
-  });
+  }));
 
-  router.post('/api/chain/verify', (req, res, { sendResponse }) => {
+  router.post('/api/chain/verify', requireHubKey((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       if (!payload.slug) return sendResponse(400, { error: 'slug required' });
       const chainResult = await lessonChain.verifyChain(payload.slug);
@@ -18,9 +18,9 @@ function register(router, ctx) {
       }
       return sendResponse(200, { chain: chainResult });
     });
-  });
+  }));
 
-  router.get('/api/fork-check', (req, res, { qs, sendResponse }) => {
+  router.get('/api/fork-check', requireHubKey((req, res, { qs, sendResponse }) => {
     if (!qs.slug) return sendResponse(400, { error: 'slug query param required' });
     const yamlDir = process.env.AGNI_YAML_DIR || path.join(DATA_DIR, 'yaml');
     const loaded = authorService.loadLesson(qs.slug, yamlDir);
@@ -34,7 +34,7 @@ function register(router, ctx) {
       inheritedLicense: inherited,
       sourceUri: meta.uri || null, sourceHash: meta.content_hash || null
     });
-  });
+  }));
 }
 
 module.exports = { register };
