@@ -21,7 +21,7 @@ This playbook describes the **Sentry → graph_weights → theta** flow: how tel
 | **Default (integrated)** | Runtime → theta `POST /api/telemetry` → theta forwards to Sentry → `data/events/*.ndjson` | Standard deployment. Runtime POSTs to theta (port 8082). Theta processes events (mastery, LMS, review schedule) and forwards a copy to Sentry (port 8081). Sentry must be running. |
 | **Standalone Sentry** | Runtime → Sentry `POST /api/telemetry` directly | When theta is not used, or when devices POST to Sentry's port directly. Set runtime `hubBase` to `http://hub:8081` or equivalent. |
 
-**Configuration:** `AGNI_SENTRY_PORT` (default 8081). When theta forwards, it POSTs to `http://127.0.0.1:AGNI_SENTRY_PORT/api/telemetry`. If Sentry is not running, the forward fails (logged) and theta continues; events are still stored in `telemetry-events.json` and mastery is updated.
+**Configuration:** `AGNI_SENTRY_PORT` (default 8081), `AGNI_SENTRY_FORWARD` (default true; set to `false` to disable theta→Sentry forwarding, e.g. when Sentry is not deployed). When theta forwards, it POSTs to `http://127.0.0.1:AGNI_SENTRY_PORT/api/telemetry`. If Sentry is not running, the forward fails (logged) and theta continues; events are still stored in `telemetry-events.json` and mastery is updated.
 
 ---
 
@@ -31,7 +31,7 @@ This playbook describes the **Sentry → graph_weights → theta** flow: how tel
 
 - **Endpoints:**
   - `GET /health` — Returns `{ ok: true }`. Use for liveness probes.
-  - `GET /api/sentry/status` — Returns `{ bufferSize, lastAnalysisAt, graphWeightsUpdatedAt }`.
+  - `GET /api/sentry/status` — Returns `{ bufferSize, lastAnalysisAt, graphWeightsUpdatedAt, edgesCount }`. `edgesCount` is the number of edges in the current graph_weights.json (null if file missing).
   - `POST /api/telemetry` — Submit events (see below).
 - **Port:** `AGNI_SENTRY_PORT` (default `8081`)
 - **Body:** JSON with `events` array (or single event). Each event:
@@ -39,7 +39,7 @@ This playbook describes the **Sentry → graph_weights → theta** flow: how tel
   - `skillsProvided`, `skillsRequired` (arrays; provided entries may have `{ skill, evidencedLevel }`)
   - `pseudoId` (optional), `eventId` (optional)
 
-Events are validated, buffered in memory, and appended to **`data/events/YYYY-MM-DD.ndjson`** every 30 seconds.
+Events are validated, buffered in memory, and appended to **`data/events/YYYY-MM-DD.ndjson`** every 30 seconds. On flush failure (e.g. SD card full), Sentry retries up to 3 times with 1s delay; if all retries fail, events are written to **`data/events/failed-YYYYMMDD.ndjson`** as a last resort so data is not lost. Only if that fallback also fails are events discarded.
 
 ### 2.2 When Analysis Runs
 

@@ -71,6 +71,11 @@ function appendEvents(events) {
   eventBuffer.push(...serialized);
 }
 
+function failedEventsFile() {
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  return path.join(EVENTS_DIR, 'failed-' + date + '.ndjson');
+}
+
 function doFlushOnce(callback) {
   if (eventBuffer.length === 0) return callback(null);
   const toWrite = eventBuffer.join('\n') + '\n';
@@ -83,7 +88,12 @@ function doFlushOnce(callback) {
         log.warn('Flush retry', { attempt: attempts, error: err.message });
         setTimeout(tryWrite, FLUSH_RETRY_DELAY_MS);
       } else if (err) {
-        log.error('Event flush failed after retries, data discarded', { error: err.message });
+        try {
+          fs.appendFileSync(failedEventsFile(), toWrite, 'utf8');
+          log.warn('Event flush failed after retries, wrote to failed-events file', { error: err.message });
+        } catch (fallbackErr) {
+          log.error('Event flush failed, failed-events fallback also failed, data lost', { error: err.message, fallback: fallbackErr.message });
+        }
         callback(err);
       } else {
         callback(null);
@@ -150,11 +160,19 @@ function startReceiver() {
     }
 
     if (req.method === 'GET' && req.url === '/api/sentry/status') {
+      let edgesCount = null;
+      try {
+        if (fs.existsSync(GRAPH_WEIGHTS)) {
+          const gw = JSON.parse(fs.readFileSync(GRAPH_WEIGHTS, 'utf8'));
+          edgesCount = Array.isArray(gw.edges) ? gw.edges.length : 0;
+        }
+      } catch (_) { /* ignore */ }
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         bufferSize: eventBuffer.length,
         lastAnalysisAt: _lastAnalysisAt,
-        graphWeightsUpdatedAt: _graphWeightsUpdatedAt
+        graphWeightsUpdatedAt: _graphWeightsUpdatedAt,
+        edgesCount: edgesCount
       }));
       return;
     }

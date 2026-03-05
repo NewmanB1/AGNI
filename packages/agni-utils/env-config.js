@@ -80,6 +80,7 @@ const config = {
   sentryMinSample:       intVal('AGNI_SENTRY_MIN_SAMPLE', 20),
   sentryJaccardThreshold: validRange(floatVal('AGNI_SENTRY_JACCARD_THRESHOLD', 0.5), 0, 1, 'AGNI_SENTRY_JACCARD_THRESHOLD'),
   sentryMinClusterSize:  intVal('AGNI_SENTRY_MIN_CLUSTER_SIZE', 20),
+  sentryForward:         process.env.AGNI_SENTRY_FORWARD !== 'false',
 
   markovWeight:       floatVal('AGNI_MARKOV_WEIGHT', 0.15),
   pagerankWeight:     floatVal('AGNI_PAGERANK_WEIGHT', 0.10),

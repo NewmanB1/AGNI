@@ -128,7 +128,9 @@ function register(router, ctx) {
         log.warn('Telemetry event persistence failed', { error: e.message });
       }
 
-      forwardToSentry(events);
+      if (envConfig.sentryForward) {
+        forwardToSentry(events);
+      }
 
       return sendResponse(200, { accepted, processed: events.length });
     });

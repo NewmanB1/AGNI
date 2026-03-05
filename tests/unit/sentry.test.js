@@ -208,4 +208,47 @@ describe('Sentry analysis', function () {
       assert.ok(result.largest.members.length >= 20);
     });
   });
+
+  // ── graph output shape (conforms to schema) ──────────────────────────────────
+  describe('graph output shape', function () {
+    it('computeEdgesFromGlobalPairs produces schema-conformant edges', function () {
+      const pairs = {
+        'ols:math:fractions\x00ols:math:ratios': { a: 30, b: 5, c: 10, d: 55 }
+      };
+      const edges = sentryAnalysis.computeEdgesFromGlobalPairs(pairs);
+      assert.ok(Array.isArray(edges));
+      assert.ok(edges.length >= 1);
+      const e = edges[0];
+      assert.ok(typeof e.from === 'string' && /^[a-z0-9_.-]+(:[a-z0-9_.-]+)+$/.test(e.from));
+      assert.ok(typeof e.to === 'string' && /^[a-z0-9_.-]+(:[a-z0-9_.-]+)+$/.test(e.to));
+      assert.ok(typeof e.weight === 'number' && e.weight >= 0 && e.weight <= 1);
+      assert.ok(typeof e.confidence === 'number' && e.confidence >= 0 && e.confidence <= 1);
+      assert.ok(typeof e.sample_size === 'number' && e.sample_size >= 20);
+    });
+
+    it('full graph_weights object has required schema fields', function () {
+      const pairs = {
+        'ols:physics:gravity\x00ols:physics:acceleration': { a: 25, b: 5, c: 8, d: 62 }
+      };
+      const edges = sentryAnalysis.computeEdgesFromGlobalPairs(pairs);
+      const gw = {
+        version: '1.7.0',
+        discovered_cohort: 'c_47f9a2b1',
+        level: 'village',
+        sample_size: 25,
+        created_date: new Date().toISOString(),
+        last_updated: new Date().toISOString(),
+        default_weight: 1.0,
+        weight_estimation_method: 'correlation_based',
+        clustering_method: 'jaccard_similarity',
+        edges,
+        metadata: { computation_date: new Date().toISOString(), software_version: 'sentry-agent v1.8.0' }
+      };
+      assert.ok(gw.version && gw.discovered_cohort && gw.level && gw.sample_size);
+      assert.ok(gw.created_date && gw.last_updated);
+      assert.ok(gw.weight_estimation_method && gw.clustering_method);
+      assert.ok(Array.isArray(gw.edges));
+      assert.ok(gw.edges.every(x => x.from && x.to && typeof x.weight === 'number' && typeof x.confidence === 'number' && typeof x.sample_size === 'number'));
+    });
+  });
 });
