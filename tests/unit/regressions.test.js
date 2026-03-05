@@ -772,7 +772,8 @@ describe('C1-XSS: shared-runtime.js ON_ATTR_RE handles unquoted values', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('C1-ENTITY: shared.js sanitizeHtml strips entity-encoded javascript: URIs', () => {
-  delete require.cache[require.resolve('../../server/pwa/shared.js')];
+  var sharedPath = require.resolve('../../packages/agni-hub/pwa/shared.js');
+  delete require.cache[sharedPath];
   const { sanitizeHtml } = require('../../packages/agni-hub/pwa/shared.js');
 
   const ENTITY_PAYLOADS = [
