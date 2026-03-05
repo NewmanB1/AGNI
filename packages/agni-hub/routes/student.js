@@ -1,6 +1,6 @@
 'use strict';
 
-const { withLock } = require('../../src/utils/file-lock');
+const { withLock } = require('../../../src/utils/file-lock');
 
 function register(router, ctx) {
   const { loadJSONAsync, saveJSONAsync, loadLessonIndexAsync, loadMasterySummaryAsync,
@@ -10,7 +10,7 @@ function register(router, ctx) {
           DATA_DIR, REVIEW_SCHEDULE_PATH, LEARNING_PATHS_PATH, CHECKPOINTS_DIR,
           MASTERY_SUMMARY, MASTERY_THRESHOLD } = ctx;
 
-  // ── Checkpoint sync endpoints ────────────────────────────────────────────
+  // â”€â”€ Checkpoint sync endpoints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   router.post('/api/checkpoint', requireHubKey((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {

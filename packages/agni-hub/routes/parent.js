@@ -1,6 +1,6 @@
 'use strict';
 
-const { withLock } = require('../../src/utils/file-lock');
+const { withLock } = require('../../../src/utils/file-lock');
 
 var INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 

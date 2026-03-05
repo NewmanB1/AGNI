@@ -3,7 +3,7 @@
 function register(router, ctx) {
   const { authorService, accountsService, handleJsonBody,
           adminOnly, authOnly } = ctx;
-  const envConfig = require('../../src/utils/env-config');
+  const envConfig = require('../../../src/utils/env-config');
   const yamlDir = envConfig.yamlDir;
 
   router.get('/api/author/load/:slug', authOnly((req, res, { params, sendResponse }) => {

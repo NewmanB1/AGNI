@@ -1,0 +1,343 @@
+// hub-tools/sync.js
+// AGNI Hub Sync v1.7.0 â€“ hardened for low-resource environments
+//
+// Packages anonymized learning events for the home server and receives
+// updated BaseCost tables, regional graphs, curriculums, and schedules.
+//
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const https = require('https');
+const http = require('http');
+const { createLogger } = require('../../src/utils/logger');
+const envConfig = require('../../src/utils/env-config');
+
+// â”€â”€ Hub config bootstrap (F1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const { loadHubConfig } = require('../../src/utils/hub-config');
+loadHubConfig(path.join(__dirname, '../../data'));
+
+// â”€â”€ Configuration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const DATA_DIR = envConfig.dataDir;
+const EVENTS_DIR = path.join(DATA_DIR, 'events');
+const GRAPH_WEIGHTS = path.join(DATA_DIR, 'graph-weights.json');
+const BASE_COSTS = path.join(DATA_DIR, 'base-costs.json');
+const SYNC_STATE = path.join(DATA_DIR, 'sync-state.json');
+const SYNC_LOG = path.join(DATA_DIR, 'sync.log');
+
+const args = parseArgs(process.argv.slice(2));
+const TRANSPORT = args['transport'] || envConfig.syncTransport || 'starlink';
+const HOME_URL = (args['home-url'] || envConfig.homeUrl || '').replace(/\/$/, '');
+const USB_PATH = args['usb-path'] || envConfig.usbPath || '/mnt/usb/agni-sync';
+const HUB_ID = envConfig.hubId;
+const IMPORT_FILE = args['import'] || null;
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// 1. Re-pseudonymization
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function buildTokenMap(pseudoIds) {
+  const map = {};
+  pseudoIds.forEach(id => {
+    map[id] = 'bt-' + crypto.randomBytes(6).toString('hex');
+  });
+  return map;
+}
+
+function repseudonymize(events, tokenMap) {
+  return events.map(ev => ({
+    batchToken: tokenMap[ev.pseudoId] || ('bt-' + crypto.randomBytes(6).toString('hex')),
+    lessonId: ev.lessonId,
+    lessonVersion: ev.lessonVersion,
+    difficulty: ev.difficulty,
+    language: ev.language,
+    skillsRequired: ev.skillsRequired || [],
+    skillsProvided: ev.skillsProvided || [],
+    mastery: ev.mastery,
+    steps: (ev.steps || []).map(s => ({
+      stepId: s.stepId,
+      type: s.type,
+      weight: s.weight,
+      score: s.score,
+      passed: s.passed,
+      skipped: s.skipped,
+      attempts: s.attempts
+      // durationMs intentionally omitted
+    })),
+    completedDate: ev.completedAt ? ev.completedAt.slice(0, 10) : null
+  }));
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// 2. Sync state
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function loadSyncState() {
+  if (!fs.existsSync(SYNC_STATE)) return { lastSyncAt: null, syncedFiles: [] };
+  try { return JSON.parse(fs.readFileSync(SYNC_STATE, 'utf8')); } catch (e) { return { lastSyncAt: null, syncedFiles: [] }; }
+}
+
+function saveSyncState(state) {
+  fs.writeFileSync(SYNC_STATE, JSON.stringify(state, null, 2));
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// 3. Load unsynced events
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function loadUnsynced() {
+  const state = loadSyncState();
+  const synced = new Set(state.syncedFiles || []);
+  if (!fs.existsSync(EVENTS_DIR)) return { events: [], files: [] };
+
+  const files = fs.readdirSync(EVENTS_DIR)
+    .filter(f => f.endsWith('.ndjson') && !synced.has(f))
+    .sort();
+
+  const events = [];
+  files.forEach(file => {
+    const content = fs.readFileSync(path.join(EVENTS_DIR, file), 'utf8');
+    content.split('\n').filter(l => l.trim()).forEach(line => {
+      try { events.push(JSON.parse(line)); } catch (e) { log.warn('Skipping malformed NDJSON line', { file, error: e.message }); }
+    });
+  });
+
+  return { events, files };
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// 4. Build sync package
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function loadDiscoveredCohort() {
+  if (!fs.existsSync(GRAPH_WEIGHTS)) return null;
+  try {
+    const gw = JSON.parse(fs.readFileSync(GRAPH_WEIGHTS, 'utf8'));
+    return gw.discovered_cohort || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function buildPackage(events) {
+  const pseudoIds = [...new Set(events.map(e => e.pseudoId))];
+  const tokenMap = buildTokenMap(pseudoIds);
+  const discoveredCohort = loadDiscoveredCohort();
+
+  return {
+    schemaVersion: '1.7.0',
+    hubId: HUB_ID,
+    packageId: 'pkg-' + Date.now() + '-' + crypto.randomBytes(3).toString('hex'),
+    createdAt: new Date().toISOString(),
+    eventCount: events.length,
+    cohortSize: pseudoIds.length,
+    discovered_cohort: discoveredCohort,
+    events: repseudonymize(events, tokenMap)
+  };
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// 5. Starlink transport
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function sendViaStarlink(pkg) {
+  if (!HOME_URL) return Promise.reject(new Error('--home-url required for Starlink transport'));
+
+  const body = JSON.stringify(pkg);
+  const url = new URL(HOME_URL + '/api/hub-sync');
+  const lib = url.protocol === 'https:' ? https : http;
+
+  log.info('Sending events via Starlink', { count: pkg.eventCount, url: url.href });
+
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: url.hostname,
+      port: url.port || (url.protocol === 'https:' ? 443 : 80),
+      path: url.pathname,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+        'X-AGNI-Hub-ID': HUB_ID,
+        'X-AGNI-Version': '1.7.0'
+      }
+    };
+
+    const req = lib.request(options, res => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          try { resolve(JSON.parse(data)); }
+          catch (e) { resolve({ accepted: pkg.eventCount }); }
+        } else {
+          reject(new Error(`Home server HTTP ${res.statusCode}`));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.setTimeout(30000, () => { req.destroy(); reject(new Error('Timeout')); });
+    req.write(body);
+    req.end();
+  });
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// 6. USB / sneakernet transport
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function sendViaUsb(pkg) {
+  if (!fs.existsSync(USB_PATH)) {
+    try { fs.mkdirSync(USB_PATH, { recursive: true }); }
+    catch (e) { return Promise.reject(new Error('USB path not accessible: ' + USB_PATH)); }
+  }
+
+  const filename = `sync_${HUB_ID}_${new Date().toISOString().slice(0,10)}_${pkg.packageId}.json`;
+  const dest = path.join(USB_PATH, filename);
+  fs.writeFileSync(dest, JSON.stringify(pkg, null, 2));
+
+  log.info('Package written to USB', { dest, count: pkg.eventCount });
+  return Promise.resolve({ accepted: pkg.eventCount, packageFile: dest });
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// 7. Inbound import â€“ hardened version
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function importInbound(filePath) {
+  if (!fs.existsSync(filePath)) {
+    log.error('Import file not found', { filePath });
+    return false;
+  }
+
+  const stats = fs.statSync(filePath);
+  if (stats.size > 10 * 1024 * 1024) {  // cap at ~10 MB
+    log.error('Inbound file too large', { sizeMB: Math.round(stats.size / 1024 / 1024) });
+    return false;
+  }
+
+  let incoming;
+  try {
+    incoming = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (e) {
+    log.error('Could not parse inbound file', { error: e.message });
+    return false;
+  }
+
+  // 1. BaseCosts
+  if (incoming.costs && typeof incoming.costs === 'object' && Object.keys(incoming.costs).length > 0) {
+    let existing = {};
+    if (fs.existsSync(BASE_COSTS)) {
+      try { existing = JSON.parse(fs.readFileSync(BASE_COSTS, 'utf8')); } catch {}
+    }
+    const merged = { ...existing, ...incoming.costs };
+    fs.writeFileSync(BASE_COSTS, JSON.stringify(merged, null, 2));
+    log.info('BaseCosts updated', { updated: Object.keys(incoming.costs).length, total: Object.keys(merged).length });
+  }
+
+  // 2. Regional / higher-level graph weights
+  if (incoming.graph_weights?.level && incoming.graph_weights.level !== 'village' &&
+      Array.isArray(incoming.graph_weights.edges) && incoming.graph_weights.edges.length > 0) {
+    const level = incoming.graph_weights.level;
+    const levelPath = path.join(DATA_DIR, `graph-weights-${level}.json`);
+    fs.writeFileSync(levelPath, JSON.stringify(incoming.graph_weights, null, 2));
+    log.info('Stored graph weights', { level, path: levelPath, edges: incoming.graph_weights.edges.length });
+  }
+
+  // 3. Jurisdictional Curriculum Overrides
+  if (incoming.curriculum?.graph && typeof incoming.curriculum.graph === 'object') {
+    const dest = path.join(DATA_DIR, 'curriculum.json');
+    fs.writeFileSync(dest, JSON.stringify(incoming.curriculum, null, 2));
+    log.info('Jurisdictional curriculum imported', { skills: Object.keys(incoming.curriculum.graph).length });
+  }
+
+  // 4. Governance Student Schedules
+  if (incoming.schedules?.students && typeof incoming.schedules.students === 'object') {
+    const dest = path.join(DATA_DIR, 'schedules.json');
+    fs.writeFileSync(dest, JSON.stringify(incoming.schedules, null, 2));
+    log.info('Student schedules imported', { students: Object.keys(incoming.schedules.students).length });
+  }
+
+  return true;
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// 8. Main sync flow
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+async function runSync() {
+  if (IMPORT_FILE) {
+    log.info('Importing inbound update', { file: IMPORT_FILE });
+    const success = importInbound(IMPORT_FILE);
+    if (!success) process.exitCode = 1;
+    return;
+  }
+
+  const { events, files } = loadUnsynced();
+  if (!events.length) {
+    log.info('No new events to sync');
+    return;
+  }
+
+  log.info('Preparing sync package', { events: events.length, files: files.length });
+  const pkg = buildPackage(events);
+
+  const cohortMsg = pkg.discovered_cohort
+    ? `cohort ${pkg.discovered_cohort}`
+    : 'cohort not yet discovered';
+
+  log.info('Package ready', { packageId: pkg.packageId, students: pkg.cohortSize, cohort: pkg.discovered_cohort || 'not yet discovered' });
+
+  let result;
+  try {
+    result = TRANSPORT === 'usb'
+      ? await sendViaUsb(pkg)
+      : await sendViaStarlink(pkg);
+  } catch (err) {
+    log.error('Sync failed', { error: err.message });
+    process.exitCode = 1;
+    return;
+  }
+
+  const state = loadSyncState();
+  state.syncedFiles = (state.syncedFiles || []).concat(files);
+  state.lastSyncAt = new Date().toISOString();
+  state.lastPackageId = pkg.packageId;
+  saveSyncState(state);
+
+  log.info('Sync complete', { accepted: result.accepted || pkg.eventCount });
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// 9. Helpers
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+const log = createLogger('sync', { logFile: SYNC_LOG });
+
+function parseArgs(argv) {
+  const result = {};
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a.startsWith('--')) {
+      const [key, val] = a.slice(2).split('=');
+      if (val !== undefined) result[key] = val;
+      else {
+        const next = argv[i + 1];
+        if (next && !next.startsWith('--')) { result[key] = next; i++; }
+        else result[key] = true;
+      }
+    }
+  }
+  return result;
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// 10. Entry point
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+if (require.main === module) {
+  runSync().catch(err => {
+    log.error('Fatal error', { error: err.message });
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  runSync,
+  buildPackage,
+  repseudonymize,
+  importInbound,
+  loadUnsynced
+};

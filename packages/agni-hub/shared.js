@@ -1,14 +1,14 @@
 'use strict';
 
 // Assembles the `ctx` object passed to route register() functions.
-// Individual concerns live in hub-tools/context/ — routes can gradually
+// Individual concerns live in hub-tools/context/ â€” routes can gradually
 // migrate to importing directly from those modules.
 
 const fs   = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const { createLogger }  = require('../src/utils/logger');
+const { createLogger }  = require('../../src/utils/logger');
 const log = createLogger('theta');
 
 const dataPaths  = require('./context/data-paths');

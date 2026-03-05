@@ -1,4 +1,4 @@
-// server/hub-transform.js
+// packages/agni-hub/hub-transform.js
 // AGNI Hub Transform  v1.0.0
 //
 // On-demand lesson delivery server. Transforms YAML source into compiled

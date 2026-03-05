@@ -7,12 +7,12 @@ function register(router, ctx) {
 
   router.get('/api/admin/onboarding-status', (req, res, { sendResponse }) => {
     const isFirstRun = !fs.existsSync(path.join(DATA_DIR, 'hub-config.json')) &&
-                       !fs.existsSync(path.resolve(path.join(__dirname, '../../data/hub-config.json')));
+                       !fs.existsSync(path.resolve(path.join(__dirname, '../../../data/hub-config.json')));
     return sendResponse(200, { isFirstRun });
   });
 
   router.get('/api/admin/config', adminOnly(async (req, res, { sendResponse }) => {
-    const cfgPath = path.resolve(path.join(__dirname, '../../data/hub-config.json'));
+    const cfgPath = path.resolve(path.join(__dirname, '../../../data/hub-config.json'));
     const cfg = await loadJSONAsync(cfgPath, {});
     const effective = {
       dataDir: DATA_DIR,
@@ -46,7 +46,7 @@ function register(router, ctx) {
           Object.prototype.hasOwnProperty.call(cfg, 'prototype')) {
         return sendResponse(400, { error: 'Payload contains forbidden keys' });
       }
-      const cfgPath = path.resolve(path.join(__dirname, '../../data/hub-config.json'));
+      const cfgPath = path.resolve(path.join(__dirname, '../../../data/hub-config.json'));
       const existing = await loadJSONAsync(cfgPath, {});
       const merged = Object.create(null);
       for (const k of Object.keys(existing)) {
