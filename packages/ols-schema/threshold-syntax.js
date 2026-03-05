@@ -22,11 +22,14 @@ function tokenise(str) {
   return tokens;
 }
 
+var ORIENTATION_VALUES = ['flat', 'portrait', 'landscape'];
+
 function parseValue(tok) {
   if (!tok) throw new Error('Expected value, got end of input');
   if (/g$/i.test(tok)) return parseFloat(tok) * 9.81;
+  if (ORIENTATION_VALUES.indexOf(tok) !== -1) return tok;
   var n = parseFloat(tok);
-  if (isNaN(n)) throw new Error('Expected number, got: ' + tok);
+  if (isNaN(n)) throw new Error('Expected number or orientation (flat|portrait|landscape), got: ' + tok);
   return n;
 }
 
@@ -59,8 +62,8 @@ function parseCondition(tokens, i) {
     var op3 = tokens[i + 1];
     var valTok = tokens[i + 2];
     if (!op3 || !valTok) throw new Error('Incomplete condition for: ' + sensorId);
-    parseValue(valTok);
-    return [{ type: 'sensor', sensorId: sensorId, op: op3 }, i + 3];
+    var parsedVal = parseValue(valTok);
+    return [{ type: 'sensor', sensorId: sensorId, op: op3, value: parsedVal }, i + 3];
   }
 
   throw new Error('Unexpected token: ' + tok);

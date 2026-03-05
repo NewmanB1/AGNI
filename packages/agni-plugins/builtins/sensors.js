@@ -18,6 +18,7 @@ reg.registerSensor({ id: 'accel.total.x',   label: 'Accel+G X',             unit
 reg.registerSensor({ id: 'accel.total.y',   label: 'Accel+G Y',             unit: 'm/s²', group: 'Accelerometer', desc: 'Acceleration along Y including gravity' });
 reg.registerSensor({ id: 'accel.total.z',   label: 'Accel+G Z',             unit: 'm/s²', group: 'Accelerometer', desc: 'Acceleration along Z including gravity' });
 reg.registerSensor({ id: 'accel.total',     label: 'Accel+G total',         unit: 'm/s²', group: 'Accelerometer', desc: 'Total acceleration magnitude including gravity (~9.8 at rest)' });
+reg.registerSensor({ id: 'shake',           label: 'Shake detected',        unit: 'none', group: 'Accelerometer', desc: 'Virtual: 1 when accel.total variance (5-sample window) exceeds ~2.5g' });
 
 // ── Gyroscope (DeviceMotion) ────────────────────────────────────────────────
 
@@ -31,6 +32,7 @@ reg.registerSensor({ id: 'gyro.magnitude',  label: 'Gyro magnitude',         uni
 reg.registerSensor({ id: 'rotation.alpha',  label: 'Compass heading',        unit: '°',    group: 'Orientation', desc: 'Compass direction 0–360 (0=North)' });
 reg.registerSensor({ id: 'rotation.beta',   label: 'Tilt front/back',        unit: '°',    group: 'Orientation', desc: 'Front-back tilt −180 to 180' });
 reg.registerSensor({ id: 'rotation.gamma',  label: 'Tilt left/right',        unit: '°',    group: 'Orientation', desc: 'Left-right tilt −90 to 90' });
+reg.registerSensor({ id: 'orientation',     label: 'Screen position',        unit: 'none', group: 'Orientation', desc: "Virtual: 'flat'|'portrait'|'landscape' derived from rotation" });
 
 // ── Environment (Phyphox bridge) ────────────────────────────────────────────
 

@@ -12,6 +12,7 @@
 
   const FACTORY_SCRIPTS = [
     'svg-stage.js',
+    'svg-helpers.js',
     'svg-factories.js',
     'svg-factories-dynamic.js',
     'svg-factories-geometry.js',

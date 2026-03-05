@@ -3,32 +3,19 @@
 // Provides dynamic polygon transforms, decomposition, a full Cartesian grid
 // system, and an animated trig unit circle.
 //
-// Requires: svg-stage.js
-// Load order: svg-stage.js → svg-factories.js → svg-factories-geometry.js
+// Requires: svg-stage.js, svg-helpers.js
+// Load order: svg-stage.js → svg-helpers.js → svg-factories.js → svg-factories-geometry.js
 // ─────────────────────────────────────────────────────────────────────────────
 
 (function (global) {
   'use strict';
 
-  var NS = 'http://www.w3.org/2000/svg';
-
-  // ── SVG helpers ─────────────────────────────────────────────────────────────
-  function el(tag, attrs) {
-    var e = document.createElementNS(NS, tag);
-    Object.keys(attrs || {}).forEach(function (k) { e.setAttribute(k, attrs[k]); });
-    return e;
-  }
-  function txt(content, attrs) {
-    var e = el('text', Object.assign({
-      'text-anchor': 'middle', 'dominant-baseline': 'central',
-      'font-family': 'sans-serif', 'font-size': '13', 'fill': '#ffffff'
-    }, attrs));
-    e.textContent = content;
-    return e;
-  }
-  function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
-
-  var PALETTE = ['#0B5FFF','#D84315','#1B5E20','#996600','#7B1FA2','#B00020','#00695C','#AD1457'];
+  var H = global.AGNI_SVG_HELPERS || {};
+  var el = H.el;
+  var txt = H.txt;
+  var clamp = H.clamp;
+  var assign = H.assign || function(t,s){ if(s) for(var k in s) if(Object.prototype.hasOwnProperty.call(s,k)) t[k]=s[k]; return t; };
+  var PALETTE = H.PALETTE || ['#0B5FFF','#D84315','#1B5E20','#996600','#7B1FA2','#B00020','#00695C','#AD1457'];
 
   if (!global.AGNI_SVG) global.AGNI_SVG = {};
   var SVG = global.AGNI_SVG;
@@ -528,7 +515,8 @@
   SVG.cartesianGrid = function (stage, opts) {
     opts = opts || {};
     var W = stage.w, H = stage.h;
-    var pad = Object.assign({ l: 48, r: 20, t: 30, b: 40 }, opts.padding || {});
+    var pad = { l: 48, r: 20, t: 30, b: 40 };
+    assign(pad, opts.padding || {});
     var CW = W - pad.l - pad.r;
     var CH = H - pad.t - pad.b;
 

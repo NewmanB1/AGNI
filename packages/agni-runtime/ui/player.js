@@ -216,6 +216,34 @@
     app.innerHTML = '';
     S = global.AGNI_SHARED;
 
+    var sensorsAvailable = S.device && S.device.hasMotionEvents && S.sensorBridge && S.sensorBridge.isActive && S.sensorBridge.isActive();
+    var sensorOptional = step.sensor_optional === true || (lesson.meta && lesson.meta.sensor_optional === true);
+
+    if (!sensorsAvailable && sensorOptional) {
+      var fallbackContainer = document.createElement('div');
+      fallbackContainer.className = 'step step-hardware-trigger step-sensor-fallback';
+      if (step.htmlContent) {
+        var fd = document.createElement('div');
+        fd.className = 'step-content';
+        S.setSafeHtml(fd, step.htmlContent);
+        fallbackContainer.appendChild(fd);
+      }
+      var fallbackMsg = document.createElement('p');
+      fallbackMsg.className = 'hw-fallback-msg';
+      fallbackMsg.textContent = t('sensor_unavailable') || 'Sensors unavailable on this device.';
+      fallbackContainer.appendChild(fallbackMsg);
+      var fallbackBtn = document.createElement('button');
+      fallbackBtn.className = 'btn btn-primary';
+      fallbackBtn.textContent = t('tap_to_continue') || 'Tap to continue';
+      fallbackBtn.onclick = function () {
+        recordStepOutcome(step, true, 1, false);
+        nextStep();
+      };
+      fallbackContainer.appendChild(fallbackBtn);
+      app.appendChild(fallbackContainer);
+      return;
+    }
+
     var container = document.createElement('div');
     container.className = 'step step-hardware-trigger';
 

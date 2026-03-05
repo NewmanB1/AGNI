@@ -70,13 +70,16 @@
   //   { type: 'freefall', op, duration }                — accel.total below 1.0 for duration
   //   { type: 'and',      left, right }                 — both conditions
 
+  var ORIENTATION_VALUES = ['flat', 'portrait', 'landscape'];
+
   function parseValue(tok) {
     if (!tok) throw new Error('[THRESHOLD] Expected value, got end of input');
     if (/g$/i.test(tok)) {
       return parseFloat(tok) * G;   // convert g → m/s²
     }
+    if (ORIENTATION_VALUES.indexOf(tok) !== -1) return tok;
     var n = parseFloat(tok);
-    if (isNaN(n)) throw new Error('[THRESHOLD] Expected number, got: ' + tok);
+    if (isNaN(n)) throw new Error('[THRESHOLD] Expected number or orientation (flat|portrait|landscape), got: ' + tok);
     return n;
   }
 
@@ -168,7 +171,7 @@
 
   function buildEvaluator(node) {
     if (node.type === 'sensor') {
-      // Simple comparison — stateless
+      // Simple comparison — stateless (handles numeric and string e.g. orientation)
       var sensorId = node.sensorId;
       var op       = node.op;
       var val      = node.value;
@@ -294,9 +297,12 @@
   function watch(thresholdStr, primarySensor, onMet) {
     var evaluate = compile(thresholdStr);
     var fired    = false;
+    var tick     = 0;
+    var isLowEnd = S.device && S.device.isLowEnd;
 
     var unsub = S.subscribeToSensor(primarySensor, function (reading) {
       if (fired) return;
+      if (isLowEnd && (++tick % 2) !== 0) return;
       if (evaluate(S.lastSensorValues)) {
         fired = true;
         unsub();
@@ -329,9 +335,11 @@
 
   function describeNode(node) {
     if (node.type === 'sensor') {
+      var v = node.value;
+      var disp = typeof v === 'string' ? v : v.toFixed(2);
       var unit = ['accel.total','accel.magnitude','accel.x','accel.y','accel.z'].indexOf(node.sensorId) !== -1
         ? ' m/s²' : '';
-      return node.sensorId + ' ' + node.op + ' ' + node.value.toFixed(2) + unit;
+      return node.sensorId + ' ' + node.op + ' ' + disp + unit;
     }
     if (node.type === 'steady') {
       return 'held for ' + node.duration + 's';

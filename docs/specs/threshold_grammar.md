@@ -38,6 +38,19 @@ Computed states for easier authoring.
 | `shake` | Rapid oscillation | High-pass filter on `accel.total` > `2.5g` |
 | `orientation` | Screen position | Enum: `flat`, `portrait`, `landscape` |
 
+### 3.3 Sensor Availability
+
+| Subject | Native (DeviceMotion / Web APIs) | Phyphox Bridge |
+| :--- | :--- | :--- |
+| `accel.*`, `accel.total`, `gyro.*`, `rotation.*` | ✅ iOS 9+, Android 4+ | ✅ |
+| `orientation` | ✅ Derived from DeviceOrientation | — |
+| `freefall`, `steady`, `shake` | ✅ Derived from accel | — |
+| `light` | ⚠️ AmbientLightSensor (limited support, requires secure context) | ✅ |
+| `mic` / `sound.level` | ⚠️ Web Audio + getUserMedia (permission, heavier on old devices) | ✅ |
+| `pressure`, `temperature`, `mag.*` | — | ✅ |
+
+**For 10-year-old phones (Chrome 44, Android 6):** `light` and `mic`/`sound.level` are best supplied via the Phyphox postMessage bridge. Native AmbientLightSensor and Web Audio have poor or no support on older WebViews.
+
 ---
 
 ## 4. Logic & Time Semantics

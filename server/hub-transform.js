@@ -111,6 +111,7 @@ const ALLOWED_FACTORY_FILES = new Set([
   'completion.js',
   'sensor-bridge.js',
   'svg-stage.js',
+  'svg-helpers.js',
   'svg-factories.js',
   'svg-factories-dynamic.js',
   'svg-factories-geometry.js',

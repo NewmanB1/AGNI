@@ -75,6 +75,19 @@ describe('parse', () => {
     assert.equal(ast.right.type, 'steady');
   });
 
+  it('parses orientation == flat', () => {
+    const ast = parse(tokenise('orientation == flat'));
+    assert.equal(ast.type, 'sensor');
+    assert.equal(ast.sensorId, 'orientation');
+    assert.equal(ast.op, '==');
+    assert.equal(ast.value, 'flat');
+  });
+
+  it('parses orientation == portrait', () => {
+    const ast = parse(tokenise('orientation == portrait'));
+    assert.equal(ast.value, 'portrait');
+  });
+
   it('chains multiple AND conditions', () => {
     const ast = parse(tokenise('a > 1 AND b > 2 AND c > 3'));
     assert.equal(ast.type, 'and');
@@ -134,5 +147,21 @@ describe('validateThresholdSyntax', () => {
 
   it('rejects missing operator', () => {
     assert.ok(!validateThresholdSyntax('accel.total 2.5g').valid);
+  });
+
+  it('validates orientation == flat', () => {
+    assert.ok(validateThresholdSyntax('orientation == flat').valid);
+  });
+
+  it('validates orientation == portrait', () => {
+    assert.ok(validateThresholdSyntax('orientation == portrait').valid);
+  });
+
+  it('validates orientation == landscape', () => {
+    assert.ok(validateThresholdSyntax('orientation == landscape').valid);
+  });
+
+  it('validates orientation != flat', () => {
+    assert.ok(validateThresholdSyntax('orientation != flat').valid);
   });
 });

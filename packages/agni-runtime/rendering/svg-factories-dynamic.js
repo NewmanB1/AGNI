@@ -6,35 +6,18 @@
 //   - arrowMap   : animated arrows overlaid on a PNG background
 //   - compose()  : combine multiple factories into one stage
 //
-// Requires: svg-stage.js, svg-factories.js
+// Requires: svg-stage.js, svg-helpers.js, svg-factories.js
 // ─────────────────────────────────────────────────────────────────────────────
 
 (function (global) {
   'use strict';
 
-  var NS = 'http://www.w3.org/2000/svg';
-
-  // ── SVG helpers (duplicated minimally to keep files independent) ────────────
-  function el(tag, attrs) {
-    var e = document.createElementNS(NS, tag);
-    Object.keys(attrs || {}).forEach(function (k) { e.setAttribute(k, attrs[k]); });
-    return e;
-  }
-  function txt(content, attrs) {
-    var e = el('text', Object.assign({
-      'text-anchor': 'middle', 'dominant-baseline': 'central',
-      'font-family': 'sans-serif', 'font-size': '13', 'fill': '#ffffff'
-    }, attrs));
-    e.textContent = content;
-    return e;
-  }
-  function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
-  function polar(cx, cy, r, deg) {
-    var rad = (deg - 90) * Math.PI / 180;
-    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-  }
-
-  var PALETTE = ['#0B5FFF','#D84315','#1B5E20','#996600','#7B1FA2','#B00020','#00695C','#AD1457'];
+  var H = global.AGNI_SVG_HELPERS || {};
+  var el = H.el;
+  var txt = H.txt;
+  var clamp = H.clamp;
+  var polar = H.polar;
+  var PALETTE = H.PALETTE || ['#0B5FFF','#D84315','#1B5E20','#996600','#7B1FA2','#B00020','#00695C','#AD1457'];
 
   // ── Ensure AGNI_SVG exists ──────────────────────────────────────────────────
   if (!global.AGNI_SVG) global.AGNI_SVG = {};
@@ -349,6 +332,12 @@
       return MT + CH - clamp((value - yMin) / (yMax - yMin), 0, 1) * CH;
     }
 
+    // ── Time base: elapsed seconds since timeGraph init (consistent for sensor + tick) ──
+    var _startTime = Date.now();
+    function elapsedSeconds() {
+      return (Date.now() - _startTime) / 1000;
+    }
+
     // ── Redraw polylines ──────────────────────────────────────────────────────
     var lastT = 0;
     function redraw(tNow) {
@@ -370,16 +359,19 @@
     streamState.forEach(function (ss, i) {
       if (!ss.opts.sensor) return;
       stage.bindSensor(ss.opts.sensor, function (reading) {
-        ss.data.push({ t: lastT, value: reading.value });
+        var t = (reading && typeof reading.timestamp === 'number')
+          ? (reading.timestamp - _startTime) / 1000
+          : elapsedSeconds();
+        ss.data.push({ t: t, value: reading.value });
         if (ss.data.length > maxPoints) ss.data.shift();
-        if (opts.onReading) opts.onReading(i, reading.value, lastT);
+        if (opts.onReading) opts.onReading(i, reading.value, t);
       });
     });
 
     // ── Tick: advance time, redraw ─────────────────────────────────────────────
-    stage.onTick(function (t) {
-      lastT = t;
-      redraw(t);
+    stage.onTick(function () {
+      lastT = elapsedSeconds();
+      redraw(lastT);
     });
 
     // ── Manual push (for table-driven or clock-driven modes) ──────────────────
@@ -387,7 +379,7 @@
       push: function (streamIndex, value, t) {
         var ss = streamState[streamIndex];
         if (!ss) return;
-        var tVal = t !== undefined ? t : lastT;
+        var tVal = t !== undefined ? t : elapsedSeconds();
         ss.data.push({ t: tVal, value: value });
         if (ss.data.length > maxPoints) ss.data.shift();
       }
@@ -675,7 +667,10 @@
   // colour zones (green/yellow/red), and optional label.
   SVG.gauge = function (stage, opts) {
     opts = opts || {};
-    var W = opts.w || 260, H = opts.h || 200;
+    var W = opts.w != null ? opts.w : stage.w;
+    var H = opts.h != null ? opts.h : stage.h;
+    if (typeof W !== 'number') W = 260;
+    if (typeof H !== 'number') H = 200;
     var CX = W / 2, CY = H * 0.65;
     var R = Math.min(W, H) * 0.38;
     var minVal = opts.min != null ? opts.min : 0;

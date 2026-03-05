@@ -19,7 +19,7 @@ Use this when changing the browser-side lesson player, sensors, or SVG/visual sy
 | Goal | Files to touch |
 |------|-----------------|
 | Add a new visual factory (e.g. new SVG type) | 1) Add implementation (e.g. `src/runtime/svg-factories-*.js` or register in existing factory file). 2) `src/utils/featureInference.js`: add to `FACTORY_FILE_MAP` and, if needed, `FACTORY_LOAD_ORDER` / `_buildFactoryManifest`. 3) `server/hub-transform.js`: add new filename to `ALLOWED_FACTORY_FILES` if served from hub. |
-| Change sensor behaviour or add a sensor | `src/runtime/sensor-bridge.js` — publishes into `AGNI_SHARED`. Ensure any new runtime module that needs sensors subscribes via `AGNI_SHARED` and loads after `sensor-bridge.js`. |
+| Change sensor behaviour or add a sensor | `src/runtime/sensor-bridge.js` — publishes into `AGNI_SHARED`. Ensure any new runtime module that needs sensors subscribes via `AGNI_SHARED` and loads after `sensor-bridge.js`. See **`sensor-toolkit-improvement-plan.md`** for planned enhancements and verification requirements. |
 | Change step navigation or gates | `src/runtime/player.js` for navigation; `src/runtime/gate-renderer.js` (`AGNI_GATES`) for gate UI, retry timers, and pass/fail feedback. |
 | Change integrity verification | `src/runtime/integrity.js` (`AGNI_INTEGRITY`) and `src/utils/crypto.js` (signContent). Binding hash contract must stay identical on both sides. |
 | Change checkpoint / resume behaviour | `src/runtime/checkpoint.js` (`AGNI_CHECKPOINT`) — persist and restore step index, gate state, scroll position. |

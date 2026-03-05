@@ -89,6 +89,7 @@ function makeDocument() {
     body,
     readyState: 'complete',
     createElement(tag) { return makeElement(tag); },
+    createElementNS(ns, tag) { return makeElement(tag); },
     createTextNode(text) { return { textContent: text, nodeType: 3, parentNode: null }; },
     getElementById(id) { return _elementRegistry.get(id) || null; },
     addEventListener() {},

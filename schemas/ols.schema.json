@@ -436,6 +436,10 @@
         "threshold": {
           "type": "string"
         },
+        "sensor_optional": {
+          "type": "boolean",
+          "description": "If true, when sensors are unavailable (e.g. desktop, permission denied), show a tap-to-continue fallback instead of waiting indefinitely."
+        },
         "feedback": {
           "oneOf": [
             {

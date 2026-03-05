@@ -37,6 +37,25 @@ const MINIMAL_LESSON_YAML = [
   '    content: "Hello from the smoke test"'
 ].join('\n');
 
+var SENSOR_LESSON_YAML = [
+  'version: "1.7.0"',
+  'meta:',
+  '  identifier: sensor-smoke-test',
+  '  title: Sensor Wiring Smoke Test',
+  '  language: en',
+  '  license: CC-BY-SA-4.0',
+  '  created: "2026-01-01T00:00:00Z"',
+  'steps:',
+  '  - id: s1',
+  '    type: hardware_trigger',
+  '    sensor: accelerometer',
+  '    threshold: "accel.total > 2.5g"',
+  '    content: "Shake the phone"',
+  '  - id: s2',
+  '    type: completion',
+  '    content: "Done"'
+].join('\n');
+
 function httpGet(port, urlPath) {
   return new Promise(function (resolve, reject) {
     var req = http.request({
@@ -87,10 +106,11 @@ describe('Wiring smoke tests', function () {
       if (fs.existsSync(src)) fs.copyFileSync(src, path.join(dataDir, f));
     });
 
-    // Write a minimal YAML lesson so /lessons/smoke-test compiles
+    // Write minimal YAML lessons so /lessons/smoke-test and /lessons/sensor-smoke-test compile
     var yamlDir = path.join(dataDir, 'yaml');
     fs.mkdirSync(yamlDir, { recursive: true });
     fs.writeFileSync(path.join(yamlDir, 'smoke-test.yaml'), MINIMAL_LESSON_YAML);
+    fs.writeFileSync(path.join(yamlDir, 'sensor-smoke-test.yaml'), SENSOR_LESSON_YAML);
 
     var theta = require('../../hub-tools/theta');
     server = theta.startApi(0);
@@ -256,6 +276,20 @@ describe('Wiring smoke tests', function () {
     assert.equal(polyIdx, 0, 'polyfills.js must be first (index 0), got index ' + polyIdx);
     assert.ok(binaryIdx < sharedIdx,
       'binary-utils.js (idx ' + binaryIdx + ') must come before shared-runtime.js (idx ' + sharedIdx + ')');
+  });
+
+  it('GET /lessons/sensor-smoke-test includes sensor-bridge.js when has_sensors', async function () {
+    var res = await httpGet(port, '/lesson-data.js?slug=sensor-smoke-test');
+    assert.equal(res.status, 200, 'sensor-smoke-test lesson compilation failed');
+    var match = res.body.match(/var LESSON_DATA = (.+);$/m);
+    assert.ok(match, 'Could not extract LESSON_DATA from response');
+    var data = JSON.parse(match[1]);
+    assert.ok(data.inferredFeatures && data.inferredFeatures.flags && data.inferredFeatures.flags.has_sensors,
+      'sensor-smoke-test should have has_sensors flag');
+    var deps = data.requires.factories || [];
+    var files = deps.map(function (d) { return d.file; });
+    assert.ok(files.indexOf('sensor-bridge.js') !== -1,
+      'sensor-bridge.js must be in factory deps when has_sensors — got: ' + files.join(', '));
   });
 
   it('factory deps versions are consistent and match package.json', async function () {

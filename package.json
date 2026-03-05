@@ -94,6 +94,8 @@
     "verify:factory-order": "node scripts/check-factory-order.js",
     "verify:schema-sync": "node scripts/sync-schema-enums.js --check",
     "verify:canonical": "node scripts/verify-canonical-ownership.js",
-    "verify:all": "node scripts/check-dead-files.js && node scripts/check-dts-arity.js && node scripts/check-innerhtml.js && node scripts/check-factory-order.js && node scripts/sync-schema-enums.js --check && node scripts/verify-canonical-ownership.js"
+    "verify:svg-tools": "node scripts/check-svg-tools.js",
+    "verify:sensors": "node scripts/check-known-sensors.js",
+    "verify:all": "node scripts/check-dead-files.js && node scripts/check-dts-arity.js && node scripts/check-innerhtml.js && node scripts/check-factory-order.js && node scripts/check-svg-tools.js && node scripts/check-known-sensors.js && node scripts/sync-schema-enums.js --check && node scripts/verify-canonical-ownership.js"
   }
 }

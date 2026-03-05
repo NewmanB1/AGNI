@@ -39,6 +39,7 @@ var PRECACHE_FACTORIES = [
   '/factories/shared-runtime.js',
   '/factories/sensor-bridge.js',
   '/factories/svg-stage.js',
+  '/factories/svg-helpers.js',
   '/factories/svg-factories.js',
   '/factories/svg-registry.js'
 ];

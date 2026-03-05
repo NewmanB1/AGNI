@@ -42,14 +42,23 @@
       }
       document.getElementById('app').appendChild(div);
 
-      if (step.type === 'svg' && window.svgGenerators && window.svgGenerators[step.svg_type]) {
+      if (step.type === 'svg') {
         var svgContainer = document.createElement('div');
-        if (typeof window.AGNI_SHARED !== 'undefined' && window.AGNI_SHARED.setSafeHtml) {
-          window.AGNI_SHARED.setSafeHtml(svgContainer, window.svgGenerators[step.svg_type](step.params || {}));
-        } else {
-          svgContainer.innerHTML = window.svgGenerators[step.svg_type](step.params || {});
+        if (step.svg_spec && step.svg_spec.factory && window.AGNI_SVG && typeof window.AGNI_SVG.fromSpec === 'function') {
+          try {
+            window.AGNI_SVG.fromSpec(step.svg_spec, svgContainer);
+          } catch (e) {
+            svgContainer.textContent = 'SVG preview unavailable';
+          }
+          document.getElementById('app').appendChild(svgContainer);
+        } else if (window.svgGenerators && step.svg_type && window.svgGenerators[step.svg_type]) {
+          if (typeof window.AGNI_SHARED !== 'undefined' && window.AGNI_SHARED.setSafeHtml) {
+            window.AGNI_SHARED.setSafeHtml(svgContainer, window.svgGenerators[step.svg_type](step.params || {}));
+          } else {
+            svgContainer.innerHTML = window.svgGenerators[step.svg_type](step.params || {});
+          }
+          document.getElementById('app').appendChild(svgContainer);
         }
-        document.getElementById('app').appendChild(svgContainer);
       }
     }
   }

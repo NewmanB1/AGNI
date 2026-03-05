@@ -19,6 +19,7 @@ const FACTORY_PATH_MAP = {
   'gate-renderer.js':           'rendering/gate-renderer.js',
   'math-renderer.js':           'rendering/math-renderer.js',
   'svg-stage.js':               'rendering/svg-stage.js',
+  'svg-helpers.js':             'rendering/svg-helpers.js',
   'svg-factories.js':           'rendering/svg-factories.js',
   'svg-factories-dynamic.js':   'rendering/svg-factories-dynamic.js',
   'svg-factories-geometry.js':  'rendering/svg-factories-geometry.js',
@@ -49,6 +50,7 @@ const FACTORY_LOAD_ORDER = [
   'completion.js',
   'sensor-bridge.js',
   'svg-stage.js',
+  'svg-helpers.js',
   'svg-factories.js',
   'svg-factories-dynamic.js',
   'svg-factories-geometry.js',
@@ -71,6 +73,7 @@ const FACTORY_FILE_MAP = {
   'clockFaceDynamic':  'svg-factories-dynamic.js',
   'timeGraph':         'svg-factories-dynamic.js',
   'arrowMap':          'svg-factories-dynamic.js',
+  'gauge':             'svg-factories-dynamic.js',
   'compose':           'svg-factories-dynamic.js',
   'polygonDynamic':  'svg-factories-geometry.js',
   'cartesianGrid':   'svg-factories-geometry.js',
@@ -93,6 +96,7 @@ function getOrderedFactoryFiles(capabilities) {
   ];
   if (capabilities.includeSensorBridge) files.push('sensor-bridge.js');
   files.push('svg-stage.js');
+  files.push('svg-helpers.js');
   files.push('svg-factories.js');
   if (capabilities.hasDynamic)  files.push('svg-factories-dynamic.js');
   if (capabilities.hasGeometry) files.push('svg-factories-geometry.js');

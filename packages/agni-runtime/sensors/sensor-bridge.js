@@ -24,6 +24,7 @@
 //   rotation.alpha / .beta / .gamma    — device orientation angles (°)
 //   gyro.x / gyro.y / gyro.z           — rotation rate (°/s)
 //   gyro.magnitude                     — √(rx²+ry²+rz²) rotation rate
+//   orientation                        — virtual: 'flat'|'portrait'|'landscape' (from rotation angles)
 //
 // All readings: { sensorId, value, timestamp }
 //
@@ -49,6 +50,16 @@
 
   // Old Android: axes are reported with opposite signs and lower precision
   var IS_OLD_ANDROID = S.device.isOldAndroid;
+
+  // Optional low-pass smoothing for accel.total (STK-2.1). Disabled on low-end to save CPU.
+  var _accelSmoothing = true;
+  var _accelTotalPrev = null;
+  var ALPHA = 0.8;  // smoothing factor: smoothed = alpha*prev + (1-alpha)*raw
+
+  // Shake virtual sensor (STK-2.2): ring buffer, emit 1 when max-min > threshold
+  var _accelRing = [];
+  var RING_SIZE = 5;
+  var SHAKE_THRESHOLD = 2.5 * 9.81;  // m/s² (~2.5g)
 
   // Detect passive event listener support (Chrome 49+; false on Chrome 44)
   var _supportsPassive = false;
@@ -108,8 +119,16 @@
   // 2. DeviceMotion — primary accelerometer + gyroscope source
   // ═══════════════════════════════════════════════════════════════════════════
 
+  function _smooth(v, prev) {
+    if (prev === null) return v;
+    return ALPHA * prev + (1 - ALPHA) * v;
+  }
+
   function _onMotion(e) {
     var now = Date.now();
+    var lessonData = global.LESSON_DATA;
+    var smoothOpt = lessonData && lessonData.sensorSmoothing;
+    var useSmooth = (smoothOpt !== false) && _accelSmoothing && !S.device.isLowEnd;
 
     // Linear acceleration (gravity subtracted by hardware)
     var lin = e.acceleration;
@@ -124,17 +143,35 @@
       _pub('accel.magnitude', lmag, now);
     }
 
-    // Acceleration including gravity (raw)
+    // Acceleration including gravity (raw) — smooth accel.total only (primary for thresholds)
     var grav = e.accelerationIncludingGravity;
     if (grav) {
       var gx = (grav.x || 0) * (IS_OLD_ANDROID ? -1 : 1);
       var gy = (grav.y || 0) * (IS_OLD_ANDROID ? -1 : 1);
       var gz = grav.z || 0;
       var gmag = Math.sqrt(gx*gx + gy*gy + gz*gz);
+      if (useSmooth) {
+        gmag = _smooth(gmag, _accelTotalPrev);
+        _accelTotalPrev = gmag;
+      } else {
+        _accelTotalPrev = null;
+      }
       _pub('accel.total.x', gx,   now);
       _pub('accel.total.y', gy,   now);
       _pub('accel.total.z', gz,   now);
       _pub('accel.total',   gmag, now);
+      _accelRing.push(gmag);
+      if (_accelRing.length > RING_SIZE) _accelRing.shift();
+      var shakeVal = 0;
+      if (_accelRing.length >= RING_SIZE) {
+        var mn = _accelRing[0], mx = mn;
+        for (var i = 1; i < _accelRing.length; i++) {
+          if (_accelRing[i] < mn) mn = _accelRing[i];
+          if (_accelRing[i] > mx) mx = _accelRing[i];
+        }
+        if (mx - mn >= SHAKE_THRESHOLD) shakeVal = 1;
+      }
+      _pub('shake', shakeVal, now);
     }
 
     // Rotation rate (gyroscope)
@@ -160,9 +197,16 @@
 
   function _onOrientation(e) {
     var now = Date.now();
-    _pub('rotation.alpha', e.alpha || 0, now);
-    _pub('rotation.beta',  e.beta  || 0, now);
-    _pub('rotation.gamma', e.gamma || 0, now);
+    var alpha = e.alpha || 0;
+    var beta  = e.beta  || 0;
+    var gamma = e.gamma || 0;
+    _pub('rotation.alpha', alpha, now);
+    _pub('rotation.beta',  beta,  now);
+    _pub('rotation.gamma', gamma, now);
+    var ab = Math.abs(beta);
+    var ag = Math.abs(gamma);
+    var orient = (ab <= 25 && ag <= 25) ? 'flat' : (ag >= 60 ? 'landscape' : 'portrait');
+    _pub('orientation', orient, now);
   }
 
   function _pub(sensorId, value, timestamp) {
@@ -295,9 +339,11 @@
       _pub('mag.z', d.z || 0, now);
       _pub('mag.magnitude', Math.sqrt((d.x||0)*(d.x||0) + (d.y||0)*(d.y||0) + (d.z||0)*(d.z||0)), now);
     },
-    'light':       function (d) { _pub('light',       d.value || d.lux  || 0, d.t ? d.t*1000 : Date.now()); },
-    'pressure':    function (d) { _pub('pressure',    d.value || d.p    || 0, d.t ? d.t*1000 : Date.now()); },
-    'temperature': function (d) { _pub('temperature', d.value || d.temp || 0, d.t ? d.t*1000 : Date.now()); }
+    'light':         function (d) { _pub('light',         d.value || d.lux  || 0, d.t ? d.t*1000 : Date.now()); },
+    'pressure':      function (d) { _pub('pressure',      d.value || d.p    || 0, d.t ? d.t*1000 : Date.now()); },
+    'temperature':   function (d) { _pub('temperature',   d.value || d.temp || 0, d.t ? d.t*1000 : Date.now()); },
+    'sound':         function (d) { _pub('sound.level',   d.value || d.db   || 0, d.t ? d.t*1000 : Date.now()); },
+    'sound.level':   function (d) { _pub('sound.level',   d.value || d.db   || 0, d.t ? d.t*1000 : Date.now()); }
   };
 
   // Origin allowlist for postMessage security [R10 P1.3]
@@ -392,7 +438,8 @@
           { sensorId: 'accel.y',         value: (Math.random()-0.5)*3 },
           { sensorId: 'accel.z',         value: (Math.random()-0.5)*3 },
           { sensorId: 'accel.magnitude', value: Math.abs(shake) + 1 },
-          { sensorId: 'accel.total',     value: Math.sqrt(shake*shake + 9.8*9.8) }
+          { sensorId: 'accel.total',     value: Math.sqrt(shake*shake + 9.8*9.8) },
+          { sensorId: 'shake',           value: 1 }
         ];
       } else if (pattern === 'freefall') {
         // Oscillate between freefall (near 0) and held (near 9.8)
@@ -403,9 +450,15 @@
           { sensorId: 'accel.total.z', value: val }
         ];
       } else if (pattern === 'tilt') {
+        var gamma = 30 * Math.sin(t * 0.8);
+        var beta  = 15 * Math.cos(t * 0.5);
+        var ab = Math.abs(beta);
+        var ag = Math.abs(gamma);
+        var orient = (ab <= 25 && ag <= 25) ? 'flat' : (ag >= 60 ? 'landscape' : 'portrait');
         readings = [
-          { sensorId: 'rotation.gamma', value: 30 * Math.sin(t * 0.8) },
-          { sensorId: 'rotation.beta',  value: 15 * Math.cos(t * 0.5) }
+          { sensorId: 'rotation.gamma', value: gamma },
+          { sensorId: 'rotation.beta',  value: beta },
+          { sensorId: 'orientation',    value: orient }
         ];
       } else {
         // still — phone sitting flat on a surface, accel.z ≈ 9.8
@@ -465,8 +518,8 @@
     registerAdapter: registerAdapter
   };
 
-  S.registerModule('sensor-bridge', '1.7.1');
+  S.registerModule('sensor-bridge', '1.8.0');
 
-  if (DEV_MODE) log.debug('sensor-bridge v1.7.1 loaded');
+  if (DEV_MODE) log.debug('sensor-bridge v1.8.0 loaded');
 
 }(window));

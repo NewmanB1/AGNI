@@ -15,80 +15,20 @@
 (function (global) {
   'use strict';
 
-  // ── Shared helpers ──────────────────────────────────────────────────────────
+  var H = global.AGNI_SVG_HELPERS || {};
+  var el = H.el;
+  var txt = H.txt;
+  var g = H.g;
+  var rootSvg = H.rootSvg;
+  var clamp = H.clamp;
+  var polar = H.polar;
+  var arcPath = H.arcPath;
+  var PALETTE = H.PALETTE || ['#0B5FFF','#D84315','#1B5E20','#996600','#7B1FA2','#B00020','#00695C','#AD1457'];
 
-  var NS = 'http://www.w3.org/2000/svg';
-
-  /** Create an SVG element with attributes */
-  function el(tag, attrs) {
-    var e = document.createElementNS(NS, tag);
-    Object.keys(attrs || {}).forEach(function (k) {
-      e.setAttribute(k, attrs[k]);
-    });
-    return e;
+  function _rootSvg(container, w, h, opts) {
+    var aria = (opts && (opts.title || opts.description)) ? { ariaLabel: opts.title || opts.description } : {};
+    return rootSvg(container, w, h, aria);
   }
-
-  /** Create a text node with common defaults */
-  function txt(content, attrs) {
-    var e = el('text', Object.assign({
-      'text-anchor': 'middle',
-      'dominant-baseline': 'central',
-      'font-family': 'sans-serif',
-      'font-size': '13',
-      'fill': '#ffffff'
-    }, attrs));
-    e.textContent = content;
-    return e;
-  }
-
-  /** Wrap a group of SVG elements */
-  function g(attrs, children) {
-    var group = el('g', attrs);
-    (children || []).forEach(function (c) { if (c) group.appendChild(c); });
-    return group;
-  }
-
-  /** Build root SVG element sized to container */
-  function rootSvg(container, w, h) {
-    container.innerHTML = '';
-    var svg = el('svg', {
-      xmlns: NS,
-      viewBox: '0 0 ' + w + ' ' + h,
-      width: '100%',
-      height: 'auto',
-      style: 'display:block;'
-    });
-    container.appendChild(svg);
-    return svg;
-  }
-
-  /** Clamp a value between min and max */
-  function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
-
-  /** Convert polar (r, angleDeg) to cartesian around cx,cy */
-  function polar(cx, cy, r, angleDeg) {
-    var rad = (angleDeg - 90) * Math.PI / 180;
-    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-  }
-
-  /** SVG arc path for a pie/clock slice */
-  function arcPath(cx, cy, r, startDeg, endDeg) {
-    var s = polar(cx, cy, r, startDeg);
-    var e = polar(cx, cy, r, endDeg);
-    var large = (endDeg - startDeg > 180) ? 1 : 0;
-    return [
-      'M', cx, cy,
-      'L', s.x.toFixed(2), s.y.toFixed(2),
-      'A', r, r, 0, large, 1, e.x.toFixed(2), e.y.toFixed(2),
-      'Z'
-    ].join(' ');
-  }
-
-  // Default colour palette (accessible, works on dark backgrounds)
-  var PALETTE = [
-    '#0B5FFF', '#D84315', '#1B5E20', '#996600',
-    '#7B1FA2', '#B00020', '#00695C', '#AD1457'
-  ];
 
   // ── 1. Venn Diagram ─────────────────────────────────────────────────────────
   /**
@@ -103,7 +43,7 @@
     opts = opts || {};
     var W = opts.w || 400, H = opts.h || 260;
     var sets = opts.sets || [];
-    var svg = rootSvg(container, W, H);
+    var svg = _rootSvg(container, W, H, opts);
 
     if (sets.length < 2) {
       svg.appendChild(txt('Need at least 2 sets', { x: W/2, y: H/2, fill: '#ff8787' }));
@@ -192,7 +132,7 @@
     var min = opts.min !== undefined ? opts.min : 0;
     var max = opts.max !== undefined ? opts.max : 10;
     var step = opts.step || 1;
-    var svg = rootSvg(container, W, H);
+    var svg = _rootSvg(container, W, H, opts);
 
     function toX(v) { return ML + ((v - min) / (max - min)) * CW; }
     function toY(v) { return MT + CH - clamp(v, 0, 1) * CH; }
@@ -209,19 +149,37 @@
     svg.appendChild(el('line', { x1:ML, y1:MT, x2:ML, y2:MT+CH, stroke:'#aaaacc', 'stroke-width':'2' }));
     svg.appendChild(el('line', { x1:ML, y1:MT+CH, x2:ML+CW, y2:MT+CH, stroke:'#aaaacc', 'stroke-width':'2' }));
 
-    // Optional function plot
+    // Optional function plot — fn can be a function or a string e.g. "Math.sin(x)"
+    var plotFn = null;
     if (typeof opts.fn === 'function') {
+      plotFn = opts.fn;
+    } else if (typeof opts.fn === 'string' && opts.fn.trim()) {
+      try {
+        var fnStr = opts.fn.trim();
+        var block = /eval|Function|constructor|prototype|__proto__|window|document|require|import|this\s*\./i;
+        if (!block.test(fnStr)) {
+          plotFn = new Function('x', 'return ' + fnStr);
+        }
+      } catch (e) {
+        plotFn = null;
+      }
+    }
+    if (plotFn) {
       var steps = 200;
       var points = [];
       for (var i = 0; i <= steps; i++) {
         var xv = min + (i / steps) * (max - min);
-        var yv = opts.fn(xv);
+        var yv;
+        try { yv = plotFn(xv); } catch (e) { continue; }
+        if (typeof yv !== 'number' || !isFinite(yv)) continue;
         points.push(toX(xv).toFixed(1) + ',' + toY(yv).toFixed(1));
       }
-      svg.appendChild(el('polyline', {
-        points: points.join(' '),
-        fill: 'none', stroke: PALETTE[0], 'stroke-width': '2.5', 'stroke-linejoin': 'round'
-      }));
+      if (points.length > 1) {
+        svg.appendChild(el('polyline', {
+          points: points.join(' '),
+          fill: 'none', stroke: PALETTE[0], 'stroke-width': '2.5', 'stroke-linejoin': 'round'
+        }));
+      }
     }
 
     // Marked values
@@ -264,7 +222,7 @@
     var min = opts.min !== undefined ? opts.min : 0;
     var max = opts.max !== undefined ? opts.max : 10;
     var step = opts.step || 1;
-    var svg = rootSvg(container, W, H);
+    var svg = _rootSvg(container, W, H, opts);
 
     function toX(v) { return ML + ((v - min) / (max - min)) * CW; }
 
@@ -313,7 +271,7 @@
   function balanceScale(container, opts) {
     opts = opts || {};
     var W = opts.w || 360, H = opts.h || 260;
-    var svg = rootSvg(container, W, H);
+    var svg = _rootSvg(container, W, H, opts);
     var left  = opts.left  || { label: 'Left',  value: 1 };
     var right = opts.right || { label: 'Right', value: 1 };
     var lv = parseFloat(left.value)  || 0;
@@ -401,48 +359,80 @@
     var ML = 50, MR = 20, MT = 36, MB = 50;
     var CW = W - ML - MR, CH = H - MT - MB;
     var data = opts.data || [];
-    var yMax = opts.yMax || Math.max.apply(null, data.map(function(d){ return d.value; })) * 1.15 || 10;
-    var svg = rootSvg(container, W, H);
+    var valMax = opts.yMax || Math.max.apply(null, data.map(function(d){ return d.value; })) * 1.15 || 10;
+    var svg = _rootSvg(container, W, H, opts);
     var horiz = !!opts.horizontal;
 
-    // Axes
-    svg.appendChild(el('line', { x1:ML, y1:MT, x2:ML, y2:MT+CH, stroke:'#aaaacc', 'stroke-width':'2' }));
-    svg.appendChild(el('line', { x1:ML, y1:MT+CH, x2:ML+CW, y2:MT+CH, stroke:'#aaaacc', 'stroke-width':'2' }));
+    if (horiz) {
+      // Horizontal bars: categories on Y, values on X
+      var barH = Math.min(24, (CH / data.length) * 0.65);
+      var gap = CH / data.length;
 
-    // Y grid lines (4 steps)
-    for (var gi = 0; gi <= 4; gi++) {
-      var gv = (yMax / 4) * gi;
-      var gy = MT + CH - (gv / yMax) * CH;
-      svg.appendChild(el('line', { x1:ML, y1:gy, x2:ML+CW, y2:gy, stroke:'#C0BDB3', 'stroke-width':'1' }));
-      svg.appendChild(txt(Math.round(gv), { x:ML-8, y:gy, 'font-size':'11', fill:'#8888aa', 'text-anchor':'end' }));
-    }
+      svg.appendChild(el('line', { x1:ML, y1:MT, x2:ML, y2:MT+CH, stroke:'#aaaacc', 'stroke-width':'2' }));
+      svg.appendChild(el('line', { x1:ML, y1:MT+CH, x2:ML+CW, y2:MT+CH, stroke:'#aaaacc', 'stroke-width':'2' }));
 
-    // Bars
-    var barW = Math.min(50, (CW / data.length) * 0.65);
-    var gap   = CW / data.length;
+      for (var gi = 0; gi <= 4; gi++) {
+        var gv = (valMax / 4) * gi;
+        var gx = ML + (gv / valMax) * CW;
+        svg.appendChild(el('line', { x1:gx, y1:MT, x2:gx, y2:MT+CH, stroke:'#C0BDB3', 'stroke-width':'1' }));
+        svg.appendChild(txt(Math.round(gv), { x:gx, y:MT+CH+14, 'font-size':'11', fill:'#8888aa' }));
+      }
 
-    data.forEach(function (d, i) {
-      var color = d.color || PALETTE[i % PALETTE.length];
-      var bh = (d.value / yMax) * CH;
-      var bx = ML + gap * i + (gap - barW) / 2;
-      var by = MT + CH - bh;
+      data.forEach(function (d, i) {
+        var color = d.color || PALETTE[i % PALETTE.length];
+        var bw = (d.value / valMax) * CW;
+        var bx = ML;
+        var by = MT + gap * i + (gap - barH) / 2;
 
-      svg.appendChild(el('rect', { x:bx.toFixed(1), y:by.toFixed(1), width:barW, height:bh.toFixed(1),
-        rx:3, fill:color, 'fill-opacity':'0.85' }));
+        svg.appendChild(el('rect', { x:bx.toFixed(1), y:by.toFixed(1), width:bw.toFixed(1), height:barH,
+          rx:3, fill:color, 'fill-opacity':'0.85' }));
 
-      // Value on top
-      svg.appendChild(txt(d.value, { x:(bx + barW/2).toFixed(1), y:(by-10).toFixed(1),
-        'font-size':'11', fill:'#ffffff' }));
+        svg.appendChild(txt(d.value, { x:(bx + bw + 8).toFixed(1), y:(by + barH/2).toFixed(1),
+          'font-size':'11', fill:'#ffffff', 'text-anchor':'start' }));
 
-      // X label
-      svg.appendChild(txt(d.label, { x:(bx + barW/2).toFixed(1), y:(MT+CH+18).toFixed(1),
-        'font-size':'11', fill:'#8888aa' }));
-    });
+        svg.appendChild(txt(d.label, { x:(ML - 6).toFixed(1), y:(by + barH/2).toFixed(1),
+          'font-size':'11', fill:'#8888aa', 'text-anchor':'end' }));
+      });
 
-    if (opts.yLabel) {
-      var yl = txt(opts.yLabel, { x:0, y:0, fill:'#ccccee', 'font-size':'12' });
-      yl.setAttribute('transform', 'translate(12,' + (MT+CH/2) + ') rotate(-90)');
-      svg.appendChild(yl);
+      if (opts.yLabel) {
+        svg.appendChild(txt(opts.yLabel, { x:ML+CW/2, y:H-6, fill:'#ccccee', 'font-size':'12' }));
+      }
+    } else {
+      // Vertical bars (original)
+      svg.appendChild(el('line', { x1:ML, y1:MT, x2:ML, y2:MT+CH, stroke:'#aaaacc', 'stroke-width':'2' }));
+      svg.appendChild(el('line', { x1:ML, y1:MT+CH, x2:ML+CW, y2:MT+CH, stroke:'#aaaacc', 'stroke-width':'2' }));
+
+      for (var gi = 0; gi <= 4; gi++) {
+        var gv = (valMax / 4) * gi;
+        var gy = MT + CH - (gv / valMax) * CH;
+        svg.appendChild(el('line', { x1:ML, y1:gy, x2:ML+CW, y2:gy, stroke:'#C0BDB3', 'stroke-width':'1' }));
+        svg.appendChild(txt(Math.round(gv), { x:ML-8, y:gy, 'font-size':'11', fill:'#8888aa', 'text-anchor':'end' }));
+      }
+
+      var barW = Math.min(50, (CW / data.length) * 0.65);
+      var gap = CW / data.length;
+
+      data.forEach(function (d, i) {
+        var color = d.color || PALETTE[i % PALETTE.length];
+        var bh = (d.value / valMax) * CH;
+        var bx = ML + gap * i + (gap - barW) / 2;
+        var by = MT + CH - bh;
+
+        svg.appendChild(el('rect', { x:bx.toFixed(1), y:by.toFixed(1), width:barW, height:bh.toFixed(1),
+          rx:3, fill:color, 'fill-opacity':'0.85' }));
+
+        svg.appendChild(txt(d.value, { x:(bx + barW/2).toFixed(1), y:(by-10).toFixed(1),
+          'font-size':'11', fill:'#ffffff' }));
+
+        svg.appendChild(txt(d.label, { x:(bx + barW/2).toFixed(1), y:(MT+CH+18).toFixed(1),
+          'font-size':'11', fill:'#8888aa' }));
+      });
+
+      if (opts.yLabel) {
+        var yl = txt(opts.yLabel, { x:0, y:0, fill:'#ccccee', 'font-size':'12' });
+        yl.setAttribute('transform', 'translate(12,' + (MT+CH/2) + ') rotate(-90)');
+        svg.appendChild(yl);
+      }
     }
     if (opts.title) svg.appendChild(txt(opts.title, { x:W/2, y:20, 'font-size':'14', 'font-weight':'bold' }));
 
@@ -462,7 +452,7 @@
   function clockFace(container, opts) {
     opts = opts || {};
     var W = opts.w || 240, H = opts.h || 260;
-    var svg = rootSvg(container, W, H);
+    var svg = _rootSvg(container, W, H, opts);
     var cx = W/2, cy = H/2 - 10, r = Math.min(W, H) * 0.40;
     var hrs = (opts.hours   || 0) % 12;
     var min = (opts.minutes || 0) % 60;
@@ -534,7 +524,7 @@
   function flowMap(container, opts) {
     opts = opts || {};
     var W = opts.w || 440, H = opts.h || 320;
-    var svg = rootSvg(container, W, H);
+    var svg = _rootSvg(container, W, H, opts);
     var nodes = opts.nodes || [];
     var edges = opts.edges || [];
 
@@ -622,7 +612,7 @@
   function pieChart(container, opts) {
     opts = opts || {};
     var W = opts.w || 340, H = opts.h || 300;
-    var svg = rootSvg(container, W, H);
+    var svg = _rootSvg(container, W, H, opts);
     var data = opts.data || [];
     var total = data.reduce(function(s, d){ return s + d.value; }, 0) || 1;
     var cx = W * 0.42, cy = H * 0.50;
@@ -644,11 +634,6 @@
           stroke:'#F4F1E8', 'stroke-width':'2' }));
       }
 
-      // Donut hole
-      if (opts.donut) {
-        svg.appendChild(el('circle', { cx:cx, cy:cy, r:innerR, fill:'#F4F1E8' }));
-      }
-
       // Slice label (only for slices > 8%)
       if (d.value / total > 0.08) {
         var lp = polar(cx, cy, r * (opts.donut ? 0.72 : 0.65), midDeg);
@@ -659,6 +644,11 @@
 
       cursor += sweep;
     });
+
+    // Donut hole: draw once after all slices so it appears correctly on top
+    if (opts.donut && innerR > 0) {
+      svg.appendChild(el('circle', { cx:cx, cy:cy, r:innerR, fill:'#F4F1E8' }));
+    }
 
     // Legend
     data.forEach(function (d, i) {
@@ -691,7 +681,7 @@
   function polygon(container, opts) {
     opts = opts || {};
     var W = opts.w || 280, H = opts.h || 280;
-    var svg = rootSvg(container, W, H);
+    var svg = _rootSvg(container, W, H, opts);
     var sides = Math.max(3, Math.min(12, opts.sides || 6));
     var cx = W/2, cy = H/2 + 10;
     var r = Math.min(W, H) * 0.36;
@@ -740,7 +730,7 @@
   function tree(container, opts) {
     opts = opts || {};
     var W = opts.w || 440, H = opts.h || 320;
-    var svg = rootSvg(container, W, H);
+    var svg = _rootSvg(container, W, H, opts);
     var root = opts.root || { label: 'Root' };
 
     // Measure depth and max breadth per level
