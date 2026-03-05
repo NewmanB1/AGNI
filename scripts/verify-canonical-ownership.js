@@ -15,14 +15,12 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const PACKAGES_TO_CHECK = [
   { name: '@agni/utils', dir: 'packages/agni-utils' },
-  { name: '@ols/compiler', dir: 'packages/ols-compiler' }
+  { name: '@ols/compiler', dir: 'packages/ols-compiler' },
+  { name: '@agni/hub', dir: 'packages/agni-hub', allowSrcServices: true }
 ];
 
-const BAD_PATTERNS = [
-  /require\s*\(\s*['"]\.\.\/\.\.\/src\//,
-  /require\s*\(\s*['"]\.\.\/\.\.\/\.\.\/src\//,
-  /require\s*\(\s*['"]\.\.\/\.\.\/\.\.\/\.\.\/src\//
-];
+// Match require('...src/...') and capture the full path for allowlist check
+const SRC_REQUIRE_PATTERN = /require\s*\(\s*['"]([^'"]*\/src\/[^'"]+)['"]\s*\)/g;
 
 const violations = [];
 
@@ -40,18 +38,21 @@ function walkDir(dir, extensions, out) {
   }
 }
 
-function checkFile(filePath, relPath) {
+function checkFile(filePath, relPath, pkg) {
   let content;
   try {
     content = fs.readFileSync(filePath, 'utf8');
   } catch (_e) {
     return;
   }
-  for (const pat of BAD_PATTERNS) {
-    const match = content.match(pat);
-    if (match) {
-      violations.push({ file: relPath, match: match[0] });
-    }
+  const allowSrcServices = pkg && pkg.allowSrcServices === true;
+  let m;
+  SRC_REQUIRE_PATTERN.lastIndex = 0;
+  while ((m = SRC_REQUIRE_PATTERN.exec(content)) !== null) {
+    const fullMatch = m[0];
+    const requirePath = m[1];
+    if (allowSrcServices && /\/src\/services\//.test(requirePath)) continue;
+    violations.push({ file: relPath, match: fullMatch });
   }
 }
 
@@ -61,7 +62,7 @@ for (const pkg of PACKAGES_TO_CHECK) {
   walkDir(absDir, ['.js'], files);
   for (const f of files) {
     const rel = path.relative(ROOT, f).replace(/\\/g, '/');
-    checkFile(f, rel);
+    checkFile(f, rel, pkg);
   }
 }
 

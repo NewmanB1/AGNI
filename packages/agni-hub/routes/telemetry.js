@@ -1,9 +1,9 @@
 'use strict';
 
 const http = require('http');
-const { updateSchedule } = require('../../../src/engine/sm2');
-const { withLock } = require('../../../src/utils/file-lock');
-const envConfig = require('../../../src/utils/env-config');
+const { updateSchedule } = require('@agni/engine/sm2');
+const { withLock } = require('@agni/utils/file-lock');
+const envConfig = require('@agni/utils/env-config');
 
 function forwardToSentry(events) {
   const port = envConfig.sentryPort;
@@ -16,12 +16,12 @@ function forwardToSentry(events) {
     headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body, 'utf8') }
   }, function (res) {
     if (res.statusCode !== 200) {
-      const log = require('../../../src/utils/logger').createLogger('theta');
+      const log = require('@agni/utils/logger').createLogger('theta');
       log.warn('Sentry forward failed', { statusCode: res.statusCode });
     }
   });
   req.on('error', function (e) {
-    const log = require('../../../src/utils/logger').createLogger('theta');
+    const log = require('@agni/utils/logger').createLogger('theta');
     log.warn('Sentry forward error', { error: e.message });
   });
   req.setTimeout(5000, function () { req.destroy(); });

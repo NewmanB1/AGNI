@@ -1,6 +1,6 @@
 'use strict';
 
-const { loadJSONAsync, saveJSONAsync, getFileMtimeAsync } = require('../../../src/utils/json-store');
+const { loadJSONAsync, saveJSONAsync, getFileMtimeAsync } = require('@agni/utils/json-store');
 const paths = require('./data-paths');
 
 function createDataAccessors(filePath, defaults, normalize) {

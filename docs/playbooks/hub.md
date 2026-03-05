@@ -16,7 +16,7 @@ Use this when adding routes, changing auth, or wiring hub services.
 | Add a new API endpoint | Create or edit a file in `packages/agni-hub/routes/`. Register in `packages/agni-hub/theta.js` (routes are auto-loaded). |
 | Add auth to a route | Wrap the handler with `requireHubKey`, `authOnly`, or `adminOnly` from `ctx`. See auth rules below. |
 | Change auth middleware | `packages/agni-hub/context/auth.js` |
-| Change service layer | `packages/agni-hub/context/services.js`, or `src/services/` for accounts, governance, author, etc. |
+| Change service layer | Business logic: `src/services/` (accounts, governance, author, lms, lesson-chain) or `@agni/*` packages. Wiring: `packages/agni-hub/context/services.js` — binds services into `ctx` for routes. |
 | Change data paths | `packages/agni-hub/context/data-paths.js` |
 | Change HTTP helpers | `packages/agni-hub/context/http.js` |
 

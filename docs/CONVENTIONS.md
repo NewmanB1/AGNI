@@ -21,9 +21,9 @@ These rules keep the codebase navigable and safe to change with tooling and LLM 
 - **CLI entry points** may throw; the CLI wrapper prints the error and exits.
 - Example: `runCompilePipeline()` returns `{ ir, sidecar }` or `{ error }`. `compileLessonFromYamlFile()` throws because the CLI wraps it in try/catch.
 
-## Middleware wrappers (hub-tools)
+## Middleware wrappers (hub)
 
-Route-level cross-cutting concerns use middleware factories in `hub-tools/shared.js`:
+Route-level cross-cutting concerns use middleware factories in `packages/agni-hub/shared.js` and `packages/agni-hub/context/`:
 
 - **`adminOnly(handler)`** — verifies admin session, injects `creator` into context, returns 401 on failure.
 - **`requireLms(handler)`** — checks `lmsService.isAvailable()`, returns 503 if engine is down.

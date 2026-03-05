@@ -8,7 +8,7 @@ const fs   = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const { createLogger }  = require('../../src/utils/logger');
+const { createLogger }  = require('@agni/utils/logger');
 const log = createLogger('theta');
 
 const dataPaths  = require('./context/data-paths');

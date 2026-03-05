@@ -55,6 +55,11 @@ const KNOWN_STANDALONE = new Set([
   normalize('src/utils/csp.js'),
   normalize('src/utils/io.js'),
   normalize('src/utils/katex-css-builder.js'),
+  // Re-exports from @agni/utils (canonical); kept for backward compat
+  normalize('src/utils/archetype-match.js'),
+  normalize('src/utils/env-validate.js'),
+  normalize('src/utils/hub-config.js'),
+  normalize('src/utils/router.js'),
 ]);
 
 // Runtime browser files listed in runtimeManifest.js are inlined by the HTML

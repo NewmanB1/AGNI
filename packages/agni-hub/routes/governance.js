@@ -23,7 +23,7 @@ function register(router, ctx) {
   }));
 
   router.get('/api/governance/archetypes', authOnly((req, res, { qs, sendResponse }) => {
-    const archetypeMatch = require('../../../src/utils/archetype-match');
+    const archetypeMatch = require('@agni/utils/archetype-match');
     if (qs.band || qs.protocol) {
       const filtered = archetypeMatch.filterArchetypes({
         band:     qs.band ? parseInt(qs.band, 10) : undefined,

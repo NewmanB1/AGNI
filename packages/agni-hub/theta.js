@@ -6,12 +6,12 @@
 const path = require('path');
 const http = require('http');
 
-const { loadHubConfig } = require('../../src/utils/hub-config');
-const { validateEnv } = require('../../src/utils/env-validate');
+const { loadHubConfig } = require('@agni/utils/hub-config');
+const { validateEnv } = require('@agni/utils/env-validate');
 validateEnv();
 loadHubConfig(path.join(__dirname, '../../data'));
 
-const { Router } = require('../../src/utils/router');
+const { Router } = require('@agni/utils/router');
 const ctx = require('./shared');
 
 const {
@@ -432,7 +432,7 @@ function startApi(port) {
   require('./routes/admin').register(router, ctx);
   require('./routes/chain').register(router, ctx);
   require('./routes/telemetry').register(router, ctx);
-  require('../../src/utils/feature-flags').registerRoutes(router, ctx);
+  require('@agni/utils/feature-flags').registerRoutes(router, ctx);
 
   const server = http.createServer((req, res) => {
     const requestId = ctx.generateRequestId();

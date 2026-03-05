@@ -1,7 +1,7 @@
 'use strict';
 
 const path = require('path');
-const envConfig = require('../../../src/utils/env-config');
+const envConfig = require('@agni/utils/env-config');
 
 const DATA_DIR             = envConfig.dataDir;
 const SERVE_DIR            = envConfig.serveDir;

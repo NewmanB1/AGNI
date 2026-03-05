@@ -1,6 +1,6 @@
 'use strict';
 
-const { withLock } = require('../../../src/utils/file-lock');
+const { withLock } = require('@agni/utils/file-lock');
 
 function register(router, ctx) {
   const { loadJSONAsync, saveJSONAsync, loadLessonIndexAsync, loadMasterySummaryAsync,

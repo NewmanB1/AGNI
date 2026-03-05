@@ -1,6 +1,6 @@
 'use strict';
 
-const envConfig = require('../../../src/utils/env-config');
+const envConfig = require('@agni/utils/env-config');
 
 const PORT = envConfig.thetaPort;
 const MIN_RESIDUAL = 0.15;

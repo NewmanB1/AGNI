@@ -60,7 +60,11 @@ function httpGet(port, urlPath) {
   return new Promise(function (resolve, reject) {
     var req = http.request({
       hostname: '127.0.0.1', port: port, path: urlPath, method: 'GET',
-      headers: { Accept: '*/*', 'x-hub-key': SMOKE_HUB_KEY }
+      headers: {
+        Accept: '*/*',
+        'Accept-Encoding': 'identity',
+        'x-hub-key': SMOKE_HUB_KEY
+      }
     }, function (res) {
       var data = '';
       res.on('data', function (chunk) { data += chunk; });

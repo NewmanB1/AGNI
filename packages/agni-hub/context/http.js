@@ -1,7 +1,7 @@
 'use strict';
 
-const { readBody, handleJsonBody, createResponseSender, extractBearerToken, safeErrorMessage, checkAuthRateLimit, generateRequestId } = require('../../../src/utils/http-helpers');
-const { computeStreaks, collectReviewDates } = require('../../../src/utils/streak');
+const { readBody, handleJsonBody, createResponseSender, extractBearerToken, safeErrorMessage, checkAuthRateLimit, generateRequestId } = require('@agni/utils/http-helpers');
+const { computeStreaks, collectReviewDates } = require('@agni/utils/streak');
 
 function paginate(items, qs) {
   const total = items.length;

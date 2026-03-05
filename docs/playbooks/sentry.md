@@ -125,6 +125,6 @@ So: **Sentry produces edges (prior → target, weight, confidence); theta uses t
 | Change when analysis runs | `packages/agni-hub/sentry.js`: ANALYSE_AFTER_N, MIN_MS_BETWEEN_ANALYSIS, setInterval |
 | Change cohort size or clustering | `env-config.js`: AGNI_SENTRY_JACCARD_THRESHOLD, AGNI_SENTRY_MIN_CLUSTER_SIZE |
 | Change edge thresholds (chi2, sample size) | `env-config.js`: AGNI_SENTRY_CHI2_THRESHOLD, AGNI_SENTRY_MIN_SAMPLE |
-| Change theta’s graph selection | `hub-tools/theta.js`: getEffectiveGraphWeights, MIN_LOCAL_SAMPLE_SIZE, MIN_LOCAL_EDGE_COUNT |
-| Change residual formula | `hub-tools/theta.js`: getResidualCostFactor, MIN_RESIDUAL, MIN_CONFIDENCE |
+| Change theta’s graph selection | `packages/agni-hub/theta.js`: getEffectiveGraphWeights, MIN_LOCAL_SAMPLE_SIZE, MIN_LOCAL_EDGE_COUNT |
+| Change residual formula | `packages/agni-hub/theta.js`: getResidualCostFactor, MIN_RESIDUAL, MIN_CONFIDENCE |
 | Validate graph_weights shape | `schemas/graph_weights.schema.json`; CI in `.github/workflows/validate.yml` (fixtures and Sentry output). |

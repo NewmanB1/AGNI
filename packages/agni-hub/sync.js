@@ -11,11 +11,11 @@ const path = require('path');
 const crypto = require('crypto');
 const https = require('https');
 const http = require('http');
-const { createLogger } = require('../../src/utils/logger');
-const envConfig = require('../../src/utils/env-config');
+const { createLogger } = require('@agni/utils/logger');
+const envConfig = require('@agni/utils/env-config');
 
 // â”€â”€ Hub config bootstrap (F1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const { loadHubConfig } = require('../../src/utils/hub-config');
+const { loadHubConfig } = require('@agni/utils/hub-config');
 loadHubConfig(path.join(__dirname, '../../data'));
 
 // â”€â”€ Configuration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

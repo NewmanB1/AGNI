@@ -43,25 +43,25 @@ const path    = require('path');
 const zlib    = require('zlib');
 const yaml    = require('js-yaml');
 
-const { createLogger }   = require('../../src/utils/logger');
+const { createLogger }   = require('@agni/utils/logger');
 const log                = createLogger('hub-transform');
-const compiler           = require('../../src/compiler');
-const buildLessonIR      = compiler.buildLessonIR;
-const buildLessonSidecar = compiler.buildLessonSidecar;
-const buildKatexCss      = require('../../src/utils/katex-css-builder');
-const lessonSchema       = require('../../src/services/lesson-schema');
-const { signContent, canonicalJSON } = require('../../src/utils/crypto');
-const generateNonce      = require('../../src/utils/csp').generateNonce;
-const buildCspMeta       = require('../../src/utils/csp').buildCspMeta;
-const lessonAssembly     = require('../../src/services/lesson-assembly');
-const _escapeHtml        = require('../../src/utils/io').escapeHtml;
-const { resolveFactoryPath } = require('../../src/utils/runtimeManifest');
+const buildLessonIrModule = require('@ols/compiler/compiler/build-lesson-ir');
+const buildLessonIR      = buildLessonIrModule.buildLessonIR;
+const buildLessonSidecar = buildLessonIrModule.buildLessonSidecar;
+const buildKatexCss      = require('@agni/utils/katex-css-builder');
+const lessonSchema       = require('@ols/schema/lesson-schema');
+const { signContent, canonicalJSON } = require('@agni/utils/crypto');
+const generateNonce      = require('@agni/utils/csp').generateNonce;
+const buildCspMeta       = require('@agni/utils/csp').buildCspMeta;
+const lessonAssembly     = require('@ols/compiler/services/lesson-assembly');
+const _escapeHtml        = require('@agni/utils/io').escapeHtml;
+const { resolveFactoryPath } = require('@agni/utils/runtimeManifest');
 
 // ΓöÇΓöÇ Version (from package.json, used for SW stamping) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const PKG_VERSION   = require('../../package.json').version || '0.0.0';
 
 // ΓöÇΓöÇ Paths (from centralized config) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-const envConfig     = require('../../src/utils/env-config');
+const envConfig     = require('@agni/utils/env-config');
 const YAML_DIR      = envConfig.yamlDir;
 const FACTORY_DIR   = process.env.AGNI_FACTORY_DIR || require('@agni/runtime').RUNTIME_ROOT;
 const KATEX_DIR     = process.env.AGNI_KATEX_DIR   || path.join(__dirname, '../../data/katex-css');

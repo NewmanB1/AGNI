@@ -1,7 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
-const { extractBearerToken, checkAuthRateLimit } = require('../../../src/utils/http-helpers');
+const { extractBearerToken, checkAuthRateLimit } = require('@agni/utils/http-helpers');
 const { accountsService } = require('./services');
 
 async function _authenticate(req, qs, sendResponse) {
