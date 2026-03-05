@@ -6,6 +6,7 @@
   let { steps = [], title = '', focusStep = 0 } = $props();
 
   let viewStep = $state(0);
+  let simulateSensors = $state(false);
 
   $effect(() => {
     if (focusStep >= 0 && focusStep < steps.length) {
@@ -55,6 +56,12 @@
           <div class="progress-fill" style="width: {((viewStep + 1) / steps.length) * 100}%"></div>
         </div>
         <span class="progress-label">{viewStep + 1}/{steps.length}</span>
+        {#if steps.some(s => s.type === 'hardware_trigger')}
+          <label class="sim-global-toggle" title="Simulate sensor steps on desktop">
+            <input type="checkbox" bind:checked={simulateSensors} />
+            Simulate
+          </label>
+        {/if}
       </div>
 
       {#if currentStep}
@@ -119,10 +126,22 @@
                 <code class="hw-thresh">{currentStep.threshold}</code>
               {/if}
             </div>
-            <div class="hw-waiting">
-              <div class="pulse-ring"></div>
-              <span>Waiting for sensor…</span>
-            </div>
+            {#if simulateSensors}
+              <div class="hw-simulate">
+                <p class="sim-hint">Simulated sensors (desktop preview — real sensors on device)</p>
+                <div class="sim-presets">
+                  <button type="button" class="sim-btn" onclick={() => go(1)}>Simulate freefall</button>
+                  <button type="button" class="sim-btn" onclick={() => go(1)}>Simulate steady</button>
+                  <button type="button" class="sim-btn" onclick={() => go(1)}>Simulate shake</button>
+                  <button type="button" class="sim-btn primary" onclick={() => go(1)}>Trigger & advance</button>
+                </div>
+              </div>
+            {:else}
+              <div class="hw-waiting">
+                <div class="pulse-ring"></div>
+                <span>Waiting for sensor… (enable Simulate above to test)</span>
+              </div>
+            {/if}
           {/if}
 
           {#if currentStep.type === 'quiz' && Array.isArray(currentStep.answer_options)}
@@ -274,9 +293,28 @@
     border-radius: 4px; font-size: 0.75rem;
   }
   .hw-waiting {
-    display: flex; align-items: center; gap: 0.5rem;
+    display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
     margin-top: 0.8rem; font-size: 0.82rem; opacity: 0.5; font-style: italic;
   }
+  .sim-global-toggle {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    font-size: 0.7rem; cursor: pointer; opacity: 0.8; white-space: nowrap;
+  }
+  .sim-global-toggle input { accent-color: var(--accent); }
+  .hw-simulate {
+    margin-top: 0.6rem; padding: 0.6rem;
+    background: rgba(255,152,0,0.08); border: 1px solid rgba(255,152,0,0.25);
+    border-radius: 8px;
+  }
+  .sim-hint { font-size: 0.72rem; opacity: 0.7; margin: 0 0 0.5rem; }
+  .sim-presets { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .sim-btn {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+    color: var(--text); padding: 0.35rem 0.6rem; border-radius: 5px;
+    font-size: 0.78rem; cursor: pointer; transition: border-color 0.15s;
+  }
+  .sim-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .sim-btn.primary { background: rgba(255,152,0,0.2); border-color: #ff9800; color: #ffb74d; }
   .pulse-ring {
     width: 12px; height: 12px; border-radius: 50%;
     border: 2px solid #ff9800; opacity: 0.6;

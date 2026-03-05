@@ -154,6 +154,20 @@
   let { steps = $bindable([]), onchange = () => {}, onfocus = () => {}, archetypeId = null } = $props();
 
   let showThresholdHelp = $state(false);
+  let thresholdBuilderStepIdx = $state(null); // which step shows the "Build expression" UI
+  const THRESHOLD_SENSORS = [
+    { value: 'accel.total', label: 'accel.total (G-force)' },
+    { value: 'accel.x', label: 'accel.x' }, { value: 'accel.y', label: 'accel.y' }, { value: 'accel.z', label: 'accel.z' },
+    { value: 'freefall', label: 'freefall (falling)' }, { value: 'steady', label: 'steady (still)' }, { value: 'shake', label: 'shake' },
+    { value: 'gyro.alpha', label: 'gyro.alpha' }, { value: 'gyro.beta', label: 'gyro.beta' }, { value: 'gyro.gamma', label: 'gyro.gamma' },
+    { value: 'rotation.gamma', label: 'rotation.gamma (tilt)' }, { value: 'light', label: 'light (lux)' }, { value: 'mic', label: 'mic (dB)' },
+    { value: 'orientation', label: 'orientation' },
+  ];
+  const THRESHOLD_OPS = ['>', '<', '>=', '<=', '=='];
+  const THRESHOLD_UNITS = [
+    { value: '', label: '—' }, { value: 'g', label: 'g' }, { value: 's', label: 's' }, { value: 'ms', label: 'ms' },
+    { value: 'deg', label: 'deg' }, { value: 'lux', label: 'lux' }, { value: 'db', label: 'db' },
+  ];
   const thresholdExamples = $derived(getThresholdExamples(archetypeId));
   const isSensorHeavy = $derived(isSensorHeavyArchetype(archetypeId));
 
@@ -231,6 +245,19 @@
       thresholdErrors = { ...thresholdErrors, [sid]: result.valid ? '' : result.error };
     }
     onchange();
+  }
+
+  function applyBuilderExpression(i, sensor, op, val, unit) {
+    const num = String(val || '').trim();
+    if (!sensor || !op || !num) return;
+    const expr = sensor + ' ' + op + ' ' + num + (unit || '');
+    updateField(i, 'threshold', expr);
+  }
+
+  function parseThresholdToBuilder(threshold) {
+    const m = (threshold || '').trim().match(/^([a-z.]+)\s*(>|<|>=|<=|==)\s*([\d.]+)(g|s|ms|deg|lux|db)?$/i);
+    if (!m) return { sensor: 'accel.total', op: '>', val: '2.5', unit: 'g' };
+    return { sensor: m[1], op: m[2], val: m[3], unit: m[4] || '' };
   }
 
   function onTypeChange(i, newType) {
@@ -524,12 +551,44 @@
             </div>
             <div class="form-group threshold-group">
               <label>Threshold
-                <span class="threshold-help-row">
-                  <input type="text" value={step.threshold || ''} oninput={(e) => updateField(i, 'threshold', e.target.value)}
-                         placeholder="e.g. accel.total > 2.5g" class:input-error={thresholdErrors[step.id]} />
+                <span class="threshold-mode-row">
+                  <button type="button" class="micro-btn" class:active={thresholdBuilderStepIdx !== i}
+                    onclick={() => { thresholdBuilderStepIdx = thresholdBuilderStepIdx === i ? null : i; }}>Type</button>
+                  <button type="button" class="micro-btn" class:active={thresholdBuilderStepIdx === i}
+                    onclick={() => { thresholdBuilderStepIdx = thresholdBuilderStepIdx === i ? null : i; }}>Build</button>
                   <button type="button" class="help-btn" onclick={() => showThresholdHelp = !showThresholdHelp} title="Threshold syntax help">?</button>
                 </span>
               </label>
+              {#if thresholdBuilderStepIdx === i}
+                {@const b = parseThresholdToBuilder(step.threshold)}
+                <div class="threshold-builder">
+                  <select value={b.sensor} onchange={(e) => applyBuilderExpression(i, e.target.value, b.op, b.val, b.unit)}>
+                    {#each THRESHOLD_SENSORS as s}
+                      <option value={s.value}>{s.label}</option>
+                    {/each}
+                  </select>
+                  <select value={b.op} onchange={(e) => applyBuilderExpression(i, b.sensor, e.target.value, b.val, b.unit)}>
+                    {#each THRESHOLD_OPS as o}
+                      <option value={o}>{o}</option>
+                    {/each}
+                  </select>
+                  <input type="text" value={b.val} placeholder="value"
+                    oninput={(e) => applyBuilderExpression(i, b.sensor, b.op, e.target.value, b.unit)} />
+                  <select value={b.unit} onchange={(e) => applyBuilderExpression(i, b.sensor, b.op, b.val, e.target.value)}>
+                    {#each THRESHOLD_UNITS as u}
+                      <option value={u.value}>{u.label || '(unit)'}</option>
+                    {/each}
+                  </select>
+                  <span class="builder-result">→ <code>{step.threshold || '—'}</code></span>
+                </div>
+              {:else}
+                <span class="threshold-help-row">
+                  <input type="text" value={step.threshold || ''}
+                    oninput={(e) => updateField(i, 'threshold', e.target.value)}
+                    onblur={(e) => { const sid = step.id || i; const r = validateThreshold(e.target.value); thresholdErrors = { ...thresholdErrors, [sid]: r.valid ? '' : r.error }; }}
+                    placeholder="e.g. accel.total > 2.5g" class:input-error={thresholdErrors[step.id]} />
+                </span>
+              {/if}
               {#if thresholdErrors[step.id]}
                 <span class="field-error">{thresholdErrors[step.id]}</span>
               {/if}
@@ -537,6 +596,8 @@
                 <details class="threshold-help-detail" open>
                   <summary>Syntax & examples</summary>
                   <p class="syntax-desc">Format: <code>sensorId op value</code>. Chain with <code>AND</code>. Units: <code>g</code>, <code>s</code>, <code>deg</code>, <code>lux</code>, <code>db</code>.</p>
+                  <p class="syntax-desc"><strong>Subjects:</strong> accel.total, accel.x/y/z, freefall, steady, shake, gyro.*, rotation.gamma, light, mic, orientation.</p>
+                  <p class="syntax-desc"><strong>Duration (s/ms):</strong> Maintain state for time — e.g. <code>freefall > 0.2s</code>, <code>steady > 3s</code>.</p>
                   {#if isSensorHeavy}
                     <p class="archetype-note">Your selected archetype uses sensor steps — these examples are tailored for your lesson type:</p>
                   {/if}
@@ -887,6 +948,16 @@
   .syntax-hint code { background: rgba(255,255,255,0.06); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.8rem; }
 
   .threshold-group { position: relative; }
+  .threshold-mode-row { display: flex; gap: 0.35rem; align-items: center; margin-bottom: 0.35rem; }
+  .threshold-mode-row .micro-btn.active { background: var(--accent); color: #1a1a2e; font-weight: 600; }
+  .threshold-builder {
+    display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;
+    margin-top: 0.35rem; padding: 0.5rem; background: rgba(31,43,78,0.6);
+    border: 1px solid var(--border); border-radius: 6px;
+  }
+  .threshold-builder select { min-width: 140px; padding: 0.35rem; border-radius: 4px; }
+  .threshold-builder input[type="text"] { width: 80px; padding: 0.35rem; }
+  .builder-result { font-size: 0.85rem; opacity: 0.85; }
   .threshold-help-row { display: flex; gap: 0.35rem; align-items: center; }
   .threshold-help-row input { flex: 1; }
   .help-btn {

@@ -373,12 +373,15 @@ async function main() {
   const args = process.argv.slice(2);
   let skillText = '';
   let outPath = '';
+  let jsonOutput = false;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--file' && args[i + 1]) {
       skillText = fs.readFileSync(path.resolve(args[++i]), 'utf8').trim();
     } else if (args[i] === '--out' && args[i + 1]) {
       outPath = path.resolve(args[++i]);
+    } else if (args[i] === '--json' || args[i] === '--portal') {
+      jsonOutput = true;
     } else if (args[i] === '--help' || args[i] === '-h') {
       console.log([
         'AGNI Lesson Generator — LLM-powered lesson authoring',
@@ -386,6 +389,7 @@ async function main() {
         'Usage:',
         '  node scripts/generate-lesson.js "skill description"',
         '  node scripts/generate-lesson.js --file brief.txt --out lesson.yaml',
+        '  node scripts/generate-lesson.js "skill" --json   # Output JSON for portal Import',
         '',
         'Environment:',
         '  AGNI_LLM_API_KEY     API key (required)',
@@ -397,6 +401,7 @@ async function main() {
         'Options:',
         '  --file <path>   Read skill description from file',
         '  --out <path>    Write generated YAML to file (default: stdout)',
+        '  --json, --portal Output JSON for paste into portal Import',
         '  --help          Show this help'
       ].join('\n'));
       process.exit(0);
@@ -419,7 +424,18 @@ async function main() {
   try {
     const result = await generateLesson(skillText);
 
-    if (outPath) {
+    if (jsonOutput) {
+      const json = JSON.stringify(result.lesson, null, 2);
+      if (outPath) {
+        const dir = path.dirname(outPath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(outPath, json, 'utf8');
+        console.log('\n→ JSON written to: ' + outPath + ' (paste into portal Import)');
+      } else {
+        console.log('\n─── Paste into portal: Author → New → Import paste ───\n');
+        console.log(json);
+      }
+    } else if (outPath) {
       const dir = path.dirname(outPath);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(outPath, result.yaml, 'utf8');

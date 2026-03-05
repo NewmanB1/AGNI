@@ -1,4 +1,10 @@
 <script>
+  const COMMON_SKILL_IDS = [
+    'ols:physics:gravity', 'ols:physics:newtons_laws', 'ols:physics:forces',
+    'ols:math:algebra', 'ols:math:geometry', 'ols:math:arithmetic',
+    'ols:science:biology_basics', 'ols:science:chemistry_basics',
+  ];
+
   let { ontology = $bindable({ requires: [], provides: [] }), spineIds = [], onchange = () => {} } = $props();
 
   let showSpineRef = $state(false);
@@ -102,6 +108,9 @@
 <datalist id="spine-datalist">
   {#each spineIds as sid}
     <option value={sid}></option>
+  {/each}
+  {#each COMMON_SKILL_IDS as skill}
+    <option value={skill}></option>
   {/each}
 </datalist>
 

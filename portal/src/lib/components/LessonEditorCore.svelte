@@ -13,6 +13,7 @@
   import ArchetypeDesignHints from './ArchetypeDesignHints.svelte';
   import KeyboardShortcutsModal from './KeyboardShortcutsModal.svelte';
   import { getAllArchetypes, filterArchetypesByUtu } from '$lib/archetypes';
+  import { validateLessonClient } from '$lib/validateLesson';
 
   let { mode = 'new', slug = null, creatorId = null, creatorName = null } = $props();
 
@@ -72,6 +73,8 @@
   let showShortcutsModal = $state(false);
   let showForkBrowser = $state(false);
   let forkBrowserArchetypeFilter = $state('');
+  let showTranslateModal = $state(false);
+  let translateTargetLang = $state('es');
   let catalogLessons = $state([]);
   let generatingAi = $state(false);
   let aiSkillDescription = $state('');
@@ -329,6 +332,24 @@
       if (s.answer_options?.length) out.answer_options = s.answer_options;
       if (s.correct_index != null) out.correct_index = s.correct_index;
     }
+    if (s.type === 'fill_blank' && Array.isArray(s.blanks) && s.blanks.length > 0) {
+      out.blanks = s.blanks.map(function (b) {
+        return { answer: b.answer || '', accept: Array.isArray(b.accept) ? b.accept : [] };
+      });
+    }
+    if (s.type === 'matching' && Array.isArray(s.pairs) && s.pairs.length > 0) {
+      out.pairs = s.pairs.map(function (p) {
+        return { left: p.left || '', right: p.right || '' };
+      });
+    }
+    if (s.type === 'ordering') {
+      if (Array.isArray(s.items) && s.items.length > 0) {
+        out.items = s.items;
+        out.correct_order = Array.isArray(s.correct_order) && s.correct_order.length === s.items.length
+          ? s.correct_order
+          : s.items.map(function (_, idx) { return idx; });
+      }
+    }
     if (s.type === 'svg' && s.svg_spec) {
       out.svg_spec = s.svg_spec;
     }
@@ -563,8 +584,12 @@
       return;
     }
     if (!api.baseUrl) {
-      validationWarnings = ['Full validation requires hub connection. Configure in Settings for schema + threshold checks.'];
-      success = 'Pre-flight checks passed.';
+      const payload = buildPayload();
+      const data = validateLessonClient(payload);
+      validationErrors = data.errors || [];
+      validationWarnings = (data.warnings || []).concat(['Client-side validation (hub offline). Configure Settings for full schema validation.']);
+      if (data.valid) success = 'Validation passed (client-side).';
+      else error = 'Validation failed.';
       validating = false;
       return;
     }
@@ -622,6 +647,25 @@
       error = e instanceof Error ? e.message : String(e);
     }
     generatingAi = false;
+  }
+
+  function duplicateAndTranslate() {
+    const target = translateTargetLang.trim() || 'es';
+    const copy = JSON.parse(JSON.stringify(lesson));
+    copy.language = target;
+    copy.identifier = (lesson.identifier || lesson.title || slug || 'lesson').replace(/-[a-z]{2}$/, '') + '-' + target;
+    copy.title = lesson.title ? lesson.title + ' (' + target + ')' : '';
+    copy.locale = target === 'es' ? 'ES' : target === 'sw' ? 'KE' : '';
+    copy._version = '';
+    copy._created = '';
+    copy._updated = '';
+    copy._content_hash = '';
+    copy._parent_hash = '';
+    copy._uri = '';
+    const draftKey = 'agni_draft_new';
+    try { localStorage.setItem(draftKey, JSON.stringify(copy)); } catch {}
+    showTranslateModal = false;
+    goto('/author/new');
   }
 
   async function loadLessonToFork(slugToLoad) {
@@ -1056,9 +1100,10 @@
     </div>
 
     <h2>UTU Coordinates</h2>
+    <p class="section-hint">Skill coordinates: Spine = subject (e.g. MAC, SCI), Band = cognitive phase (1–6), Protocol = teaching method (P1–P5). <a href="https://github.com/NewmanB1/AGNI/blob/main/docs/specs/utu-architecture.md" target="_blank" rel="noopener">UTU spec</a></p>
     <div class="row">
       <div class="form-group">
-        <label>Spine (class)
+        <label title="Subject area (Math, Science, Social). MAC = Math, SCI = Science, SOC = Social studies.">Spine (class)
           <select bind:value={lesson.utu.class} onchange={markDirty}>
             <option value="">— none —</option>
             {#each spineIds as sid}
@@ -1068,7 +1113,7 @@
         </label>
       </div>
       <div class="form-group">
-        <label>Band
+        <label title="Cognitive phase 1–6: Embodied/Representational (1–2), Operational/Structural (3–4), Hypothetical/Formal (5–6).">Band
           <select bind:value={lesson.utu.band} onchange={markDirty}>
             {#each bands as b}
               <option value={b.id}>{b.id} — {b.phase}</option>
@@ -1077,7 +1122,7 @@
         </label>
       </div>
       <div class="form-group">
-        <label>Protocol
+        <label title="Teaching protocol P1–P5: Transmission, Guided Construction, Apprenticeship, Dev. Sequencing, Meaning Activation.">Protocol
           <select bind:value={lesson.utu.protocol} onchange={markDirty}>
             <option value="">— none —</option>
             {#each protocols as p}
@@ -1227,9 +1272,32 @@
       <button class="secondary" onclick={() => showImport = !showImport}>Import paste</button>
       <button class="secondary" onclick={() => showForkBrowser = true}>Fork from saved</button>
       {#if mode === 'edit' && slug}
+        <button class="secondary" onclick={() => showTranslateModal = true}>Duplicate & translate</button>
         <button class="danger-btn" onclick={deleteCurrentLesson}>Delete lesson</button>
       {/if}
     </div>
+
+    {#if showTranslateModal}
+      <div class="fork-browser-overlay">
+        <div class="fork-browser card">
+          <h3>Duplicate and translate</h3>
+          <p class="hint">Create a copy with target language. Edit content to translate.</p>
+          <div class="form-group">
+            <label>Target language
+              <select bind:value={translateTargetLang}>
+                {#each LANGUAGES as lang}
+                  <option value={lang}>{lang}</option>
+                {/each}
+              </select>
+            </label>
+          </div>
+          <div class="modal-actions">
+            <button class="primary" onclick={duplicateAndTranslate}>Create copy</button>
+            <button class="secondary" onclick={() => showTranslateModal = false}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    {/if}
 
     {#if showImport}
       <div class="import-box">
@@ -1405,6 +1473,7 @@
     z-index: 100;
   }
   .fork-browser { max-width: 500px; width: 90%; }
+  .modal-actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
   .fork-slug-list { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.75rem 0; }
   .slug-btn {
     background: rgba(31,43,78,0.7); color: var(--text);

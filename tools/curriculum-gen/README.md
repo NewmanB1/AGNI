@@ -110,6 +110,16 @@ node src/preview.js --subjects         # one per subject/grade combo
 node src/preview.js --id math--8--linear-equations--systematic-consolidation
 ```
 
+## Import to hub
+
+Copy generated lessons into the hub's YAML catalog:
+
+```bash
+node import-to-hub.js output/lessons/math/grade-8/lesson-name.yaml
+```
+
+Uses `AGNI_YAML_DIR` or defaults to `data/yaml` (from repo root).
+
 ## Resumable generation
 
 The runner tracks progress in `output/progress.json`. If interrupted or when the
