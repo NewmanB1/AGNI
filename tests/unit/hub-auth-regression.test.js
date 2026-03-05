@@ -65,7 +65,7 @@ describe('Hub auth regression', () => {
     fs.writeFileSync(path.join(dataDir, 'groups.json'), JSON.stringify({ groups: [] }));
     fs.writeFileSync(path.join(dataDir, 'recommendation-overrides.json'), JSON.stringify({}));
 
-    const theta = require('../../hub-tools/theta');
+    const theta = require('@agni/hub').theta;
     server = theta.startApi(0);
     await new Promise(resolve => setTimeout(resolve, 150));
     port = server.address().port;

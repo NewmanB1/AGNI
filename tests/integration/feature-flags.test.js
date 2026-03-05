@@ -8,6 +8,7 @@ const fs = require('fs');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const FLAGS_PATH = path.join(DATA_DIR, 'feature-flags.json');
+const HUB_KEY = 'integration-test-hub-key';
 const CREATORS_PATH = path.join(DATA_DIR, 'creator-accounts.json');
 const SESSIONS_PATH = path.join(DATA_DIR, 'sessions.json');
 
@@ -18,7 +19,7 @@ function makeRequest(method, baseUrl, urlPath, body, headers) {
     const opts = {
       hostname: url.hostname, port: url.port,
       path: url.pathname + url.search, method,
-      headers: Object.assign({ Accept: 'application/json' }, headers || {})
+      headers: Object.assign({ Accept: 'application/json', 'x-hub-key': HUB_KEY }, headers || {})
     };
     if (body) {
       opts.headers['Content-Type'] = 'application/json';
@@ -54,15 +55,18 @@ describe('Feature flags integration', () => {
 
     fs.writeFileSync(FLAGS_PATH, JSON.stringify({ flags: {} }));
 
-    const testCreatorId = 'test-admin-' + Date.now();
-    adminToken = 'integration-test-admin-token-' + Date.now();
-    const expires = new Date(Date.now() + 3600000).toISOString();
-    const sessionData = { sessions: [{ token: adminToken, creatorId: testCreatorId, email: 'admin@test.local', expiresAt: expires }] };
-    fs.writeFileSync(SESSIONS_PATH, JSON.stringify(sessionData));
-    const creatorData = { creators: [{ id: testCreatorId, name: 'Test Admin', email: 'admin@test.local', approved: true, role: 'admin', passwordHash: 'x', salt: 'x' }] };
-    fs.writeFileSync(CREATORS_PATH, JSON.stringify(creatorData));
-
-    const theta = require('../../hub-tools/theta');
+    process.env.AGNI_HUB_API_KEY = HUB_KEY;
+    const theta = require('@agni/hub').theta;
+    const accountsService = require('@agni/hub').accounts;
+    const reg = await accountsService.registerCreator({
+      name: 'Test Admin', email: 'admin@test.local', password: 'testpass123'
+    });
+    if (reg.creator) {
+      await accountsService.setCreatorApproval(reg.creator.id, true);
+      await accountsService.setCreatorRole(reg.creator.id, 'admin');
+    }
+    const login = await accountsService.loginCreator({ email: 'admin@test.local', password: 'testpass123' });
+    adminToken = login.token;
     try { await theta.rebuildLessonIndex(); } catch (_) { /* ok */ }
     server = theta.startApi(0);
     const port = await new Promise((r) => server.once('listening', () => r(server.address().port)));
@@ -84,7 +88,7 @@ describe('Feature flags integration', () => {
   }
 
   it('GET /api/flags returns empty flags initially', async () => {
-    const { statusCode, data } = await get(baseUrl, '/api/flags');
+    const { statusCode, data } = await get(baseUrl, '/api/flags', authHeaders());
     assert.equal(statusCode, 200);
     assert.ok(data.flags !== undefined);
     assert.deepEqual(data.flags, {});
@@ -107,7 +111,7 @@ describe('Feature flags integration', () => {
   });
 
   it('GET /api/flags lists the created flag', async () => {
-    const { statusCode, data } = await get(baseUrl, '/api/flags');
+    const { statusCode, data } = await get(baseUrl, '/api/flags', authHeaders());
     assert.equal(statusCode, 200);
     assert.ok(data.flags.dark_mode);
     assert.equal(data.flags.dark_mode.enabled, true);

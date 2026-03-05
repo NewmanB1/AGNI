@@ -25,6 +25,14 @@ const DEFAULTS: AccessibilityPrefs = {
   fontScale: 1,
 };
 
+function defaultHapticIntensity(): number {
+  try {
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 0;
+  } catch (_) { /* matchMedia unavailable */ }
+  return 1;
+}
+
 function loadFromStorage(): AccessibilityPrefs {
   if (typeof localStorage === 'undefined') return { ...DEFAULTS };
   const hi = localStorage.getItem('agni_haptic_intensity');
@@ -32,7 +40,7 @@ function loadFromStorage(): AccessibilityPrefs {
   const hc = localStorage.getItem('agni_high_contrast');
   const fs = localStorage.getItem('agni_font_scale');
   return {
-    hapticIntensity: hi !== null ? Math.max(0, Math.min(1, parseFloat(hi))) : DEFAULTS.hapticIntensity,
+    hapticIntensity: hi !== null ? Math.max(0, Math.min(1, parseFloat(hi))) : defaultHapticIntensity(),
     reducedMotion: rm === 'true',
     highContrast: hc === 'true',
     fontScale: fs !== null ? Math.max(0.8, Math.min(1.5, parseFloat(fs))) : DEFAULTS.fontScale,

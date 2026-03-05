@@ -8,6 +8,7 @@ on:
       - 'fixtures/**'
       - 'src/**'
       - 'hub-tools/**'
+      - 'packages/**'
       - 'server/**'
       - 'tests/**'
       - 'portal/**'
@@ -19,6 +20,7 @@ on:
       - 'fixtures/**'
       - 'src/**'
       - 'hub-tools/**'
+      - 'packages/**'
       - 'server/**'
       - 'tests/**'
       - 'portal/**'
@@ -48,7 +50,7 @@ jobs:
       - name: Lint
         run: npm run lint
       - name: Format check
-        run: npx prettier --check "src/**/*.{js,ts}" "hub-tools/**/*.js" "server/**/*.js" "tests/**/*.js"
+        run: npx prettier --check "src/**/*.{js,ts}" "hub-tools/**/*.js" "packages/**/*.js" "server/**/*.js" "tests/**/*.js"
       - name: Type check
         run: npm run typecheck
       - name: Validate JSON schemas load (Ajv)
@@ -81,6 +83,8 @@ jobs:
         run: npm run verify:version-sync
       - name: Verify api-contract auth
         run: npm run verify:api-contract-auth
+      - name: Verify hub imports (no hub-tools/context or hub-tools/routes in tests)
+        run: npm run verify:hub-imports
       - name: Validate OLS lessons and data files
         run: node scripts/validate-schemas.js
       # Build all lessons, not just gravity.yaml [R10 P3.4]

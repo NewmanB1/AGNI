@@ -9,7 +9,7 @@ This playbook documents **sync contracts** and **graph_weights deployment** so o
 | Piece | Role |
 |-------|------|
 | **Village hub** | Runs theta, hub-transform, Sentry (optional). Holds local `data/` (lesson_index, mastery_summary, graph_weights.json, lms_state.json, events/). |
-| **hub-tools/sync.js** | Outbound: packages events and sends to home server (Starlink) or writes to USB. Inbound: imports file with costs, graph_weights, curriculum, schedules. |
+| **packages/agni-hub/sync.js** (run via `node hub-tools/sync.js`) | Outbound: packages events and sends to home server (Starlink) or writes to USB. Inbound: imports file with costs, graph_weights, curriculum, schedules. |
 | **Home server** | Receives POST /api/hub-sync from village hubs; may return acknowledgments or errors. Optional: sends inbound update files back (USB or API). |
 | **graph_weights** | Local: `data/graph_weights.json` (Sentry output). Regional: `data/graph_weights_regional.json` (from sync import or manual drop). Theta uses **`getEffectiveGraphWeights()`** (see sentry.md §3.1). |
 
@@ -111,10 +111,10 @@ Inbound `graph_weights` should conform to **`schemas/graph_weights.schema.json`*
 
 | Goal | File(s) |
 |------|--------|
-| Change outbound package shape | `hub-tools/sync.js`: buildPackage, repseudonymize |
-| Change Starlink URL or headers | `hub-tools/sync.js`: sendViaStarlink, HOME_URL, HUB_ID |
-| Change inbound import logic | `hub-tools/sync.js`: importInbound |
-| Change theta’s graph selection | `hub-tools/theta.js`: getEffectiveGraphWeights |
+| Change outbound package shape | `packages/agni-hub/sync.js`: buildPackage, repseudonymize |
+| Change Starlink URL or headers | `packages/agni-hub/sync.js`: sendViaStarlink, HOME_URL, HUB_ID |
+| Change inbound import logic | `packages/agni-hub/sync.js`: importInbound |
+| Change theta’s graph selection | `packages/agni-hub/theta.js`: getEffectiveGraphWeights |
 | Validate graph_weights shape | `schemas/graph_weights.schema.json`; CI or manual ajv validate |
 
 ---

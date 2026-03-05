@@ -1,6 +1,6 @@
 # AGNI Hub API Contract
 
-All HTTP endpoints served by `hub-tools/theta.js` follow this contract.
+All HTTP endpoints served by `@agni/hub` (packages/agni-hub/theta.js) follow this contract. Run via `node hub-tools/theta.js` (wrapper) or `node packages/agni-hub/theta.js`.
 
 ## Response Envelope
 

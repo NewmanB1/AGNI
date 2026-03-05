@@ -335,7 +335,7 @@ describe('Extended API tests', () => {
     fs.writeFileSync(path.join(dataDir, 'lesson-index.json'), JSON.stringify([]));
     fs.writeFileSync(path.join(dataDir, 'approved-catalog.json'), JSON.stringify({ lessonIds: [] }));
 
-    const { accountsService } = require('../../hub-tools/context/services');
+    const { accountsService } = require('../../packages/agni-hub/context/services');
     const reg = await accountsService.registerCreator({
       name: 'Ext Admin', email: 'ext-admin@test.local', password: 'testpass123'
     });
@@ -346,7 +346,7 @@ describe('Extended API tests', () => {
     const login = await accountsService.loginCreator({ email: 'ext-admin@test.local', password: 'testpass123' });
     adminToken = login.token;
 
-    const theta = require('../../hub-tools/theta');
+    const theta = require('@agni/hub').theta;
     server = theta.startApi(0);
     await new Promise(resolve => setTimeout(resolve, 200));
     port = server.address().port;
@@ -360,8 +360,8 @@ describe('Extended API tests', () => {
     delete process.env.AGNI_HUB_API_KEY;
     delete require.cache[require.resolve('../../src/utils/env-config')];
     delete require.cache[require.resolve('../../src/services/accounts')];
-    delete require.cache[require.resolve('../../hub-tools/context/auth')];
-    delete require.cache[require.resolve('../../hub-tools/context/services')];
+    delete require.cache[require.resolve('../../packages/agni-hub/context/auth')];
+    delete require.cache[require.resolve('../../packages/agni-hub/context/services')];
   });
 
   it('GET /health returns status ok', async () => {
@@ -460,7 +460,7 @@ describe('Extended API tests', () => {
 // 6. Paginate utility test
 // ═══════════════════════════════════════════════════════════════════════════
 describe('paginate utility', () => {
-  const { paginate } = require('../../hub-tools/shared');
+  const { paginate } = require('@agni/hub').shared;
 
   it('returns all items when no limit/offset', () => {
     const result = paginate([1, 2, 3, 4, 5], {});

@@ -74,6 +74,10 @@ npm run build        # compile gravity.yaml → dist/gravity.html
 node test-inference.js  # run feature inference on all lessons
 ```
 
+### Integrate OLS into Kolibri
+
+If you work with [Kolibri](https://learningequality.org/kolibri/) (Learning Equality), see **`docs/integrations/KOLIBRI-INTEGRATION-GUIDE.md`** for how to add OLS lessons to a Kolibri channel using Ricecooker. For a minimal iframe demo, see **`demo/iframe-demo.html`**.
+
 ### Translate a Lesson
 
 **Full tutorial:** See **`docs/tutorials/fork-and-translate-lesson.md`** for a step-by-step guide (fork, translate metadata and content, validate, build).

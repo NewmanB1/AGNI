@@ -8,6 +8,7 @@ const fs = require('fs');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const CHECKPOINTS_DIR = path.join(DATA_DIR, 'checkpoints');
+const HUB_KEY = 'integration-test-hub-key';
 
 function post(baseUrl, urlPath, body) {
   const url = new URL(urlPath, baseUrl);
@@ -16,7 +17,10 @@ function post(baseUrl, urlPath, body) {
     const req = http.request({
       hostname: url.hostname, port: url.port,
       path: url.pathname + url.search, method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'Content-Length': Buffer.byteLength(bodyStr) }
+      headers: {
+        'Content-Type': 'application/json', Accept: 'application/json',
+        'x-hub-key': HUB_KEY, 'Content-Length': Buffer.byteLength(bodyStr)
+      }
     }, (res) => {
       let data = '';
       res.on('data', (c) => { data += c; });
@@ -35,7 +39,7 @@ function post(baseUrl, urlPath, body) {
 function get(baseUrl, urlPath) {
   const url = new URL(urlPath, baseUrl);
   return new Promise((resolve, reject) => {
-    const req = http.get(url, { headers: { Accept: 'application/json' } }, (res) => {
+    const req = http.get(url, { headers: { Accept: 'application/json', 'x-hub-key': HUB_KEY } }, (res) => {
       let body = '';
       res.on('data', (c) => { body += c; });
       res.on('end', () => {
@@ -55,7 +59,8 @@ describe('Checkpoint sync integration', () => {
   const studentDir = path.join(CHECKPOINTS_DIR, PSEUDO_ID);
 
   before(async () => {
-    const theta = require('../../hub-tools/theta');
+    process.env.AGNI_HUB_API_KEY = HUB_KEY;
+    const theta = require('@agni/hub').theta;
     try { await theta.rebuildLessonIndex(); } catch (_) { /* no serve dir */ }
     server = theta.startApi(0);
     const port = await new Promise((r) => server.once('listening', () => r(server.address().port)));
@@ -137,7 +142,7 @@ describe('Checkpoint sync integration', () => {
     const { statusCode, data } = await post(baseUrl, '/api/checkpoint', newer);
     assert.equal(statusCode, 200);
     assert.equal(data.ok, true);
-    assert.equal(data.skipped, undefined);
+    assert.equal(data.skipped, false);
 
     const { data: getData } = await get(
       baseUrl, `/api/checkpoint?pseudoId=${PSEUDO_ID}&lessonId=${LESSON_ID}`

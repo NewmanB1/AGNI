@@ -22,9 +22,9 @@ function loadConfig() {
       model: 'gemini-2.0-flash',
       maxTokens: 4096,
       temperature: 0.7,
-      rateLimit: { requestsPerMinute: 10, delayMs: 6000 },
+      rateLimit: { requestsPerMinute: 5, delayMs: 12000 },
       maxRetries: 3,
-      batchSize: 50,
+      batchSize: 20,
       startFrom: 0
     }, null, 2));
     process.exit(1);
@@ -60,6 +60,13 @@ function saveProgress(progress) {
 
 function sleep(ms) {
   return new Promise(function (resolve) { setTimeout(resolve, ms); });
+}
+
+// ── Progress summary ─────────────────────────────────────────────────────────
+
+function formatProgress(total, completed) {
+  const pct = total > 0 ? ((completed / total) * 100).toFixed(1) : '0';
+  return 'Progress: ' + completed + ' / ' + total + ' (' + pct + '% complete)';
 }
 
 // ── Quota detection ──────────────────────────────────────────────────────────
@@ -205,10 +212,13 @@ async function main() {
 
   const batch = toProcess.slice(0, batchSize);
 
+  const total = plan.lessons.length;
+  const completedCount = Object.keys(progress.completed).length;
+
   console.log('AGNI Curriculum Generator');
   console.log('========================');
-  console.log('Total lessons in plan: ' + plan.lessons.length);
-  console.log('Already completed: ' + Object.keys(progress.completed).length);
+  console.log('Total lessons in plan: ' + total);
+  console.log(formatProgress(total, completedCount));
   console.log('Already failed (skipped): ' + (skipFailed ? Object.keys(progress.failed).length : 0));
   console.log('Remaining to process: ' + toProcess.length);
   console.log('This batch: ' + batch.length + ' lessons');
@@ -227,7 +237,9 @@ async function main() {
 
     if (result.status === 'quota_exceeded') {
       saveProgress(progress);
+      const done = Object.keys(progress.completed).length;
       console.log('\nStopped: API quota reached. Progress saved.');
+      console.log(formatProgress(total, done));
       console.log('Run again tomorrow to continue from where you left off.');
       process.exit(0);
     }
@@ -245,9 +257,11 @@ async function main() {
   console.log('Invalid: ' + progress.stats.totalInvalid);
   console.log('Total tokens: ' + progress.stats.totalTokensUsed);
 
+  const finalCompleted = Object.keys(progress.completed).length;
   const remaining = toProcess.length - batch.length;
+  console.log('\n' + formatProgress(total, finalCompleted));
   if (remaining > 0) {
-    console.log('\n' + remaining + ' lessons remaining. Run again to continue.');
+    console.log(remaining + ' lessons remaining. Run again to continue.');
   }
 }
 

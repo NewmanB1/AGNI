@@ -302,8 +302,7 @@ async function run(baseUrl, bearer) {
 async function main() {
   const path = require('path');
   process.env.AGNI_HUB_API_KEY = CONTRACT_HUB_KEY;
-  const thetaPath = path.join(__dirname, '../hub-tools/theta.js');
-  const theta = require(thetaPath);
+  const theta = require('@agni/hub').theta;
 
   let server;
   try {
@@ -321,7 +320,7 @@ async function main() {
 
   let bearer;
   try {
-    const { accountsService } = require('../hub-tools/context/services');
+    const accountsService = require('@agni/hub').accounts;
     const reg = await accountsService.registerCreator({ name: 'Contract Admin', email: 'contract@test.local', password: 'testpass123' });
     if (reg.creator) {
       await accountsService.setCreatorApproval(reg.creator.id, true);

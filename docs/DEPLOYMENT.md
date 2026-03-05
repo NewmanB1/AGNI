@@ -105,7 +105,7 @@ cp lessons/ShakeRhythm.yaml data/yaml/
 export AGNI_HUB_API_KEY=$(openssl rand -hex 32)
 echo "Hub key: $AGNI_HUB_API_KEY"
 
-# Start the main hub (theta + lesson server)
+# Start the main hub (theta + lesson server). hub-tools/ wrappers delegate to packages/agni-hub/.
 node hub-tools/theta.js
 
 # In a separate terminal (or use a process manager): start sentry

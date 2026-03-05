@@ -12,7 +12,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const CONTRACT_PATH = path.join(ROOT, 'docs/api-contract.md');
-const ROUTES_DIR = path.join(ROOT, 'hub-tools/routes');
+const ROUTES_DIR = path.join(ROOT, 'packages/agni-hub/routes');
 
 const AUTH_MAP = {
   'No': 'none',

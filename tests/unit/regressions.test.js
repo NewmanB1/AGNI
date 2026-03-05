@@ -267,8 +267,8 @@ describe('AUDIT-6: requireHubKey fails closed when key is not configured', () =>
     const saved = process.env.AGNI_HUB_API_KEY;
     process.env.AGNI_HUB_API_KEY = '';
     try {
-      delete require.cache[require.resolve('../../hub-tools/context/auth')];
-      const { requireHubKey } = require('../../hub-tools/context/auth');
+      delete require.cache[require.resolve('../../packages/agni-hub/context/auth')];
+      const { requireHubKey } = require('../../packages/agni-hub/context/auth');
       let responseCode = null;
       let responseBody = null;
       const handler = requireHubKey(function () { responseCode = 200; });
@@ -280,7 +280,7 @@ describe('AUDIT-6: requireHubKey fails closed when key is not configured', () =>
       assert.equal(responseCode, 503, 'requireHubKey should return 503 when key is not configured, got ' + responseCode);
     } finally {
       process.env.AGNI_HUB_API_KEY = saved;
-      delete require.cache[require.resolve('../../hub-tools/context/auth')];
+      delete require.cache[require.resolve('../../packages/agni-hub/context/auth')];
     }
   });
 });
@@ -346,8 +346,8 @@ describe('AUDIT-10: requireHubKey rejects incorrect key with 401', () => {
     const saved = process.env.AGNI_HUB_API_KEY;
     process.env.AGNI_HUB_API_KEY = 'correct-secret-key';
     try {
-      delete require.cache[require.resolve('../../hub-tools/context/auth')];
-      const { requireHubKey } = require('../../hub-tools/context/auth');
+      delete require.cache[require.resolve('../../packages/agni-hub/context/auth')];
+      const { requireHubKey } = require('../../packages/agni-hub/context/auth');
       let responseCode = null;
       const handler = requireHubKey(function () { responseCode = 200; });
       handler(
@@ -358,7 +358,7 @@ describe('AUDIT-10: requireHubKey rejects incorrect key with 401', () => {
       assert.equal(responseCode, 401, 'requireHubKey should return 401 for wrong key, got ' + responseCode);
     } finally {
       process.env.AGNI_HUB_API_KEY = saved;
-      delete require.cache[require.resolve('../../hub-tools/context/auth')];
+      delete require.cache[require.resolve('../../packages/agni-hub/context/auth')];
     }
   });
 });
@@ -648,7 +648,7 @@ describe('AUDIT-21: governance routes reject unauthenticated requests', () => {
     fsMod.writeFileSync(pathMod.join(dataDir, 'lesson-index.json'), JSON.stringify([]));
     fsMod.writeFileSync(pathMod.join(dataDir, 'approved-catalog.json'), JSON.stringify({ lessonIds: [] }));
 
-    var theta = require('../../hub-tools/theta');
+    var theta = require('@agni/hub').theta;
     server = theta.startApi(0);
     await new Promise(function (resolve) { setTimeout(resolve, 200); });
     port = server.address().port;
@@ -664,8 +664,8 @@ describe('AUDIT-21: governance routes reject unauthenticated requests', () => {
     delete require.cache[require.resolve('../../src/utils/env-config')];
     delete require.cache[require.resolve('@agni/utils/env-config')];
     delete require.cache[require.resolve('../../src/services/accounts')];
-    delete require.cache[require.resolve('../../hub-tools/context/auth')];
-    delete require.cache[require.resolve('../../hub-tools/context/services')];
+    delete require.cache[require.resolve('../../packages/agni-hub/context/auth')];
+    delete require.cache[require.resolve('../../packages/agni-hub/context/services')];
   });
 
   function rawRequest(method, urlPath) {
@@ -704,7 +704,7 @@ describe('AUDIT-21: governance routes reject unauthenticated requests', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('C1-XSS: shared.js sanitizeHtml strips unquoted event handlers', () => {
-  const { sanitizeHtml } = require('../../server/pwa/shared.js');
+  const { sanitizeHtml } = require('../../packages/agni-hub/pwa/shared.js');
 
   const XSS_PAYLOADS = [
     { name: 'unquoted onerror',      input: '<img onerror=alert(1) src=x>',             must_not_contain: 'onerror' },
@@ -773,7 +773,7 @@ describe('C1-XSS: shared-runtime.js ON_ATTR_RE handles unquoted values', () => {
 
 describe('C1-ENTITY: shared.js sanitizeHtml strips entity-encoded javascript: URIs', () => {
   delete require.cache[require.resolve('../../server/pwa/shared.js')];
-  const { sanitizeHtml } = require('../../server/pwa/shared.js');
+  const { sanitizeHtml } = require('../../packages/agni-hub/pwa/shared.js');
 
   const ENTITY_PAYLOADS = [
     { name: 'decimal &#106; for j',       input: '<a href="&#106;avascript:alert(1)">click</a>',   banned: 'javascript' },
@@ -930,7 +930,7 @@ describe('R16-C3.3: PageRank invalidateCache clears _currGraph', () => {
 describe('R16-C2.1: sentry event buffer is bounded', () => {
   it('sentry.js source contains EVENT_BUFFER_MAX constant', () => {
     const fs = require('fs');
-    const src = fs.readFileSync(require('path').join(__dirname, '../../hub-tools/sentry.js'), 'utf8');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../packages/agni-hub/sentry.js'), 'utf8');
     assert.ok(src.indexOf('EVENT_BUFFER_MAX') !== -1,
       'sentry.js missing EVENT_BUFFER_MAX — eventBuffer can grow without limit');
     assert.ok(src.indexOf('_flushing') !== -1,
@@ -945,7 +945,7 @@ describe('R16-C2.1: sentry event buffer is bounded', () => {
 describe('R16-C2.2: sentry UTF-8 body parsing uses Buffer.concat', () => {
   it('sentry.js receiver uses Buffer.concat, not body += chunk', () => {
     const fs = require('fs');
-    const src = fs.readFileSync(require('path').join(__dirname, '../../hub-tools/sentry.js'), 'utf8');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../packages/agni-hub/sentry.js'), 'utf8');
     const receiverStart = src.indexOf('function startReceiver');
     const receiverBlock = src.slice(receiverStart, receiverStart + 2500);
     assert.ok(receiverBlock.indexOf('Buffer.concat') !== -1,
@@ -962,7 +962,7 @@ describe('R16-C2.2: sentry UTF-8 body parsing uses Buffer.concat', () => {
 describe('R16-C3.2: sentry has event retention pruning', () => {
   it('sentry.js contains pruneOldEvents function', () => {
     const fs = require('fs');
-    const src = fs.readFileSync(require('path').join(__dirname, '../../hub-tools/sentry.js'), 'utf8');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../packages/agni-hub/sentry.js'), 'utf8');
     assert.ok(src.indexOf('pruneOldEvents') !== -1,
       'sentry.js missing pruneOldEvents — NDJSON files accumulate forever on Pi SD card');
     assert.ok(src.indexOf('sentryRetentionDays') !== -1,
@@ -977,7 +977,7 @@ describe('R16-C3.2: sentry has event retention pruning', () => {
 describe('R16-C3.1: service worker version uses placeholder, not hardcoded', () => {
   it('sw.js uses __SW_VERSION__ placeholder', () => {
     const fs = require('fs');
-    const src = fs.readFileSync(require('path').join(__dirname, '../../server/sw.js'), 'utf8');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../packages/agni-hub/sw.js'), 'utf8');
     assert.ok(src.indexOf('__SW_VERSION__') !== -1,
       'sw.js does not use __SW_VERSION__ placeholder — version is hardcoded');
     assert.ok(src.indexOf("'agni-v1.9.0'") === -1,
@@ -986,7 +986,7 @@ describe('R16-C3.1: service worker version uses placeholder, not hardcoded', () 
 
   it('hub-transform stamps __SW_VERSION__ with package version', () => {
     const fs = require('fs');
-    const src = fs.readFileSync(require('path').join(__dirname, '../../server/hub-transform.js'), 'utf8');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../packages/agni-hub/hub-transform.js'), 'utf8');
     assert.ok(src.indexOf("'__SW_VERSION__'") !== -1 || src.indexOf('"__SW_VERSION__"') !== -1,
       'hub-transform does not replace __SW_VERSION__ — service worker gets raw placeholder');
   });
@@ -999,21 +999,21 @@ describe('R16-C3.1: service worker version uses placeholder, not hardcoded', () 
 describe('R16-C1: withLock is used in all mutating route handlers', () => {
   it('groups.js uses withLock', () => {
     const fs = require('fs');
-    const src = fs.readFileSync(require('path').join(__dirname, '../../hub-tools/routes/groups.js'), 'utf8');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../packages/agni-hub/routes/groups.js'), 'utf8');
     assert.ok(src.indexOf('withLock') !== -1,
       'groups.js missing withLock — concurrent group mutations can lose data');
   });
 
   it('parent.js uses withLock', () => {
     const fs = require('fs');
-    const src = fs.readFileSync(require('path').join(__dirname, '../../hub-tools/routes/parent.js'), 'utf8');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../packages/agni-hub/routes/parent.js'), 'utf8');
     assert.ok(src.indexOf('withLock') !== -1,
       'parent.js missing withLock — concurrent invite/link mutations can lose data');
   });
 
   it('student.js checkpoint uses withLock', () => {
     const fs = require('fs');
-    const src = fs.readFileSync(require('path').join(__dirname, '../../hub-tools/routes/student.js'), 'utf8');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../packages/agni-hub/routes/student.js'), 'utf8');
     const checkpointSection = src.slice(0, src.indexOf('router.get(\'/api/checkpoint'));
     assert.ok(checkpointSection.indexOf('withLock(filePath') !== -1,
       'student.js POST /api/checkpoint does not lock the checkpoint file');

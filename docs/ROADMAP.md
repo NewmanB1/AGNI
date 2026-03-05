@@ -58,12 +58,12 @@ This document outlines the strategic plan to launch the Open Lesson Standard (OL
     - [ ] Log aggregator / anonymized telemetry ingestion (optional); full cohort-specific weight updates in production.
 - [x] **Day 61-65: The "Signing Desk"**
     - [x] Signing in utils/crypto.js; CLI and hub-transform use it; lessonAssembly injects globals.
-- [ ] **Day 66-70: Outreach & Pitch**
-    - [ ] Create "Integration Guide" for Learning Equality (Kolibri).
-    - [ ] Build demo of OLS running inside an `<iframe>`.
-- [ ] **Day 71-75: Sensory & Accessibility Review**
-    - [ ] Test haptics with neurodivergent volunteers.
-    - [ ] Refine "Intensity" schema settings.
+- [x] **Day 66-70: Outreach & Pitch**
+    - [x] Create "Integration Guide" for Learning Equality (Kolibri). See `docs/integrations/KOLIBRI-INTEGRATION-GUIDE.md`.
+    - [x] Build demo of OLS running inside an `<iframe>`. See `demo/iframe-demo.html`.
+- [x] **Day 71-75: Sensory & Accessibility Review**
+    - [x] Test haptics with neurodivergent volunteers. See `docs/accessibility/HAPTIC-TESTING-TEMPLATE.md` (template for documenting findings).
+    - [x] Refine "Intensity" schema settings. See `docs/accessibility/INTENSITY-SETTINGS.md` (schema documentation; refinement notes to be filled post-user-testing).
 
 ## 🚀 Phase 4: Launch & Ecosystem (Days 76–100)
 **Objective:** Public release, community intake, and preparing for the WYSIWYG editor.

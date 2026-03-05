@@ -66,10 +66,10 @@
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "prebuild": "npm run clean",
     "dev": "node --watch src/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html",
-    "lint": "eslint src/ hub-tools/ tests/ --max-warnings=120",
-    "lint:fix": "eslint src/ hub-tools/ tests/ --fix",
-    "format": "prettier --write \"src/**/*.{js,ts}\" \"hub-tools/**/*.js\" \"server/**/*.js\" \"tests/**/*.js\"",
-    "format:check": "prettier --check \"src/**/*.{js,ts}\" \"hub-tools/**/*.js\" \"server/**/*.js\" \"tests/**/*.js\"",
+    "lint": "eslint src/ hub-tools/ packages/agni-hub/ tests/ --max-warnings=120",
+    "lint:fix": "eslint src/ hub-tools/ packages/agni-hub/ tests/ --fix",
+    "format": "prettier --write \"src/**/*.{js,ts}\" \"hub-tools/**/*.js\" \"packages/**/*.js\" \"server/**/*.js\" \"tests/**/*.js\"",
+    "format:check": "prettier --check \"src/**/*.{js,ts}\" \"hub-tools/**/*.js\" \"packages/**/*.js\" \"server/**/*.js\" \"tests/**/*.js\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "init:data": "node scripts/init-data.js",
     "validate": "node scripts/validate-all.js",
@@ -99,6 +99,8 @@
     "verify:unauthed-routes": "node scripts/check-unauthed-routes.js",
     "verify:version-sync": "node scripts/check-version-sync.js",
     "verify:api-contract-auth": "node scripts/check-api-contract-auth.js",
-    "verify:all": "node scripts/check-dead-files.js && node scripts/check-dts-arity.js && node scripts/check-innerhtml.js && node scripts/check-factory-order.js && node scripts/check-svg-tools.js && node scripts/check-known-sensors.js && node scripts/sync-schema-enums.js --check && node scripts/verify-canonical-ownership.js && node scripts/check-unauthed-routes.js && node scripts/check-version-sync.js && node scripts/check-api-contract-auth.js"
+    "verify:hub-imports": "node scripts/check-hub-imports.js",
+    "verify:hub-docs": "node scripts/check-hub-docs.js",
+    "verify:all": "node scripts/check-dead-files.js && node scripts/check-dts-arity.js && node scripts/check-innerhtml.js && node scripts/check-factory-order.js && node scripts/check-svg-tools.js && node scripts/check-known-sensors.js && node scripts/sync-schema-enums.js --check && node scripts/verify-canonical-ownership.js && node scripts/check-unauthed-routes.js && node scripts/check-version-sync.js && node scripts/check-api-contract-auth.js && node scripts/check-hub-imports.js"
   }
 }

@@ -1,14 +1,14 @@
 'use strict';
 
 /**
- * Unit tests for Sentry analysis logic (hub-tools/sentry-analysis.js).
+ * Unit tests for Sentry analysis logic (packages/agni-hub/sentry-analysis.js).
  * Covers validation, contingency logic, chi-squared, cohort discovery, and output shape.
  */
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 
-const sentryAnalysis = require('../../hub-tools/sentry-analysis');
+const sentryAnalysis = require('../../packages/agni-hub/sentry-analysis');
 
 describe('Sentry analysis', function () {
 

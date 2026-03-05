@@ -41,7 +41,7 @@ node test-inference.js
 npm run validate
 ```
 
-The compiled output lands in `dist/`. Open `dist/gravity.html` in any browser — no server needed.
+The compiled output lands in `dist/`. Open `dist/gravity.html` in any browser — no server needed. For an **iframe demo** (embed OLS in a parent page), see [demo/iframe-demo.html](demo/iframe-demo.html) — run `npm run build`, then serve the repo root (e.g. `npx serve .`).
 
 ### Running the portal against the hub
 
@@ -143,6 +143,7 @@ AGNI/
 | [API contract](docs/api-contract.md) | Hub HTTP API endpoints and payloads |
 | [Fork and translate tutorial](docs/tutorials/fork-and-translate-lesson.md) | Step-by-step: fork and translate a lesson |
 | [Deployment guide](docs/DEPLOYMENT.md) | Setting up a Village Hub on Raspberry Pi |
+| [Kolibri integration](docs/integrations/KOLIBRI-INTEGRATION-GUIDE.md) | Integrating OLS lessons into Kolibri via Ricecooker |
 | [Conventions](docs/CONVENTIONS.md) | Coding conventions and ES5 rules |
 
 ---

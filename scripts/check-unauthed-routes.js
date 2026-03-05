@@ -11,7 +11,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const ROUTES_DIR = path.resolve(__dirname, '../hub-tools/routes');
+const ROUTES_DIR = path.resolve(__dirname, '../packages/agni-hub/routes');
 const AUTH_MIDDLEWARE = ['requireHubKey', 'authOnly', 'adminOnly', 'roleOnly'];
 
 // Paths intentionally open (no auth middleware)

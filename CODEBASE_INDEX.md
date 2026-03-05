@@ -44,11 +44,11 @@ Quick reference for humans and AI tools. Canonical implementations live in `pack
 
 | What | Where |
 |------|-------|
-| Hub transform (on-demand PWA) | `server/hub-transform.js` |
-| Theta (lesson ordering) | `hub-tools/theta.js` |
-| @agni/hub package | `packages/agni-hub/` — facade that re-exports theta, hubTransform, etc. Canonical logic remains in `server/` and `hub-tools/`.
-| Service worker | `server/sw.js` |
-| PWA shell | `server/pwa/shell.html` |
+| Hub transform (on-demand PWA) | `packages/agni-hub/hub-transform.js` |
+| Theta (lesson ordering) | `packages/agni-hub/theta.js` |
+| @agni/hub package | `packages/agni-hub/` — canonical hub: theta, sentry, routes, hub-transform, PWA. Run via `node hub-tools/theta.js` (wrapper). |
+| Service worker | `packages/agni-hub/sw.js` |
+| PWA shell | `packages/agni-hub/pwa/shell.html` |
 
 ---
 
@@ -86,5 +86,5 @@ Quick reference for humans and AI tools. Canonical implementations live in `pack
 | Entry | Path |
 |-------|------|
 | CLI | `src/cli.js` |
-| Hub API | `hub-tools/theta.js` → `theta.startApi()` |
+| Hub API | `packages/agni-hub/theta.js` or `node hub-tools/theta.js` → `theta.startApi()` |
 | Portal | `portal/` (SvelteKit) |

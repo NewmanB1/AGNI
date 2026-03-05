@@ -119,7 +119,11 @@
     try {
       var val = localStorage.getItem('agni_haptic_intensity');
       if (val !== null) return Math.max(0, Math.min(1, parseFloat(val)));
+      if (getReducedMotion()) return 0;
     } catch (e) { /* localStorage unavailable */ }
+    try {
+      if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 0;
+    } catch (e2) { /* matchMedia unavailable */ }
     return 1;
   }
 

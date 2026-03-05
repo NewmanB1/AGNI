@@ -129,7 +129,7 @@ if (barSrc.indexOf('typeof opts.fn === \'string\'') !== -1 || barSrc.indexOf('ty
 
 // ── P4.1: shell-boot svg_spec ───────────────────────────────────────────────
 
-var shellSrc = fs.readFileSync(path.join(root, 'server', 'pwa', 'shell-boot.js'), 'utf8');
+var shellSrc = fs.readFileSync(path.join(root, 'packages', 'agni-hub', 'pwa', 'shell-boot.js'), 'utf8');
 if (shellSrc.indexOf('step.svg_spec') !== -1 && shellSrc.indexOf('AGNI_SVG.fromSpec') !== -1) {
   pass('P4.1 shell-boot uses svg_spec and fromSpec');
 } else {

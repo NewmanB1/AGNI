@@ -112,7 +112,7 @@ describe('Wiring smoke tests', function () {
     fs.writeFileSync(path.join(yamlDir, 'smoke-test.yaml'), MINIMAL_LESSON_YAML);
     fs.writeFileSync(path.join(yamlDir, 'sensor-smoke-test.yaml'), SENSOR_LESSON_YAML);
 
-    var theta = require('../../hub-tools/theta');
+    var theta = require('@agni/hub').theta;
     server = theta.startApi(0);
     await new Promise(function (resolve) { setTimeout(resolve, 300); });
     port = server.address().port;

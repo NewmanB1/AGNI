@@ -21,7 +21,8 @@
         osReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
       }
     } catch (e) { /* matchMedia not available */ }
-    var defaults = { fontScale: 1, highContrast: false, reducedMotion: osReducedMotion, hapticIntensity: 1, autoNarrate: false };
+    var defaultHaptic = osReducedMotion ? 0 : 1;
+    var defaults = { fontScale: 1, highContrast: false, reducedMotion: osReducedMotion, hapticIntensity: defaultHaptic, autoNarrate: false };
     try {
       var fs = localStorage.getItem('agni_font_scale');
       var hc = localStorage.getItem('agni_high_contrast');
@@ -32,7 +33,7 @@
         fontScale:       fs !== null ? Math.max(0.8, Math.min(1.5, parseFloat(fs))) : 1,
         highContrast:    hc === 'true',
         reducedMotion:   rm !== null ? rm === 'true' : osReducedMotion,
-        hapticIntensity: hi !== null ? Math.max(0, Math.min(1, parseFloat(hi))) : 1,
+        hapticIntensity: hi !== null ? Math.max(0, Math.min(1, parseFloat(hi))) : defaultHaptic,
         autoNarrate:     an === 'true'
       };
     } catch (e) { return defaults; }

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self';">
+  <title>AGNI Lesson</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1a1a2e">
+  <style>
+    body { margin: 0; font-family: sans-serif; background: #f0f0f0; }
+    #loading { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: #fff; }
+    #app { padding: 16px; }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading lesson...</div>
+  <div id="app" style="display:none"></div>
+
+  <script src="/factories/polyfills.js"></script>
+  <script src="/shared.js"></script>
+  <script src="/factory-loader.js"></script>
+  <script src="/lesson-data.js"></script>
+  <script src="/shell-boot.js"></script>
+</body>
+</html>

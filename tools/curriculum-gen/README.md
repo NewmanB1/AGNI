@@ -76,19 +76,29 @@ Create `config.json` from the example:
 {
   "provider": "gemini",         // "gemini", "openai", or "anthropic"
   "apiKey": "YOUR_API_KEY",
-  "model": "gemini-2.0-flash",  // or "gpt-4o", "claude-sonnet-4-20250514"
+  "model": "gemini-2.0-flash",  // or "gemini-2.5-flash", "gpt-4o", etc.
   "maxTokens": 4096,
   "temperature": 0.7,
   "rateLimit": {
-    "requestsPerMinute": 10,
-    "delayMs": 6000             // ms between requests
+    "requestsPerMinute": 5,     // match your API quota (RPM)
+    "delayMs": 12000            // 60000 / RPM; 5 RPM = 12s, 15 RPM = 4s
   },
-  "maxRetries": 3,              // retries per lesson on failure
-  "batchSize": 50,              // lessons per run
-  "skipFailed": true,           // skip previously failed lessons (set false to retry)
-  "startFrom": 0                // deprecated; resume is automatic
+  "maxRetries": 3,
+  "batchSize": 20,              // smaller for free tier; increase for paid
+  "skipFailed": true,
+  "startFrom": 0
 }
 ```
+
+### Rate limits (match to your API quota)
+
+| Tier | RPM | TPM | delayMs | batchSize |
+|------|-----|-----|---------|-----------|
+| Gemini free | 5 | 250k | 12000 | 20 |
+| Gemini free (higher) | 15 | 250k | 4000 | 50 |
+| Paid | 60+ | 1M+ | 1000 | 100 |
+
+Set `delayMs` to at least `60000 / requestsPerMinute` to avoid quota errors.
 
 ### Provider notes
 

@@ -16,8 +16,8 @@ const PKG = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
 const PKG_VERSION = PKG.version || '0.0.0';
 
 const FILES = [
-  'server/sw.js',
-  'server/hub-transform.js'
+  'packages/agni-hub/sw.js',
+  'packages/agni-hub/hub-transform.js'
 ];
 
 // Patterns that indicate hardcoded version (fail)
@@ -52,10 +52,16 @@ function main() {
     }
   }
 
-  const swContent = fs.readFileSync(path.join(ROOT, 'server/sw.js'), 'utf8');
-  if (!swContent.includes('__SW_VERSION__')) {
-    console.error('server/sw.js: Must use __SW_VERSION__ placeholder');
+  const swPath = path.join(ROOT, 'packages/agni-hub/sw.js');
+  if (!fs.existsSync(swPath)) {
+    console.error('packages/agni-hub/sw.js: file not found');
     failed = true;
+  } else {
+    const swContent = fs.readFileSync(swPath, 'utf8');
+    if (!swContent.includes('__SW_VERSION__')) {
+      console.error('packages/agni-hub/sw.js: Must use __SW_VERSION__ placeholder');
+      failed = true;
+    }
   }
 
   if (failed) process.exit(1);

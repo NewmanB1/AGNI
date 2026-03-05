@@ -59,7 +59,7 @@ describe('Theta API integration tests', () => {
     fs.writeFileSync(path.join(dataDir, 'lesson-index.json'), JSON.stringify([]));
     fs.writeFileSync(path.join(dataDir, 'approved-catalog.json'), JSON.stringify({ lessonIds: [] }));
 
-    const { accountsService } = require('../../hub-tools/context/services');
+    const accountsService = require('@agni/hub').accounts;
     const result = await accountsService.registerCreator({
       name: 'Test Admin', email: 'admin@test.local', password: 'testpass123'
     });
@@ -70,7 +70,7 @@ describe('Theta API integration tests', () => {
     const login = await accountsService.loginCreator({ email: 'admin@test.local', password: 'testpass123' });
     adminToken = login.token;
 
-    const theta = require('../../hub-tools/theta');
+    const theta = require('@agni/hub').theta;
     server = theta.startApi(0);
     await new Promise(resolve => setTimeout(resolve, 200));
     port = server.address().port;
@@ -85,8 +85,7 @@ describe('Theta API integration tests', () => {
     // Clear cached modules that captured env-config at require time
     delete require.cache[require.resolve('../../src/utils/env-config')];
     delete require.cache[require.resolve('../../src/services/accounts')];
-    delete require.cache[require.resolve('../../hub-tools/context/auth')];
-    delete require.cache[require.resolve('../../hub-tools/context/services')];
+    delete require.cache[require.resolve('../../src/utils/env-config')];
   });
 
   it('GET /api/theta requires pseudoId', async () => {

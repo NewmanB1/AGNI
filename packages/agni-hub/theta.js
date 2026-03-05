@@ -477,7 +477,7 @@ function startApi(port) {
   // the same server so that tests calling startApi() get the same routing as
   // production. Wrapped in try/catch for graceful degradation if the compiler
   // or its dependencies are unavailable.
-  const HUB_TRANSFORM_PATH = path.join(__dirname, '../../server/hub-transform.js');
+  const HUB_TRANSFORM_PATH = path.join(__dirname, 'hub-transform.js');
   try {
     const hubTransform = require(HUB_TRANSFORM_PATH);
     hubTransform.attachRoutes(server, { dev: process.env.NODE_ENV !== 'production', deviceId: null, privateKey: null });

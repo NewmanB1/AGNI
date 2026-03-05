@@ -14,7 +14,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 
 const SOURCE_DIRS = ['src', 'hub-tools', 'server'];
-const CONSUMER_DIRS = ['src', 'hub-tools', 'server', 'tests', 'scripts'];
+const CONSUMER_DIRS = ['src', 'hub-tools', 'server', 'packages', 'tests', 'scripts'];
 
 const ENTRY_POINTS = new Set([
   normalize('src/cli.js'),
@@ -22,8 +22,8 @@ const ENTRY_POINTS = new Set([
   normalize('hub-tools/sentry.js'),
   normalize('hub-tools/sync.js'),
   normalize('server/hub-transform.js'),
-  normalize('server/sw.js'),
-  normalize('server/pwa/shared.js'),
+  normalize('packages/agni-hub/sw.js'),
+  normalize('packages/agni-hub/pwa/shared.js'),
   normalize('src/runtime/shell/index.html'),
 ]);
 
@@ -41,7 +41,7 @@ const KNOWN_STANDALONE = new Set([
   normalize('src/engine/embeddings.d.ts'),
   normalize('src/engine/federation.d.ts'),
   normalize('src/services/index.js'),
-  normalize('server/pwa/shell-boot.js'),
+  normalize('packages/agni-hub/pwa/shell-boot.js'),
   normalize('src/governance/catalog.js'),
   normalize('src/governance/schema-store.js'),
   // Phase 1: Re-exports from @ols/compiler (canonical ownership)
@@ -49,6 +49,12 @@ const KNOWN_STANDALONE = new Set([
   normalize('src/builders/native.js'),
   normalize('src/builders/yaml-packet.js'),
   normalize('src/markdown-pipeline.js'),
+  // Required by packages/agni-hub/hub-transform.js (cross-dir require)
+  normalize('src/compiler/index.js'),
+  normalize('src/utils/crypto.js'),
+  normalize('src/utils/csp.js'),
+  normalize('src/utils/io.js'),
+  normalize('src/utils/katex-css-builder.js'),
 ]);
 
 // Runtime browser files listed in runtimeManifest.js are inlined by the HTML
@@ -127,7 +133,7 @@ consumerFiles.forEach(function (file) {
 
 function resolveRelative(fromFile, target) {
   const dir = normalize(path.dirname(fromFile));
-  const joined = normalize(path.posix.join(dir, target));
+  const joined = normalize(path.posix.normalize(path.posix.join(dir, target)));
 
   const candidates = [
     joined,

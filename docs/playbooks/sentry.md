@@ -8,9 +8,9 @@ This playbook describes the **Sentry → graph_weights → theta** flow: how tel
 
 | Component | Role |
 |-----------|------|
-| **Sentry** (`hub-tools/sentry.js`) | Receives anonymized lesson-completion events, updates contingency tables and mastery, discovers a cohort via clustering, and writes `graph_weights.json`. |
+| **Sentry** (`packages/agni-hub/sentry.js`) | Receives anonymized lesson-completion events, updates contingency tables and mastery, discovers a cohort via clustering, and writes `graph_weights.json`. |
 | **graph_weights.json** | File in `AGNI_DATA_DIR` (default `data/`) describing skill-to-skill transfer weights for a discovered cohort. Theta reads it to compute residual cost (transfer benefit). |
-| **Theta** (`hub-tools/theta.js`) | Reads `graph_weights.json` (local or regional), uses it in `getResidualCostFactor()` and `computeLessonTheta()` to order lessons by MLC. |
+| **Theta** (`packages/agni-hub/theta.js`) | Reads `graph_weights.json` (local or regional), uses it in `getResidualCostFactor()` and `computeLessonTheta()` to order lessons by MLC. |
 
 **Data flow:** Device/runtime → `POST /api/telemetry` (theta or Sentry) → events on disk → analysis run → `graph_weights.json` → theta reads it → lesson list sorted by θ.
 
@@ -100,7 +100,7 @@ So: **Sentry produces edges (prior → target, weight, confidence); theta uses t
 
 ## 4. Optional: Regional Sync
 
-- **hub-tools/sync.js** can receive graph_weights from a regional tier and write `graph_weights_regional.json`.
+- **packages/agni-hub/sync.js** (or `node hub-tools/sync.js`) can receive graph_weights from a regional tier and write `graph_weights_regional.json`.
 - Theta prefers local village graph when it has enough data; otherwise falls back to regional. This supports “cultural adaptation” at village level with regional fallback.
 
 ---
@@ -114,7 +114,7 @@ So: **Sentry produces edges (prior → target, weight, confidence); theta uses t
 | Schema compliance (weight_estimation_method, clustering_method) | Implemented (Sentry outputs them) |
 | Theta reads graph_weights, getEffectiveGraphWeights, residual in computeLessonTheta | Implemented |
 | Sync of regional graph_weights (sync.js) | Implemented (write path); deployment/orchestration is environment-specific |
-| Runtime → theta; theta forwards to Sentry | Implemented (hub-tools/routes/telemetry.js) |
+| Runtime → theta; theta forwards to Sentry | Implemented (packages/agni-hub/routes/telemetry.js) |
 
 ---
 
@@ -122,7 +122,7 @@ So: **Sentry produces edges (prior → target, weight, confidence); theta uses t
 
 | Goal | File(s) |
 |------|--------|
-| Change when analysis runs | `hub-tools/sentry.js`: ANALYSE_AFTER_N, MIN_MS_BETWEEN_ANALYSIS, setInterval |
+| Change when analysis runs | `packages/agni-hub/sentry.js`: ANALYSE_AFTER_N, MIN_MS_BETWEEN_ANALYSIS, setInterval |
 | Change cohort size or clustering | `env-config.js`: AGNI_SENTRY_JACCARD_THRESHOLD, AGNI_SENTRY_MIN_CLUSTER_SIZE |
 | Change edge thresholds (chi2, sample size) | `env-config.js`: AGNI_SENTRY_CHI2_THRESHOLD, AGNI_SENTRY_MIN_SAMPLE |
 | Change theta’s graph selection | `hub-tools/theta.js`: getEffectiveGraphWeights, MIN_LOCAL_SAMPLE_SIZE, MIN_LOCAL_EDGE_COUNT |

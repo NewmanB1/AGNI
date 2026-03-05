@@ -4,21 +4,21 @@ Use this when adding routes, changing auth, or wiring hub services.
 
 ## Entry points
 
-- **Server:** `hub-tools/theta.js` — main HTTP server entry point
-- **Shared context:** `hub-tools/shared.js` — assembles `ctx` passed to route modules (auth, services, data paths)
-- **Auth:** `hub-tools/context/auth.js` — `requireHubKey`, `authOnly`, `adminOnly`, `roleOnly`
-- **Routes:** `hub-tools/routes/*.js` — each file registers routes with the router
+- **Server:** `packages/agni-hub/theta.js` (canonical) or `node hub-tools/theta.js` (CLI wrapper) — main HTTP server
+- **Shared context:** `packages/agni-hub/shared.js` — assembles `ctx` passed to route modules (auth, services, data paths)
+- **Auth:** `packages/agni-hub/context/auth.js` — `requireHubKey`, `authOnly`, `adminOnly`, `roleOnly`
+- **Routes:** `packages/agni-hub/routes/*.js` — each file registers routes with the router
 
 ## Where to change what
 
 | Goal | Files to touch |
 |------|----------------|
-| Add a new API endpoint | Create or edit a file in `hub-tools/routes/`. Register in `hub-tools/theta.js` (routes are auto-loaded). |
+| Add a new API endpoint | Create or edit a file in `packages/agni-hub/routes/`. Register in `packages/agni-hub/theta.js` (routes are auto-loaded). |
 | Add auth to a route | Wrap the handler with `requireHubKey`, `authOnly`, or `adminOnly` from `ctx`. See auth rules below. |
-| Change auth middleware | `hub-tools/context/auth.js` |
-| Change service layer | `hub-tools/context/services.js`, or `src/services/` for accounts, governance, author, etc. |
-| Change data paths | `hub-tools/context/data-paths.js` |
-| Change HTTP helpers | `hub-tools/context/http.js` |
+| Change auth middleware | `packages/agni-hub/context/auth.js` |
+| Change service layer | `packages/agni-hub/context/services.js`, or `src/services/` for accounts, governance, author, etc. |
+| Change data paths | `packages/agni-hub/context/data-paths.js` |
+| Change HTTP helpers | `packages/agni-hub/context/http.js` |
 
 ## Auth rules
 

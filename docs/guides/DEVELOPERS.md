@@ -11,7 +11,7 @@ AGNI is a compiler and runtime for the **Open Lesson Standard (OLS)** — a file
 The system has three main parts:
 
 1. **Compiler** (`src/`) — YAML → IR → HTML/JSON pipeline
-2. **Village Hub** (`hub-tools/`, `server/`) — Node.js server that compiles and serves lessons, runs the adaptive ordering engine (theta), and collects telemetry
+2. **Village Hub** (`packages/agni-hub/`, `hub-tools/` wrappers, `server/`) — Node.js server that compiles and serves lessons, runs the adaptive ordering engine (theta), and collects telemetry. Canonical code in `@agni/hub` (packages/agni-hub/).
 3. **Portal** (`portal/`) — SvelteKit web app for teachers, administrators, and governance
 
 ---
@@ -74,8 +74,9 @@ Student phone ◄─── WiFi ◄─── Village Hub (Raspberry Pi)
 | `src/runtime/` | Browser-side code: player, sensors, SVG factories, telemetry. **Must be ES5** (Android 6 WebView). |
 | `src/services/` | Accounts, lesson assembly, lesson schema validation |
 | `src/utils/` | Shared utilities: file lock, logger, env config, crypto, CSP, feature flags |
-| `hub-tools/` | Hub server: `theta.js` (main), `sentry.js` (telemetry), `routes/` (API endpoints), `context/` (shared state) |
-| `server/` | `hub-transform.js` (lesson serving), `sw.js` (service worker), `pwa/` (PWA shell) |
+| `packages/agni-hub/` | Canonical hub: `theta.js`, `sentry.js`, `routes/`, `context/`, hub-transform, PWA. Use `@agni/hub` in code. |
+| `hub-tools/` | CLI wrappers that delegate to packages/agni-hub (e.g. `node hub-tools/theta.js`) |
+| `server/` | Legacy `hub-transform.js`; hub transform is in packages/agni-hub/ |
 | `portal/` | SvelteKit teacher/admin portal |
 | `schemas/` | JSON Schema definitions for OLS, graph weights, governance policy |
 | `tests/` | Unit and integration tests (Node.js `test` runner) |

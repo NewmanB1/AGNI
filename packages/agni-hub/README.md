@@ -22,7 +22,7 @@ This is the **top of the dependency tree**: it depends on all other packages and
 | `lesson-chain` | Content hash chain for integrity verification and fork tracking |
 | `lesson-assembly` | Assembles runtime files into lesson bundles |
 
-### HTTP Routes (`hub-tools/routes/`)
+### HTTP Routes (`packages/agni-hub/routes/`)
 | Route | Endpoints |
 |-------|-----------|
 | `theta` | `GET /api/theta` — next lesson recommendations |
@@ -36,7 +36,7 @@ This is the **top of the dependency tree**: it depends on all other packages and
 | `chain` | `GET /api/chain/:slug`, `POST /api/chain/verify`, `GET /api/fork-check` |
 | `admin` | `GET /api/admin/config`, `PUT /api/admin/config`, `POST /api/admin/sync-test` |
 
-### PWA Shell (`server/pwa/`)
+### PWA Shell (`packages/agni-hub/pwa/`)
 | File | Purpose |
 |------|---------|
 | `shell.html` | PWA app shell with offline support |
@@ -54,4 +54,4 @@ This is the **top of the dependency tree**: it depends on all other packages and
 
 ## Contributing
 
-When adding a new API endpoint, create a route file in `hub-tools/routes/` and register it in `hub-tools/theta.js` (the main server entry point). Keep business logic in the appropriate package (engine, governance, compiler) and use routes only for HTTP wiring.
+When adding a new API endpoint, create a route file in `packages/agni-hub/routes/` and register it in `packages/agni-hub/theta.js` (the main server entry point). Keep business logic in the appropriate package (engine, governance, compiler) and use routes only for HTTP wiring.

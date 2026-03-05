@@ -194,7 +194,7 @@ describe('SVG-TOOLS: DOM-dependent factory and helper tests', () => {
 
 describe('SVG-TOOLS-P4.1: shell-boot checks svg_spec before legacy svg_type', () => {
   it('shell-boot.js references step.svg_spec and AGNI_SVG.fromSpec', () => {
-    const src = fs.readFileSync(path.join(root, 'server/pwa/shell-boot.js'), 'utf8');
+    const src = fs.readFileSync(path.join(root, 'packages/agni-hub/pwa/shell-boot.js'), 'utf8');
     assert.ok(src.indexOf('step.svg_spec') !== -1, 'shell-boot must check svg_spec');
     assert.ok(src.indexOf('AGNI_SVG.fromSpec') !== -1, 'shell-boot must use fromSpec when available');
   });

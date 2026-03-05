@@ -38,6 +38,25 @@ describe('prefs – defaults', () => {
     assert.equal(a11y.prefs.reducedMotion, false);
     assert.equal(a11y.prefs.hapticIntensity, 1);
   });
+
+  it('defaults hapticIntensity to 0 when prefers-reduced-motion is set', () => {
+    const origMatchMedia = globalThis.matchMedia;
+    globalThis.matchMedia = function (q) {
+      return { matches: q.indexOf('prefers-reduced-motion') >= 0 };
+    };
+    try {
+      delete require.cache[shimPath];
+      delete require.cache[canonicalPath];
+      delete globalThis.AGNI_A11Y;
+      require('../../src/runtime/ui/a11y');
+      assert.equal(globalThis.AGNI_A11Y.prefs.hapticIntensity, 0);
+    } finally {
+      globalThis.matchMedia = origMatchMedia;
+      delete require.cache[shimPath];
+      delete require.cache[canonicalPath];
+      delete globalThis.AGNI_A11Y;
+    }
+  });
 });
 
 // ── prefs – localStorage overrides ──────────────────────────────────────────

@@ -8,7 +8,7 @@ module.exports = {
   sentry:         require('./sentry'),
   sync:           require('./sync'),
   shared:         require('./shared'),
-  hubTransform:   require('../../server/hub-transform'),
+  hubTransform:   require('./hub-transform'),
   accounts:       require('../../src/services/accounts'),
   author:         require('../../src/services/author'),
   lessonChain:    require('../../src/services/lesson-chain'),

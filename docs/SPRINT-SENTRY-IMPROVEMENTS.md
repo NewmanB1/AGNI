@@ -4,7 +4,7 @@ Implementation plan for Sentry enhancements with **regression guards** and **pro
 
 **Status:** Completed (implemented 2026-03-05).
 
-**Reference:** `docs/playbooks/sentry.md`, `hub-tools/sentry.js`, `docs/ROADMAP.md`
+**Reference:** `docs/playbooks/sentry.md`, `packages/agni-hub/sentry.js`, `docs/ROADMAP.md`
 
 ---
 
@@ -44,7 +44,7 @@ Implementation plan for Sentry enhancements with **regression guards** and **pro
 
 | Item | Details |
 |------|---------|
-| **File** | `hub-tools/sentry.js` |
+| **File** | `packages/agni-hub/sentry.js` |
 | **Scope** | Align validation input/output. Support both `{ skill, evidencedLevel }` and string `skillsProvided`. |
 | **Changes** | (a) Either include `steps` in validated output or remove `steps` requirement and document. (b) Normalize `skillsProvided`: accept `"skillId"` string → treat as `{ skill: "skillId", evidencedLevel: event.mastery }`. Accept `{ skill, evidencedLevel }` or `{ skill, declaredLevel }`. |
 
@@ -64,7 +64,7 @@ Implementation plan for Sentry enhancements with **regression guards** and **pro
 
 | Item | Details |
 |------|---------|
-| **File** | `packages/agni-utils/env-config.js`, `hub-tools/sentry.js` |
+| **File** | `packages/agni-utils/env-config.js`, `packages/agni-hub/sentry.js` |
 | **Scope** | Move hardcoded thresholds into envConfig. |
 | **Changes** | Add to `env-config.js`: `sentryChi2Threshold` (default 3.841), `sentryMinSample` (20), `sentryJaccardThreshold` (0.5), `sentryMinClusterSize` (20). Wire in sentry.js. Env vars: `AGNI_SENTRY_CHI2_THRESHOLD`, `AGNI_SENTRY_MIN_SAMPLE`, `AGNI_SENTRY_JACCARD_THRESHOLD`, `AGNI_SENTRY_MIN_CLUSTER_SIZE`. |
 
@@ -84,7 +84,7 @@ Implementation plan for Sentry enhancements with **regression guards** and **pro
 
 | Item | Details |
 |------|---------|
-| **File** | `hub-tools/sentry.js`, `schemas/graph-weights.schema.json` |
+| **File** | `packages/agni-hub/sentry.js`, `schemas/graph-weights.schema.json` |
 | **Scope** | Validate `graph_weights` object before writing. Fail fast on schema violation. |
 | **Changes** | Load schema (e.g. via Ajv or existing validator). Before `saveJSONAsync(GRAPH_WEIGHTS, gw)`, run `validate(gw)`. On failure: log error, do not overwrite file, throw or return so caller knows. |
 
@@ -107,7 +107,7 @@ Implementation plan for Sentry enhancements with **regression guards** and **pro
 
 | Item | Details |
 |------|---------|
-| **File** | `hub-tools/routes/telemetry.js`, `hub-tools/context/services.js` (or equivalent) |
+| **File** | `packages/agni-hub/routes/telemetry.js`, `packages/agni-hub/context/services.js` (or equivalent) |
 | **Scope** | After theta processes events, forward a copy to Sentry (or feed Sentry from the same source). |
 | **Options** | **(A)** Theta POSTs to `http://127.0.0.1:AGNI_SENTRY_PORT/api/telemetry` with same payload after processing. **(B)** Theta appends to `data/events/YYYY-MM-DD.ndjson` in Sentry format, Sentry reads it. **(C)** Sentry reads from `telemetry-events.json` and converts to NDJSON format. Recommend **(A)** — minimal change, Sentry stays the sink. |
 | **Changes** | Add optional forward: if `AGNI_SENTRY_PORT` is set and Sentry is reachable, `http.post('http://127.0.0.1:' + port + '/api/telemetry', { events })` after theta processing. Fire-and-forget (do not block response). Log on failure. |
@@ -146,7 +146,7 @@ Implementation plan for Sentry enhancements with **regression guards** and **pro
 
 | Item | Details |
 |------|---------|
-| **File** | `hub-tools/sentry.js` |
+| **File** | `packages/agni-hub/sentry.js` |
 | **Scope** | Retry append on transient failure instead of discarding. |
 | **Changes** | On `fs.appendFile` error: retry up to 3 times with 1s delay. If all fail, log and discard (current behaviour). Optional: write to `data/events/failed-YYYYMMDD.ndjson` as last resort before discard. |
 
@@ -166,7 +166,7 @@ Implementation plan for Sentry enhancements with **regression guards** and **pro
 
 | Item | Details |
 |------|---------|
-| **File** | `hub-tools/sentry.js` |
+| **File** | `packages/agni-hub/sentry.js` |
 | **Scope** | On SIGTERM/SIGINT, drain buffer before exit. |
 | **Changes** | `process.on('SIGTERM', ...)` and `process.on('SIGINT', ...)`: stop accepting new requests (optional: respond 503), wait for in-flight request to complete, flush buffer once synchronously, then `process.exit(0)`. Set a timeout (e.g. 10s) — if flush doesn't complete, exit anyway and log. |
 
@@ -186,7 +186,7 @@ Implementation plan for Sentry enhancements with **regression guards** and **pro
 
 | Item | Details |
 |------|---------|
-| **File** | `hub-tools/sentry.js` |
+| **File** | `packages/agni-hub/sentry.js` |
 | **Scope** | Add `GET /health` and optionally `GET /api/sentry/status`. |
 | **Changes** | `GET /health`: return 200 + `{ ok: true }`. `GET /api/sentry/status` (optional): `{ bufferSize, lastAnalysisAt, graphWeightsUpdatedAt, edgesCount }` from in-memory state + stat of `graph_weights.json`. |
 
@@ -209,7 +209,7 @@ Implementation plan for Sentry enhancements with **regression guards** and **pro
 
 | Item | Details |
 |------|---------|
-| **File** | `hub-tools/sentry.js` |
+| **File** | `packages/agni-hub/sentry.js` |
 | **Scope** | Use `envConfig.analyseCron` (e.g. `'02:00'`) in addition to event-driven and interval-driven runs. |
 | **Changes** | Parse cron expression (e.g. "HH:MM"). Use `setInterval` (e.g. every 60s) to check if current time matches; if so, run analysis. Keep `ANALYSE_AFTER_N` and `MIN_MS_BETWEEN_ANALYSIS` for event-driven and throttle. |
 

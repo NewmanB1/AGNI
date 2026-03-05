@@ -72,7 +72,7 @@ async function runTest() {
     writeJson(path.join(tmpDir, 'schedules.json'), SCHEDULES);
     writeJson(path.join(tmpDir, 'curriculum.json'), CURRICULUM);
 
-    const theta = require('../hub-tools/theta.js');
+    const theta = require('@agni/hub').theta;
 
     // Weaver: high weaving:patterns, low farming:seasons → loops should be cheaper (first).
     writeJson(path.join(tmpDir, 'mastery-summary.json'), {
