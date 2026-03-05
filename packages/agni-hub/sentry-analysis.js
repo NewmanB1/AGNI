@@ -20,7 +20,7 @@ function validateEvent(raw, opts) {
   if (typeof raw.mastery !== 'number' || raw.mastery < 0 || raw.mastery > 1) return null;
   if (raw.steps !== undefined && !Array.isArray(raw.steps)) return null;
   const lessonId = String(raw.lessonId);
-  if (/[\/\\]/.test(lessonId) || lessonId.includes('..')) return null;
+  if (/[/\\]/.test(lessonId) || lessonId.includes('..')) return null;
   if (typeof raw.completedAt !== 'string' || isNaN(Date.parse(raw.completedAt))) return null;
 
   const mastery = raw.mastery;

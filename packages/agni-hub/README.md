@@ -54,4 +54,4 @@ This is the **top of the dependency tree**: it depends on all other packages and
 
 ## Contributing
 
-When adding a new API endpoint, create a route file in `packages/agni-hub/routes/` and register it in `packages/agni-hub/theta.js` (the main server entry point). Keep business logic in the appropriate package (engine, governance, compiler) and use routes only for HTTP wiring.
+When adding a new API endpoint, create a route file in `packages/agni-hub/routes/`. Routes are auto-loaded by `theta.js` (the main server entry point); no manual registration needed. Keep business logic in the appropriate package (engine, governance, compiler) and use routes only for HTTP wiring.

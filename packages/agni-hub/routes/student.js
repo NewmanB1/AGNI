@@ -193,15 +193,11 @@ function register(router, ctx) {
     const { longestStreak } = computeStreaks(sortedDates);
     // Badge definitions loaded from data file [R10 P5.3]
     const badgeData = await loadJSONAsync(path.join(DATA_DIR, 'badge-definitions.json'), { badges: [] });
-    const metricValues = { lessonCount, skillCount, longestStreak };
-    const badges = badgeData.badges.map(def => {
-      let earned = false;
-      if (def.metric === 'allSkills') {
-        earned = totalSkills.size > 0 && skillCount >= totalSkills.size;
-      } else {
-        earned = (metricValues[def.metric] || 0) >= def.threshold;
-      }
-      return { id: def.id, name: def.name, description: def.desc, icon: def.icon, earned };
+    const badges = badgeData.badges.map((def) => {
+      const val = def.metric === 'allSkills'
+        ? (totalSkills.size > 0 && skillCount >= totalSkills.size)
+        : (({ lessonCount, skillCount, longestStreak }[def.metric] || 0) >= def.threshold);
+      return { id: def.id, name: def.name, description: def.desc, icon: def.icon, earned: !!val };
     });
     return sendResponse(200, { pseudoId, badges, stats: { lessons: lessonCount, skills: skillCount, longestStreak, totalSkills: totalSkills.size } });
   }));

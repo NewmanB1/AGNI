@@ -41,5 +41,17 @@ module.exports = [
       'no-var': 'off',
       'prefer-const': 'off'
     }
+  },
+  {
+    files: ['packages/agni-hub/pwa/**', 'packages/agni-hub/sw.js'],
+    languageOptions: {
+      globals: { ...globals.browser, self: 'readonly', LESSON_DATA: 'readonly' }
+    },
+    rules: {
+      'no-var': 'off',
+      'prefer-const': 'off',
+      'no-control-regex': 'off',
+      'no-undef': 'off'
+    }
   }
 ];

@@ -6,7 +6,7 @@
  *
  * Part A — Polyfills Wiring (original checks):
  *   1. src/runtime/polyfills.js exists
- *   2. polyfills.js is in ALLOWED_FACTORY_FILES in server/hub-transform.js
+ *   2. polyfills.js is in ALLOWED_FACTORY_FILES in packages/agni-hub/hub-transform.js
  *   3. polyfills.js is pushed to factoryDeps in src/builders/html.js
  *   4. polyfills.js appears BEFORE shared-runtime.js in factoryDeps
  *

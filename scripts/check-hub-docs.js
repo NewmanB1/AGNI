@@ -20,7 +20,7 @@ const BAD_PATTERNS = [
 ];
 
 // Meta-docs that describe the migration (mention old paths by design)
-const SKIP_FILES = ['docs/PHASE-3-REMEDIATION-PLAN.md', 'docs/HUB-CANONICAL-MIGRATION-PLAN.md'];
+const SKIP_FILES = ['docs/PHASE-3-REMEDIATION-PLAN.md', 'docs/HUB-CANONICAL-MIGRATION-PLAN.md', 'docs/HUB-IMPROVEMENT-PLAN.md'];
 
 function walkDir(dir, out, skipArchive) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });

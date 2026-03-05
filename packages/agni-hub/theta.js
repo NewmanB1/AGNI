@@ -328,7 +328,7 @@ async function rebuildLessonIndex() {
     const htmlPath    = path.join(lessonDir, 'index.html');
 
     let hasSidecar = false;
-    try { await fsp.access(sidecarPath); hasSidecar = true; } catch {}
+    try { await fsp.access(sidecarPath); hasSidecar = true; } catch (_) { /* no sidecar */ }
 
     if (hasSidecar) {
       sidecarCount++;
@@ -362,7 +362,7 @@ async function rebuildLessonIndex() {
     let skillsRequired = [];
 
     let hasHtml = false;
-    try { await fsp.access(htmlPath); hasHtml = true; } catch {}
+    try { await fsp.access(htmlPath); hasHtml = true; } catch (_) { /* no html */ }
     if (hasHtml) {
       const html = await fsp.readFile(htmlPath, 'utf8');
       const m = html.match(/window\.LESSON_DATA\s*=\s*(\{[\s\S]*?\});/);

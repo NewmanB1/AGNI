@@ -293,7 +293,7 @@ async function runAnalysis() {
     const filePath = path.join(EVENTS_DIR, file);
     const content = await fsp.readFile(filePath, 'utf8');
     const lines = content.split('\n');
-    let startIdx = state.cursors[file] || 0;
+    const startIdx = state.cursors[file] || 0;
 
     for (let i = startIdx; i < lines.length; i++) {
       const line = lines[i].trim();

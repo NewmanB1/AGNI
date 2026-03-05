@@ -223,7 +223,7 @@ function importInbound(filePath) {
   if (incoming.costs && typeof incoming.costs === 'object' && Object.keys(incoming.costs).length > 0) {
     let existing = {};
     if (fs.existsSync(BASE_COSTS)) {
-      try { existing = JSON.parse(fs.readFileSync(BASE_COSTS, 'utf8')); } catch {}
+      try { existing = JSON.parse(fs.readFileSync(BASE_COSTS, 'utf8')); } catch (_) { /* use default */ }
     }
     const merged = { ...existing, ...incoming.costs };
     fs.writeFileSync(BASE_COSTS, JSON.stringify(merged, null, 2));

@@ -65,7 +65,6 @@ const envConfig     = require('@agni/utils/env-config');
 const YAML_DIR      = envConfig.yamlDir;
 const FACTORY_DIR   = process.env.AGNI_FACTORY_DIR || require('@agni/runtime').RUNTIME_ROOT;
 const KATEX_DIR     = process.env.AGNI_KATEX_DIR   || path.join(__dirname, '../../data/katex-css');
-const DATA_DIR      = envConfig.dataDir;
 const SERVE_PORT    = envConfig.servePort;
 
 // ΓöÇΓöÇ In-memory lesson cache ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
@@ -281,12 +280,12 @@ async function _doCompile(slug, loaded, options) {
   const nonce = generateNonce();
   const html = _buildPwaShell(ir, styles, lessonScript, nonce);
 
-  var isUpdate = !!_lessonCache[slug];
+  const isUpdate = !!_lessonCache[slug];
 
   // LRU eviction: if cache is full and this is a new entry, evict oldest
   if (!isUpdate && _cacheSize >= MAX_CACHE_ENTRIES) {
-    var oldestSlug = null;
-    var oldestTime = Infinity;
+    let oldestSlug = null;
+    let oldestTime = Infinity;
     Object.keys(_lessonCache).forEach(function (s) {
       if (_lessonCache[s].lastAccessed < oldestTime) {
         oldestTime = _lessonCache[s].lastAccessed;
@@ -412,10 +411,10 @@ function _sendJson(req, res, statusCode, payload) {
 }
 
 function _sendFile(req, res, filePath, contentType, maxAge) {
-  var buf;
+  let buf;
   try {
     buf = fs.readFileSync(filePath);
-  } catch (_e) {
+  } catch {
     res.writeHead(404);
     res.end('Not found');
     return;
@@ -464,7 +463,7 @@ function handleRequest(req, res, options) {
   // GET /shell/:slug ΓÇö serve the PWA shell with the lesson slug injected into
   // the lesson-data.js script tag. The template is read once and cached; only
   // the slug query parameter differs per request.
-  const shellMatch = urlPath.match(/^\/shell\/([a-zA-Z0-9_\-]+)$/);
+  const shellMatch = urlPath.match(/^\/shell\/([a-zA-Z0-9_-]+)$/);
   if (req.method === 'GET' && shellMatch) {
     const shellSlug = shellMatch[1];
     try {
@@ -474,7 +473,7 @@ function handleRequest(req, res, options) {
           throw new Error('shell.html is missing the lesson-data.js placeholder script tag');
         }
       }
-      var shellHtml = _shellTemplate.replace(
+      const shellHtml = _shellTemplate.replace(
         SHELL_PLACEHOLDER,
         '<script src="/lesson-data.js?slug=' + encodeURIComponent(shellSlug) + '"></script>'
       );
@@ -570,7 +569,7 @@ function handleRequest(req, res, options) {
       const stamped = raw.replace('__SW_VERSION__', PKG_VERSION);
       res.setHeader('Cache-Control', 'no-cache');
       _sendText(req, res, 200, MIME['.js'], stamped);
-    } catch (_e) {
+    } catch {
       res.writeHead(404);
       res.end('Not found');
     }
@@ -599,11 +598,11 @@ function handleRequest(req, res, options) {
   // GET /lesson-data.js ΓÇö serves lesson data as a script for the PWA shell.
   // Accepts ?slug=<slug> query parameter, compiles the lesson, and returns
   // a JS file that sets window.LESSON_DATA.
-  var lessonDataMatch = (req.method === 'GET' && urlPath === '/lesson-data.js');
+  const lessonDataMatch = (req.method === 'GET' && urlPath === '/lesson-data.js');
   if (lessonDataMatch) {
-    var qs = require('querystring');
-    var query = qs.parse((req.url.split('?')[1]) || '');
-    var slug = query.slug;
+    const qs = require('querystring');
+    const query = qs.parse((req.url.split('?')[1]) || '');
+    const slug = query.slug;
     if (!slug) {
       _sendText(req, res, 200, MIME['.js'],
         'var LESSON_DATA = null; /* no slug provided */');

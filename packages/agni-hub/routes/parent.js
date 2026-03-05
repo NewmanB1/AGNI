@@ -2,7 +2,7 @@
 
 const { withLock } = require('@agni/utils/file-lock');
 
-var INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function isInviteExpired(invite) {
   if (!invite.createdAt) return true;
