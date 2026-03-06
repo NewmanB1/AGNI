@@ -69,6 +69,6 @@ No `require()` or `import` — the browser loads files via `<script>` tags in de
 
 ## Contributing
 
-- **Adding an SVG factory:** Add the factory function in the appropriate `svg-factories-*.js` file, register it in `svg-registry.js`, add it to the portal catalog (`portal/src/lib/svg-catalog.js`), and add its opts to the validator (`src/utils/lesson-validator.js`).
-- **Adding a sensor:** Update `sensor-bridge.js` and the `KNOWN_SENSORS` set in `lesson-validator.js`.
+- **Adding an SVG factory:** Add the factory in the appropriate `rendering/svg-factories-*.js` file; register in `svg-registry.js`; add to `@agni/utils/runtimeManifest` (FACTORY_FILE_MAP, FACTORY_LOAD_ORDER if needed); add to `packages/agni-hub` ALLOWED_FACTORY_FILES; add to portal `svg-catalog` and validator. See `docs/playbooks/runtime.md`.
+- **Adding a sensor:** Update `sensors/sensor-bridge.js`; register in `@agni/plugins/builtins/sensors.js`; extend threshold grammar in `@ols/schema` and `threshold-evaluator.js` if the sensor is a new threshold subject.
 - **ES5 rule:** No exceptions. Run `npm run test:es5` before submitting.

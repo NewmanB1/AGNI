@@ -1,4 +1,4 @@
-// src/runtime/shell/library.js
+// packages/agni-runtime/shell/library.js
 // ES5 compatible — targets Android 6.0+ (Chrome 44 WebView).
 
 // 1. Mock Data (In production, this comes from fetch() or CacheStorage)

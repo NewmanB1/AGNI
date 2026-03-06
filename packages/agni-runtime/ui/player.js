@@ -1,4 +1,4 @@
-// src/runtime/player.js
+// packages/agni-runtime/ui/player.js
 // AGNI Lesson Player  v4.0.0
 //
 // Core state machine: step routing, sensor init, rendering.

@@ -1,4 +1,4 @@
-// src/runtime/binary-utils.js
+// packages/agni-runtime/integrity/binary-utils.js
 // Centralized base64/bytes and UTF-8 helpers for the browser runtime.
 // Used by shared-runtime and player for Phase 4 integrity verification.
 // Must load before shared-runtime when used as a separate script.

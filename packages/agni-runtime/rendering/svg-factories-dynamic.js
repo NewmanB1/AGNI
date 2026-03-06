@@ -1,4 +1,4 @@
-// src/runtime/svg-factories-dynamic.js
+// packages/agni-runtime/rendering/svg-factories-dynamic.js
 // AGNI Dynamic SVG Factories
 // Extends svg-factories.js with:
 //   - sensor-connected dynamic variants of numberLine and clockFace

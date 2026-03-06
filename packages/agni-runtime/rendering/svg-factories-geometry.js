@@ -1,4 +1,4 @@
-// src/runtime/svg-factories-geometry.js
+// packages/agni-runtime/rendering/svg-factories-geometry.js
 // AGNI Geometry SVG Factories
 // Provides dynamic polygon transforms, decomposition, a full Cartesian grid
 // system, and an animated trig unit circle.

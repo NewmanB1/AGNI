@@ -4,6 +4,7 @@
   "description": "AGNI browser runtime: lesson player, sensor bridge, SVG factories, and UI components. ES5-compatible for Chrome 44+.",
   "license": "AGPL-3.0",
   "main": "index.js",
+  "types": "index.d.ts",
   "browser": true,
   "repository": {
     "type": "git",

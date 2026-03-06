@@ -1,4 +1,4 @@
-// src/runtime/frustration.js
+// packages/agni-runtime/ui/frustration.js
 // AGNI Frustration Detection Module
 //
 // Tracks consecutive skips, fails, and rapid retries to detect student

@@ -1,4 +1,4 @@
-// src/runtime/sensor-bridge.js
+// packages/agni-runtime/sensors/sensor-bridge.js
 // AGNI Sensor Bridge  v1.7.1
 //
 // Connects physical device sensors to AGNI_SHARED.publishSensorReading.

@@ -1,4 +1,4 @@
-// src/runtime/svg-registry.js
+// packages/agni-runtime/rendering/svg-registry.js
 // AGNI SVG Registry
 //
 // Makes the SVG library self-describing so a WYSIWYG editor can:
@@ -859,4 +859,13 @@
       Registry.categories().join(', '));
   }
 
-}(window));
+  // Node/portal export: single source for FACTORIES and CATEGORIES
+  if (typeof module !== 'undefined' && module.exports) {
+    var catMap = { comparison: 'Comparison', data: 'Data & Charts', number: 'Number', time: 'Time', process: 'Process', geometry: 'Geometry', sensor: 'Sensor', geography: 'Geography' };
+    var catIcons = { comparison: '⚖️', data: '📊', number: '🔢', time: '🕐', process: '🔀', geometry: '📐', sensor: '📡', geography: '🗺️' };
+    var catIds = Registry.categories();
+    module.exports.FACTORIES = _registry.slice();
+    module.exports.CATEGORIES = catIds.map(function (c) { return { id: c, label: catMap[c] || c, icon: catIcons[c] || '📊' }; });
+  }
+
+}(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : typeof global !== 'undefined' ? global : {})));

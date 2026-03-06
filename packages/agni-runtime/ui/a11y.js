@@ -1,4 +1,4 @@
-// src/runtime/a11y.js
+// packages/agni-runtime/ui/a11y.js
 // AGNI Accessibility Module
 //
 // Loads accessibility preferences from localStorage and applies them:

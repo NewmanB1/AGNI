@@ -1,4 +1,4 @@
-// src/runtime/table-renderer.js
+// packages/agni-runtime/rendering/table-renderer.js
 // AGNI Table Renderer  v1.7.0
 //
 // Renders Markdown tables in lesson content with three layers of intelligence:

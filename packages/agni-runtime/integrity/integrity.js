@@ -1,4 +1,4 @@
-// src/runtime/integrity/integrity.js
+// packages/agni-runtime/integrity/integrity.js
 // AGNI Integrity Verification Module
 //
 // Ed25519 signature verification for lesson content.

@@ -1,4 +1,4 @@
-// src/runtime/shared-runtime.js
+// packages/agni-runtime/shared-runtime.js
 // AGNI Shared Runtime  v1.8.1
 //
 // The foundational module loaded by every lesson, always first.

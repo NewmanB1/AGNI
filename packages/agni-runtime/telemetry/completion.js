@@ -1,4 +1,4 @@
-// src/runtime/completion.js
+// packages/agni-runtime/telemetry/completion.js
 // AGNI Completion Screen Renderer
 //
 // Renders the lesson-complete screen: mastery score, pace summary,

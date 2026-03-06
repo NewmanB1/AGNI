@@ -98,6 +98,7 @@ describe('Theta API integration tests', () => {
     const res = await request(port, 'GET', '/api/theta?pseudoId=test-student');
     assert.equal(res.status, 200);
     assert.ok(Array.isArray(res.body.lessons));
+    assert.ok(Array.isArray(res.body.precacheSlugs), 'theta must return precacheSlugs for opportunistic precache');
     assert.equal(res.body.pseudoId, 'test-student');
   });
 

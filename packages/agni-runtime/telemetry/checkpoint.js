@@ -1,4 +1,4 @@
-// src/runtime/checkpoint.js
+// packages/agni-runtime/telemetry/checkpoint.js
 // AGNI Checkpoint Persistence Module
 //
 // Saves and restores lesson progress via localStorage so students can

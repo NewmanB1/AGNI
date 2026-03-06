@@ -37,6 +37,8 @@
 		"vitest": "^4.0.18"
 	},
 	"dependencies": {
+		"@agni/plugins": "0.1.0",
+		"@agni/runtime": "0.1.0",
 		"js-yaml": "^4.1.1"
 	}
 }

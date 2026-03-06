@@ -1,4 +1,4 @@
-// src/runtime/ui/narration.js
+// packages/agni-runtime/ui/narration.js
 // AGNI Audio Narration Engine
 //
 // Provides auto-narration for blind and illiterate learners using the

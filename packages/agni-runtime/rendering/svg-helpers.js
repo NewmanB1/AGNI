@@ -61,6 +61,9 @@
       height: 'auto',
       style: 'display:block;'
     };
+    if (opts.preserveAspectRatio) {
+      svgAttrs.preserveAspectRatio = opts.preserveAspectRatio;
+    }
     if (opts.ariaLabel) {
       svgAttrs['aria-label'] = opts.ariaLabel;
       svgAttrs.role = 'img';

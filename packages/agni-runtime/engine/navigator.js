@@ -1,4 +1,4 @@
-// src/runtime/navigator.js
+// packages/agni-runtime/engine/navigator.js
 
 /**
  * AGNI Adaptive Navigation Engine v2.2

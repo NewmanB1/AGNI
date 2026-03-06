@@ -1,4 +1,4 @@
-// src/runtime/ui/factory-loader.js
+// packages/agni-runtime/ui/factory-loader.js
 // AGNI Factory Loader  v1.1.0
 //
 // Resolves factory dependencies at lesson startup using a cache-first strategy:

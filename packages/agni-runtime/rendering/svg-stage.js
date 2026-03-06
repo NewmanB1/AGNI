@@ -1,4 +1,4 @@
-// src/runtime/svg-stage.js
+// packages/agni-runtime/rendering/svg-stage.js
 // AGNI SVG Stage System  v1.8.0
 //
 // Owns a single SVG viewport, manages named layers, drives the RAF animation
@@ -194,6 +194,40 @@
         if (!shared || !shared.lastSensorValues) return null;
         var v = shared.lastSensorValues.get(sensorId);
         return v !== undefined ? v : null;
+      },
+
+      /**
+       * Export the stage as SVG string or PNG data URL.
+       * @param {string} format  'svg' (sync) or 'png' (returns Promise)
+       * @returns {string|Promise<string>}
+       */
+      export: function (format) {
+        var svgEl = container.querySelector('svg');
+        if (!svgEl) return '';
+        if (format === 'svg') {
+          return svgEl.outerHTML;
+        }
+        if (format === 'png') {
+          return new Promise(function (resolve) {
+            var svgStr = svgEl.outerHTML;
+            var img = new Image();
+            img.onload = function () {
+              var c = document.createElement('canvas');
+              c.width = W;
+              c.height = H;
+              var ctx = c.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(img, 0, 0);
+                resolve(c.toDataURL('image/png'));
+              } else {
+                resolve('');
+              }
+            };
+            img.onerror = function () { resolve(''); };
+            img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
+          });
+        }
+        return '';
       },
 
       /**

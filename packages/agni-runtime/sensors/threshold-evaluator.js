@@ -1,4 +1,4 @@
-// src/runtime/threshold-evaluator.js
+// packages/agni-runtime/sensors/threshold-evaluator.js
 // AGNI Threshold Evaluator  v1.7.0
 //
 // Parses threshold strings from lesson YAML into stateful evaluator functions.

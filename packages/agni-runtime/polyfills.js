@@ -1,4 +1,4 @@
-// src/runtime/polyfills.js
+// packages/agni-runtime/polyfills.js
 // ES5 polyfills for Chrome 44 WebView (Android 6.0 Marshmallow)
 //
 // Loaded FIRST by factory-loader before any other runtime code.

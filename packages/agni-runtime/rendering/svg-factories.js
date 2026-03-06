@@ -1,4 +1,4 @@
-// src/runtime/svg-factories.js
+// packages/agni-runtime/rendering/svg-factories.js
 // AGNI SVG Factory Library
 // Each factory takes a DOM container element and an options object.
 // Returns the created SVG element so callers can update or animate it.

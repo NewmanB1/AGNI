@@ -588,6 +588,12 @@ function handleRequest(req, res, options) {
     return true;
   }
 
+  // GET /precache.js ΓÇö opportunistic lesson precache orchestrator
+  if (req.method === 'GET' && urlPath === '/precache.js') {
+    _sendFile(req, res, path.join(__dirname, 'pwa', 'precache.js'), MIME['.js'], 86400);
+    return true;
+  }
+
   // GET /factory-loader.js ΓÇö factory loader for PWA shell
   if (req.method === 'GET' && urlPath === '/factory-loader.js') {
     const loaderPath = resolveFactoryPath(FACTORY_DIR, 'factory-loader.js');

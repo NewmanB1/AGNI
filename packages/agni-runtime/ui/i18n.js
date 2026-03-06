@@ -1,4 +1,4 @@
-// src/runtime/i18n.js
+// packages/agni-runtime/ui/i18n.js
 // AGNI Internationalization (i18n) module v1.0
 //
 // Lightweight string localization for the lesson player.

@@ -166,6 +166,21 @@ describe('SVG-TOOLS: DOM-dependent factory and helper tests', () => {
     assert.ok(hasPolyline, 'axis with fn string must produce a polyline');
   });
 
+  it('P4.2: stage.export(format) returns SVG string or PNG Promise', () => {
+    globalThis.AGNI_SVG = {};
+    require(path.join(runtimeRoot, 'rendering/svg-stage.js'));
+    const container = makeElement('div');
+    container.innerHTML = '';
+    const stage = globalThis.AGNI_SVG.stage(container, { w: 400, h: 300 });
+    assert.ok(typeof stage.export === 'function', 'stage must have export method');
+    const svgResult = stage.export('svg');
+    assert.equal(typeof svgResult, 'string', 'export("svg") must return string');
+    assert.ok(svgResult.indexOf('<svg') !== -1 || svgResult === '', 'export("svg") must return SVG markup or empty string');
+    const pngResult = stage.export('png');
+    assert.ok(pngResult && typeof pngResult.then === 'function', 'export("png") must return Promise');
+    stage.destroy();
+  });
+
   it('P3.1: rootSvg with opts.ariaLabel adds role=img and aria-label', () => {
     const H = globalThis.AGNI_SVG_HELPERS;
     assert.ok(H && H.rootSvg, 'AGNI_SVG_HELPERS.rootSvg must exist');

@@ -43,6 +43,16 @@ module.exports = [
     }
   },
   {
+    files: ['packages/agni-runtime/**/*.js'],
+    languageOptions: {
+      globals: { ...globals.browser }
+    },
+    rules: {
+      'no-var': 'off',
+      'prefer-const': 'off'
+    }
+  },
+  {
     files: ['packages/agni-hub/pwa/**', 'packages/agni-hub/sw.js'],
     languageOptions: {
       globals: { ...globals.browser, self: 'readonly', LESSON_DATA: 'readonly' }

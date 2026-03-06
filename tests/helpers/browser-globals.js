@@ -31,6 +31,15 @@ function makeElement(tag) {
     id: '',
     textContent: '',
     innerHTML: '',
+    get outerHTML() {
+      var tag = el._tag || 'div';
+      var attrs = Object.keys(el._attrs || {}).map(function (k) {
+        return k + '="' + String(el._attrs[k]).replace(/"/g, '&quot;') + '"';
+      }).join(' ');
+      var open = attrs ? '<' + tag + ' ' + attrs + '>' : '<' + tag + '>';
+      var inner = el.innerHTML || '';
+      return open + inner + '</' + tag + '>';
+    },
     style: {},
     disabled: false,
     parentNode: null,
@@ -55,8 +64,10 @@ function makeElement(tag) {
     removeEventListener() {},
     querySelectorAll(sel) {
       const match = [];
+      const tagSel = /^[a-z]+$/i.test(sel) ? sel.toLowerCase() : null;
       function walk(node) {
-        if (node.className && typeof node.className === 'string' &&
+        if (tagSel && (node._tag || '').toLowerCase() === tagSel) match.push(node);
+        else if (node.className && typeof node.className === 'string' &&
             sel.startsWith('.') && node.className.indexOf(sel.slice(1)) >= 0) {
           match.push(node);
         }
@@ -119,6 +130,7 @@ function setupGlobals() {
   _originals.window = globalThis.window;
   _originals.SpeechSynthesisUtterance = globalThis.SpeechSynthesisUtterance;
   _originals.DeviceMotionEvent = globalThis.DeviceMotionEvent;
+  _originals.Image = globalThis.Image;
 
   _storage = makeLocalStorage();
   const doc = makeDocument();
@@ -132,6 +144,20 @@ function setupGlobals() {
   });
   globalThis.self = globalThis;
   globalThis.window = globalThis;
+  globalThis.Image = function ImageStub() {
+    var _src = '';
+    var img = {
+      onload: null,
+      onerror: null,
+      get src() { return _src; },
+      set src(v) {
+        _src = v;
+        var fn = img.onerror;
+        if (typeof fn === 'function') setImmediate(function () { fn(); });
+      }
+    };
+    return img;
+  };
   _elementRegistry.clear();
 }
 

@@ -12,13 +12,19 @@ function register(router, ctx) {
     const overrideLessonId = overrides[qs.pseudoId]?.lessonId || null;
     const effectiveLessons = ctx.applyRecommendationOverride(lessons, overrideLessonId);
     const graphWeights = await ctx.getEffectiveGraphWeights();
+    const precacheN = Math.max(0, parseInt(process.env.AGNI_PRECACHE_HINT_COUNT || '5', 10));
+    const precacheSlugs = effectiveLessons
+      .slice(0, precacheN)
+      .map(function (l) { return l.slug; })
+      .filter(Boolean);
     return sendResponse(200, {
-      pseudoId:    qs.pseudoId,
-      lessons:     effectiveLessons,
-      computedAt:  new Date().toISOString(),
-      cached:      thetaCache.has(qs.pseudoId),
-      graphSource: graphWeights.level || 'village',
-      override:    overrideLessonId || undefined
+      pseudoId:     qs.pseudoId,
+      lessons:      effectiveLessons,
+      precacheSlugs: precacheSlugs,
+      computedAt:   new Date().toISOString(),
+      cached:       thetaCache.has(qs.pseudoId),
+      graphSource:  graphWeights.level || 'village',
+      override:     overrideLessonId || undefined
     });
   }));
 

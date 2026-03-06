@@ -1,4 +1,4 @@
-// src/runtime/telemetry.js
+// packages/agni-runtime/telemetry/telemetry.js
 // AGNI Telemetry  v1.8.0
 //
 // Runs on the student's edge device (browser).

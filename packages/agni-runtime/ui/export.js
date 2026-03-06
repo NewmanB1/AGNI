@@ -1,4 +1,4 @@
-// src/runtime/ui/export.js
+// packages/agni-runtime/ui/export.js
 // ES5 compatible — targets Android 6.0+ (Chrome 44 WebView).
 
 /**

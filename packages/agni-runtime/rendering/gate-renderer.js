@@ -1,4 +1,4 @@
-// src/runtime/gate-renderer.js
+// packages/agni-runtime/rendering/gate-renderer.js
 // AGNI Gate Renderer Module
 //
 // Gate quiz, manual verification, and redirect rendering.

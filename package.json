@@ -96,6 +96,8 @@
     "verify:canonical": "node scripts/verify-canonical-ownership.js",
     "verify:svg-tools": "node scripts/check-svg-tools.js",
     "verify:runtime-manifest": "node scripts/check-runtime-manifest.js",
+    "verify:runtime-headers": "node scripts/check-runtime-headers.js",
+    "verify:runtime-lint": "eslint packages/agni-runtime/",
     "verify:sensors": "node scripts/check-known-sensors.js",
     "verify:unauthed-routes": "node scripts/check-unauthed-routes.js",
     "verify:version-sync": "node scripts/check-version-sync.js",
@@ -110,6 +112,7 @@
     "verify:hub-test-targets": "node scripts/check-hub-test-targets.js",
     "verify:hub-lint": "eslint packages/agni-hub/",
     "verify:config-injection": "node --test tests/unit/config-injection.test.js",
-    "verify:all": "node scripts/check-dead-files.js && node scripts/check-dts-arity.js && node scripts/check-innerhtml.js && node scripts/check-factory-order.js && node scripts/check-svg-tools.js && node scripts/check-runtime-manifest.js && node scripts/check-known-sensors.js && node scripts/sync-schema-enums.js --check && node scripts/verify-canonical-ownership.js && node scripts/check-services-no-scripts.js && node scripts/check-services-test-targets.js && node scripts/check-services-docs.js && eslint packages/agni-services/ && node scripts/check-unauthed-routes.js && node scripts/check-version-sync.js && node scripts/check-api-contract-auth.js && node scripts/check-hub-imports.js && node scripts/check-hub-no-scripts.js && node scripts/check-hub-test-targets.js && node scripts/check-hub-docs.js && eslint packages/agni-hub/ && node --test tests/unit/config-injection.test.js"
+    "verify:precache-regression": "node scripts/check-precache-regression.js",
+    "verify:all": "node scripts/check-dead-files.js && node scripts/check-dts-arity.js && node scripts/check-innerhtml.js && node scripts/check-factory-order.js && node scripts/check-precache-regression.js && node scripts/check-svg-tools.js && node scripts/check-runtime-manifest.js && node scripts/check-runtime-headers.js && node scripts/check-known-sensors.js && node scripts/sync-schema-enums.js --check && node scripts/verify-canonical-ownership.js && node scripts/check-services-no-scripts.js && node scripts/check-services-test-targets.js && node scripts/check-services-docs.js && eslint packages/agni-services/ && node scripts/check-unauthed-routes.js && node scripts/check-version-sync.js && node scripts/check-api-contract-auth.js && node scripts/check-hub-imports.js && node scripts/check-hub-no-scripts.js && node scripts/check-hub-test-targets.js && node scripts/check-hub-docs.js && eslint packages/agni-hub/ && node --test tests/unit/config-injection.test.js && node --test tests/unit/theta-api.test.js"
   }
 }

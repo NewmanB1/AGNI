@@ -212,6 +212,8 @@ packet + IR sidecar) changes between lessons.
 4. Edge device loads in Chrome → Service Worker caches shared assets.
 5. Subsequent lessons only need new HTML packet + IR sidecar (shared code already cached).
 
+**Opportunistic precaching (planned):** Edge devices may proactively fetch and cache the next N lessons when online, using theta's ordered list as a hint. See `docs/OPPORTUNISTIC-PRECACHE-PLAN.md`.
+
 **Static (CLI) delivery:**
 
 1. Hub operator runs `agni` (or `node src/cli.js`) with `--input` and `--output`.

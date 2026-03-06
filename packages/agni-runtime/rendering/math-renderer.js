@@ -1,4 +1,4 @@
-// src/runtime/math-renderer.js
+// packages/agni-runtime/rendering/math-renderer.js
 // AGNI Math Renderer  v1.7.0
 //
 // Renders LaTeX equations in lesson content.
