@@ -166,7 +166,7 @@ function startReceiver() {
           const gw = JSON.parse(fs.readFileSync(GRAPH_WEIGHTS, 'utf8'));
           edgesCount = Array.isArray(gw.edges) ? gw.edges.length : 0;
         }
-      } catch (_) { /* ignore */ }
+      } catch { /* ignore */ }
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         bufferSize: eventBuffer.length,
@@ -214,7 +214,7 @@ function startReceiver() {
             lastAnalysisAttempt = Date.now();
             setImmediate(() => runAnalysis().catch(e => log.error('Analysis error', { error: e.message })));
           }
-        } catch (e) { res.writeHead(400); res.end(); }
+        } catch { res.writeHead(400); res.end(); }
       });
       return;
     }

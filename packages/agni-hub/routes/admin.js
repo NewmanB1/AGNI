@@ -98,7 +98,7 @@ function register(router, ctx) {
           try {
             fs.mkdirSync(p, { recursive: true });
             return sendResponse(200, { ok: true, message: 'USB path created and writable.' });
-          } catch (_e) {
+          } catch {
             return sendResponse(200, { ok: false, message: 'USB path not accessible.' });
           }
         }
@@ -106,14 +106,14 @@ function register(router, ctx) {
           fs.writeFileSync(path.join(p, '.agni-test'), 'ok');
           fs.unlinkSync(path.join(p, '.agni-test'));
           return sendResponse(200, { ok: true, message: 'USB path writable.' });
-        } catch (_e) {
+        } catch {
           return sendResponse(200, { ok: false, message: 'USB path not writable.' });
         }
       }
       const url = (homeUrl || '').replace(/\/$/, '');
       if (!url) return sendResponse(200, { ok: false, message: 'Home URL required for Starlink test.' });
       let parsed;
-      try { parsed = new URL(url); } catch (_e) {
+      try { parsed = new URL(url); } catch {
         return sendResponse(400, { ok: false, message: 'Invalid URL.' });
       }
       if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {

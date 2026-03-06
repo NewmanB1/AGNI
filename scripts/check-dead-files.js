@@ -44,6 +44,9 @@ const KNOWN_STANDALONE = new Set([
   normalize('packages/agni-hub/pwa/shell-boot.js'),
   normalize('src/governance/catalog.js'),
   normalize('src/governance/schema-store.js'),
+  normalize('src/governance/policy.js'),
+  normalize('src/governance/aggregateCohortCoverage.js'),
+  normalize('src/governance/evaluateLessonCompliance.js'),
   // Phase 1: Re-exports from @ols/compiler (canonical ownership)
   normalize('src/builders/html.js'),
   normalize('src/builders/native.js'),

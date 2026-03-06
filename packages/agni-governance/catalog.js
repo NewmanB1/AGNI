@@ -3,7 +3,6 @@
 // Load and save approved lesson catalog. Used by governance APIs and theta for filtering.
 // Schema: schemas/approved-catalog.schema.json
 
-const path = require('path');
 const { createSchemaStore } = require('./schema-store');
 const log  = require('@agni/utils/logger').createLogger('governance');
 const envConfig = require('@agni/utils/env-config');
@@ -11,7 +10,7 @@ const envConfig = require('@agni/utils/env-config');
 const CATALOG_DEFAULTS = { lessonIds: [] };
 
 const store = createSchemaStore({
-  schemaPath: path.join(__dirname, '../../schemas', 'approved-catalog.schema.json'),
+  schemaPath: envConfig.approvedCatalogSchema,
   defaults: CATALOG_DEFAULTS,
   log,
   preValidate: function (catalog) {

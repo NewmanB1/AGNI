@@ -3,7 +3,7 @@
 const generateLesson = (function () {
   try {
     return require('@agni/lesson-gen').generateLesson;
-  } catch (_) {
+  } catch {
     return null;
   }
 })();

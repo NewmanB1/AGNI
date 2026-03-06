@@ -6,25 +6,23 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { samplePolicy, sampleSidecar, tempDir } = require('../helpers/fixtures');
-const policy = require('../../src/governance/policy');
-const { evaluateLessonCompliance } = require('../../src/governance/evaluateLessonCompliance');
-const { aggregateCohortCoverage, MASTERY_THRESHOLD } = require('../../src/governance/aggregateCohortCoverage');
+const gov = require('@agni/governance');
 
 // ── validatePolicy ───────────────────────────────────────────────────────────
 
 describe('validatePolicy', () => {
   it('rejects null as invalid policy', () => {
-    const r = policy.validatePolicy(null);
+    const r = gov.validatePolicy(null);
     assert.equal(r.valid, false);
   });
 
   it('accepts an empty object', () => {
-    const r = policy.validatePolicy({});
+    const r = gov.validatePolicy({});
     assert.ok(r.valid);
   });
 
   it('rejects a non-object as invalid policy', () => {
-    const r = policy.validatePolicy('not-an-object');
+    const r = gov.validatePolicy('not-an-object');
     assert.equal(r.valid, false);
   });
 });
@@ -38,20 +36,20 @@ describe('loadPolicy / savePolicy', () => {
   after(() => { tmp.cleanup(); });
 
   it('loadPolicy returns empty object for missing file', () => {
-    const p = policy.loadPolicy('/nonexistent/path/governance.json');
+    const p = gov.loadPolicy('/nonexistent/path/governance.json');
     assert.deepEqual(p, {});
   });
 
   it('loadPolicy returns empty object for null path', () => {
-    assert.deepEqual(policy.loadPolicy(null), {});
+    assert.deepEqual(gov.loadPolicy(null), {});
   });
 
   it('round-trips save and load', () => {
     const fp = path.join(tmp.dir, 'policy.json');
     const data = { requireUtu: true, minDifficulty: 2, maxDifficulty: 4 };
-    const saveResult = policy.savePolicy(data, fp);
+    const saveResult = gov.savePolicy(data, fp);
     assert.ok(saveResult.ok, 'Save failed: ' + (saveResult.error || ''));
-    const loaded = policy.loadPolicy(fp);
+    const loaded = gov.loadPolicy(fp);
     assert.equal(loaded.requireUtu, true);
     assert.equal(loaded.minDifficulty, 2);
   });
@@ -59,7 +57,7 @@ describe('loadPolicy / savePolicy', () => {
   it('loadPolicy returns empty object for invalid JSON file', () => {
     const fp = path.join(tmp.dir, 'bad.json');
     fs.writeFileSync(fp, 'not valid json!');
-    const p = policy.loadPolicy(fp);
+    const p = gov.loadPolicy(fp);
     assert.deepEqual(p, {});
   });
 });
@@ -68,13 +66,13 @@ describe('loadPolicy / savePolicy', () => {
 
 describe('evaluateLessonCompliance', () => {
   it('returns ok for a compliant lesson with no policy', () => {
-    const r = evaluateLessonCompliance(sampleSidecar(), {});
+    const r = gov.evaluateLessonCompliance(sampleSidecar(), {});
     assert.equal(r.status, 'ok');
     assert.equal(r.issues.length, 0);
   });
 
   it('returns ok when all policy checks pass', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ difficulty: 3, teaching_mode: 'direct' }),
       samplePolicy({ minDifficulty: 1, maxDifficulty: 5, allowedTeachingModes: ['direct', 'socratic'] })
     );
@@ -82,7 +80,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('flags difficulty below minimum', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ difficulty: 1 }),
       samplePolicy({ minDifficulty: 3 })
     );
@@ -91,7 +89,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('flags difficulty above maximum', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ difficulty: 5 }),
       samplePolicy({ maxDifficulty: 3 })
     );
@@ -99,7 +97,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('flags missing UTU when required', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar(),
       samplePolicy({ requireUtu: true })
     );
@@ -107,7 +105,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('flags missing teaching_mode when required', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ teaching_mode: undefined }),
       samplePolicy({ requireTeachingMode: true })
     );
@@ -115,7 +113,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('flags disallowed teaching mode', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ teaching_mode: 'narrative' }),
       samplePolicy({ allowedTeachingModes: ['direct', 'socratic'] })
     );
@@ -123,7 +121,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('flags protocol below minimum', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ utu: { class: 'A', protocol: 1 } }),
       samplePolicy({ minProtocol: 3 })
     );
@@ -131,7 +129,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('flags protocol above maximum', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ utu: { class: 'A', protocol: 5 } }),
       samplePolicy({ maxProtocol: 3 })
     );
@@ -139,7 +137,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('flags protocol not in allowed list', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ utu: { class: 'A', protocol: 2 } }),
       samplePolicy({ allowedProtocols: [1, 3, 5] })
     );
@@ -147,7 +145,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('accepts protocol in allowed list', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ utu: { class: 'A', protocol: 3 } }),
       samplePolicy({ allowedProtocols: [1, 3, 5] })
     );
@@ -155,7 +153,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('flags missing protocol when policy enforces bounds and requireUtu', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar(),
       samplePolicy({ requireUtu: true, minProtocol: 1, maxProtocol: 5 })
     );
@@ -163,7 +161,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('adds failureModeHints when enabled and protocol fails', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ utu: { class: 'A', protocol: 1 } }),
       samplePolicy({ minProtocol: 3, failureModeHints: true })
     );
@@ -171,7 +169,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('returns "fail" status for hard violations', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ difficulty: 1 }),
       samplePolicy({ minDifficulty: 3 })
     );
@@ -179,7 +177,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('distinguishes "warning" from "fail" status', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ teaching_mode: undefined }),
       samplePolicy({ requireTeachingMode: true })
     );
@@ -188,7 +186,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('issues have structured { message, severity } shape', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ difficulty: 1 }),
       samplePolicy({ minDifficulty: 3 })
     );
@@ -200,12 +198,12 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('handles no-policy no-utu lesson without errors', () => {
-    const r = evaluateLessonCompliance(sampleSidecar(), null);
+    const r = gov.evaluateLessonCompliance(sampleSidecar(), null);
     assert.equal(r.status, 'ok');
   });
 
   it('warns on non-canonical Spine ID (portability check)', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ utu: { class: 'FAKE-99', band: 1, protocol: 1 } }),
       samplePolicy()
     );
@@ -213,7 +211,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('no portability warning for canonical Spine ID', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ utu: { class: 'MAC-2', band: 3, protocol: 2 } }),
       samplePolicy()
     );
@@ -221,7 +219,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('fails when lesson UTU does not match any policy target', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ utu: { class: 'MAC-2', band: 3, protocol: 2 } }),
       samplePolicy({
         requireUtu: true,
@@ -233,7 +231,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('passes when lesson UTU matches a policy target', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ utu: { class: 'MAC-2', band: 3, protocol: 2 } }),
       samplePolicy({
         requireUtu: true,
@@ -244,7 +242,7 @@ describe('evaluateLessonCompliance', () => {
   });
 
   it('fails when lesson protocol does not match per-target protocol', () => {
-    const r = evaluateLessonCompliance(
+    const r = gov.evaluateLessonCompliance(
       sampleSidecar({ utu: { class: 'MAC-2', band: 3, protocol: 4 } }),
       samplePolicy({
         requireUtu: true,
@@ -285,7 +283,7 @@ describe('aggregateCohortCoverage', () => {
   };
 
   it('returns correct structure', () => {
-    const r = aggregateCohortCoverage(lessonIndex, masterySummary);
+    const r = gov.aggregateCohortCoverage(lessonIndex, masterySummary);
     assert.ok(r.byUtu);
     assert.ok(r.bySkill);
     assert.equal(r.studentCount, 3);
@@ -293,38 +291,38 @@ describe('aggregateCohortCoverage', () => {
   });
 
   it('counts lessons per UTU bucket', () => {
-    const r = aggregateCohortCoverage(lessonIndex, masterySummary);
+    const r = gov.aggregateCohortCoverage(lessonIndex, masterySummary);
     assert.equal(r.byUtu['math-B1'].lessons, 2);
     assert.equal(r.byUtu['science'].lessons, 1);
   });
 
   it('counts lessons per skill', () => {
-    const r = aggregateCohortCoverage(lessonIndex, masterySummary);
+    const r = gov.aggregateCohortCoverage(lessonIndex, masterySummary);
     assert.equal(r.bySkill['ols.math:addition'].lessons, 2);
     assert.equal(r.bySkill['ols.math:subtraction'].lessons, 1);
   });
 
   it('counts students with mastery above threshold', () => {
-    const r = aggregateCohortCoverage(lessonIndex, masterySummary);
+    const r = gov.aggregateCohortCoverage(lessonIndex, masterySummary);
     assert.equal(r.bySkill['ols.math:addition'].studentMasteryCount, 1); // only px-001 (0.8)
     assert.equal(r.bySkill['ols.science:plants'].studentMasteryCount, 1); // only px-002 (0.9)
     assert.equal(r.bySkill['ols.math:subtraction'].studentMasteryCount, 0); // px-001 has 0.3
   });
 
   it('counts UTU bucket mastery', () => {
-    const r = aggregateCohortCoverage(lessonIndex, masterySummary);
+    const r = gov.aggregateCohortCoverage(lessonIndex, masterySummary);
     assert.equal(r.byUtu['math-B1'].studentMasteryCount, 1); // px-001 mastered addition
     assert.equal(r.byUtu['science'].studentMasteryCount, 1); // px-002 mastered plants
   });
 
   it('deduplicates skills within UTU bucket', () => {
-    const r = aggregateCohortCoverage(lessonIndex, masterySummary);
+    const r = gov.aggregateCohortCoverage(lessonIndex, masterySummary);
     const skills = r.byUtu['math-B1'].skills;
     assert.equal(skills.filter(s => s === 'ols.math:addition').length, 1);
   });
 
   it('handles empty lesson index', () => {
-    const r = aggregateCohortCoverage([], { students: {} });
+    const r = gov.aggregateCohortCoverage([], { students: {} });
     assert.equal(r.lessonCount, 0);
     assert.equal(r.studentCount, 0);
     assert.deepEqual(r.byUtu, {});
@@ -332,12 +330,12 @@ describe('aggregateCohortCoverage', () => {
 
   it('handles lessons with no UTU (falls back to _no_utu)', () => {
     const index = [{ lessonId: 'X', skillsProvided: [{ skill: 'test', level: 1 }] }];
-    const r = aggregateCohortCoverage(index, { students: {} });
+    const r = gov.aggregateCohortCoverage(index, { students: {} });
     assert.ok(r.byUtu['_no_utu']);
   });
 
   it('exports MASTERY_THRESHOLD constant', () => {
-    assert.equal(typeof MASTERY_THRESHOLD, 'number');
-    assert.equal(MASTERY_THRESHOLD, 0.6);
+    assert.equal(typeof gov.MASTERY_THRESHOLD, 'number');
+    assert.equal(gov.MASTERY_THRESHOLD, 0.6);
   });
 });

@@ -43,8 +43,8 @@ if (!/MAX_LESSON_CACHE_ENTRIES\s*=\s*\d+/.test(swSrc)) {
 
 if (!/cacheName\s*===\s*LESSON_CACHE/.test(swSrc)) {
   fail('sw.js _networkFirst must check cacheName === LESSON_CACHE for eviction');
-} else if (!/keys\.length\s*>=\s*MAX_LESSON_CACHE_ENTRIES/.test(swSrc)) {
-  fail('sw.js LESSON_CACHE must evict when keys.length >= MAX_LESSON_CACHE_ENTRIES');
+} else if (!/keys\.length\s*>=\s*(?:MAX_LESSON_CACHE_ENTRIES|maxLessonEntries)/.test(swSrc)) {
+  fail('sw.js LESSON_CACHE must evict when keys.length >= MAX_LESSON_CACHE_ENTRIES (or maxLessonEntries param)');
 } else if (!/cache\.delete\(/.test(swSrc)) {
   fail('sw.js LESSON_CACHE eviction must call cache.delete');
 } else {

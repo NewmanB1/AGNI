@@ -73,7 +73,7 @@ function repseudonymize(events, tokenMap) {
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function loadSyncState() {
   if (!fs.existsSync(SYNC_STATE)) return { lastSyncAt: null, syncedFiles: [] };
-  try { return JSON.parse(fs.readFileSync(SYNC_STATE, 'utf8')); } catch (e) { return { lastSyncAt: null, syncedFiles: [] }; }
+  try { return JSON.parse(fs.readFileSync(SYNC_STATE, 'utf8')); } catch { return { lastSyncAt: null, syncedFiles: [] }; }
 }
 
 function saveSyncState(state) {
@@ -96,7 +96,7 @@ function loadUnsynced() {
   files.forEach(file => {
     const content = fs.readFileSync(path.join(EVENTS_DIR, file), 'utf8');
     content.split('\n').filter(l => l.trim()).forEach(line => {
-      try { events.push(JSON.parse(line)); } catch (e) { log.warn('Skipping malformed NDJSON line', { file, error: e.message }); }
+      try { events.push(JSON.parse(line)); } catch (err) { log.warn('Skipping malformed NDJSON line', { file, error: err.message }); }
     });
   });
 
@@ -111,7 +111,7 @@ function loadDiscoveredCohort() {
   try {
     const gw = JSON.parse(fs.readFileSync(GRAPH_WEIGHTS, 'utf8'));
     return gw.discovered_cohort || null;
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -165,7 +165,7 @@ function sendViaStarlink(pkg) {
       res.on('end', () => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           try { resolve(JSON.parse(data)); }
-          catch (e) { resolve({ accepted: pkg.eventCount }); }
+          catch { resolve({ accepted: pkg.eventCount }); }
         } else {
           reject(new Error(`Home server HTTP ${res.statusCode}`));
         }
@@ -185,7 +185,7 @@ function sendViaStarlink(pkg) {
 function sendViaUsb(pkg) {
   if (!fs.existsSync(USB_PATH)) {
     try { fs.mkdirSync(USB_PATH, { recursive: true }); }
-    catch (e) { return Promise.reject(new Error('USB path not accessible: ' + USB_PATH)); }
+    catch { return Promise.reject(new Error('USB path not accessible: ' + USB_PATH)); }
   }
 
   const filename = `sync_${HUB_ID}_${new Date().toISOString().slice(0,10)}_${pkg.packageId}.json`;
@@ -214,8 +214,8 @@ function importInbound(filePath) {
   let incoming;
   try {
     incoming = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch (e) {
-    log.error('Could not parse inbound file', { error: e.message });
+  } catch (err) {
+    log.error('Could not parse inbound file', { error: err.message });
     return false;
   }
 
@@ -223,7 +223,7 @@ function importInbound(filePath) {
   if (incoming.costs && typeof incoming.costs === 'object' && Object.keys(incoming.costs).length > 0) {
     let existing = {};
     if (fs.existsSync(BASE_COSTS)) {
-      try { existing = JSON.parse(fs.readFileSync(BASE_COSTS, 'utf8')); } catch (_) { /* use default */ }
+      try { existing = JSON.parse(fs.readFileSync(BASE_COSTS, 'utf8')); } catch { /* use default */ }
     }
     const merged = { ...existing, ...incoming.costs };
     fs.writeFileSync(BASE_COSTS, JSON.stringify(merged, null, 2));
@@ -275,10 +275,6 @@ async function runSync() {
 
   log.info('Preparing sync package', { events: events.length, files: files.length });
   const pkg = buildPackage(events);
-
-  const cohortMsg = pkg.discovered_cohort
-    ? `cohort ${pkg.discovered_cohort}`
-    : 'cohort not yet discovered';
 
   log.info('Package ready', { packageId: pkg.packageId, students: pkg.cohortSize, cohort: pkg.discovered_cohort || 'not yet discovered' });
 

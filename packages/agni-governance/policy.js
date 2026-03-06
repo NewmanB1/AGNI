@@ -6,13 +6,12 @@
 //
 // Expected shape: see schemas/governance-policy.schema.json
 
-const path = require('path');
 const { createSchemaStore } = require('./schema-store');
 const envConfig = require('@agni/utils/env-config');
 const log = require('@agni/utils/logger').createLogger('governance');
 
 const store = createSchemaStore({
-  schemaPath: path.join(__dirname, '../../schemas', 'governance-policy.schema.json'),
+  schemaPath: envConfig.governancePolicySchema,
   defaults: {},
   log,
   preValidate: function (policy) {

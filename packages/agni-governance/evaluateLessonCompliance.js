@@ -2,32 +2,33 @@
 
 // Evaluate a single lesson (sidecar) against a governance policy.
 // Returns status and a list of structured issues for authoring tools and hub APIs.
-// Pure: (sidecar, policy) → { status, issues }; no I/O or hidden state.
+// When opts.utuConstants is provided, uses it (pure, no I/O). Otherwise loads from envConfig.utuConstantsPath.
 
-const path = require('path');
 const fs = require('fs');
+const envConfig = require('@agni/utils/env-config');
 
-let utuConstants = null;
-function getUtuConstants() {
-  if (!utuConstants) {
-    try {
-      const p = path.join(__dirname, '../../data/utu-constants.json');
-      if (fs.existsSync(p)) {
-        utuConstants = JSON.parse(fs.readFileSync(p, 'utf8'));
-      }
-    } catch (e) { utuConstants = {}; }
-  }
-  return utuConstants || {};
+let _utuCache = null;
+function loadUtuConstantsFromPath(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (e) { return {}; }
 }
 
-function getFailureModeForProtocol(protocol) {
-  const protocols = (getUtuConstants().protocols || []);
+function resolveUtuConstants(opts) {
+  if (opts && opts.utuConstants && typeof opts.utuConstants === 'object') return opts.utuConstants;
+  if (!_utuCache) _utuCache = loadUtuConstantsFromPath(envConfig.utuConstantsPath);
+  return _utuCache || {};
+}
+
+function getFailureModeForProtocol(protocol, utuConstants) {
+  const protocols = (utuConstants.protocols || []);
   const p = protocols.find(function (x) { return x.id === protocol; });
   return p ? p.failureMode : null;
 }
 
-function getCanonicalSpineIds() {
-  return getUtuConstants().spineIds || [];
+function getCanonicalSpineIds(utuConstants) {
+  return utuConstants.spineIds || [];
 }
 
 function issue(message, severity) {
@@ -36,14 +37,16 @@ function issue(message, severity) {
 
 /**
  * Evaluate lesson compliance against policy.
- * Pure function: same inputs always yield the same output.
+ * When opts.utuConstants is provided: pure (no I/O). Otherwise loads UTU constants from envConfig.utuConstantsPath.
  *
  * @param  {object} sidecar  Lesson sidecar (identifier, utu, teaching_mode, difficulty, ontology, ...)
  * @param  {object} policy   Optional. { allowedTeachingModes?, requireUtu?, requireTeachingMode?, allowedProtocols?, minProtocol?, maxProtocol?, failureModeHints?, minDifficulty?, maxDifficulty? }
+ * @param  {object} opts     Optional. { utuConstants?: object } — when provided, used instead of file load (enables pure testing)
  * @returns {{ status: 'ok'|'warning'|'fail', issues: Array<{ message: string, severity: 'fail'|'warning' }> }}
  */
-function evaluateLessonCompliance(sidecar, policy) {
+function evaluateLessonCompliance(sidecar, policy, opts) {
   policy = policy || {};
+  const utuConstants = resolveUtuConstants(opts || {});
   const issues = [];
 
   if (policy.requireUtu && (!sidecar.utu || !sidecar.utu.class)) {
@@ -53,7 +56,7 @@ function evaluateLessonCompliance(sidecar, policy) {
   // Portability check: validate Spine ID against canonical list
   const lessonSpineId = sidecar.utu && sidecar.utu.class;
   if (lessonSpineId) {
-    const canonical = getCanonicalSpineIds();
+    const canonical = getCanonicalSpineIds(utuConstants);
     if (canonical.length > 0 && canonical.indexOf(lessonSpineId) === -1) {
       issues.push(issue('Spine ID "' + lessonSpineId + '" is not in canonical list. Lesson may not be portable across authorities.', 'warning'));
     }
@@ -115,7 +118,7 @@ function evaluateLessonCompliance(sidecar, policy) {
       }
     }
     if (protocolFail && addFailureHint) {
-      const hint = getFailureModeForProtocol(lessonProtocol);
+      const hint = getFailureModeForProtocol(lessonProtocol, utuConstants);
       if (hint) issues.push(issue('Failure-mode hint (P' + lessonProtocol + '): ' + hint, 'warning'));
     }
   } else if (((allowedProtocols && allowedProtocols.length > 0) || typeof minP === 'number' || typeof maxP === 'number') && policy.requireUtu) {

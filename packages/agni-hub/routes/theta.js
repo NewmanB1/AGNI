@@ -2,7 +2,7 @@
 
 function register(router, ctx) {
   const { loadMasterySummaryAsync, loadLessonIndexAsync, loadOverridesAsync, saveOverridesAsync,
-          authorService, handleJsonBody, safeErrorMessage, requireHubKey, adminOnly,
+          authorService, handleJsonBody, requireHubKey, adminOnly,
           DATA_DIR, path, thetaCache } = ctx;
 
   router.get('/api/theta', requireHubKey(async (req, res, { qs, sendResponse }) => {

@@ -210,7 +210,7 @@ describe('AUDIT-4: evaluateLessonCompliance is pure (no hidden I/O dependency)',
     // The function claims to be pure but lazily loads utu-constants.json.
     // This test documents the impurity. Once the function is refactored
     // to accept constants as a parameter, update this test accordingly.
-    const { evaluateLessonCompliance } = require('../../src/governance/evaluateLessonCompliance');
+    const gov = require('@agni/governance');
 
     const sidecar = {
       identifier: 'test',
@@ -219,8 +219,8 @@ describe('AUDIT-4: evaluateLessonCompliance is pure (no hidden I/O dependency)',
     };
     const policy = { requireUtu: true, utuTargets: [{ class: 'SCI-1', band: 1 }] };
 
-    const r1 = evaluateLessonCompliance(sidecar, policy);
-    const r2 = evaluateLessonCompliance(sidecar, policy);
+    const r1 = gov.evaluateLessonCompliance(sidecar, policy);
+    const r2 = gov.evaluateLessonCompliance(sidecar, policy);
 
     assert.deepEqual(r1, r2, 'Same inputs should produce same outputs — function must be deterministic.');
     assert.equal(r1.status, 'fail', 'Mismatched UTU target should produce fail status.');

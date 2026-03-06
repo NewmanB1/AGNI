@@ -1,4 +1,4 @@
-﻿// shell-boot.js ΓÇö PWA shell bootstrap
+// shell-boot.js ΓÇö PWA shell bootstrap
 // Loaded as external script to satisfy CSP script-src 'self'.
 // ES5 compatible ΓÇö targets Android 6.0+ (Chrome 44 WebView).
 
@@ -7,11 +7,6 @@
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js');
-  }
-
-  function escapeHtml(str) {
-    if (typeof str !== 'string') return '';
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   function renderLesson(lesson) {
@@ -47,8 +42,9 @@
         if (step.svg_spec && step.svg_spec.factory && window.AGNI_SVG && typeof window.AGNI_SVG.fromSpec === 'function') {
           try {
             window.AGNI_SVG.fromSpec(step.svg_spec, svgContainer);
-          } catch (e) {
-            svgContainer.textContent = 'SVG preview unavailable';
+          } catch (err) {
+            var msg = (err && err.message) ? err.message : String(err);
+            svgContainer.textContent = 'SVG preview unavailable' + (msg ? ' (' + msg + ')' : '');
           }
           document.getElementById('app').appendChild(svgContainer);
         } else if (window.svgGenerators && step.svg_type && window.svgGenerators[step.svg_type]) {
@@ -74,7 +70,9 @@
     if (typeof window.AGNI_LOADER !== 'undefined' && LESSON_DATA.requires) {
       window.AGNI_LOADER.loadDependencies(LESSON_DATA).then(function () {
         renderLesson(LESSON_DATA);
-      }).catch(function () {
+      }).catch(function (err) {
+        var app = document.getElementById('app');
+        if (app && err) app.setAttribute('data-load-error', err.message || String(err));
         renderLesson(LESSON_DATA);
       });
     } else {

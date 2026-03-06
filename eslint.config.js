@@ -63,5 +63,12 @@ module.exports = [
       'no-control-regex': 'off',
       'no-undef': 'off'
     }
+  },
+  {
+    files: ['packages/agni-hub/sw.js'],
+    rules: {
+      // no-undef:off prevents ref-tracking; MAX_LESSON_CACHE_ENTRIES is used (lessonLimit = ...).
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^MAX_LESSON_CACHE_ENTRIES$' }]
+    }
   }
 ];

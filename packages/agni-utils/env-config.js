@@ -57,6 +57,9 @@ const config = {
 
   approvedCatalog:    strVal('AGNI_APPROVED_CATALOG', path.join(DATA_DIR, 'approved-catalog.json')),
   governancePolicy:   strVal('AGNI_GOVERNANCE_POLICY', path.join(DATA_DIR, 'governance-policy.json')),
+  governancePolicySchema:  strVal('AGNI_GOVERNANCE_POLICY_SCHEMA', path.join(DATA_DIR, '..', 'schemas', 'governance-policy.schema.json')),
+  approvedCatalogSchema:   strVal('AGNI_APPROVED_CATALOG_SCHEMA', path.join(DATA_DIR, '..', 'schemas', 'approved-catalog.schema.json')),
+  utuConstantsPath:   strVal('AGNI_UTU_CONSTANTS', path.join(DATA_DIR, 'utu-constants.json')),
 
   masteryThreshold:   validRange(floatVal('AGNI_MASTERY_THRESHOLD', 0.6), 0, 1, 'AGNI_MASTERY_THRESHOLD'),
 

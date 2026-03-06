@@ -262,7 +262,7 @@ function register(router, ctx) {
             .filter(r => r.skill)
             .map(r => ({ probeId: r.probeId || r.skill, correct: (r.answer || 0) >= 1 }));
           if (probeResults.length > 0) lmsEngine.recordObservation(pseudoId, 'diagnostic', probeResults);
-        } catch (e) { /* non-critical */ }
+        } catch { /* non-critical */ }
       }
       try {
         const diagPath = path.join(DATA_DIR, 'diagnostic-status.json');
@@ -271,7 +271,7 @@ function register(router, ctx) {
           status[pseudoId] = { completedAt: new Date().toISOString(), ability: result.bootstrapAbility };
           await saveJSONAsync(diagPath, status);
         });
-      } catch (e) { /* non-critical */ }
+      } catch { /* non-critical */ }
       return sendResponse(200, { ok: true, ability: result.bootstrapAbility, skillsBootstrapped: result.skillCount });
     });
   }));

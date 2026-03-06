@@ -24,7 +24,7 @@ const {
   SERVE_DIR, LESSON_INDEX, PORT,
   MIN_RESIDUAL, MASTERY_THRESHOLD, MIN_CONFIDENCE,
   MIN_LOCAL_SAMPLE_SIZE, MIN_LOCAL_EDGE_COUNT,
-  thetaCache, governanceService, accountsService
+  thetaCache, accountsService
 } = ctx;
 
 // â”€â”€ LMS engine status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -328,7 +328,7 @@ async function rebuildLessonIndex() {
     const htmlPath    = path.join(lessonDir, 'index.html');
 
     let hasSidecar = false;
-    try { await fsp.access(sidecarPath); hasSidecar = true; } catch (_) { /* no sidecar */ }
+    try { await fsp.access(sidecarPath); hasSidecar = true; } catch { /* no sidecar */ }
 
     if (hasSidecar) {
       sidecarCount++;
@@ -362,7 +362,7 @@ async function rebuildLessonIndex() {
     let skillsRequired = [];
 
     let hasHtml = false;
-    try { await fsp.access(htmlPath); hasHtml = true; } catch (_) { /* no html */ }
+    try { await fsp.access(htmlPath); hasHtml = true; } catch { /* no html */ }
     if (hasHtml) {
       const html = await fsp.readFile(htmlPath, 'utf8');
       const m = html.match(/window\.LESSON_DATA\s*=\s*(\{[\s\S]*?\});/);
