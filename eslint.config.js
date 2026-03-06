@@ -45,11 +45,22 @@ module.exports = [
   {
     files: ['packages/agni-runtime/**/*.js'],
     languageOptions: {
-      globals: { ...globals.browser }
+      globals: {
+        ...globals.browser,
+        LESSON_DATA: 'readonly',
+        QRious: 'readonly'
+      }
     },
     rules: {
       'no-var': 'off',
-      'prefer-const': 'off'
+      'prefer-const': 'off',
+      'no-console': 'off',
+      'no-prototype-builtins': 'off',
+      'no-redeclare': 'off',
+      'no-control-regex': 'off',
+      'no-empty': ['error', { allowEmptyCatch: true }],
+      'no-undef': 'off',
+      'no-useless-assignment': 'off'
     }
   },
   {

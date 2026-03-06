@@ -46,18 +46,14 @@ Single ordered list of remaining improvement work, merged from HUB-IMPROVEMENT-P
 | 7 | **PACKAGES Phase 2: verify-canonical** | PACKAGES | 15m | — |
 | | Confirm all packages in PACKAGES_TO_CHECK; add any missing | | | |
 
-### Tier 3: Optional / Lower Priority
+### Tier 3: Optional / Lower Priority (8–11 Done)
 
-| # | Task | Source | Effort | Dependencies |
-|---|------|--------|--------|--------------|
-| 8 | **SERVICES Phase 4: Types** | SERVICES | 1–2h | — |
-| | Improve @agni/services types; typecheck pass for services imports | | | |
-| 9 | **SERVICES Phase 5: Config injection** | SERVICES | 1h | — |
-| | Optional unit test with alternate config | | | |
-| 10 | **RUNTIME Phase 6: Types** | RUNTIME | 1h | — |
-| | index.d.ts for @agni/runtime | | | |
-| 11 | **RUNTIME Phase 7: ESLint scope** | RUNTIME | 30m | — |
-| | verify:runtime-lint; ESLint on packages/agni-runtime with ES5 override | | | |
+| # | Task | Source | Status |
+|---|------|--------|--------|
+| 8 | **SERVICES Phase 4: Types** | SERVICES | Done — typecheck:services |
+| 9 | **SERVICES Phase 5: Config injection** | SERVICES | Done — config-injection.test.js |
+| 10 | **RUNTIME Phase 6: Types** | RUNTIME | Done — index.d.ts exists |
+| 11 | **RUNTIME Phase 7: ESLint scope** | RUNTIME | Done — verify:runtime-lint in verify:all |
 | 12 | **RUNTIME Phase 3/4: SVG registry, export** | RUNTIME | Deferred | — |
 | | Portal catalog sync; stage.export() | | | |
 | 13 | **BACKLOG Phase E: Deferred** | BACKLOG | Manual | — |

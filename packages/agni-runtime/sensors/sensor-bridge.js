@@ -498,7 +498,7 @@
   function registerAdapter(adapter) {
     if (!adapter || typeof adapter.start !== 'function') return;
     _adapters.push(adapter);
-    if (_active && adapter.start) adapter.start(_pub);
+    if (isActive() && adapter.start) adapter.start(_pub);
   }
 
   S.sensorBridge = {

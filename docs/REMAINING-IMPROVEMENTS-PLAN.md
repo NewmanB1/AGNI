@@ -129,12 +129,12 @@ grep -E "src/runtime|src/utils" packages/agni-runtime/README.md  # Empty (or onl
 
 ---
 
-## Phase 3: Optional / Lower Priority
+## Phase 3: Optional / Lower Priority (Tier 3 Done)
 
-### 3.1 SERVICES — Types (Optional)
+### 3.1 SERVICES — Types (Optional) — Done
 
-**Regression guard:** `npm run typecheck` — goal: pass for @agni/services imports.  
-**Note:** Full typecheck has pre-existing failures; scope to services only or defer.
+**Regression guard:** `npm run typecheck:services` — passes for packages/agni-services.  
+Uses `tsconfig.services.json` (scoped, skipLibCheck). Full `typecheck` still has pre-existing failures in engine/compiler.
 
 ---
 
@@ -144,9 +144,9 @@ grep -E "src/runtime|src/utils" packages/agni-runtime/README.md  # Empty (or onl
 
 ---
 
-### 3.3 RUNTIME — Types, ESLint (Optional)
+### 3.3 RUNTIME — Types, ESLint (Optional) — Done
 
-**Regression guard:** `verify:runtime-lint`, `verify:dts` for new .d.ts.
+**Regression guard:** `verify:runtime-lint` (eslint packages/agni-runtime), wired into verify:all. ES5 override in eslint.config.js. index.d.ts already exists.
 
 ---
 

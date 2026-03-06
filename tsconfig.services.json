@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["packages/agni-services/**/*.js", "packages/agni-services/**/*.ts"],
+  "exclude": ["node_modules"]
+}
