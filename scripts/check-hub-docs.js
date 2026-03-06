@@ -50,8 +50,36 @@ for (const f of files) {
     }
   }
 }
+// Also scan packages/agni-hub for stale path references in comments
+const HUB_DIR = path.join(ROOT, 'packages', 'agni-hub');
+const HUB_BAD_PATTERNS = [/hub-tools\//, /server\/hub-transform/, /server\/theta/];
+function walkHub(dir, out) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const e of entries) {
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) {
+      if (e.name === 'node_modules') continue;
+      walkHub(full, out);
+    } else if (e.name.endsWith('.js')) {
+      out.push(full);
+    }
+  }
+}
+const hubFiles = [];
+walkHub(HUB_DIR, hubFiles);
+for (const f of hubFiles) {
+  const rel = path.relative(ROOT, f).replace(/\\/g, '/');
+  const content = fs.readFileSync(f, 'utf8');
+  for (const pat of HUB_BAD_PATTERNS) {
+    if (pat.test(content)) {
+      violations.push({ file: rel, pattern: 'stale hub-tools/ or server/ path' });
+      break;
+    }
+  }
+}
+
 if (violations.length > 0) {
-  console.error('Docs must not reference hub-tools/context/ or hub-tools/routes/. Use packages/agni-hub/.\n');
+  console.error('Docs and hub package must not reference hub-tools/ or server/. Use packages/agni-hub/.\n');
   violations.forEach((v) => console.error('  ', v.file));
   process.exit(1);
 }

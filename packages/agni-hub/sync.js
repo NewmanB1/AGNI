@@ -1,4 +1,4 @@
-// hub-tools/sync.js
+// packages/agni-hub/sync.js
 // AGNI Hub Sync v1.7.0 â€“ hardened for low-resource environments
 //
 // Packages anonymized learning events for the home server and receives

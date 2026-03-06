@@ -1,7 +1,7 @@
 'use strict';
 
 // Assembles the `ctx` object passed to route register() functions.
-// Individual concerns live in hub-tools/context/ â€” routes can gradually
+// Individual concerns live in packages/agni-hub/context/ â€” routes can gradually
 // migrate to importing directly from those modules.
 
 const fs   = require('fs');

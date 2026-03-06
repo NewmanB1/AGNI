@@ -1,6 +1,6 @@
-// hub-tools/sentry-analysis.js
+// packages/agni-hub/sentry-analysis.js
 // Pure analysis logic for Sentry: event validation, contingency updates, cohort discovery, graph weights.
-// Extracted for testability. Used by hub-tools/sentry.js.
+// Extracted for testability. Used by packages/agni-hub/sentry.js.
 
 'use strict';
 

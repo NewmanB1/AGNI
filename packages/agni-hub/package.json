@@ -4,6 +4,7 @@
   "description": "AGNI Village Hub: HTTP server, theta scheduler, account management, telemetry, and lesson serving.",
   "license": "AGPL-3.0",
   "main": "index.js",
+  "types": "index.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/NewmanB1/AGNI.git",

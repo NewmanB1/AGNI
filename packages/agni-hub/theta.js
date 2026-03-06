@@ -1,6 +1,6 @@
 'use strict';
 
-// hub-tools/theta.js â€” AGNI Hub API entry point
+// packages/agni-hub/theta.js â€” AGNI Hub API entry point
 // Business logic for theta scheduling + router wiring to route modules.
 
 const path = require('path');

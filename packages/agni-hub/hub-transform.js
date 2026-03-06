@@ -1,4 +1,4 @@
-// server/hub-transform.js
+// packages/agni-hub/hub-transform.js
 // AGNI Hub Transform  v1.0.0
 //
 // On-demand lesson delivery server. Transforms YAML source into compiled
@@ -20,7 +20,7 @@
 //   Alternatively it can run standalone on AGNI_SERVE_PORT (default 8083).
 //
 //   In theta.js startApi(), add:
-//     require('../server/hub-transform').attachRoutes(server);
+//     require('./hub-transform').attachRoutes(server);
 //
 // YAML source lookup:
 //   Lessons are located by slug under YAML_DIR (default: data/yaml/).
