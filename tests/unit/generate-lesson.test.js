@@ -2,7 +2,7 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { loadPromptStack, extractYamlBlock, mergeYamlFragments } = require('../../scripts/generate-lesson');
+const { loadPromptStack, extractYamlBlock, mergeYamlFragments } = require('@agni/lesson-gen');
 
 describe('loadPromptStack', () => {
   it('loads all prompts from the markdown file', () => {

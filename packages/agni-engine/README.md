@@ -27,7 +27,7 @@ The engine is designed as **pure functions with persistence at the edges**:
 (local, remote)      → merged       // mergeBanditSummaries (federation)
 ```
 
-State loading/saving happens in `src/services/lms.js` (the service wrapper), not in the engine itself.
+State loading/saving happens in `@agni/services/lms` (the service wrapper), not in the engine itself.
 
 ## Usage
 
