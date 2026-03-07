@@ -105,6 +105,18 @@ function updateEmbedding(state, studentId, lessonId, gain) {
   var z = ensureStudentVector(state, studentId);
   var w = ensureLessonVector(state, lessonId);
 
+  // Bug 3: reject corrupted vectors from state file; no silent propagation of NaN
+  for (var i = 0; i < z.length; i++) {
+    if (!isFinite(z[i])) {
+      throw new Error('[EMBEDDING] student vector has non-finite component at index ' + i + ' — reject update');
+    }
+  }
+  for (i = 0; i < w.length; i++) {
+    if (!isFinite(w[i])) {
+      throw new Error('[EMBEDDING] lesson vector has non-finite component at index ' + i + ' — reject update');
+    }
+  }
+
   var gamma = state.embedding.forgetting;
   var lr    = state.embedding.lr;
   var reg   = state.embedding.reg;
@@ -129,21 +141,29 @@ function updateEmbedding(state, studentId, lessonId, gain) {
   // Per-step delta clamp prevents single-update explosion; avoids oscillation at cap.
   var MAX_DELTA = 0.5;
 
+  // Bug 3: compute into temps; reject atomically if any overflow (no partial revert)
+  var zNew = [];
+  var wNew = [];
   for (var k = 0; k < z.length; k++) {
     var zk = z[k];
     var wk = w[k];
     var newZk = gamma * zk + lr * (err * wk - reg * zk);
     var newWk = gamma * wk + lr * (err * zk - reg * wk);
-    if (!isFinite(newZk)) newZk = zk;
-    if (!isFinite(newWk)) newWk = wk;
+    if (!isFinite(newZk) || !isFinite(newWk)) {
+      throw new Error('[EMBEDDING] update produced non-finite value at k=' + k + ' — reject observation');
+    }
 
     var deltaZk = newZk - zk;
     var deltaWk = newWk - wk;
     deltaZk = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, deltaZk));
     deltaWk = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, deltaWk));
 
-    z[k] = Math.max(-MAG_CAP, Math.min(MAG_CAP, zk + deltaZk));
-    w[k] = Math.max(-MAG_CAP, Math.min(MAG_CAP, wk + deltaWk));
+    zNew[k] = Math.max(-MAG_CAP, Math.min(MAG_CAP, zk + deltaZk));
+    wNew[k] = Math.max(-MAG_CAP, Math.min(MAG_CAP, wk + deltaWk));
+  }
+  for (k = 0; k < z.length; k++) {
+    z[k] = zNew[k];
+    w[k] = wNew[k];
   }
 }
 

@@ -368,6 +368,53 @@ describe('AUDIT-INVARIANT: embeddings Bug 2 — MAG_CAP and gradient clipping pr
   });
 });
 
+describe('AUDIT-INVARIANT: embeddings Bug 3 — reject corrupted vectors and overflow atomically', () => {
+  const embeddings = require('../../src/engine/embeddings');
+  const { createState } = require('../helpers/engine-state');
+
+  it('updateEmbedding throws when student vector has NaN (corrupted state)', () => {
+    const state = createState({ dim: 2 });
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    state.embedding.students.s1.vector[0] = NaN;
+
+    assert.throws(
+      () => embeddings.updateEmbedding(state, 's1', 'l1', 0.5),
+      /student vector has non-finite|reject update/
+    );
+  });
+
+  it('updateEmbedding throws when lesson vector has NaN', () => {
+    const state = createState({ dim: 2 });
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    state.embedding.lessons.l1.vector[0] = NaN;
+
+    assert.throws(
+      () => embeddings.updateEmbedding(state, 's1', 'l1', 0.5),
+      /lesson vector has non-finite|reject update/
+    );
+  });
+
+  it('updateEmbedding does not mutate vectors when overflow would occur', () => {
+    const state = createState({ dim: 2 });
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    // Inject Inf to cause overflow in newZk/newWk
+    state.embedding.students.s1.vector[0] = 1e308;
+    state.embedding.lessons.l1.vector[0] = 1e308;
+    var zBefore = state.embedding.students.s1.vector.slice();
+    var wBefore = state.embedding.lessons.l1.vector.slice();
+
+    assert.throws(
+      () => embeddings.updateEmbedding(state, 's1', 'l1', 0.5),
+      /non-finite|reject/
+    );
+    assert.deepEqual(state.embedding.students.s1.vector, zBefore, 'z must be unchanged on reject');
+    assert.deepEqual(state.embedding.lessons.l1.vector, wBefore, 'w must be unchanged on reject');
+  });
+});
+
 describe('AUDIT-8: engine rejects invalid hyperparameters', () => {
   const embeddings = require('../../src/engine/embeddings');
   const { createState } = require('../helpers/engine-state');
