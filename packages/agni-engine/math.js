@@ -13,7 +13,8 @@
 
 'use strict';
 
-/** Minimum diagonal for Cholesky. Below this, sqrt(diag) and divisions blow up (NaN-poison Thompson). */
+/** Minimum diagonal for Cholesky. Below this, sqrt(diag) and divisions blow up (NaN-poison Thompson).
+ *  JITTER in thompson.js must be >= CHOLESKY_EPSILON for jitter retry to succeed. */
 var CHOLESKY_EPSILON = 1e-10;
 
 /**
@@ -56,6 +57,9 @@ function addVec(a, b) {
  */
 function scaleVec(v, s) {
   if (v == null) throw new Error('[MATH] scaleVec: vector is null or undefined');
+  if (typeof s !== 'number' || !isFinite(s)) {
+    throw new Error('[MATH] scaleVec: scalar must be finite number');
+  }
   return v.map(function(x) { return x * s; });
 }
 
@@ -115,6 +119,9 @@ function addMat(A, B) {
  */
 function scaleMat(A, s) {
   if (A == null) throw new Error('[MATH] scaleMat: matrix is null or undefined');
+  if (typeof s !== 'number' || !isFinite(s)) {
+    throw new Error('[MATH] scaleMat: scalar must be finite number');
+  }
   if (A.length > 0) {
     var cols = A[0].length;
     for (var i = 0; i < A.length; i++) {
@@ -157,6 +164,10 @@ function matVec(A, x) {
  * @returns {number[][]}
  */
 function identity(n) {
+  if (n == null) throw new Error('[MATH] identity: n is null or undefined');
+  if (typeof n !== 'number' || !Number.isInteger(n) || n < 0) {
+    throw new Error('[MATH] identity: n must be non-negative integer, got ' + n);
+  }
   var I = new Array(n);
   for (var i = 0; i < n; i++) {
     I[i] = new Array(n).fill(0);
@@ -172,9 +183,22 @@ function identity(n) {
  * @returns {number[][]}
  */
 function cholesky(A) {
+  if (A == null) throw new Error('[MATH] cholesky: matrix is null or undefined');
   var n = A.length;
-  var L = new Array(n);
   var i, j, k, sum, diag;
+  for (i = 0; i < n; i++) {
+    if (!A[i] || A[i].length !== n) {
+      throw new Error('[MATH] cholesky: matrix must be square (got ' + n + 'x' + (A[i] ? A[i].length : '?') + ')');
+    }
+  }
+  for (i = 0; i < n; i++) {
+    for (j = i + 1; j < n; j++) {
+      if (Math.abs((A[i][j] || 0) - (A[j][i] || 0)) > 1e-12) {
+        throw new Error('[MATH] cholesky: matrix is not symmetric (A[' + i + '][' + j + '] !== A[' + j + '][' + i + '])');
+      }
+    }
+  }
+  var L = new Array(n);
   for (i = 0; i < n; i++) {
     L[i] = new Array(n).fill(0);
   }
@@ -206,7 +230,11 @@ function cholesky(A) {
  * @returns {number[]}
  */
 function forwardSub(L, b) {
+  if (b == null) throw new Error('[MATH] forwardSub: RHS vector is null or undefined');
   var n = L.length;
+  if (b.length !== n) {
+    throw new Error('[MATH] forwardSub: dimension mismatch (L is ' + n + 'x' + n + ', b.length=' + b.length + ')');
+  }
   var y = new Array(n);
   var i, j, sum;
   for (i = 0; i < n; i++) {
@@ -227,7 +255,11 @@ function forwardSub(L, b) {
  * @returns {number[]}
  */
 function backSub(L, y) {
+  if (y == null) throw new Error('[MATH] backSub: RHS vector is null or undefined');
   var n = L.length;
+  if (y.length !== n) {
+    throw new Error('[MATH] backSub: dimension mismatch (L is ' + n + 'x' + n + ', y.length=' + y.length + ')');
+  }
   var x = new Array(n);
   var i, j, sum;
   for (i = n - 1; i >= 0; i--) {
@@ -247,6 +279,7 @@ function backSub(L, y) {
  * @returns {number[][]}
  */
 function invertSPD(A) {
+  if (A == null) throw new Error('[MATH] invertSPD: matrix is null or undefined');
   var n = A.length;
   var L = cholesky(A);
   var inv = new Array(n);
@@ -273,30 +306,20 @@ function invertSPD(A) {
   return inv;
 }
 
-var _randnCache = null;
-
 /**
- * Gaussian random variable (Box–Muller). Caches the second sample to avoid waste.
+ * Gaussian random variable (Box–Muller). Pure — no module-level state.
  * @returns {number}
  */
 function randn() {
-  if (_randnCache !== null) {
-    var out = _randnCache;
-    _randnCache = null;
-    return out;
-  }
   var u, v, lim = 1000;
   do {
     u = Math.random();
     v = Math.random();
     if (--lim <= 0) {
-      u = 1e-10;
-      v = 1e-10;
-      break;
+      throw new Error('[MATH] randn: PRNG returned zero 1000 times');
     }
   } while (u === 0 || v === 0);
   var r = Math.sqrt(-2 * Math.log(u));
-  _randnCache = r * Math.sin(2 * Math.PI * v);
   return r * Math.cos(2 * Math.PI * v);
 }
 

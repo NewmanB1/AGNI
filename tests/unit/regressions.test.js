@@ -1578,3 +1578,122 @@ describe('AUDIT-DOCS: Node version docs consistent (hub Node 18+, not 14–16)',
     );
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MATH: packages/agni-engine/math.js remediation (docs/playbooks/math-remediation-plan.md)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('MATH-1: cholesky rejects null, non-square, and non-symmetric input', () => {
+  const math = require('../../src/engine/math');
+
+  it('throws for null input', () => {
+    assert.throws(() => math.cholesky(null), /cholesky.*null or undefined/);
+  });
+
+  it('throws for non-square matrix', () => {
+    assert.throws(() => math.cholesky([[1, 0, 0], [0, 1, 0]]), /square/);
+  });
+
+  it('throws for non-symmetric matrix', () => {
+    assert.throws(() => math.cholesky([[4, 1], [2, 3]]), /not symmetric/);
+  });
+});
+
+describe('MATH-2: randn has no module-level state', () => {
+  const math = require('../../src/engine/math');
+
+  it('produces statistically independent samples regardless of call order', () => {
+    // Call randn odd times (no cache anymore — was the bug). Verify samples are valid N(0,1).
+    const N = 2000;
+    const samples = [];
+    for (let i = 0; i < N; i++) samples.push(math.randn());
+    const mean = samples.reduce((a, b) => a + b, 0) / samples.length;
+    const variance = samples.reduce((a, b) => a + b * b, 0) / samples.length - mean * mean;
+    // SE(mean) = 1/sqrt(N) ≈ 0.02; allow 5 sigma → 0.1. Variance: allow ±0.15.
+    assert.ok(Math.abs(mean) < 0.12, 'Mean should be near 0 (got ' + mean + ')');
+    assert.ok(Math.abs(variance - 1) < 0.15, 'Variance should be near 1 (got ' + variance + ')');
+  });
+});
+
+describe('MATH-3: randn fallback does not produce degenerate u=v sample', () => {
+  const math = require('../../src/engine/math');
+
+  it('throws when Math.random returns zero repeatedly', () => {
+    const origRandom = Math.random;
+    Math.random = function () { return 0; };
+    try {
+      assert.throws(() => math.randn(), /randn.*PRNG returned zero/);
+    } finally {
+      Math.random = origRandom;
+    }
+  });
+});
+
+describe('MATH-4: forwardSub and backSub throw on RHS length mismatch', () => {
+  const math = require('../../src/engine/math');
+
+  it('forwardSub throws when b.length < L.length', () => {
+    const L = [[1, 0], [1, 1]];
+    assert.throws(() => math.forwardSub(L, [1]), /forwardSub.*dimension mismatch/);
+  });
+
+  it('forwardSub throws when b.length > L.length', () => {
+    const L = [[1, 0], [1, 1]];
+    assert.throws(() => math.forwardSub(L, [1, 2, 3]), /forwardSub.*dimension mismatch/);
+  });
+
+  it('backSub throws when y.length < L.length', () => {
+    const L = [[1, 0], [1, 1]];
+    assert.throws(() => math.backSub(L, [1]), /backSub.*dimension mismatch/);
+  });
+
+  it('backSub throws when y.length > L.length', () => {
+    const L = [[1, 0], [1, 1]];
+    assert.throws(() => math.backSub(L, [1, 2, 3]), /backSub.*dimension mismatch/);
+  });
+});
+
+describe('MATH-5: identity rejects invalid n', () => {
+  const math = require('../../src/engine/math');
+
+  it('throws for null or undefined', () => {
+    assert.throws(() => math.identity(null), /identity.*null or undefined/);
+    assert.throws(() => math.identity(undefined), /identity.*null or undefined/);
+  });
+
+  it('throws for negative n', () => {
+    assert.throws(() => math.identity(-1), /identity.*non-negative integer/);
+  });
+
+  it('throws for non-integer n', () => {
+    assert.throws(() => math.identity(2.5), /identity.*non-negative integer/);
+  });
+});
+
+describe('MATH-6: scaleVec and scaleMat reject invalid scalar', () => {
+  const math = require('../../src/engine/math');
+
+  it('scaleVec throws for undefined scalar', () => {
+    assert.throws(() => math.scaleVec([1, 2, 3], undefined), /scaleVec.*finite number/);
+  });
+
+  it('scaleVec throws for NaN scalar', () => {
+    assert.throws(() => math.scaleVec([1, 2, 3], NaN), /scaleVec.*finite number/);
+  });
+
+  it('scaleMat throws for undefined scalar', () => {
+    assert.throws(() => math.scaleMat([[1, 2], [3, 4]], undefined), /scaleMat.*finite number/);
+  });
+});
+
+describe('MATH-7: invertSPD throws for null input', () => {
+  const math = require('../../src/engine/math');
+
+  it('throws for null', () => {
+    assert.throws(() => math.invertSPD(null), /invertSPD.*null or undefined/);
+  });
+
+  it('throws for undefined', () => {
+    assert.throws(() => math.invertSPD(undefined), /invertSPD.*null or undefined/);
+  });
+});

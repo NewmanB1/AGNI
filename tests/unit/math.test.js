@@ -87,6 +87,11 @@ describe('scaleVec', () => {
   it('throws for null or undefined vector', () => {
     assert.throws(() => math.scaleVec(null, 2), /null or undefined/);
   });
+
+  it('throws for undefined or NaN scalar', () => {
+    assert.throws(() => math.scaleVec([1, 2, 3], undefined), /scaleVec.*finite number/);
+    assert.throws(() => math.scaleVec([1, 2, 3], NaN), /scaleVec.*finite number/);
+  });
 });
 
 // ── outer ────────────────────────────────────────────────────────────────────
@@ -149,6 +154,10 @@ describe('scaleMat', () => {
     assert.throws(() => math.scaleMat([sparseRow, [4, 5, 6]], 2), /sparse/);
     assert.throws(() => math.scaleMat([[1, 2], [3, 4, 5]], 2), /jagged/);
   });
+
+  it('throws for undefined or NaN scalar', () => {
+    assert.throws(() => math.scaleMat([[1, 2], [3, 4]], undefined), /scaleMat.*finite number/);
+  });
 });
 
 describe('matVec', () => {
@@ -191,6 +200,19 @@ describe('identity', () => {
     assert.equal(I.length, 5);
     assert.equal(I[0].length, 5);
   });
+
+  it('throws for null or undefined n', () => {
+    assert.throws(() => math.identity(null), /identity.*null or undefined/);
+    assert.throws(() => math.identity(undefined), /identity.*null or undefined/);
+  });
+
+  it('throws for negative n', () => {
+    assert.throws(() => math.identity(-1), /identity.*non-negative integer/);
+  });
+
+  it('throws for non-integer n', () => {
+    assert.throws(() => math.identity(2.5), /identity.*non-negative integer/);
+  });
 });
 
 // ── cholesky ─────────────────────────────────────────────────────────────────
@@ -231,6 +253,18 @@ describe('cholesky', () => {
     const nearSingular = [[1, 1], [1, 1 + 1e-11]];
     assert.throws(() => math.cholesky(nearSingular), /not SPD/);
   });
+
+  it('throws for null input', () => {
+    assert.throws(() => math.cholesky(null), /cholesky.*null or undefined/);
+  });
+
+  it('throws for non-square matrix', () => {
+    assert.throws(() => math.cholesky([[1, 0, 0], [0, 1, 0]]), /square/);
+  });
+
+  it('throws for non-symmetric matrix', () => {
+    assert.throws(() => math.cholesky([[4, 1], [2, 3]]), /not symmetric/);
+  });
 });
 
 // ── forwardSub / backSub ─────────────────────────────────────────────────────
@@ -263,6 +297,18 @@ describe('forwardSub and backSub', () => {
   it('backSub throws on zero diagonal', () => {
     const L = [[1, 0], [1, 0]];
     assert.throws(() => math.backSub(L, [1, 1]), /backSub.*zero.*diagonal/);
+  });
+
+  it('forwardSub throws when b.length !== L.length', () => {
+    const L = [[1, 0], [1, 1]];
+    assert.throws(() => math.forwardSub(L, [1]), /forwardSub.*dimension mismatch/);
+    assert.throws(() => math.forwardSub(L, [1, 2, 3]), /forwardSub.*dimension mismatch/);
+  });
+
+  it('backSub throws when y.length !== L.length', () => {
+    const L = [[1, 0], [1, 1]];
+    assert.throws(() => math.backSub(L, [1]), /backSub.*dimension mismatch/);
+    assert.throws(() => math.backSub(L, [1, 2, 3]), /backSub.*dimension mismatch/);
   });
 });
 
@@ -312,6 +358,11 @@ describe('invertSPD', () => {
       }
     }
   });
+
+  it('throws for null or undefined input', () => {
+    assert.throws(() => math.invertSPD(null), /invertSPD.*null or undefined/);
+    assert.throws(() => math.invertSPD(undefined), /invertSPD.*null or undefined/);
+  });
 });
 
 // ── randn ────────────────────────────────────────────────────────────────────
@@ -342,5 +393,15 @@ describe('randn', () => {
     const mean = sum / N;
     const variance = sumSq / N - mean * mean;
     assert.ok(Math.abs(variance - 1) < 0.15, 'Variance ' + variance + ' should be near 1');
+  });
+
+  it('throws when Math.random returns zero repeatedly', () => {
+    const origRandom = Math.random;
+    Math.random = function () { return 0; };
+    try {
+      assert.throws(() => math.randn(), /randn.*PRNG returned zero/);
+    } finally {
+      Math.random = origRandom;
+    }
   });
 });

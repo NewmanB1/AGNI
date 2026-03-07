@@ -23,7 +23,8 @@ var PRIOR_REGULARIZATION = 0.01;
 
 /** Diagonal jitter added to A before retrying a failed Cholesky inversion.
  *  JITTER_LIGHT tried first to minimize mean bias (A+εI)⁻¹b vs A⁻¹b.
- *  JITTER used if light jitter still fails. If both fail, fall back to b. */
+ *  JITTER used if light jitter still fails. If both fail, fall back to b.
+ *  Both must be >= math.CHOLESKY_EPSILON for jitter retry to succeed. */
 var JITTER_LIGHT = 1e-10;
 var JITTER = 1e-5;
 
