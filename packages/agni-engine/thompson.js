@@ -129,8 +129,8 @@ function ensureBanditInitialized(state) {
 // ── Core operations ───────────────────────────────────────────────────────────
 
 /**
- * Sample a parameter vector θ from the current posterior using
- * A⁻¹ and mean b for a Gaussian approximation.
+ * Sample a parameter vector θ from the current posterior N(mean, A⁻¹).
+ * Uses Cholesky of A only — no explicit inversion or cholesky(A⁻¹).
  *
  * @param {import('../types').LMSState} state
  * @returns {number[]}
@@ -138,35 +138,34 @@ function ensureBanditInitialized(state) {
 function sampleTheta(state) {
   ensureBanditInitialized(state);
 
-  // Wrap the entire inversion + Cholesky in a try/catch.
-  // invertSPD internally calls cholesky, which may throw for near-singular A.
-  var Ainv, mean, L;
+  var A = state.bandit.A;
+  var b = state.bandit.b;
+  var n = A.length;
+  var L, mean;
+
+  function solveAndSample(mat) {
+    L = math.cholesky(mat);
+    mean = math.backSub(L, math.forwardSub(L, b));
+    var z = [];
+    for (var j = 0; j < n; j++) z.push(math.randn());
+    var noise = math.backSub(L, z);
+    return math.addVec(mean, noise);
+  }
+
   try {
-    Ainv = math.invertSPD(state.bandit.A);
-    mean = math.matVec(Ainv, state.bandit.b);
-    L = math.cholesky(Ainv);
+    return solveAndSample(A);
   } catch (_e) {
-    // Retry once with diagonal jitter on a COPY of A (avoid permanently
-    // mutating the stored matrix, which would accumulate regularization).
-    var n = state.bandit.A.length;
     var Acopy = new Array(n);
     for (var i = 0; i < n; i++) {
-      Acopy[i] = state.bandit.A[i].slice();
+      Acopy[i] = A[i].slice();
       Acopy[i][i] += JITTER;
     }
     try {
-      Ainv = math.invertSPD(Acopy);
-      mean = math.matVec(Ainv, state.bandit.b);
-      L = math.cholesky(Ainv);
+      return solveAndSample(Acopy);
     } catch (_e2) {
-      return state.bandit.b.slice();
+      return b.slice();
     }
   }
-
-  var z = [];
-  for (var j = 0; j < mean.length; j++) z.push(math.randn());
-  var noise = math.matVec(L, z);
-  return mean.map(function (m, idx) { return m + noise[idx]; });
 }
 
 /**
