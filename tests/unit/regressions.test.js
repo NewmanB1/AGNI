@@ -448,6 +448,16 @@ describe('AUDIT-8: engine rejects invalid hyperparameters', () => {
       embeddings.updateEmbedding(state, 's1', 'l1', 0.5);
     }, /lr/);
   });
+
+  it('updateEmbedding throws on lr > 0.1 (Bug 8)', () => {
+    const state = createState({ dim: 4 });
+    state.embedding.lr = 0.5;
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    assert.throws(() => {
+      embeddings.updateEmbedding(state, 's1', 'l1', 0.5);
+    }, /lr.*0\.1/);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

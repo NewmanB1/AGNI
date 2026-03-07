@@ -93,7 +93,7 @@ function migrateLMSState(raw, opts) {
   // ── Embedding ─────────────────────────────────────────────────────────────
   var embDim = ensureNumber(embedding.dim, dim, { min: 4, max: 256 });
   if (embedding.dim !== embDim) migrated = true;
-  var embLr = ensureNumber(embedding.lr, envConfig.embeddingLr, { min: 1e-6, max: 1 });
+  var embLr = ensureNumber(embedding.lr, envConfig.embeddingLr, { min: 1e-6, max: 0.1 });
   if (embedding.lr !== embLr) migrated = true;
   var embReg = ensureNumber(embedding.reg, envConfig.embeddingReg, { min: 0, max: 1 });
   if (embedding.reg !== embReg) migrated = true;

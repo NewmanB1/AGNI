@@ -111,6 +111,10 @@ function ensureLessonVector(state, lessonId) {
  * the observed gain. Forgetting (γ < 1) gradually discounts older updates,
  * allowing the model to adapt as students progress.
  *
+ * IMPORTANT: Call only from recordObservation (same flow as updateBandit).
+ * Embedding and bandit share the feature space; if a lesson is updated here
+ * but never seen by updateBandit (or vice versa), the models diverge.
+ *
  * Update rule (err and z_k, w_k captured pre-update; both vectors use same snapshot):
  *   err = gain − z·w
  *   raw_z_k = γ·z_k + lr·(err·w_k − reg·z_k)
@@ -158,8 +162,8 @@ function updateEmbedding(state, studentId, lessonId, gain) {
   if (typeof gamma !== 'number' || !isFinite(gamma) || gamma < 0.9 || gamma > 1) {
     throw new Error('[EMBEDDING] forgetting must be a finite number in [0.9,1], got: ' + gamma);
   }
-  if (typeof lr !== 'number' || !isFinite(lr) || lr <= 0) {
-    throw new Error('[EMBEDDING] lr must be a positive finite number, got: ' + lr);
+  if (typeof lr !== 'number' || !isFinite(lr) || lr <= 0 || lr > 0.1) {
+    throw new Error('[EMBEDDING] lr must be in (0, 0.1], got: ' + lr);
   }
   if (typeof reg !== 'number' || !isFinite(reg) || reg < 0) {
     throw new Error('[EMBEDDING] reg must be a non-negative finite number, got: ' + reg);
