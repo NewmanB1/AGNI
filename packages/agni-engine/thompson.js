@@ -169,7 +169,7 @@ function sampleTheta(state) {
       try {
         return solveAndSample(jitteredMatrix(JITTER));
       } catch (_e3) {
-        return b.slice();
+        return math.scaleVec(b, 0);
       }
     }
   }
@@ -260,6 +260,7 @@ module.exports = {
   assertEmbeddingDimValid:   assertEmbeddingDimValid,
   assertFeatureDimInvariant: assertFeatureDimInvariant,
   ensureBanditInitialized:   ensureBanditInitialized,
+  sampleTheta:              sampleTheta,
   selectLesson:             selectLesson,
   updateBandit:             updateBandit
 };

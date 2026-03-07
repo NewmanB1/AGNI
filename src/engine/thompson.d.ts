@@ -3,6 +3,7 @@
 import type { LMSState } from '../types';
 
 export function ensureBanditInitialized(state: LMSState): void;
+export function sampleTheta(state: LMSState): number[];
 export function selectLesson(
   state: LMSState,
   studentId: string

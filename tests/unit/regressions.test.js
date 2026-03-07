@@ -471,6 +471,31 @@ describe('AUDIT-14: sampleTheta gracefully handles near-singular A', () => {
 // R15: Thompson jitter must operate on a copy, not mutate state.bandit.A
 // ═══════════════════════════════════════════════════════════════════════════════
 
+describe('AUDIT-INVARIANT: thompson Bug 3 — fallback returns zero vector, not b', () => {
+  const thompson = require('../../src/engine/thompson');
+  const embeddings = require('../../src/engine/embeddings');
+  const math = require('../../src/engine/math');
+  const { createState } = require('../helpers/engine-state');
+
+  it('sampleTheta fallback returns zero vector when all Cholesky attempts fail', () => {
+    const state = createState({ dim: 2 });
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    thompson.ensureBanditInitialized(state);
+    state.bandit.b = [100, 200, 300, 400];
+    // A = -I: fails cholesky; A + JITTER_LIGHT and A + JITTER still have negative diag
+    var n = 4;
+    for (var i = 0; i < n; i++) {
+      for (var j = 0; j < n; j++) {
+        state.bandit.A[i][j] = i === j ? -1 : 0;
+      }
+    }
+    var theta = thompson.sampleTheta(state);
+    assert.deepEqual(theta, [0, 0, 0, 0], 'fallback must return zero vector, not b');
+    assert.ok(math.dot(theta, [1, 1, 1, 1]) === 0, 'dot with zero vector must be 0');
+  });
+});
+
 describe('AUDIT-15: sampleTheta jitter does not mutate state.bandit.A', () => {
   const thompson = require('../../src/engine/thompson');
   const embeddings = require('../../src/engine/embeddings');
