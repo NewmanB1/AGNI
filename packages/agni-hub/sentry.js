@@ -6,11 +6,15 @@ const fs = require('fs');
 const path = require('path');
 const { loadHubConfig } = require('@agni/utils/hub-config');
 loadHubConfig(path.join(__dirname, '../../data'));
+const { validateEnv } = require('@agni/utils/env-validate');
+validateEnv();
 
 const http = require('http');
 const crypto = require('crypto');
 const { createLogger } = require('@agni/utils/logger');
 const envConfig = require('@agni/utils/env-config');
+const { ensureDataDirExists } = require('@agni/utils/ensure-paths');
+ensureDataDirExists(envConfig);
 const sentryAnalysis = require('./sentry-analysis');
 
 // â”€â”€ Hub config bootstrap (F1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

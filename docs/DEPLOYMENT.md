@@ -87,7 +87,22 @@ Create a `.env` file or set environment variables. All variables are optional â€
 
 ---
 
-## 4. Add lessons
+## 4. Initialize data directory (required before first start)
+
+The hub expects `AGNI_DATA_DIR` to exist. If it does not, startup fails immediately with a clear error.
+
+```bash
+# Create and initialize data files
+AGNI_DATA_DIR=/home/pi/AGNI/data node scripts/init-data.js
+# Or, if using repo defaults:
+npm run init:data
+```
+
+**Path assumptions (Pi deployment):** When using absolute paths (e.g. `/opt/agni/data`), create the directory and run `init-data` before first start. There is no fallback; missing paths cause ENOENT at first file access. The hub process user needs `rwx` on `dataDir`, `serveDir`, `yamlDir` and `r` on `factoryDir`, `katexDir`. See `data/hub-config.pi.json` `_path_notes` for details.
+
+---
+
+## 5. Add lessons
 
 Place YAML lesson files in `$AGNI_YAML_DIR` (default: `data/yaml/`). The hub compiles them on demand when a student requests a lesson.
 
@@ -98,7 +113,7 @@ cp lessons/ShakeRhythm.yaml data/yaml/
 
 ---
 
-## 5. Start the hub
+## 6. Start the hub
 
 ```bash
 # Generate the hub API key
@@ -116,7 +131,7 @@ The hub listens on port 8082 (theta API + lessons) and sentry on 8081 (telemetry
 
 ---
 
-## 6. Run as a service (systemd)
+## 7. Run as a service (systemd)
 
 Create `/etc/systemd/system/agni-hub.service`:
 
@@ -149,7 +164,7 @@ sudo systemctl status agni-hub
 
 ---
 
-## 7. Set up WiFi access point
+## 8. Set up WiFi access point
 
 Students connect to the Pi's WiFi to access lessons. Use `hostapd` + `dnsmasq`:
 
@@ -164,7 +179,7 @@ Point the captive portal or default DNS to the Pi's IP on port 8082 so students 
 
 ---
 
-## 8. Verify
+## 9. Verify
 
 ```bash
 # From the Pi itself

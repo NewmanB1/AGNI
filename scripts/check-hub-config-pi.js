@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * Regression guards for hub-config.pi.json (audit bugs 1–7).
+ * Regression guards for hub-config.pi.json (audit bugs 1–8).
  *
  * Bug 1: Memory arithmetic must be correct (960 B Rasch, 3.8 KB / 13 KB embeddings, 2.0 KB Bandit A).
  * Bug 2: _engine_notes must caveat JS object overhead (plain Array, V8, 3–5×).
@@ -91,6 +91,21 @@ if (!notes.includes('ability+variance') && !notes.includes('RaschStudentState'))
 }
 if (!notes.includes('featureDim') && !notes.includes('embeddingDim×2')) {
   errors.push('_engine_notes must note featureDim=embeddingDim×2 invariant for Bandit A.');
+}
+
+// Bug 8: Path assumptions — existence, fallback, permissions, failure mode
+const pathNotes = (cfg._path_notes || []).join('\n');
+if (!pathNotes.includes('ENOENT') && !pathNotes.includes('no such file')) {
+  errors.push('_path_notes must document failure mode when dataDir missing (ENOENT at first file access).');
+}
+if (!pathNotes.includes('init') && !pathNotes.includes('init:data')) {
+  errors.push('_path_notes must document init:data (or equivalent) before first start.');
+}
+if (!pathNotes.includes('Permissions') && !pathNotes.includes('permissions') && !pathNotes.includes('rwx')) {
+  errors.push('_path_notes must document required filesystem permissions (rwx on dataDir/serveDir/yamlDir).');
+}
+if (!pathNotes.includes('fallback') && !pathNotes.includes('Fallback') && !pathNotes.includes('No fallback')) {
+  errors.push('_path_notes must state that there is no fallback when paths do not exist.');
 }
 
 // Bug 2: JS object overhead caveat

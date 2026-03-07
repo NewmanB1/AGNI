@@ -11,6 +11,8 @@ loadHubConfig(path.join(__dirname, '../../data'));
 const { validateEnv } = require('@agni/utils/env-validate');
 validateEnv();
 const envConfig = require('@agni/utils/env-config');
+const { ensureDataDirExists } = require('@agni/utils/ensure-paths');
+ensureDataDirExists(envConfig);
 
 const { Router } = require('@agni/utils/router');
 const ctx = require('./shared');

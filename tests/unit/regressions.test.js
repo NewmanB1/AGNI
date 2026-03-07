@@ -1153,8 +1153,8 @@ describe('AUDIT-INVARIANT: featureDim === embeddingDim * 2 enforced defensively'
   });
 });
 
-describe('AUDIT-DOCS: hub-config.pi.json regression guards (memory arithmetic, JS overhead, Node version, embeddingDim)', () => {
-  it('check-hub-config-pi passes — correct memory math, JS overhead caveat, Node version, embeddingDim', () => {
+describe('AUDIT-DOCS: hub-config.pi.json regression guards (Bugs 1–8)', () => {
+  it('check-hub-config-pi passes — memory, JS overhead, Node version, embeddingDim, path notes (Bug 8)', () => {
     const script = path.resolve(__dirname, '../../scripts/check-hub-config-pi.js');
     const result = spawnSync(process.execPath, [script], {
       cwd: path.resolve(__dirname, '../..'),
@@ -1163,7 +1163,20 @@ describe('AUDIT-DOCS: hub-config.pi.json regression guards (memory arithmetic, J
     assert.equal(
       result.status,
       0,
-      `check-hub-config-pi must pass. Guards: Bug 1–7 (memory, JS overhead, Node version, embeddingDim, forgetting, hubId, maxStudents/maxLessons).\n${result.stderr || result.stdout}`
+      `check-hub-config-pi must pass. Guards: Bugs 1–8 (memory, JS overhead, Node version, embeddingDim, forgetting, hubId, maxStudents/maxLessons, path assumptions).\n${result.stderr || result.stdout}`
+    );
+  });
+});
+
+describe('AUDIT-INVARIANT: Bug 8 — ensureDataDirExists fails fast when dataDir missing', () => {
+  it('ensureDataDirExists throws when dataDir does not exist', () => {
+    const os = require('os');
+    const nonexistent = path.join(os.tmpdir(), 'agni-nonexistent-' + Date.now() + '-x');
+    const { ensureDataDirExists } = require('@agni/utils/ensure-paths');
+    assert.throws(
+      () => ensureDataDirExists({ dataDir: nonexistent }),
+      /AGNI_DATA_DIR does not exist|init-data/,
+      'ensureDataDirExists must throw with clear message when path missing'
     );
   });
 });

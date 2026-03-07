@@ -20,6 +20,13 @@
   "maxLessons": 200,
   "capacityNote": "Memory budget assumes maxStudents and maxLessons. Runtime enforced: engine and accounts reject when at cap.",
 
+  "_path_notes": [
+    "Paths above are absolute for dedicated Pi deployment. No fallback: if dataDir/serveDir/yamlDir do not exist, hub startup fails with ENOENT at first file access.",
+    "Before first start: create dirs and run init:data. Example: sudo mkdir -p /opt/agni/data /opt/agni/serve /opt/agni/lessons && AGNI_DATA_DIR=/opt/agni/data node scripts/init-data.js",
+    "Permissions: hub process user needs rwx on dataDir, serveDir, yamlDir; r on factoryDir, katexDir.",
+    "Failure mode when dataDir missing: process throws ENOENT (no such file or directory) on first read/write (accounts, LMS state, mastery-summary, etc.). Run init:data first."
+  ],
+
   "_engine_notes": [
     "embeddingDim=8 (above): Halves the default (16) to reduce matrix sizes.",
     "  - Bandit A matrix: 16x16 instead of 32x32 (4x less memory and compute).",
