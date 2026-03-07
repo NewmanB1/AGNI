@@ -81,7 +81,8 @@ function buildDefaultState() {
       b:                [],
       featureDim:       dim * 2,
       forgetting:       envConfig.forgetting,
-      observationCount: 0
+      observationCount: 0,
+      seenSyncIds:      []
     },
     markov: {
       transitions:    {},
@@ -434,12 +435,14 @@ function getStudentAbility(studentId) {
 
 /**
  * Export bandit summary for federation sync with a regional hub.
+ * Adds syncId (content hash) for receiver-side deduplication of duplicate syncs.
  * @returns {import('../types').BanditSummary}
  * @throws {Error} Re-throws after logging if getBanditSummary fails (e.g. invalid state).
  */
 function exportBanditSummary() {
   try {
-    return federation.getBanditSummary(_state);
+    var summary = federation.getBanditSummary(_state);
+    return federation.addSyncId(summary);
   } catch (err) {
     log.error('exportBanditSummary failed:', err.message);
     throw err;
@@ -451,6 +454,7 @@ function exportBanditSummary() {
  * Used when syncing with a regional hub over the village network link.
  * Saves state after merge.
  *
+ * Idempotent: if remote.syncId was already merged (duplicate sync), skips.
  * Reconstructs A and b from the merged precision and mean using the RLS
  * invariant: b = A · θ_map (mean of the posterior).
  *
@@ -465,11 +469,25 @@ async function mergeRemoteSummary(remote) {
       'Federating hubs must use identical AGNI_EMBEDDING_DIM.'
     );
   }
+  var seenSyncIds = _state.bandit.seenSyncIds;
+  if (!Array.isArray(seenSyncIds)) {
+    seenSyncIds = [];
+    _state.bandit.seenSyncIds = seenSyncIds;
+  }
+  var syncId = remote.syncId || federation.contentHash(remote);
+  if (seenSyncIds.indexOf(syncId) >= 0) {
+    log.info('Remote summary already merged (syncId seen) — skipping duplicate');
+    return;
+  }
   var local  = federation.getBanditSummary(_state);
   var merged = federation.mergeBanditSummaries(local, remote);
   _state.bandit.A                = merged.precision;
   _state.bandit.b                = math.matVec(merged.precision, merged.mean);
   _state.bandit.observationCount = merged.sampleSize;
+  seenSyncIds.push(syncId);
+  if (seenSyncIds.length > federation.MAX_SEEN_SYNC_IDS) {
+    _state.bandit.seenSyncIds = seenSyncIds.slice(-federation.MAX_SEEN_SYNC_IDS);
+  }
 
   await saveState(_state);
   log.info('Remote summary merged — total observations:', merged.sampleSize);

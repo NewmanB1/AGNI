@@ -196,12 +196,19 @@ function migrateLMSState(raw, opts) {
     }
   }
 
+  var seenSyncIds = Array.isArray(bandit.seenSyncIds) ? bandit.seenSyncIds : [];
+  if (seenSyncIds.length > 500) {
+    seenSyncIds = seenSyncIds.slice(-500);
+    migrated = true;
+  }
+
   var banditState = {
     A: A,
     b: b,
     featureDim: featureDim,
     forgetting: banditForgetting,
-    observationCount: observationCount
+    observationCount: observationCount,
+    seenSyncIds: seenSyncIds
   };
 
   // ── Markov ────────────────────────────────────────────────────────────────

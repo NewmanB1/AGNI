@@ -9,11 +9,26 @@
 
 'use strict';
 
+var crypto = require('crypto');
 var math = require('./math');
 var thompson = require('./thompson');
 
 /** Max embeddingDim (matches thompson/embeddings). Prevents OOM from corrupt summaries. */
 var MAX_EMBEDDING_DIM = 1024;
+
+/** Max seenSyncIds to retain (prevents unbounded growth). */
+var MAX_SEEN_SYNC_IDS = 500;
+
+/** Content hash for sync deduplication. Deterministic — same summary yields same syncId. */
+function contentHash(summary) {
+  var payload = JSON.stringify({
+    embeddingDim: summary.embeddingDim,
+    mean: summary.mean,
+    precision: summary.precision,
+    sampleSize: summary.sampleSize
+  });
+  return crypto.createHash('sha256').update(payload).digest('hex').slice(0, 16);
+}
 
 /** Deep-copy a matrix (avoid returning live reference). */
 function copyMat(A) {
@@ -43,7 +58,7 @@ function validateMean(vec, label, expectedLen) {
   }
 }
 
-/** Validate precision matrix: square, correct dimensions, no jagged rows. */
+/** Validate precision matrix: square, correct dimensions, no jagged rows, finite values. */
 function validatePrecision(prec, label, expectedDim) {
   if (!Array.isArray(prec) || prec.length !== expectedDim) {
     throw new Error(
@@ -54,6 +69,18 @@ function validatePrecision(prec, label, expectedDim) {
     if (!Array.isArray(prec[i]) || prec[i].length !== expectedDim) {
       throw new Error('[FEDERATION] ' + label + '.precision is jagged at row ' + i + ' (expected ' + expectedDim + ' cols)');
     }
+    for (var j = 0; j < prec[i].length; j++) {
+      if (typeof prec[i][j] !== 'number' || !Number.isFinite(prec[i][j])) {
+        throw new Error('[FEDERATION] ' + label + '.precision has non-finite value at [' + i + '][' + j + ']');
+      }
+    }
+  }
+}
+
+/** Validate sampleSize is non-negative integer. Module-level to avoid per-call allocation. */
+function validSampleSize(n, label) {
+  if (typeof n !== 'number' || !Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
+    throw new Error('[FEDERATION] ' + label + '.sampleSize must be non-negative integer, got: ' + n);
   }
 }
 
@@ -66,6 +93,9 @@ function validatePrecision(prec, label, expectedDim) {
  *
  * Uses Cholesky solve (O(n²)) instead of full inversion (O(n³)) for mean.
  *
+ * When observationCount > 0, validates A/b without repairing — avoid exporting
+ * a prior masquerading as accumulated posterior if ensureBanditInitialized reset A.
+ *
  * @param {import('../types').LMSState} state
  * @returns {import('../types').BanditSummary}
  */
@@ -73,11 +103,22 @@ function getBanditSummary(state) {
   if (state == null || state.bandit == null) {
     throw new Error('[FEDERATION] getBanditSummary: state and state.bandit must be non-null');
   }
-  thompson.ensureBanditInitialized(state);
   thompson.assertFeatureDimInvariant(state);
+  var expectedFeatureDim = state.embedding.dim * 2;
   var n = state.bandit.observationCount;
-  if (typeof n !== 'number' || !Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
-    throw new Error('[FEDERATION] observationCount must be non-negative integer, got: ' + n);
+  validSampleSize(n, 'observationCount');
+  if (n > 0) {
+    // Do not call ensureBanditInitialized — it may reset A and export prior as posterior
+    var A = state.bandit.A;
+    var b = state.bandit.b;
+    if (!Array.isArray(A) || A.length !== expectedFeatureDim ||
+        !Array.isArray(b) || b.length !== expectedFeatureDim) {
+      throw new Error(
+        '[FEDERATION] observationCount > 0 but bandit A/b missing or wrong size — state inconsistent'
+      );
+    }
+  } else {
+    thompson.ensureBanditInitialized(state);
   }
   // Cholesky solve A*mean = b → mean = A⁻¹b (O(n²)), avoid O(n³) invertSPD
   var L = math.cholesky(state.bandit.A);
@@ -88,6 +129,12 @@ function getBanditSummary(state) {
     precision:    copyMat(state.bandit.A),  // A ≈ Σ⁻¹ (raw); copy to avoid aliasing
     sampleSize:   n
   };
+}
+
+/** Add syncId (content hash) to summary for deduplication. Call before exporting. */
+function addSyncId(summary) {
+  summary.syncId = contentHash(summary);
+  return summary;
 }
 
 /**
@@ -108,9 +155,6 @@ function getBanditSummary(state) {
 function mergeBanditSummaries(local, remote) {
   if (local == null || remote == null) {
     throw new Error('[FEDERATION] mergeBanditSummaries: local and remote must be non-null');
-  }
-  if (local === remote) {
-    throw new Error('[FEDERATION] mergeBanditSummaries: local and remote must be different objects (same object would double-count)');
   }
 
   // Contract: embeddingDim must be present — federating hubs declare their config explicitly.
@@ -145,12 +189,6 @@ function mergeBanditSummaries(local, remote) {
   validateMean(remote.mean, 'remote', expectedFeatureDim);
   validatePrecision(local.precision, 'local', expectedFeatureDim);
   validatePrecision(remote.precision, 'remote', expectedFeatureDim);
-
-  function validSampleSize(n, label) {
-    if (typeof n !== 'number' || !Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
-      throw new Error('[FEDERATION] ' + label + '.sampleSize must be non-negative integer, got: ' + n);
-    }
-  }
   validSampleSize(local.sampleSize, 'local');
   validSampleSize(remote.sampleSize, 'remote');
 
@@ -190,12 +228,13 @@ function mergeBanditSummaries(local, remote) {
   math.symmetrize(mergedPrec);  // Fix float asymmetry from JSON round-trip (BUG 13)
 
   // Precision-weighted mean: μ = P_merged⁻¹ (P_local·μ_local + P_remote·μ_remote)
-  var mergedCov    = math.invertSPD(mergedPrec);
-  var weightedSum  = math.addVec(
+  // Cholesky solve (O(n²)) instead of invertSPD (O(n³)) — same optimization as getBanditSummary
+  var weightedSum = math.addVec(
     math.matVec(local.precision,  local.mean),
     math.matVec(remote.precision, remote.mean)
   );
-  var mergedMean = math.matVec(mergedCov, weightedSum);
+  var L_merged = math.cholesky(mergedPrec);
+  var mergedMean = math.backSub(L_merged, math.forwardSub(L_merged, weightedSum));
 
   return {
     embeddingDim: local.embeddingDim,
@@ -206,7 +245,10 @@ function mergeBanditSummaries(local, remote) {
 }
 
 module.exports = {
+  addSyncId:             addSyncId,
+  contentHash:           contentHash,
   getBanditSummary:      getBanditSummary,
-  mergeBanditSummaries:  mergeBanditSummaries
+  mergeBanditSummaries:  mergeBanditSummaries,
+  MAX_SEEN_SYNC_IDS:     MAX_SEEN_SYNC_IDS
 };
 

@@ -138,6 +138,27 @@ describe('selectBestLesson integration', () => {
     assert.ok(typeof status.featureDim === 'number');
   });
 
+  it('R1: mergeRemoteSummary is idempotent — duplicate sync skipped', async () => {
+    await engine.seedLessons([{ lessonId: 'R1-L', difficulty: 2, skill: 'r1' }]);
+    const math = require('../../packages/agni-engine/math');
+    const federation = require('../../packages/agni-engine/federation');
+    const dim = engine.getStatus().embeddingDim;
+    const featureDim = dim * 2;
+    const remote = {
+      embeddingDim: dim,
+      mean: Array(featureDim).fill(0).map((_, i) => i * 0.1),
+      precision: math.scaleMat(math.identity(featureDim), 5),
+      sampleSize: 10
+    };
+    federation.addSyncId(remote);
+    await engine.mergeRemoteSummary(remote);
+    const obsAfterFirst = engine.getStatus().observations;
+    await engine.mergeRemoteSummary(remote);
+    const obsAfterSecond = engine.getStatus().observations;
+    assert.equal(obsAfterFirst, obsAfterSecond,
+      'Duplicate merge should skip — observations must not double');
+  });
+
   it('E1: exportBanditSummary throws on invalid state — logs and re-throws (no silent crash)', async () => {
     await engine.seedLessons([{ lessonId: 'E1-L', difficulty: 2, skill: 'e1' }]);
     const status = engine.getStatus();

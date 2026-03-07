@@ -210,6 +210,8 @@ export interface BanditState {
   featureDim: number;
   forgetting: number;
   observationCount: number;
+  /** Sync IDs already merged — prevents duplicate sync double-counting. */
+  seenSyncIds?: string[];
 }
 
 export interface MarkovTransitionEdge {
@@ -249,6 +251,8 @@ export interface BanditSummary {
   mean: number[];
   precision: number[][];
   sampleSize: number;
+  /** Content hash for deduplication — added by exporter, checked by importer. */
+  syncId?: string;
 }
 
 /** Input to applyObservation: one completed lesson attempt. Reference implementation: pure (state, observation) → newState. */

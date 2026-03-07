@@ -2,6 +2,9 @@
 
 import type { LMSState, BanditSummary } from '../types';
 
+export const MAX_SEEN_SYNC_IDS: number;
+export function addSyncId(summary: BanditSummary): BanditSummary;
+export function contentHash(summary: BanditSummary): string;
 export function getBanditSummary(state: LMSState): BanditSummary;
 export function mergeBanditSummaries(
   local: BanditSummary,

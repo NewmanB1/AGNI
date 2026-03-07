@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const math = require('../../src/engine/math');
 const { ensureBanditInitialized, updateBandit } = require('../../src/engine/thompson');
 const { ensureLessonVector } = require('../../src/engine/embeddings');
-const { getBanditSummary, mergeBanditSummaries } = require('../../src/engine/federation');
+const { addSyncId, contentHash, getBanditSummary, mergeBanditSummaries } = require('../../src/engine/federation');
 const { createState } = require('../helpers/engine-state');
 
 const EPSILON = 1e-6;
@@ -60,13 +60,24 @@ describe('getBanditSummary', () => {
     }
   });
 
-  it('V1: works without pre-calling ensureBanditInitialized (lazy init)', () => {
+  it('V1: works without pre-calling ensureBanditInitialized when n=0 (lazy init)', () => {
     const state = createState({ dim: 4 });
-    // Do NOT call ensureBanditInitialized — getBanditSummary should init internally
+    // Do NOT call ensureBanditInitialized — getBanditSummary should init internally for n=0
     const summary = getBanditSummary(state);
     assert.equal(summary.embeddingDim, 4);
     assert.equal(summary.mean.length, 8);
     assert.equal(summary.sampleSize, 0);
+  });
+
+  it('N2: throws when observationCount > 0 but A/b missing (no silent repair)', () => {
+    const state = createState({ dim: 4 });
+    state.bandit.observationCount = 5;
+    state.bandit.A = null;
+    state.bandit.b = null;
+    assert.throws(
+      () => getBanditSummary(state),
+      /\[FEDERATION\].*observationCount > 0.*A\/b missing/
+    );
   });
 
   it('E2: throws clear error on null state', () => {
@@ -170,11 +181,6 @@ describe('mergeBanditSummaries', () => {
     assert.throws(() => mergeBanditSummaries(valid, bad), /\[FEDERATION\].*[Pp]recision/);
   });
 
-  it('I2: throws when local === remote (would double-count)', () => {
-    const a = makeSummary(4, 5);
-    assert.throws(() => mergeBanditSummaries(a, a), /\[FEDERATION\].*same object.*double-count/);
-  });
-
   it('E2: throws clear error on null local', () => {
     const b = makeSummary(4, 5);
     assert.throws(() => mergeBanditSummaries(null, b), /\[FEDERATION\].*local.*remote.*non-null/);
@@ -218,5 +224,38 @@ describe('mergeBanditSummaries', () => {
     const bad = makeSummary(4, 5);
     bad.mean = null;
     assert.throws(() => mergeBanditSummaries(valid, bad), /\[FEDERATION\].*mean.*non-null/);
+  });
+
+  it('R5: throws on non-finite value in precision', () => {
+    const valid = makeSummary(4, 5);
+    const bad = makeSummary(4, 5);
+    bad.precision[1][1] = NaN;
+    assert.throws(() => mergeBanditSummaries(valid, bad), /\[FEDERATION\].*precision.*non-finite/);
+  });
+
+  it('addSyncId adds deterministic syncId to summary', () => {
+    const a = makeSummary(4, 5);
+    addSyncId(a);
+    assert.ok(typeof a.syncId === 'string' && a.syncId.length === 16);
+    const b = makeSummary(4, 5);
+    addSyncId(b);
+    assert.equal(a.syncId, b.syncId, 'Same content yields same syncId');
+  });
+
+  it('R4: merged mean matches invertSPD path (Cholesky solve correctness)', () => {
+    const a = makeSummary(4, 10);
+    const b = makeSummary(4, 20);
+    const merged = mergeBanditSummaries(a, b);
+    const expectedMean = math.matVec(
+      math.invertSPD(merged.precision),
+      math.addVec(
+        math.matVec(a.precision, a.mean),
+        math.matVec(b.precision, b.mean)
+      )
+    );
+    for (let i = 0; i < merged.mean.length; i++) {
+      assert.ok(Math.abs(merged.mean[i] - expectedMean[i]) < EPSILON,
+        'Cholesky mean[' + i + ']=' + merged.mean[i] + ' vs invertSPD=' + expectedMean[i]);
+    }
   });
 });
