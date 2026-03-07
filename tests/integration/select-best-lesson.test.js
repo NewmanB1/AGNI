@@ -137,4 +137,23 @@ describe('selectBestLesson integration', () => {
     assert.ok(typeof status.embeddingDim === 'number');
     assert.ok(typeof status.featureDim === 'number');
   });
+
+  it('E1: exportBanditSummary throws on invalid state — logs and re-throws (no silent crash)', async () => {
+    await engine.seedLessons([{ lessonId: 'E1-L', difficulty: 2, skill: 'e1' }]);
+    const status = engine.getStatus();
+    const statePath = status.statePath;
+    assert.ok(fs.existsSync(statePath), 'State file must exist');
+    const raw = fs.readFileSync(statePath, 'utf8');
+    const state = JSON.parse(raw);
+    // Migration repairs NaN observationCount, so use singular A (zero matrix) — cholesky fails
+    const dim = state.bandit.A.length;
+    state.bandit.A = state.bandit.A.map(() => Array(dim).fill(0));
+    fs.writeFileSync(statePath, JSON.stringify(state), 'utf8');
+    engine.reloadState();
+    assert.throws(
+      () => engine.exportBanditSummary(),
+      /\[FEDERATION\]|\[MATH\].*SPD|Cholesky|not SPD/,
+      'exportBanditSummary must throw (and re-throw after logging) on bad state'
+    );
+  });
 });

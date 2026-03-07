@@ -435,9 +435,15 @@ function getStudentAbility(studentId) {
 /**
  * Export bandit summary for federation sync with a regional hub.
  * @returns {import('../types').BanditSummary}
+ * @throws {Error} Re-throws after logging if getBanditSummary fails (e.g. invalid state).
  */
 function exportBanditSummary() {
-  return federation.getBanditSummary(_state);
+  try {
+    return federation.getBanditSummary(_state);
+  } catch (err) {
+    log.error('exportBanditSummary failed:', err.message);
+    throw err;
+  }
 }
 
 /**

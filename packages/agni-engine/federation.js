@@ -12,9 +12,49 @@
 var math = require('./math');
 var thompson = require('./thompson');
 
+/** Max embeddingDim (matches thompson/embeddings). Prevents OOM from corrupt summaries. */
+var MAX_EMBEDDING_DIM = 1024;
+
 /** Deep-copy a matrix (avoid returning live reference). */
 function copyMat(A) {
-  return A.map(function(row) { return row.slice(); });
+  if (A == null || !Array.isArray(A)) {
+    throw new Error('[FEDERATION] copyMat: matrix must be non-null array');
+  }
+  return A.map(function(row, i) {
+    if (!Array.isArray(row)) {
+      throw new Error('[FEDERATION] copyMat: row ' + i + ' is not an array');
+    }
+    return row.slice();
+  });
+}
+
+/** Validate mean vector: non-null, correct length, all finite. */
+function validateMean(vec, label, expectedLen) {
+  if (vec == null || !Array.isArray(vec)) {
+    throw new Error('[FEDERATION] ' + label + '.mean must be a non-null array');
+  }
+  if (vec.length !== expectedLen) {
+    throw new Error('[FEDERATION] ' + label + '.mean length mismatch: got ' + vec.length + ', expected ' + expectedLen);
+  }
+  for (var k = 0; k < vec.length; k++) {
+    if (typeof vec[k] !== 'number' || !Number.isFinite(vec[k])) {
+      throw new Error('[FEDERATION] ' + label + '.mean has non-finite value at index ' + k);
+    }
+  }
+}
+
+/** Validate precision matrix: square, correct dimensions, no jagged rows. */
+function validatePrecision(prec, label, expectedDim) {
+  if (!Array.isArray(prec) || prec.length !== expectedDim) {
+    throw new Error(
+      '[FEDERATION] ' + label + '.precision must be array of length ' + expectedDim + ' (embeddingDim*2)'
+    );
+  }
+  for (var i = 0; i < prec.length; i++) {
+    if (!Array.isArray(prec[i]) || prec[i].length !== expectedDim) {
+      throw new Error('[FEDERATION] ' + label + '.precision is jagged at row ' + i + ' (expected ' + expectedDim + ' cols)');
+    }
+  }
 }
 
 /**
@@ -24,17 +64,24 @@ function copyMat(A) {
  * It is a *raw* precision matrix — not scaled by sampleSize. A copy is
  * returned so callers cannot mutate live bandit state.
  *
+ * Uses Cholesky solve (O(n²)) instead of full inversion (O(n³)) for mean.
+ *
  * @param {import('../types').LMSState} state
  * @returns {import('../types').BanditSummary}
  */
 function getBanditSummary(state) {
+  if (state == null || state.bandit == null) {
+    throw new Error('[FEDERATION] getBanditSummary: state and state.bandit must be non-null');
+  }
+  thompson.ensureBanditInitialized(state);
   thompson.assertFeatureDimInvariant(state);
   var n = state.bandit.observationCount;
   if (typeof n !== 'number' || !Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
     throw new Error('[FEDERATION] observationCount must be non-negative integer, got: ' + n);
   }
-  var Ainv = math.invertSPD(state.bandit.A);
-  var mean = math.matVec(Ainv, state.bandit.b);
+  // Cholesky solve A*mean = b → mean = A⁻¹b (O(n²)), avoid O(n³) invertSPD
+  var L = math.cholesky(state.bandit.A);
+  var mean = math.backSub(L, math.forwardSub(L, state.bandit.b));
   return {
     embeddingDim: state.embedding.dim,  // Contract: federating hubs must use same value
     mean:         mean,
@@ -59,6 +106,13 @@ function getBanditSummary(state) {
  * @returns {import('../types').BanditSummary}        Merged summary. precision is in raw (total) units.
  */
 function mergeBanditSummaries(local, remote) {
+  if (local == null || remote == null) {
+    throw new Error('[FEDERATION] mergeBanditSummaries: local and remote must be non-null');
+  }
+  if (local === remote) {
+    throw new Error('[FEDERATION] mergeBanditSummaries: local and remote must be different objects (same object would double-count)');
+  }
+
   // Contract: embeddingDim must be present — federating hubs declare their config explicitly.
   if (typeof local.embeddingDim !== 'number' || !Number.isInteger(local.embeddingDim) || local.embeddingDim < 1) {
     throw new Error(
@@ -72,6 +126,12 @@ function mergeBanditSummaries(local, remote) {
       'Cannot merge with hub using different export format or config.'
     );
   }
+  if (local.embeddingDim > MAX_EMBEDDING_DIM || remote.embeddingDim > MAX_EMBEDDING_DIM) {
+    throw new Error(
+      '[FEDERATION] embeddingDim must be <= ' + MAX_EMBEDDING_DIM + ' (got local=' + local.embeddingDim +
+      ', remote=' + remote.embeddingDim + '). Corrupt summary may cause OOM.'
+    );
+  }
   if (local.embeddingDim !== remote.embeddingDim) {
     throw new Error(
       '[FEDERATION] Federation contract violated: local.embeddingDim=' + local.embeddingDim +
@@ -79,20 +139,12 @@ function mergeBanditSummaries(local, remote) {
       'All federating hubs must deploy with the same AGNI_EMBEDDING_DIM.'
     );
   }
-  // Sanity: mean length must match embeddingDim*2
+
   var expectedFeatureDim = local.embeddingDim * 2;
-  if (local.mean.length !== expectedFeatureDim || remote.mean.length !== expectedFeatureDim) {
-    throw new Error(
-      '[FEDERATION] Mean length mismatch: local=' + local.mean.length + ', remote=' + remote.mean.length +
-      ', expected embeddingDim*2=' + expectedFeatureDim + '. Summary may be corrupt.'
-    );
-  }
-  if (!Array.isArray(local.precision) || local.precision.length !== expectedFeatureDim ||
-      !Array.isArray(remote.precision) || remote.precision.length !== expectedFeatureDim) {
-    throw new Error(
-      '[FEDERATION] Precision dimensions must match mean (embeddingDim*2=' + expectedFeatureDim + ')'
-    );
-  }
+  validateMean(local.mean, 'local', expectedFeatureDim);
+  validateMean(remote.mean, 'remote', expectedFeatureDim);
+  validatePrecision(local.precision, 'local', expectedFeatureDim);
+  validatePrecision(remote.precision, 'remote', expectedFeatureDim);
 
   function validSampleSize(n, label) {
     if (typeof n !== 'number' || !Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {

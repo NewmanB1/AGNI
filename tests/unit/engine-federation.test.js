@@ -46,6 +46,38 @@ describe('getBanditSummary', () => {
     state.bandit.observationCount = NaN;
     assert.throws(() => getBanditSummary(state), /\[FEDERATION\].*observationCount/);
   });
+
+  it('P1: uses Cholesky solve — mean equals A⁻¹b (same as invertSPD path)', () => {
+    const state = createState({ dim: 4 });
+    ensureLessonVector(state, 'L1');
+    ensureBanditInitialized(state);
+    updateBandit(state, 's1', 'L1', 1.0);
+    const summary = getBanditSummary(state);
+    const expectedMean = math.matVec(math.invertSPD(state.bandit.A), state.bandit.b);
+    for (let i = 0; i < summary.mean.length; i++) {
+      assert.ok(Math.abs(summary.mean[i] - expectedMean[i]) < EPSILON,
+        'mean[' + i + '] Cholesky=' + summary.mean[i] + ' vs invertSPD=' + expectedMean[i]);
+    }
+  });
+
+  it('V1: works without pre-calling ensureBanditInitialized (lazy init)', () => {
+    const state = createState({ dim: 4 });
+    // Do NOT call ensureBanditInitialized — getBanditSummary should init internally
+    const summary = getBanditSummary(state);
+    assert.equal(summary.embeddingDim, 4);
+    assert.equal(summary.mean.length, 8);
+    assert.equal(summary.sampleSize, 0);
+  });
+
+  it('E2: throws clear error on null state', () => {
+    assert.throws(() => getBanditSummary(null), /\[FEDERATION\].*state.*non-null/);
+  });
+
+  it('E2: throws clear error on state with null bandit', () => {
+    const state = createState({ dim: 4 });
+    state.bandit = null;
+    assert.throws(() => getBanditSummary(state), /\[FEDERATION\].*state.*bandit.*non-null/);
+  });
 });
 
 describe('mergeBanditSummaries', () => {
@@ -135,6 +167,56 @@ describe('mergeBanditSummaries', () => {
     const valid = makeSummary(4, 5);
     const bad = makeSummary(4, 5);
     bad.precision = math.identity(2);  // wrong size for embeddingDim*2=4
-    assert.throws(() => mergeBanditSummaries(valid, bad), /\[FEDERATION\].*Precision.*dimension/);
+    assert.throws(() => mergeBanditSummaries(valid, bad), /\[FEDERATION\].*[Pp]recision/);
+  });
+
+  it('I2: throws when local === remote (would double-count)', () => {
+    const a = makeSummary(4, 5);
+    assert.throws(() => mergeBanditSummaries(a, a), /\[FEDERATION\].*same object.*double-count/);
+  });
+
+  it('E2: throws clear error on null local', () => {
+    const b = makeSummary(4, 5);
+    assert.throws(() => mergeBanditSummaries(null, b), /\[FEDERATION\].*local.*remote.*non-null/);
+  });
+
+  it('E2: throws clear error on null remote', () => {
+    const a = makeSummary(4, 5);
+    assert.throws(() => mergeBanditSummaries(a, null), /\[FEDERATION\].*local.*remote.*non-null/);
+  });
+
+  it('V3: throws on jagged precision (truncated row)', () => {
+    const valid = makeSummary(4, 5);
+    const bad = makeSummary(4, 5);
+    bad.precision = math.identity(4).map((row, i) => (i === 2 ? row.slice(0, 2) : row));
+    assert.throws(() => mergeBanditSummaries(valid, bad), /\[FEDERATION\].*jagged.*row 2/);
+  });
+
+  it('V4: throws on NaN in mean', () => {
+    const valid = makeSummary(4, 5);
+    const bad = makeSummary(4, 5);
+    bad.mean = [0, 0, NaN, 0];
+    assert.throws(() => mergeBanditSummaries(valid, bad), /\[FEDERATION\].*mean.*non-finite/);
+  });
+
+  it('V4: throws on Infinity in mean', () => {
+    const valid = makeSummary(4, 5);
+    const bad = makeSummary(4, 5);
+    bad.mean = [0, Infinity, 0, 0];
+    assert.throws(() => mergeBanditSummaries(valid, bad), /\[FEDERATION\].*mean.*non-finite/);
+  });
+
+  it('V5: throws on embeddingDim > 1024 (OOM guard)', () => {
+    const valid = makeSummary(4, 5);
+    const big = { embeddingDim: 2048, mean: [], precision: [], sampleSize: 5 };
+    // Upper-bound check runs before mean/precision validation — no huge alloc
+    assert.throws(() => mergeBanditSummaries(valid, big), /\[FEDERATION\].*embeddingDim.*1024/);
+  });
+
+  it('E2: throws clear error on null mean', () => {
+    const valid = makeSummary(4, 5);
+    const bad = makeSummary(4, 5);
+    bad.mean = null;
+    assert.throws(() => mergeBanditSummaries(valid, bad), /\[FEDERATION\].*mean.*non-null/);
   });
 });
