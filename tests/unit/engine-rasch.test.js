@@ -72,4 +72,51 @@ describe('updateAbility', () => {
     updateAbility(state, 's1', [{ probeId: 'hard', correct: false }]);
     assert.ok(state.rasch.students['s1'].ability < 0);
   });
+
+  it('Bug 1: Newton step capped at ±1 — no wild overshoot on extreme ability/difficulty', () => {
+    const state = createState();
+    seedProbes(state, [['hard', 5, 'math']]); // ability 0, diff 5 → logit -5, grad large
+    const delta = updateAbility(state, 's1', [
+      { probeId: 'hard', correct: true },
+      { probeId: 'hard', correct: true }
+    ]);
+    assert.ok(Math.abs(delta) <= 1, 'step must be capped at ±1, got ' + delta);
+  });
+
+  it('Bug 5: stable logistic on extreme difficulty — no Math.exp overflow', () => {
+    const state = createState();
+    seedProbes(state, [['extreme', 50, 'math']]); // logit = -50, exp(50) overflows
+    const delta = updateAbility(state, 's1', [{ probeId: 'extreme', correct: false }]);
+    assert.ok(Number.isFinite(delta));
+    assert.ok(Number.isFinite(state.rasch.students['s1'].ability));
+  });
+
+  it('Bug 2: zero valid probes does not set variance to 100k', () => {
+    const state = createState();
+    state.rasch.students['s1'] = { ability: 0, variance: 1 };
+    updateAbility(state, 's1', [{ probeId: 'nonexistent', correct: true }]);
+    assert.equal(state.rasch.students['s1'].variance, 1);
+  });
+
+  it('Bug 3: variance accumulates across sessions', () => {
+    const state = createState();
+    seedProbes(state, [['p1', 0, 'math']]);
+    updateAbility(state, 's1', [{ probeId: 'p1', correct: true }]);
+    const v1 = state.rasch.students['s1'].variance;
+    updateAbility(state, 's1', [{ probeId: 'p1', correct: false }]);
+    const v2 = state.rasch.students['s1'].variance;
+    assert.ok(v2 < v1, 'variance should shrink with more observations');
+  });
+
+  it('Bug 7: throws on invalid probeResults', () => {
+    const state = createState();
+    assert.throws(() => updateAbility(state, 's1', null), /\[RASCH\].*array/);
+    assert.throws(() => updateAbility(state, 's1', undefined), /\[RASCH\].*array/);
+  });
+
+  it('Bug 10: throws when state.rasch is missing', () => {
+    const state = createState();
+    delete state.rasch;
+    assert.throws(() => updateAbility(state, 's1', []), /\[RASCH\].*state\.rasch/);
+  });
 });
