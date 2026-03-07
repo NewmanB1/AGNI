@@ -9,6 +9,9 @@
 
 'use strict';
 
+/** Minimum diagonal for Cholesky. Below this, sqrt(diag) and divisions blow up (NaN-poison Thompson). */
+var CHOLESKY_EPSILON = 1e-10;
+
 /**
  * Dot product of two vectors.
  * @param {number[]} a
@@ -137,7 +140,7 @@ function cholesky(A) {
       }
       if (i === j) {
         diag = A[i][i] - sum;
-        if (diag <= 0 || !isFinite(diag)) {
+        if (diag < CHOLESKY_EPSILON || !isFinite(diag)) {
           throw new Error('[MATH] Matrix is not SPD (Cholesky failed at i=' + i + ')');
         }
         L[i][j] = Math.sqrt(diag);
@@ -224,6 +227,7 @@ function randn() {
 }
 
 module.exports = {
+  CHOLESKY_EPSILON: CHOLESKY_EPSILON,
   dot:       dot,
   addVec:    addVec,
   scaleVec:  scaleVec,

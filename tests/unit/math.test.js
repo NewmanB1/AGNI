@@ -161,6 +161,12 @@ describe('cholesky', () => {
   it('throws for non-SPD matrix', () => {
     assert.throws(() => math.cholesky([[0, 1], [1, 0]]), /not SPD/);
   });
+
+  it('throws for near-singular matrix (diag below CHOLESKY_EPSILON)', () => {
+    // Second pivot = c - b²/a = (1 + 1e-11) - 1 = 1e-11 < 1e-10
+    const nearSingular = [[1, 1], [1, 1 + 1e-11]];
+    assert.throws(() => math.cholesky(nearSingular), /not SPD/);
+  });
 });
 
 // ── forwardSub / backSub ─────────────────────────────────────────────────────
@@ -216,6 +222,11 @@ describe('invertSPD', () => {
 
   it('throws for non-SPD matrix', () => {
     assert.throws(() => math.invertSPD([[0, 1], [1, 0]]));
+  });
+
+  it('throws for near-singular matrix (diag below CHOLESKY_EPSILON)', () => {
+    const nearSingular = [[1, 1], [1, 1 + 1e-11]];
+    assert.throws(() => math.invertSPD(nearSingular), /not SPD/);
   });
 });
 
