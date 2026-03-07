@@ -1,6 +1,8 @@
 // packages/agni-runtime/sensors/sensor-bridge.js
 // AGNI Sensor Bridge  v1.7.1
 //
+// Runs on: Edge device (Android 6.0 Marshmallow, Chrome 44 WebView). ES5 only.
+//
 // Connects physical device sensors to AGNI_SHARED.publishSensorReading.
 // Handles:
 //   - iOS 9–12: DeviceMotion events do not fire until the page has received

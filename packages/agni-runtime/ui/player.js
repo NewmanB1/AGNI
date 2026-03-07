@@ -1,6 +1,8 @@
 // packages/agni-runtime/ui/player.js
 // AGNI Lesson Player  v4.0.0
 //
+// Runs on: Edge device (Android 6.0 Marshmallow, Chrome 44 WebView). ES5 only.
+//
 // Core state machine: step routing, sensor init, rendering.
 // Delegates to extracted modules for isolated concerns:
 //   AGNI_INTEGRITY   — Ed25519 signature verification (integrity.js)

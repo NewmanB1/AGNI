@@ -2,24 +2,28 @@
 'use strict';
 
 /**
- * Validates that src/runtime/ files use strict ES5 only.
+ * Validates that all edge-device browser code uses strict ES5 only.
  *
  * Target: Android 6.0 Marshmallow WebView (Chrome 44).
+ * Scope: packages/agni-runtime + packages/agni-hub/sw.js + packages/agni-hub/pwa/*.js
  *
  * Three categories:
  *   SYNTAX  — ES6 syntax that causes parse errors. Always an error.
  *   API     — ES6+ APIs not available in Chrome 44 without a polyfill.
- *             Error UNLESS covered by src/runtime/polyfills.js.
+ *             Error UNLESS covered by packages/agni-runtime/polyfills.js.
  *   NATIVE  — APIs not in the ES5 spec but available natively in Chrome 44+.
  *             (Promise, Map, Set, etc.) Informational only — not errors.
  *
  * polyfills.js is exempt from API checks because it necessarily references
  * the APIs it is polyfilling.
+ * sw.js and pwa/*.js run in separate contexts (no polyfills) — must use only
+ * Chrome 44–native or ES5 APIs.
  */
 
 var fs = require('fs');
 var path = require('path');
 
+var ROOT = path.resolve(__dirname, '..');
 var runtimeDir = require('@agni/runtime').RUNTIME_ROOT;
 
 function collectJsFiles(dir, prefix) {
@@ -33,12 +37,37 @@ function collectJsFiles(dir, prefix) {
       results = results.concat(collectJsFiles(full, rel));
     } else if (entries[i].endsWith('.js')) {
       if (rel === 'index.js') continue;  // Node-only barrel — not a browser file
-      results.push(rel);
+      results.push({ path: full, rel: rel, dir: dir });
     }
   }
   return results;
 }
-var files = collectJsFiles(runtimeDir, '');
+
+// Edge device browser files: runtime + hub sw + pwa
+var runtimeFiles = collectJsFiles(runtimeDir, '').map(function (o) {
+  return { path: o.path, rel: 'packages/agni-runtime/' + o.rel, dir: runtimeDir, isRuntime: true };
+});
+var hubSwPath = path.join(ROOT, 'packages', 'agni-hub', 'sw.js');
+var hubPwaDir = path.join(ROOT, 'packages', 'agni-hub', 'pwa');
+var hubEdgeFiles = [];
+if (fs.existsSync(hubSwPath)) {
+  hubEdgeFiles.push({ path: hubSwPath, rel: 'packages/agni-hub/sw.js', dir: path.dirname(hubSwPath), isRuntime: false });
+}
+if (fs.existsSync(hubPwaDir)) {
+  var pwaEntries = fs.readdirSync(hubPwaDir);
+  for (var j = 0; j < pwaEntries.length; j++) {
+    if (pwaEntries[j].endsWith('.js')) {
+      hubEdgeFiles.push({
+        path: path.join(hubPwaDir, pwaEntries[j]),
+        rel: 'packages/agni-hub/pwa/' + pwaEntries[j],
+        dir: hubPwaDir,
+        isRuntime: false
+      });
+    }
+  }
+}
+
+var files = runtimeFiles.concat(hubEdgeFiles);
 
 // ── Syntax patterns (always errors — cause parse failures) ──────────────────
 var SYNTAX_PATTERNS = [
@@ -109,9 +138,10 @@ function stripTrailingComment(line) {
 var failed = false;
 var warnCount = 0;
 
-files.forEach(function (file) {
-  var isPolyfillFile = (file === 'polyfills.js');
-  var filePath = path.join(runtimeDir, file.replace(/\//g, path.sep));
+files.forEach(function (entry) {
+  var filePath = entry.path;
+  var fileRel = entry.rel;
+  var isPolyfillFile = (fileRel.indexOf('polyfills.js') !== -1 && fileRel.indexOf('agni-runtime') !== -1);
   var content = fs.readFileSync(filePath, 'utf8');
   var lines = content.split('\n');
   var errors = [];
@@ -133,7 +163,12 @@ files.forEach(function (file) {
     if (!isPolyfillFile) {
       for (p = 0; p < POLYFILLED_APIS.length; p++) {
         if (POLYFILLED_APIS[p].re.test(codePart)) {
-          warnings.push('  line ' + (i + 1) + ': [POLYFILLED] ' + POLYFILLED_APIS[p].name + ' — ' + codePart.trim().substring(0, 80));
+          var msg = '  line ' + (i + 1) + ': [POLYFILLED] ' + POLYFILLED_APIS[p].name + ' — ' + codePart.trim().substring(0, 80);
+          if (entry.isRuntime) {
+            warnings.push(msg);
+          } else {
+            errors.push(msg.replace('[POLYFILLED]', '[API]') + ' (no polyfill in sw/pwa context)');
+          }
         }
       }
     }
@@ -147,17 +182,17 @@ files.forEach(function (file) {
   }
 
   if (errors.length > 0) {
-    console.error('FAIL ' + file + ' (' + errors.length + ' errors):');
+    console.error('FAIL ' + fileRel + ' (' + errors.length + ' errors):');
     errors.forEach(function (e) { console.error(e); });
     if (warnings.length > 0) {
       warnings.forEach(function (w) { console.log('  ' + w.trim()); });
     }
     failed = true;
   } else if (warnings.length > 0) {
-    console.log('OK   ' + file + ' (' + warnings.length + ' polyfilled APIs used)');
+    console.log('OK   ' + fileRel + ' (' + warnings.length + ' polyfilled APIs used)');
     warnCount += warnings.length;
   } else {
-    console.log('OK   ' + file);
+    console.log('OK   ' + fileRel);
   }
 });
 

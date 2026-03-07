@@ -1,5 +1,7 @@
-// src/engine/math.js
+// packages/agni-engine/math.js
 // AGNI LMS Engine — pure math utilities
+//
+// Runs on: Village Hub (Raspberry Pi, Node 14+). CommonJS.
 //
 // No external dependencies. Used across Rasch, embeddings, and bandit layers.
 // All functions are pure (no side effects, no state).
@@ -7,8 +9,6 @@
 // CONTRACT: Do not add in-place variants. Callers may pass aliased arrays
 // (e.g. addVec(a, a)); implementations must never mutate inputs. An in-place
 // variant would silently corrupt shared state when a === b.
-//
-// Target: Node.js 14+. CommonJS.
 // ─────────────────────────────────────────────────────────────────────────────
 
 'use strict';

@@ -1,6 +1,7 @@
 'use strict';
 
 // packages/agni-hub/theta.js â€” AGNI Hub API entry point
+// Runs on: Village Hub (Raspberry Pi, Node 18+).
 // Business logic for theta scheduling + router wiring to route modules.
 
 const path = require('path');

@@ -44,6 +44,7 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 | Schemas | `schemas/*.json`, `@ols/schema` |
 | Shared types | `src/types/index.d.ts` |
 | API contract | `docs/api-contract.md` |
+| Run environments | `docs/RUN-ENVIRONMENTS.md` (Edge=Marshmallow/ES5, Hub=Pi) |
 
 ---
 
@@ -54,7 +55,7 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 3. **Service layer returns `{ error }` on failure**; internal functions may throw.
 4. **Browser runtime is ES5** — no `let`/`const`, arrow functions, template literals, `class`, spread.
 5. **Playbooks** in `docs/playbooks/` describe how to change compiler, runtime, LMS, governance.
-6. **CI gates** in `scripts/`: `verify:all` runs dead-files, dts-arity, innerhtml, factory-order, canonical ownership.
+6. **CI gates** in `scripts/`: `verify:all` runs dead-files, dts-arity, innerhtml, factory-order, canonical ownership, run-environments, es5.
 
 When writing scripts that inspect implementations (e.g. `check-dts-arity.js`, `check-factory-order.js`), resolve re-exports: if `src/foo.js` is `require('@agni/engine/foo')`, inspect `packages/agni-engine/foo.js` instead.
 

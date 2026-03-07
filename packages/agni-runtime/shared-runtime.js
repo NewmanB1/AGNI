@@ -1,6 +1,8 @@
 // packages/agni-runtime/shared-runtime.js
 // AGNI Shared Runtime  v1.8.1
 //
+// Runs on: Edge device (Android 6.0 Marshmallow, Chrome 44 WebView). ES5 only.
+//
 // The foundational module loaded by every lesson, always first.
 // Provides:
 //   - Sensor pub/sub with subscribe / unsubscribe / clear
