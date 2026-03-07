@@ -7,7 +7,7 @@ export function sampleTheta(state: LMSState): number[];
 export function selectLesson(
   state: LMSState,
   studentId: string,
-  opts?: { readOnly?: boolean }
+  opts?: { readOnly?: boolean; eligibleLessonIds?: string[] }
 ): string | null;
 export function updateBandit(
   state: LMSState,

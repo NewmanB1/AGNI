@@ -183,15 +183,19 @@ function sampleTheta(state) {
  * governance report), pass opts.readOnly: true — then skips lessons without
  * vectors and throws if student vector is missing.
  *
+ * ELIGIBLE SET: Pass opts.eligibleLessonIds to restrict selection to theta-filtered
+ * lessons. If omitted, iterates all lessons in state (legacy behavior).
+ *
  * @param {import('../types').LMSState} state
  * @param {string} studentId
- * @param {{ readOnly?: boolean }} [opts]
+ * @param {{ readOnly?: boolean, eligibleLessonIds?: string[] }} [opts]
  * @returns {string|null}
  */
 function selectLesson(state, studentId, opts) {
   ensureBanditInitialized(state);
 
   var readOnly = opts && opts.readOnly;
+  var eligibleLessonIds = opts && opts.eligibleLessonIds;
   var studentVec = readOnly
     ? embeddings.getStudentVector(state, studentId)
     : embeddings.ensureStudentVector(state, studentId);
@@ -201,10 +205,13 @@ function selectLesson(state, studentId, opts) {
 
   var theta = sampleTheta(state);
   var lessons = state.embedding.lessons;
+  var candidateIds = Array.isArray(eligibleLessonIds)
+    ? eligibleLessonIds
+    : Object.keys(lessons);
   var bestId = null;
   var bestScore = -Infinity;
 
-  Object.keys(lessons).forEach(function (lessonId) {
+  candidateIds.forEach(function (lessonId) {
     var lessonVec = readOnly
       ? embeddings.getLessonVector(state, lessonId)
       : embeddings.ensureLessonVector(state, lessonId);

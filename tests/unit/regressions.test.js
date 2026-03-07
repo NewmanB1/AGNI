@@ -524,6 +524,35 @@ describe('AUDIT-INVARIANT: thompson Bug 4 — selectLesson(readOnly) does not mu
   });
 });
 
+describe('AUDIT-INVARIANT: thompson Bug 5 — selectLesson respects eligibleLessonIds', () => {
+  const thompson = require('../../src/engine/thompson');
+  const embeddings = require('../../src/engine/embeddings');
+  const { createState } = require('../helpers/engine-state');
+
+  it('selectLesson with eligibleLessonIds only considers those lessons', () => {
+    const state = createState({ dim: 2 });
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    embeddings.ensureLessonVector(state, 'l2');
+    embeddings.ensureLessonVector(state, 'l3');
+    thompson.ensureBanditInitialized(state);
+
+    // Only l2 is eligible — must select l2, never l1 or l3
+    var result = thompson.selectLesson(state, 's1', { eligibleLessonIds: ['l2'] });
+    assert.strictEqual(result, 'l2', 'must select from eligible set only');
+  });
+
+  it('selectLesson with empty eligibleLessonIds returns null', () => {
+    const state = createState({ dim: 2 });
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    thompson.ensureBanditInitialized(state);
+
+    var result = thompson.selectLesson(state, 's1', { eligibleLessonIds: [] });
+    assert.strictEqual(result, null, 'empty eligible set must return null');
+  });
+});
+
 describe('AUDIT-15: sampleTheta jitter does not mutate state.bandit.A', () => {
   const thompson = require('../../src/engine/thompson');
   const embeddings = require('../../src/engine/embeddings');

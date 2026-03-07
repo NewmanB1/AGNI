@@ -233,7 +233,7 @@ describe('thompson edge cases', () => {
   it('selectLesson returns null for empty candidate set', () => {
     const state = createState();
     thompson.ensureBanditInitialized(state);
-    const result = thompson.selectLesson(state, 'stu', []);
+    const result = thompson.selectLesson(state, 'stu', { eligibleLessonIds: [] });
     assert.equal(result, null);
   });
 
