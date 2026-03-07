@@ -98,8 +98,8 @@ function updateEmbedding(state, studentId, lessonId, gain) {
   var lr    = state.embedding.lr;
   var reg   = state.embedding.reg;
 
-  if (typeof gamma !== 'number' || !isFinite(gamma) || gamma < 0.5 || gamma > 1) {
-    throw new Error('[EMBEDDING] forgetting must be a finite number in [0.5,1], got: ' + gamma);
+  if (typeof gamma !== 'number' || !isFinite(gamma) || gamma < 0.9 || gamma > 1) {
+    throw new Error('[EMBEDDING] forgetting must be a finite number in [0.9,1], got: ' + gamma);
   }
   if (typeof lr !== 'number' || !isFinite(lr) || lr <= 0) {
     throw new Error('[EMBEDDING] lr must be a positive finite number, got: ' + lr);

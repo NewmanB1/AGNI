@@ -97,7 +97,7 @@ function migrateLMSState(raw, opts) {
   if (embedding.lr !== embLr) migrated = true;
   var embReg = ensureNumber(embedding.reg, envConfig.embeddingReg, { min: 0, max: 1 });
   if (embedding.reg !== embReg) migrated = true;
-  var embForgetting = ensureNumber(embedding.forgetting, envConfig.forgetting, { min: 0.5, max: 1 });
+  var embForgetting = ensureNumber(embedding.forgetting, envConfig.forgetting, { min: 0.9, max: 1 });
   if (embedding.forgetting !== embForgetting) migrated = true;
 
   var embStudents = ensureObject(embedding.students);
@@ -143,7 +143,7 @@ function migrateLMSState(raw, opts) {
     migrated = true;
   }
   var observationCount = ensureNumber(bandit.observationCount, 0, { min: 0 });
-  var banditForgetting = ensureNumber(bandit.forgetting, envConfig.forgetting, { min: 0.5, max: 1 });
+  var banditForgetting = ensureNumber(bandit.forgetting, envConfig.forgetting, { min: 0.9, max: 1 });
   if (bandit.forgetting !== banditForgetting) migrated = true;
 
   var A = Array.isArray(bandit.A) ? bandit.A : [];

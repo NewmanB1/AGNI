@@ -33,14 +33,14 @@ if (typeof cfg.embeddingDim !== 'number' || cfg.embeddingDim < 1 || cfg.embeddin
   errors.push('embeddingDim must be present and in [1,1024]. Prefer config over env to avoid mismatch with lms_state.json.');
 }
 
-// Bug 5: forgetting must be explicit; valid range [0.5,1] documented
+// Bug 5: forgetting must be explicit; valid range [0.9,1] documented (0.5 floor was too permissive, degenerate bandit)
 if (typeof cfg.forgetting !== 'number') {
-  errors.push('forgetting must be present (e.g. 0.96). Values outside [0.5,1] corrupt bandit decay.');
-} else if (cfg.forgetting < 0.5 || cfg.forgetting > 1) {
-  errors.push('forgetting must be in [0.5,1]; got ' + cfg.forgetting + '. Values outside range corrupt decay.');
+  errors.push('forgetting must be present (e.g. 0.96). Values outside [0.9,1] corrupt bandit decay.');
+} else if (cfg.forgetting < 0.9 || cfg.forgetting > 1) {
+  errors.push('forgetting must be in [0.9,1]; got ' + cfg.forgetting + '. Values outside range corrupt decay.');
 }
-if (!notes.includes('0.5') && !notes.includes('[0.5') && !notes.includes('0.5,')) {
-  errors.push('_engine_notes must document forgetting valid range [0.5,1].');
+if (!notes.includes('0.9') && !notes.includes('[0.9') && !notes.includes('0.9,')) {
+  errors.push('_engine_notes must document forgetting valid range [0.9,1].');
 }
 
 // Bug 7: maxStudents/maxLessons must be explicit; document that no enforcement exists

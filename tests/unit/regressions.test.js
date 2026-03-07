@@ -324,6 +324,16 @@ describe('AUDIT-8: engine rejects invalid hyperparameters', () => {
     }, /forgetting/);
   });
 
+  it('updateEmbedding throws on forgetting < 0.9', () => {
+    const state = createState({ dim: 4 });
+    state.embedding.forgetting = 0.5;
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    assert.throws(() => {
+      embeddings.updateEmbedding(state, 's1', 'l1', 0.5);
+    }, /forgetting|0\.9/);
+  });
+
   it('updateEmbedding throws on negative learning rate', () => {
     const state = createState({ dim: 4 });
     state.embedding.lr = -0.01;
@@ -576,6 +586,18 @@ describe('AUDIT-INVARIANT: thompson Bug 6 — updateBandit rejects overflow atom
     assert.deepEqual(state.bandit.A, Abefore, 'A must be unchanged on overflow reject');
     assert.deepEqual(state.bandit.b, bbefore, 'b must be unchanged on overflow reject');
     assert.equal(state.bandit.observationCount, 0, 'observationCount must not increment');
+  });
+
+  it('updateBandit throws on forgetting < 0.9', () => {
+    const state = createState({ dim: 2 });
+    state.bandit.forgetting = 0.5;
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    thompson.ensureBanditInitialized(state);
+    assert.throws(
+      () => thompson.updateBandit(state, 's1', 'l1', 0.5),
+      /forgetting|0\.9/
+    );
   });
 
   it('updateBandit throws when b update would overflow', () => {
@@ -1305,15 +1327,15 @@ describe('AUDIT-INVARIANT: Bug 8 — ensureDataDirExists fails fast when dataDir
   });
 });
 
-describe('AUDIT-INVARIANT: AGNI_FORGETTING valid range [0.5,1] enforced at startup', () => {
-  it('env-config throws on forgetting < 0.5', () => {
-    const result = spawnSync(process.execPath, ['-e', "process.env.AGNI_FORGETTING='0'; require('@agni/utils/env-config');"], {
+describe('AUDIT-INVARIANT: AGNI_FORGETTING valid range [0.9,1] enforced at startup', () => {
+  it('env-config throws on forgetting < 0.9', () => {
+    const result = spawnSync(process.execPath, ['-e', "process.env.AGNI_FORGETTING='0.5'; require('@agni/utils/env-config');"], {
       cwd: path.resolve(__dirname, '../..'),
       encoding: 'utf8',
-      env: { ...process.env, AGNI_FORGETTING: '0' },
+      env: { ...process.env, AGNI_FORGETTING: '0.5' },
     });
-    assert.notEqual(result.status, 0, 'env-config must reject AGNI_FORGETTING=0');
-    assert.ok((result.stderr || result.stdout || '').includes('0.5') || (result.stderr || result.stdout || '').includes('AGNI_FORGETTING'), 'error must mention range or key');
+    assert.notEqual(result.status, 0, 'env-config must reject AGNI_FORGETTING=0.5');
+    assert.ok((result.stderr || result.stdout || '').includes('0.9') || (result.stderr || result.stdout || '').includes('AGNI_FORGETTING'), 'error must mention range or key');
   });
 
   it('env-config throws on forgetting > 1', () => {

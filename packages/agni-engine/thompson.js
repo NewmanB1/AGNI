@@ -259,8 +259,8 @@ function updateBandit(state, studentId, lessonId, gain) {
   var b = state.bandit.b;
   var gamma = state.bandit.forgetting;
 
-  if (typeof gamma !== 'number' || !isFinite(gamma) || gamma < 0.5 || gamma > 1) {
-    throw new Error('[BANDIT] forgetting must be a finite number in [0.5,1], got: ' + gamma);
+  if (typeof gamma !== 'number' || !isFinite(gamma) || gamma < 0.9 || gamma > 1) {
+    throw new Error('[BANDIT] forgetting must be a finite number in [0.9,1], got: ' + gamma);
   }
 
   // A ← γA + x xᵀ  (atomic: apply full update or reject entirely)
