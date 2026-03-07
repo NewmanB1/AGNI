@@ -21,6 +21,15 @@ function assertEmbeddingDimValid(state) {
   }
 }
 
+/** @param {import('../types').LMSState} state @param {number[]} vector @param {string} label */
+function assertVectorLengthMatchesDim(state, vector, label) {
+  assertEmbeddingDimValid(state);
+  if (vector.length !== state.embedding.dim) {
+    throw new Error('[EMBEDDING] ' + label + ' vector length ' + vector.length +
+      ' does not match embedding.dim ' + state.embedding.dim + ' — state may be corrupt');
+  }
+}
+
 /**
  * Get student embedding vector without creating. Returns undefined if missing.
  * Returns the stored reference; do not mutate. Use .slice() if you need a copy.
@@ -30,7 +39,9 @@ function assertEmbeddingDimValid(state) {
  */
 function getStudentVector(state, studentId) {
   var rec = state.embedding.students[studentId];
-  return rec && rec.vector ? rec.vector : undefined;
+  var vec = rec && rec.vector ? rec.vector : undefined;
+  if (vec) assertVectorLengthMatchesDim(state, vec, 'student');
+  return vec;
 }
 
 /**
@@ -42,7 +53,9 @@ function getStudentVector(state, studentId) {
  */
 function getLessonVector(state, lessonId) {
   var rec = state.embedding.lessons[lessonId];
-  return rec && rec.vector ? rec.vector : undefined;
+  var vec = rec && rec.vector ? rec.vector : undefined;
+  if (vec) assertVectorLengthMatchesDim(state, vec, 'lesson');
+  return vec;
 }
 
 /**
@@ -63,7 +76,9 @@ function ensureStudentVector(state, studentId) {
       })
     };
   }
-  return state.embedding.students[studentId].vector;
+  var vec = state.embedding.students[studentId].vector;
+  assertVectorLengthMatchesDim(state, vec, 'student');
+  return vec;
 }
 
 /**
@@ -84,7 +99,9 @@ function ensureLessonVector(state, lessonId) {
       })
     };
   }
-  return state.embedding.lessons[lessonId].vector;
+  var vec = state.embedding.lessons[lessonId].vector;
+  assertVectorLengthMatchesDim(state, vec, 'lesson');
+  return vec;
 }
 
 /**

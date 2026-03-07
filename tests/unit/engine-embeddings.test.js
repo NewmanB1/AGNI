@@ -2,7 +2,7 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { ensureStudentVector, ensureLessonVector, updateEmbedding } = require('../../src/engine/embeddings');
+const { getStudentVector, getLessonVector, ensureStudentVector, ensureLessonVector, updateEmbedding } = require('../../src/engine/embeddings');
 const { createState } = require('../helpers/engine-state');
 
 describe('ensureStudentVector', () => {
@@ -25,6 +25,19 @@ describe('ensureStudentVector', () => {
     const v1 = ensureStudentVector(state, 'stu1');
     const v2 = ensureStudentVector(state, 'stu2');
     assert.notEqual(v1, v2);
+  });
+
+  it('Bug 6: rejects existing vector with length mismatch', () => {
+    const state = createState({ dim: 4 });
+    state.embedding.students['s1'] = { vector: [1, 2, 3] }; // 3 elements, dim=4
+    assert.throws(
+      () => ensureStudentVector(state, 's1'),
+      /\[EMBEDDING\].*student.*length 3.*embedding\.dim 4/
+    );
+    assert.throws(
+      () => getStudentVector(state, 's1'),
+      /\[EMBEDDING\].*student.*length 3.*embedding\.dim 4/
+    );
   });
 
   it('Bug 5: rejects invalid embedding.dim (undefined, 0, NaN, negative, non-integer)', () => {
@@ -64,6 +77,19 @@ describe('ensureLessonVector', () => {
     const v1 = ensureLessonVector(state, 'L1');
     const v2 = ensureLessonVector(state, 'L1');
     assert.equal(v1, v2);
+  });
+
+  it('Bug 6: rejects existing vector with length mismatch to embedding.dim', () => {
+    const state = createState({ dim: 4 });
+    state.embedding.lessons['L1'] = { vector: [1, 2, 3, 4, 5, 6, 7, 8] }; // 8 elements, dim=4
+    assert.throws(
+      () => ensureLessonVector(state, 'L1'),
+      /\[EMBEDDING\].*length 8.*embedding\.dim 4/
+    );
+    assert.throws(
+      () => getLessonVector(state, 'L1'),
+      /\[EMBEDDING\].*length 8.*embedding\.dim 4/
+    );
   });
 
   it('Bug 5: rejects invalid embedding.dim', () => {
