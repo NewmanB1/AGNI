@@ -61,7 +61,7 @@ function buildState() {
       dim: dim,
       lr: 0.01,
       reg: 0.001,
-      forgetting: 0.96,
+      forgetting: 0.99,
       students: {},
       lessons: {}
     },
@@ -69,7 +69,7 @@ function buildState() {
       A: null,
       b: null,
       featureDim: dim * 2,
-      forgetting: 0.96,
+      forgetting: 0.99,
       observationCount: 0
     },
     markov: {

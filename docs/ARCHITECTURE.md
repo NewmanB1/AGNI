@@ -173,6 +173,45 @@ The compiler supports dual-mode distribution:
 | Use Case | Zero-install entry point, sneakernet/Starlink | Long-term retention, pocket learning |
 | Status | **Implemented** | Implemented (native.js) |
 
+### 3.3 Configuration and Bootstrap
+
+**Startup sequence (safety-critical):** Hub processes (theta, sentry, sync) must call `loadHubConfig()` before `require('@agni/utils/env-config')`. This ensures `hub-config.json` (or `hub-config.pi.json` copied as hub-config) populates `process.env` first. The startup bootstrap is the **first reader** for any config that could make the process unsafe — wrong paths cause ENOENT or data corruption; wrong ports cause bind failures or exposure; wrong `hubId` corrupts sync; wrong `usbPath` enables arbitrary file write. `scripts/check-hub-config-bootstrap.js` enforces this order for theta, sentry, and sync.
+
+**Config sources:** `hub-config.json` (loaded by `@agni/utils/hub-config.loadHubConfig`) → `process.env` → `@agni/utils/env-config` (canonical reader). Env vars override file values when set.
+
+**Config item → reader(s):** (All values flow via env-config; bootstrap loads them before any consumer.)
+
+| Config item | Reader(s) |
+|-------------|-----------|
+| `dataDir` | ensure-paths, data-paths, accounts, lesson-chain, sync, sentry, archetype-match |
+| `serveDir` | data-paths |
+| `yamlDir` | author, hub-transform, theta routes |
+| `factoryDir` | hub-transform (AGNI_FACTORY_DIR) |
+| `katexDir` | hub-transform |
+| `thetaPort` | context/config → theta server |
+| `servePort` | hub-transform |
+| `sentryPort` | sentry, telemetry routes |
+| `hubId` | sync |
+| `usbPath` | sync, admin routes (validate path prefix; wrong value = arbitrary write risk) |
+| `embeddingDim` | engine migrations, engine index |
+| `forgetting` | engine migrations (bandit, embedding) |
+| `embeddingLr`, `embeddingReg` | engine migrations |
+| `maxStudents` | accounts |
+| `maxLessons` | engine migrations |
+| `masteryThreshold` | context/config (theta), aggregateCohortCoverage, sentry |
+| `minLocalSample`, `minLocalEdges` | context/config (theta) |
+| `corsOrigin` | sentry, hub-transform |
+| `approvedCatalog`, `governancePolicy`, `governancePolicySchema`, `approvedCatalogSchema`, `utuConstantsPath` | data-paths, policy, evaluateLessonCompliance |
+| `syncTransport`, `homeUrl` | sync |
+| `analyseAfter`, `analyseCron`, `sentryRetentionDays` | sentry |
+| `sentryChi2Threshold`, `sentryMinSample`, `sentryJaccardThreshold`, `sentryMinClusterSize`, `sentryForward` | sentry |
+| `markovWeight`, `pagerankWeight` | engine index (selectBestLesson) |
+| `logLevel` | logger |
+
+**Pi deployment:** Use `data/hub-config.pi.json` as a template; copy to `data/hub-config.json` or set `AGNI_DATA_DIR` to point at a dir containing hub-config.json. See `scripts/check-hub-config-pi.js` and `docs/RUN-ENVIRONMENTS.md`.
+
+**hub-transform standalone:** When run as a separate process (not attached to theta), the caller must ensure `loadHubConfig()` runs before hub-transform loads env-config, or set env vars explicitly. Theta attaches hub-transform after its bootstrap, so the normal deployment path is safe.
+
 ---
 
 ## 4. Network Topology: The "Smart Edge"

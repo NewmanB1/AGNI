@@ -5,6 +5,15 @@
 // predictions. Uses recursive least squares with exponential forgetting
 // to track a non-stationary reward distribution.
 //
+// Forgetting tradeoff (A ← γA + xx', b ← γb + x·gain):
+//   - Lower γ (closer to 0.9) = faster forgetting = erodes A faster than
+//     observations build it. Use only when observation throughput is high
+//     and you need rapid adaptation to non-stationarity.
+//   - Higher γ (closer to 1.0) = slower forgetting = preserves observations.
+//     Small cohorts that accumulate evidence slowly need higher γ so the
+//     posterior stabilizes instead of oscillating. See hub-config.pi.json
+//     _engine_notes for Pi deployment guidance.
+//
 // Target: Node.js 14+. CommonJS.
 // ─────────────────────────────────────────────────────────────────────────────
 
