@@ -361,6 +361,7 @@ function sampleThetaForScoring(state) {
  */
 function applyObservation(state, observation) {
   var next = JSON.parse(JSON.stringify(state));
+  thompson.assertEmbeddingDimValid(next);
   var gain = rasch.updateAbility(next, observation.studentId, observation.probeResults);
   embeddings.updateEmbedding(next, observation.studentId, observation.lessonId, gain);
   thompson.updateBandit(next, observation.studentId, observation.lessonId, gain);

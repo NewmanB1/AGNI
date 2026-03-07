@@ -56,6 +56,26 @@ function banditFeature(studentVec, lessonVec) {
 // ── Invariant (hard constraint) ───────────────────────────────────────────────
 
 /**
+ * Assert embedding.dim exists and is a positive integer. Drives all vector sizing;
+ * if missing or zero, every vector operation is suspect.
+ *
+ * @param {import('../types').LMSState} state
+ * @throws {Error}
+ */
+function assertEmbeddingDimValid(state) {
+  if (!state.embedding) {
+    throw new Error('[BANDIT] state.embedding missing — cannot size vectors.');
+  }
+  var dim = state.embedding.dim;
+  if (typeof dim !== 'number' || !Number.isInteger(dim) || dim < 1 || dim > 1024) {
+    throw new Error(
+      '[BANDIT] embedding.dim invalid: must be integer in [1,1024], got ' +
+      (dim === undefined ? 'undefined' : dim) + '. State may be corrupt.'
+    );
+  }
+}
+
+/**
  * Assert featureDim === embeddingDim * 2. Throws if violated.
  * Call defensively at any engine entry point that touches bandit or feature vectors.
  *
@@ -63,6 +83,7 @@ function banditFeature(studentVec, lessonVec) {
  * @throws {Error}
  */
 function assertFeatureDimInvariant(state) {
+  assertEmbeddingDimValid(state);
   var embeddingDim = state.embedding.dim;
   var expectedFeatureDim = embeddingDim * 2;
   if (state.bandit.featureDim !== expectedFeatureDim) {
@@ -230,6 +251,7 @@ function updateBandit(state, studentId, lessonId, gain) {
 }
 
 module.exports = {
+  assertEmbeddingDimValid:   assertEmbeddingDimValid,
   assertFeatureDimInvariant: assertFeatureDimInvariant,
   ensureBanditInitialized:   ensureBanditInitialized,
   selectLesson:             selectLesson,

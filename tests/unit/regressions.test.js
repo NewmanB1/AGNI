@@ -1124,6 +1124,27 @@ describe('AUDIT-INVARIANT: featureDim === embeddingDim * 2 enforced defensively'
     assert.equal(state.bandit.featureDim, state.embedding.dim * 2);
     thompson.assertFeatureDimInvariant(state);
   });
+
+  it('assertEmbeddingDimValid throws on missing or zero embedding.dim', () => {
+    assert.throws(
+      () => thompson.assertEmbeddingDimValid({ embedding: null, bandit: {} }),
+      /embedding missing/
+    );
+    assert.throws(
+      () => thompson.assertEmbeddingDimValid({
+        embedding: { dim: 0 },
+        bandit: { featureDim: 0, A: [], b: [], forgetting: 0.98, observationCount: 0 }
+      }),
+      /embedding\.dim invalid/
+    );
+    assert.throws(
+      () => thompson.assertEmbeddingDimValid({
+        embedding: {},
+        bandit: {}
+      }),
+      /embedding\.dim invalid|undefined/
+    );
+  });
 });
 
 describe('AUDIT-DOCS: Node version docs consistent (hub Node 18+, not 14–16)', () => {

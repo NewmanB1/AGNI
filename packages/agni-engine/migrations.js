@@ -214,6 +214,14 @@ function migrateLMSState(raw, opts) {
     markov: markovState
   };
 
+  // embedding.dim drives vector sizing — must be present and positive
+  if (typeof state.embedding.dim !== 'number' || !Number.isInteger(state.embedding.dim) ||
+      state.embedding.dim < 1 || state.embedding.dim > 1024) {
+    throw new Error(
+      '[MIGRATIONS] embedding.dim invalid: must be integer in [1,1024], got ' +
+      (state.embedding.dim === undefined ? 'undefined' : state.embedding.dim)
+    );
+  }
   // Hard invariant: featureDim === embedding.dim * 2
   if (state.bandit.featureDim !== state.embedding.dim * 2) {
     throw new Error(
