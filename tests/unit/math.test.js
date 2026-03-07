@@ -58,6 +58,13 @@ describe('addVec', () => {
     assert.deepEqual(math.addVec([1, -2], [-1, 2]), [0, 0]);
   });
 
+  it('aliased inputs (a === b) do not mutate; returns 2*a', () => {
+    const v = [1, 2, 3];
+    const result = math.addVec(v, v);
+    assert.deepEqual(result, [2, 4, 6]);
+    assert.deepEqual(v, [1, 2, 3], 'addVec must not mutate input');
+  });
+
   it('throws for null or undefined input', () => {
     assert.throws(() => math.addVec(null, [1, 2]), /null or undefined/);
     assert.throws(() => math.addVec([1, 2], undefined), /null or undefined/);
