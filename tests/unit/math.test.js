@@ -190,6 +190,16 @@ describe('forwardSub and backSub', () => {
     assert.ok(approxEqual(Ax[0], b[0], 1e-8));
     assert.ok(approxEqual(Ax[1], b[1], 1e-8));
   });
+
+  it('forwardSub throws on zero diagonal', () => {
+    const L = [[0, 0], [1, 1]];
+    assert.throws(() => math.forwardSub(L, [1, 1]), /forwardSub.*zero.*diagonal/);
+  });
+
+  it('backSub throws on zero diagonal', () => {
+    const L = [[1, 0], [1, 0]];
+    assert.throws(() => math.backSub(L, [1, 1]), /backSub.*zero.*diagonal/);
+  });
 });
 
 // ── invertSPD ────────────────────────────────────────────────────────────────

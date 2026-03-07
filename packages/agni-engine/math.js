@@ -165,6 +165,9 @@ function forwardSub(L, b) {
   for (i = 0; i < n; i++) {
     sum = 0;
     for (j = 0; j < i; j++) sum += L[i][j] * y[j];
+    if (L[i][i] === 0 || !isFinite(L[i][i])) {
+      throw new Error('[MATH] forwardSub: zero or invalid diagonal at i=' + i);
+    }
     y[i] = (b[i] - sum) / L[i][i];
   }
   return y;
@@ -183,6 +186,9 @@ function backSub(L, y) {
   for (i = n - 1; i >= 0; i--) {
     sum = 0;
     for (j = i + 1; j < n; j++) sum += L[j][i] * x[j];
+    if (L[i][i] === 0 || !isFinite(L[i][i])) {
+      throw new Error('[MATH] backSub: zero or invalid diagonal at i=' + i);
+    }
     x[i] = (y[i] - sum) / L[i][i];
   }
   return x;
