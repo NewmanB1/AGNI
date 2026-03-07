@@ -1,0 +1,22 @@
+{
+  "flags": {
+    "dark_mode": {
+      "enabled": true,
+      "rollout": 100,
+      "description": "Dark mode full rollout",
+      "metric": null
+    },
+    "clamp_test": {
+      "enabled": true,
+      "rollout": 100,
+      "description": "",
+      "metric": null
+    },
+    "clamp_neg": {
+      "enabled": true,
+      "rollout": 0,
+      "description": "",
+      "metric": null
+    }
+  }
+}
