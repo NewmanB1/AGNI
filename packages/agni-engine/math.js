@@ -64,6 +64,12 @@ function scaleVec(v, s) {
 function outer(a, b) {
   if (a == null) throw new Error('[MATH] outer: first argument is null or undefined');
   if (b == null) throw new Error('[MATH] outer: second argument is null or undefined');
+  for (var i = 0; i < a.length; i++) {
+    if (!(i in a)) throw new Error('[MATH] outer: sparse first vector (hole at ' + i + ')');
+  }
+  for (i = 0; i < b.length; i++) {
+    if (!(i in b)) throw new Error('[MATH] outer: sparse second vector (hole at ' + i + ')');
+  }
   return a.map(function(ai) {
     return b.map(function(bj) { return ai * bj; });
   });
@@ -105,6 +111,15 @@ function addMat(A, B) {
  */
 function scaleMat(A, s) {
   if (A == null) throw new Error('[MATH] scaleMat: matrix is null or undefined');
+  if (A.length > 0) {
+    var cols = A[0].length;
+    for (var i = 0; i < A.length; i++) {
+      if (A[i].length !== cols) throw new Error('[MATH] scaleMat: jagged matrix at row ' + i);
+      for (var j = 0; j < cols; j++) {
+        if (!(j in A[i])) throw new Error('[MATH] scaleMat: sparse row at ' + i + ',' + j);
+      }
+    }
+  }
   return A.map(function(row) {
     return row.map(function(v) { return v * s; });
   });

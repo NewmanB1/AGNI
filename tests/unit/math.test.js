@@ -99,6 +99,12 @@ describe('outer', () => {
     assert.throws(() => math.outer(null, [1, 2]), /null or undefined/);
     assert.throws(() => math.outer([1, 2], undefined), /null or undefined/);
   });
+
+  it('throws for sparse vector', () => {
+    const sparse = [1, , 3];  // hole at index 1
+    assert.throws(() => math.outer(sparse, [1, 2, 3]), /sparse/);
+    assert.throws(() => math.outer([1, 2], sparse), /sparse/);
+  });
 });
 
 // ── matrix operations ────────────────────────────────────────────────────────
@@ -129,6 +135,12 @@ describe('scaleMat', () => {
 
   it('throws for null or undefined matrix', () => {
     assert.throws(() => math.scaleMat(null, 2), /null or undefined/);
+  });
+
+  it('throws for sparse or jagged matrix', () => {
+    const sparseRow = [1, , 3];
+    assert.throws(() => math.scaleMat([sparseRow, [4, 5, 6]], 2), /sparse/);
+    assert.throws(() => math.scaleMat([[1, 2], [3, 4, 5]], 2), /jagged/);
   });
 });
 
