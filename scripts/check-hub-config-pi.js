@@ -25,12 +25,22 @@ if (!fs.existsSync(CONFIG_PATH)) {
   process.exit(1);
 }
 
-const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-const notes = (cfg._engine_notes || []).join('\n');
+let cfg;
+try {
+  cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+} catch (e) {
+  console.error('check-hub-config-pi: failed to parse JSON:', e.message);
+  process.exit(1);
+}
 
-// Bug 4: embeddingDim must be explicit
-if (typeof cfg.embeddingDim !== 'number' || cfg.embeddingDim < 1 || cfg.embeddingDim > 1024) {
-  errors.push('embeddingDim must be present and in [1,1024]. Prefer config over env to avoid mismatch with lms_state.json.');
+function toNotes(val) {
+  return Array.isArray(val) ? val.join('\n') : (typeof val === 'string' ? val : '');
+}
+const notes = toNotes(cfg._engine_notes);
+
+// Bug 4: embeddingDim must be explicit and integer
+if (typeof cfg.embeddingDim !== 'number' || !Number.isInteger(cfg.embeddingDim) || cfg.embeddingDim < 1 || cfg.embeddingDim > 1024) {
+  errors.push('embeddingDim must be present and integer in [1,1024]. Prefer config over env to avoid mismatch with lms_state.json.');
 }
 
 // Bug 5: forgetting must be explicit; valid range [0.9,1] documented (0.5 floor was too permissive, degenerate bandit)
@@ -43,12 +53,12 @@ if (!notes.includes('0.9') && !notes.includes('[0.9') && !notes.includes('0.9,')
   errors.push('_engine_notes must document forgetting valid range [0.9,1].');
 }
 
-// Bug 7: maxStudents/maxLessons must be explicit; document that no enforcement exists
-if (typeof cfg.maxStudents !== 'number' || cfg.maxStudents < 1) {
-  errors.push('maxStudents must be present and >= 1. Budget assumes this limit; exceeding silently exceeds memory.');
+// Bug 7: maxStudents/maxLessons must be explicit integers
+if (typeof cfg.maxStudents !== 'number' || !Number.isInteger(cfg.maxStudents) || cfg.maxStudents < 1) {
+  errors.push('maxStudents must be present and integer >= 1. Budget assumes this limit; exceeding silently exceeds memory.');
 }
-if (typeof cfg.maxLessons !== 'number' || cfg.maxLessons < 1) {
-  errors.push('maxLessons must be present and >= 1. Budget assumes this limit; exceeding silently exceeds memory.');
+if (typeof cfg.maxLessons !== 'number' || !Number.isInteger(cfg.maxLessons) || cfg.maxLessons < 1) {
+  errors.push('maxLessons must be present and integer >= 1. Budget assumes this limit; exceeding silently exceeds memory.');
 }
 if (!notes.includes('Runtime') && !notes.includes('runtime') && !notes.includes('enforced') && !notes.includes('enforcement')) {
   errors.push('_engine_notes must document maxStudents/maxLessons enforcement (or lack thereof).');
@@ -69,11 +79,15 @@ if (!cfg.nodeVersionNote) {
   errors.push('nodeVersionNote must warn about Bullseye Node 12 and silent failures.');
 }
 
-// Bug 1: Memory arithmetic — key values must appear
-const raschBytes = 60 * 16;
-const embStudentsBytes = 60 * 8 * 8;
-const embLessonsBytes = 200 * 8 * 8;
-const banditABytes = 16 * 16 * 8;
+// Bug 1: Memory arithmetic — key values must appear (derive from config)
+const dim = (typeof cfg.embeddingDim === 'number' && Number.isInteger(cfg.embeddingDim)) ? cfg.embeddingDim : 8;
+const nStu = (typeof cfg.maxStudents === 'number' && Number.isInteger(cfg.maxStudents)) ? cfg.maxStudents : 60;
+const nLes = (typeof cfg.maxLessons === 'number' && Number.isInteger(cfg.maxLessons)) ? cfg.maxLessons : 200;
+const featureDim = dim * 2;
+const raschBytes = nStu * 16;
+const embStudentsBytes = nStu * dim * 8;
+const embLessonsBytes = nLes * dim * 8;
+const banditABytes = featureDim * featureDim * 8;
 if (!notes.includes('960 B') && !notes.includes('960B')) {
   errors.push(`_engine_notes must show Rasch students: 60 × 16 B = 960 B (got ${raschBytes} bytes).`);
 }
@@ -83,8 +97,11 @@ if (!notes.includes('3.8 KB') && !notes.includes('3.75')) {
 if (!notes.includes('13 KB') && !notes.includes('12.5')) {
   errors.push(`_engine_notes must show Embeddings (lessons) ≈ 13 KB (200×8×8 = ${embLessonsBytes} B).`);
 }
-if (!notes.includes('2.0 KB') && !notes.includes('2 KB')) {
-  errors.push(`_engine_notes must show Bandit A ≈ 2 KB (16×16×8 = ${banditABytes} B).`);
+const banditKB = banditABytes / 1024;
+const banditSizeOk = notes.includes(String(banditABytes)) || notes.includes(banditKB.toFixed(1)) ||
+  notes.includes(String(Math.round(banditKB)) + ' KB') || notes.includes(String(Math.round(banditKB)) + '.0 KB');
+if (!banditSizeOk) {
+  errors.push(`_engine_notes must show Bandit A ≈ ${banditKB >= 1 ? banditKB.toFixed(1) + ' KB' : banditABytes + ' B'} (${featureDim}×${featureDim}×8 = ${banditABytes} B).`);
 }
 if (!notes.includes('ability+variance') && !notes.includes('RaschStudentState')) {
   errors.push('_engine_notes must clarify Rasch 16 B = ability+variance (2×float64).');
@@ -94,7 +111,7 @@ if (!notes.includes('featureDim') && !notes.includes('embeddingDim×2')) {
 }
 
 // Bug 8: Path assumptions — existence, fallback, permissions, failure mode
-const pathNotes = (cfg._path_notes || []).join('\n');
+const pathNotes = toNotes(cfg._path_notes);
 if (!pathNotes.includes('ENOENT') && !pathNotes.includes('no such file')) {
   errors.push('_path_notes must document failure mode when dataDir missing (ENOENT at first file access).');
 }
