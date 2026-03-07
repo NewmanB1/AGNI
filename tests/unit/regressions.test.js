@@ -553,6 +553,48 @@ describe('AUDIT-INVARIANT: thompson Bug 5 — selectLesson respects eligibleLess
   });
 });
 
+describe('AUDIT-INVARIANT: thompson Bug 6 — updateBandit rejects overflow atomically', () => {
+  const thompson = require('../../src/engine/thompson');
+  const embeddings = require('../../src/engine/embeddings');
+  const { createState } = require('../helpers/engine-state');
+
+  it('updateBandit throws and does not mutate A/b when gamma*A + outer overflows', () => {
+    const state = createState({ dim: 2 });
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    thompson.ensureBanditInitialized(state);
+
+    // Inject Inf into A so gamma*A + outerXX overflows
+    state.bandit.A[0][0] = Infinity;
+    var Abefore = state.bandit.A.map(function (r) { return r.slice(); });
+    var bbefore = state.bandit.b.slice();
+
+    assert.throws(
+      () => thompson.updateBandit(state, 's1', 'l1', 0.5),
+      /overflow in A\[0\]\[0\]|reject observation/
+    );
+    assert.deepEqual(state.bandit.A, Abefore, 'A must be unchanged on overflow reject');
+    assert.deepEqual(state.bandit.b, bbefore, 'b must be unchanged on overflow reject');
+    assert.equal(state.bandit.observationCount, 0, 'observationCount must not increment');
+  });
+
+  it('updateBandit throws when b update would overflow', () => {
+    const state = createState({ dim: 2 });
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    thompson.ensureBanditInitialized(state);
+
+    state.bandit.b[0] = Infinity;
+    var bbefore = state.bandit.b.slice();
+
+    assert.throws(
+      () => thompson.updateBandit(state, 's1', 'l1', 0.5),
+      /overflow in b\[0\]|reject observation/
+    );
+    assert.deepEqual(state.bandit.b, bbefore, 'b must be unchanged on overflow reject');
+  });
+});
+
 describe('AUDIT-15: sampleTheta jitter does not mutate state.bandit.A', () => {
   const thompson = require('../../src/engine/thompson');
   const embeddings = require('../../src/engine/embeddings');

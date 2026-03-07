@@ -263,19 +263,37 @@ function updateBandit(state, studentId, lessonId, gain) {
     throw new Error('[BANDIT] forgetting must be a finite number in [0.5,1], got: ' + gamma);
   }
 
-  // A ← γA + x xᵀ
+  // A ← γA + x xᵀ  (atomic: apply full update or reject entirely)
   var outerXX = math.outer(x, x);
+  var Anew = [];
   for (var i = 0; i < A.length; i++) {
+    Anew[i] = [];
     for (var j = 0; j < A[i].length; j++) {
       var aVal = gamma * A[i][j] + outerXX[i][j];
-      A[i][j] = isFinite(aVal) ? aVal : A[i][j];
+      if (!isFinite(aVal)) {
+        throw new Error('[BANDIT] updateBandit: overflow in A[' + i + '][' + j + '] (gamma*A + outer) — reject observation');
+      }
+      Anew[i][j] = aVal;
     }
   }
 
   // b ← γb + x · gain
+  var bnew = [];
   for (var k = 0; k < b.length; k++) {
     var bVal = gamma * b[k] + x[k] * gain;
-    b[k] = isFinite(bVal) ? bVal : b[k];
+    if (!isFinite(bVal)) {
+      throw new Error('[BANDIT] updateBandit: overflow in b[' + k + '] — reject observation');
+    }
+    bnew[k] = bVal;
+  }
+
+  for (var i = 0; i < A.length; i++) {
+    for (var j = 0; j < A[i].length; j++) {
+      A[i][j] = Anew[i][j];
+    }
+  }
+  for (var k = 0; k < b.length; k++) {
+    b[k] = bnew[k];
   }
 
   state.bandit.observationCount += 1;
