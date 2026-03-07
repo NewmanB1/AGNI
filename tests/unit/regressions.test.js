@@ -310,6 +310,36 @@ describe('AUDIT-7: mastery and evidenced levels are clamped', () => {
 // R12: Engine hyperparameter validation
 // ═══════════════════════════════════════════════════════════════════════════════
 
+describe('AUDIT-INVARIANT: embeddings Bug 1 — updateEmbedding uses pre-update snapshot', () => {
+  const embeddings = require('../../src/engine/embeddings');
+  const math = require('../../src/engine/math');
+  const { createState } = require('../helpers/engine-state');
+
+  it('update rule applies gamma and gradient to pre-update z_k, w_k (symmetric)', () => {
+    const state = createState({ dim: 2 });
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    var z = state.embedding.students.s1.vector.slice();
+    var w = state.embedding.lessons.l1.vector.slice();
+    var gamma = state.embedding.forgetting;
+    var lr = state.embedding.lr;
+    var reg = state.embedding.reg;
+    var gain = 0.8;
+
+    embeddings.updateEmbedding(state, 's1', 'l1', gain);
+
+    var z1 = state.embedding.students.s1.vector;
+    var w1 = state.embedding.lessons.l1.vector;
+    var err = gain - math.dot(z, w);
+    for (var k = 0; k < z.length; k++) {
+      var expectedZk = Math.max(-10, Math.min(10, gamma * z[k] + lr * (err * w[k] - reg * z[k])));
+      var expectedWk = Math.max(-10, Math.min(10, gamma * w[k] + lr * (err * z[k] - reg * w[k])));
+      assert.ok(Math.abs(z1[k] - expectedZk) < 1e-9, 'z[' + k + '] must match documented update rule');
+      assert.ok(Math.abs(w1[k] - expectedWk) < 1e-9, 'w[' + k + '] must match documented update rule');
+    }
+  });
+});
+
 describe('AUDIT-8: engine rejects invalid hyperparameters', () => {
   const embeddings = require('../../src/engine/embeddings');
   const { createState } = require('../helpers/engine-state');

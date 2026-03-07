@@ -77,10 +77,17 @@ function ensureLessonVector(state, lessonId) {
  * the observed gain. Forgetting (γ < 1) gradually discounts older updates,
  * allowing the model to adapt as students progress.
  *
- * Update rule:
+ * Update rule (err and z_k, w_k captured pre-update; both vectors use same snapshot):
  *   err = gain − z·w
  *   z_k ← γ·z_k + lr·(err·w_k − reg·z_k)
  *   w_k ← γ·w_k + lr·(err·z_k − reg·w_k)
+ *
+ * Forgetting semantic: Each update multiplies current components by γ before
+ * adding the gradient term. Recent observations therefore dominate; after many
+ * updates to the same (student,lesson) pair, the embedding is largely determined
+ * by recent gradients (e.g. γ=0.96, 100 updates → prior base contribution ~1.7%).
+ * Pairs with no recent observations retain their last embedding (no time-based
+ * decay). Field operators should expect embeddings to reflect recent activity.
  *
  * @param {import('../types').LMSState} state
  * @param {string} studentId
