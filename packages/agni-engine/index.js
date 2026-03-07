@@ -411,16 +411,16 @@ function exportBanditSummary() {
  * @param {import('../types').BanditSummary} remote
  */
 async function mergeRemoteSummary(remote) {
-  var local  = federation.getBanditSummary(_state);
-  var merged = federation.mergeBanditSummaries(local, remote);
-
-  var expectedFeatureDim = _state.embedding.dim * 2;
-  if (merged.mean.length !== expectedFeatureDim) {
+  // Contract: remote must declare embeddingDim and it must match local
+  if (typeof remote.embeddingDim !== 'number' || remote.embeddingDim !== _state.embedding.dim) {
     throw new Error(
-      '[ENGINE] mergeRemoteSummary: merged mean length ' + merged.mean.length +
-      ' !== embedding.dim*2=' + expectedFeatureDim
+      '[ENGINE] mergeRemoteSummary: remote.embeddingDim=' + remote.embeddingDim +
+      ' !== local embedding.dim=' + _state.embedding.dim + '. ' +
+      'Federating hubs must use identical AGNI_EMBEDDING_DIM.'
     );
   }
+  var local  = federation.getBanditSummary(_state);
+  var merged = federation.mergeBanditSummaries(local, remote);
   _state.bandit.A                = merged.precision;
   _state.bandit.b                = math.matVec(merged.precision, merged.mean);
   _state.bandit.observationCount = merged.sampleSize;

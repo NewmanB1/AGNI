@@ -11,10 +11,11 @@ const { createState } = require('../helpers/engine-state');
 const EPSILON = 1e-6;
 
 describe('getBanditSummary', () => {
-  it('returns mean, precision, and sampleSize', () => {
+  it('returns embeddingDim, mean, precision, and sampleSize', () => {
     const state = createState({ dim: 4 });
     ensureBanditInitialized(state);
     const summary = getBanditSummary(state);
+    assert.equal(summary.embeddingDim, 4);
     assert.ok(Array.isArray(summary.mean));
     assert.equal(summary.mean.length, 8); // featureDim = dim * 2
     assert.ok(Array.isArray(summary.precision));
@@ -34,10 +35,12 @@ describe('getBanditSummary', () => {
 });
 
 describe('mergeBanditSummaries', () => {
-  function makeSummary(dim, sampleSize) {
+  function makeSummary(featureDim, sampleSize) {
+    var embeddingDim = featureDim / 2;  // featureDim === embeddingDim * 2
     return {
-      mean: Array(dim).fill(0).map((_, i) => i * 0.1),
-      precision: math.scaleMat(math.identity(dim), 1.0),
+      embeddingDim,
+      mean: Array(featureDim).fill(0).map((_, i) => i * 0.1),
+      precision: math.scaleMat(math.identity(featureDim), 1.0),
       sampleSize
     };
   }
@@ -66,16 +69,19 @@ describe('mergeBanditSummaries', () => {
   });
 
   it('weighted toward the side with more observations (accumulated precision)', () => {
-    const dim = 4;
+    const featureDim = 4;
+    const embeddingDim = 2;
     // Precision matrices should reflect accumulated evidence (scale ~ sampleSize)
     const small = {
-      mean: Array(dim).fill(10),
-      precision: math.scaleMat(math.identity(dim), 1.0),
+      embeddingDim,
+      mean: Array(featureDim).fill(10),
+      precision: math.scaleMat(math.identity(featureDim), 1.0),
       sampleSize: 1
     };
     const large = {
-      mean: Array(dim).fill(0),
-      precision: math.scaleMat(math.identity(dim), 100.0),
+      embeddingDim,
+      mean: Array(featureDim).fill(0),
+      precision: math.scaleMat(math.identity(featureDim), 100.0),
       sampleSize: 100
     };
     const merged = mergeBanditSummaries(small, large);
@@ -83,10 +89,10 @@ describe('mergeBanditSummaries', () => {
     assert.ok(merged.mean[0] < 5, 'Merged mean should be closer to the larger hub, got: ' + merged.mean[0]);
   });
 
-  it('throws on dimension mismatch', () => {
-    const a = makeSummary(4, 5);
-    const b = makeSummary(8, 5);
-    assert.throws(() => mergeBanditSummaries(a, b), /different feature dimensions/);
+  it('throws on embeddingDim mismatch (federation contract)', () => {
+    const a = makeSummary(4, 5);  // embeddingDim=2
+    const b = makeSummary(8, 5);  // embeddingDim=4
+    assert.throws(() => mergeBanditSummaries(a, b), /embeddingDim|Federation contract/);
   });
 
   it('merged precision is a valid SPD matrix (invertible)', () => {

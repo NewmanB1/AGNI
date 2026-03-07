@@ -51,8 +51,8 @@ function importProgress(b64) {
     console.error('Invalid JSON in payload:', e.message);
     process.exit(1);
   }
-  if (!summary.mean || !summary.precision || typeof summary.sampleSize !== 'number') {
-    console.error('Payload is not a valid bandit summary (missing mean/precision/sampleSize).');
+  if (typeof summary.embeddingDim !== 'number' || !summary.mean || !summary.precision || typeof summary.sampleSize !== 'number') {
+    console.error('Payload is not a valid bandit summary (missing embeddingDim/mean/precision/sampleSize). Federating hubs must use identical AGNI_EMBEDDING_DIM.');
     process.exit(1);
   }
   lms.mergeRemoteSummary(summary);

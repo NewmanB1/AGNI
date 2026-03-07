@@ -35,8 +35,8 @@ function register(router, ctx) {
 
   router.post('/api/lms/federation/merge', adminOnly(requireLms((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, (remote) => {
-      if (!remote.mean || !remote.precision || typeof remote.sampleSize !== 'number') {
-        return sendResponse(400, { error: 'mean, precision, sampleSize required' });
+      if (typeof remote.embeddingDim !== 'number' || !remote.mean || !remote.precision || typeof remote.sampleSize !== 'number') {
+        return sendResponse(400, { error: 'embeddingDim, mean, precision, sampleSize required; federating hubs must use identical AGNI_EMBEDDING_DIM' });
       }
       lmsEngine.mergeRemoteSummary(remote);
       sendResponse(200, { ok: true, status: lmsEngine.getStatus() });

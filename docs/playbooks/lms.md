@@ -15,7 +15,7 @@ Use this when changing adaptive selection, Rasch, embeddings, bandit, or federat
 | Change ability estimation | `src/engine/rasch.js` — `updateAbility()`. Contract: receives probeResults, updates state.rasch.students, returns gain proxy. |
 | Change student/lesson vectors | `src/engine/embeddings.js` — `ensureStudentVector`, `ensureLessonVector`, `updateEmbedding()`. Dimension is `state.embedding.dim`. |
 | Change bandit (selection or update) | `src/engine/thompson.js` — `selectLesson()`, `updateBandit()`, `ensureBanditInitialized()`. Invariant: `featureDim === embeddingDim * 2`; feature vector = concat(studentVec, lessonVec). |
-| Change federation merge | `src/engine/federation.js` — `getBanditSummary()`, `mergeBanditSummaries()`. Same feature dimension on both hubs. |
+| Change federation merge | `src/engine/federation.js` — `getBanditSummary()`, `mergeBanditSummaries()`. **Contract:** `BanditSummary.embeddingDim` must match across federating hubs; all must deploy with identical `AGNI_EMBEDDING_DIM`. |
 | Change math (linear algebra) | `src/engine/math.js` — pure helpers; no state. |
 
 ## Do not

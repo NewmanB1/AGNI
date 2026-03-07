@@ -27,9 +27,10 @@ function getBanditSummary(state) {
   var Ainv = math.invertSPD(state.bandit.A);
   var mean = math.matVec(Ainv, state.bandit.b);
   return {
-    mean:       mean,
-    precision:  state.bandit.A,  // A ≈ Σ⁻¹ (raw, not scaled by sampleSize)
-    sampleSize: state.bandit.observationCount
+    embeddingDim: state.embedding.dim,  // Contract: federating hubs must use same value
+    mean:         mean,
+    precision:    state.bandit.A,  // A ≈ Σ⁻¹ (raw, not scaled by sampleSize)
+    sampleSize:   state.bandit.observationCount
   };
 }
 
@@ -81,19 +82,32 @@ function getBanditSummary(state) {
  * @returns {import('../types').BanditSummary}        Merged summary. precision is in raw (total) units.
  */
 function mergeBanditSummaries(local, remote) {
-  // Invariant: featureDim === embeddingDim * 2. Mean length equals featureDim.
-  if (local.mean.length % 2 !== 0 || local.mean.length < 2) {
+  // Contract: embeddingDim must be present — federating hubs declare their config explicitly.
+  if (typeof local.embeddingDim !== 'number' || !Number.isInteger(local.embeddingDim) || local.embeddingDim < 1) {
     throw new Error(
-      '[FEDERATION] Invalid local summary: mean.length=' + local.mean.length + ' (must be embeddingDim*2, even >= 2).'
+      '[FEDERATION] BanditSummary must include embeddingDim (integer >= 1). ' +
+      'Federating hubs must use identical AGNI_EMBEDDING_DIM; re-export from hub to get current format.'
     );
   }
-  // Dimension guard: merging summaries from different feature spaces is a
-  // configuration error, not a recoverable runtime condition.
-  if (local.mean.length !== remote.mean.length) {
+  if (typeof remote.embeddingDim !== 'number' || !Number.isInteger(remote.embeddingDim) || remote.embeddingDim < 1) {
     throw new Error(
-      '[FEDERATION] Cannot merge bandit summaries with different feature dimensions: ' +
-      'local.mean.length=' + local.mean.length + ', remote.mean.length=' + remote.mean.length + '. ' +
-      'Both hubs must use the same embedding.dim.'
+      '[FEDERATION] Remote BanditSummary must include embeddingDim (integer >= 1). ' +
+      'Cannot merge with hub using different export format or config.'
+    );
+  }
+  if (local.embeddingDim !== remote.embeddingDim) {
+    throw new Error(
+      '[FEDERATION] Federation contract violated: local.embeddingDim=' + local.embeddingDim +
+      ', remote.embeddingDim=' + remote.embeddingDim + '. ' +
+      'All federating hubs must deploy with the same AGNI_EMBEDDING_DIM.'
+    );
+  }
+  // Sanity: mean length must match embeddingDim*2
+  var expectedFeatureDim = local.embeddingDim * 2;
+  if (local.mean.length !== expectedFeatureDim || remote.mean.length !== expectedFeatureDim) {
+    throw new Error(
+      '[FEDERATION] Mean length mismatch: local=' + local.mean.length + ', remote=' + remote.mean.length +
+      ', expected embeddingDim*2=' + expectedFeatureDim + '. Summary may be corrupt.'
     );
   }
 
@@ -103,11 +117,12 @@ function mergeBanditSummaries(local, remote) {
   // Return a neutral summary (identity precision, zero mean) rather than
   // stale local data, so downstream invertSPD calls get a valid SPD matrix.
   if (totalN === 0) {
-    var dim = local.mean.length;
+    var featDim = local.embeddingDim * 2;
     return {
-      mean:       Array(dim).fill(0),
-      precision:  math.identity(dim),
-      sampleSize: 0
+      embeddingDim: local.embeddingDim,
+      mean:         Array(featDim).fill(0),
+      precision:    math.identity(featDim),
+      sampleSize:   0
     };
   }
 
@@ -131,9 +146,10 @@ function mergeBanditSummaries(local, remote) {
   var mergedMean = math.matVec(mergedCov, weightedSum);
 
   return {
-    mean:       mergedMean,
-    precision:  mergedPrec,  // total-unit scaled precision (consistent with raw A)
-    sampleSize: totalN
+    embeddingDim: local.embeddingDim,
+    mean:         mergedMean,
+    precision:    mergedPrec,  // total-unit scaled precision (consistent with raw A)
+    sampleSize:   totalN
   };
 }
 

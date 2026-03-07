@@ -244,6 +244,8 @@ export interface LMSState {
 }
 
 export interface BanditSummary {
+  /** Embedding dimension (featureDim = embeddingDim * 2). Required for federation contract: all federating hubs must use the same value. */
+  embeddingDim: number;
   mean: number[];
   precision: number[][];
   sampleSize: number;

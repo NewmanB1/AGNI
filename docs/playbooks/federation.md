@@ -105,6 +105,8 @@ Inbound `graph_weights` should conform to **`schemas/graph_weights.schema.json`*
 
 **LMS federation (separate from sync):** Bandit summary merge uses **POST /api/lms/federation/merge** (see `docs/api-contract.md`). That is progress/state sync, not event/graph sync. Sneakernet progress export/import is **`npm run sneakernet`** (see `docs/ARCHITECTURE.md`).
 
+**Federation contract:** All hubs that merge bandit summaries **must** use the same `AGNI_EMBEDDING_DIM`. The `BanditSummary` includes `embeddingDim`; merge rejects summaries with a different value. This is an enforced runtime contract, not an assumption — deploy identical config on all federating nodes.
+
 ---
 
 ## 5. Where to Change What

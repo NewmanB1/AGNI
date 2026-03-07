@@ -1113,10 +1113,16 @@ describe('AUDIT-INVARIANT: featureDim === embeddingDim * 2 enforced defensively'
     assert.throws(() => federation.getBanditSummary(bad), /featureDim.*embedding\.dim|embedding\.dim\*2/);
   });
 
-  it('mergeBanditSummaries throws on odd-length local mean', () => {
-    const oddLocal = { mean: [1, 2, 3], precision: [[1,0,0],[0,1,0],[0,0,1]], sampleSize: 1 };
-    const remote = { mean: [1, 2, 3], precision: [[1,0,0],[0,1,0],[0,0,1]], sampleSize: 1 };
-    assert.throws(() => federation.mergeBanditSummaries(oddLocal, remote), /Invalid local summary|mean\.length/);
+  it('mergeBanditSummaries throws on missing embeddingDim (federation contract)', () => {
+    const noContract = { mean: [1, 2], precision: [[1,0],[0,1]], sampleSize: 1 };
+    const withContract = { embeddingDim: 1, mean: [1, 2], precision: [[1,0],[0,1]], sampleSize: 1 };
+    assert.throws(() => federation.mergeBanditSummaries(noContract, withContract), /embeddingDim|include embeddingDim/);
+  });
+
+  it('mergeBanditSummaries throws on embeddingDim mismatch across hubs', () => {
+    const local = { embeddingDim: 8, mean: Array(16).fill(0), precision: require('../../packages/agni-engine/math').identity(16).map(r => r.slice()), sampleSize: 1 };
+    const remote = { embeddingDim: 16, mean: Array(32).fill(0), precision: require('../../packages/agni-engine/math').identity(32).map(r => r.slice()), sampleSize: 1 };
+    assert.throws(() => federation.mergeBanditSummaries(local, remote), /embeddingDim|Federation contract/);
   });
 
   it('migrateLMSState output satisfies invariant', () => {
