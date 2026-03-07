@@ -12,6 +12,15 @@
 
 var math = require('./math');
 
+/** @param {import('../types').LMSState} state */
+function assertEmbeddingDimValid(state) {
+  var dim = state.embedding && state.embedding.dim;
+  if (typeof dim !== 'number' || !Number.isInteger(dim) || dim < 1 || dim > 1024) {
+    throw new Error('[EMBEDDING] embedding.dim invalid: must be integer in [1,1024], got ' +
+      (dim === undefined ? 'undefined' : String(dim)));
+  }
+}
+
 /**
  * Get student embedding vector without creating. Returns undefined if missing.
  * Returns the stored reference; do not mutate. Use .slice() if you need a copy.
@@ -47,6 +56,7 @@ function getLessonVector(state, lessonId) {
  */
 function ensureStudentVector(state, studentId) {
   if (!state.embedding.students[studentId]) {
+    assertEmbeddingDimValid(state);
     state.embedding.students[studentId] = {
       vector: Array(state.embedding.dim).fill(0).map(function() {
         return 0.05 * math.randn();
@@ -67,6 +77,7 @@ function ensureStudentVector(state, studentId) {
  */
 function ensureLessonVector(state, lessonId) {
   if (!state.embedding.lessons[lessonId]) {
+    assertEmbeddingDimValid(state);
     state.embedding.lessons[lessonId] = {
       vector: Array(state.embedding.dim).fill(0).map(function() {
         return 0.05 * math.randn();

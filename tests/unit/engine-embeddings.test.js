@@ -27,6 +27,17 @@ describe('ensureStudentVector', () => {
     assert.notEqual(v1, v2);
   });
 
+  it('Bug 5: rejects invalid embedding.dim (undefined, 0, NaN, negative, non-integer)', () => {
+    for (const bad of [undefined, 0, NaN, -1, 8.5]) {
+      const state = createState({ dim: 4 });
+      state.embedding.dim = bad;
+      assert.throws(
+        () => ensureStudentVector(state, 'new'),
+        /\[EMBEDDING\] embedding\.dim invalid/
+      );
+    }
+  });
+
   it('Bug 4: returns live reference — mutation corrupts state; use .slice() for safe copy', () => {
     const state = createState({ dim: 4 });
     const vec = ensureStudentVector(state, 'stu1');
@@ -53,6 +64,12 @@ describe('ensureLessonVector', () => {
     const v1 = ensureLessonVector(state, 'L1');
     const v2 = ensureLessonVector(state, 'L1');
     assert.equal(v1, v2);
+  });
+
+  it('Bug 5: rejects invalid embedding.dim', () => {
+    const state = createState({ dim: 4 });
+    state.embedding.dim = undefined;
+    assert.throws(() => ensureLessonVector(state, 'new'), /\[EMBEDDING\] embedding\.dim invalid/);
   });
 
   it('preserves pre-existing vectors', () => {
