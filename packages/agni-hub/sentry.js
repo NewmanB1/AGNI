@@ -22,6 +22,8 @@ const sentryAnalysis = require('./sentry-analysis');
 const DATA_DIR = envConfig.dataDir;
 const EVENTS_DIR = path.join(DATA_DIR, 'events');
 const GRAPH_WEIGHTS = path.join(DATA_DIR, 'graph-weights.json');
+const GRAPH_WEIGHTS_PENDING = path.join(DATA_DIR, 'graph-weights-pending.json');
+const GRAPH_WEIGHTS_BACKUP = path.join(DATA_DIR, 'graph-weights.backup.json');
 const MASTERY_SUMMARY = path.join(DATA_DIR, 'mastery-summary.json');
 const CONTINGENCY_TABLES = path.join(DATA_DIR, 'contingency-tables.json');
 const SENTRY_STATE = path.join(DATA_DIR, 'sentry-state.json');
@@ -63,6 +65,7 @@ let eventBuffer = [];
 let _flushing = false;
 let _lastAnalysisAt = null;
 let _graphWeightsUpdatedAt = null;
+let _pendingReviewPath = null;
 
 function todayFile() { return path.join(EVENTS_DIR, new Date().toISOString().slice(0, 10) + '.ndjson'); }
 
@@ -171,12 +174,15 @@ function startReceiver() {
           edgesCount = Array.isArray(gw.edges) ? gw.edges.length : 0;
         }
       } catch { /* ignore */ }
+      const pendingReview = !!_pendingReviewPath && fs.existsSync(_pendingReviewPath);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         bufferSize: eventBuffer.length,
         lastAnalysisAt: _lastAnalysisAt,
         graphWeightsUpdatedAt: _graphWeightsUpdatedAt,
-        edgesCount: edgesCount
+        edgesCount: edgesCount,
+        pendingReview: pendingReview,
+        pendingPath: pendingReview ? _pendingReviewPath : null
       }));
       return;
     }
@@ -340,7 +346,28 @@ async function runAnalysis() {
     });
   });
 
-  const edges = sentryAnalysis.computeEdgesFromGlobalPairs(globalPairs, opts);
+  let edges = sentryAnalysis.computeEdgesFromGlobalPairs(globalPairs, opts);
+
+  // INVARIANT: graph_weights affect only MLC (sort order), never eligibility (BFS prerequisites).
+  // Theta uses ontology.requires/provides for eligibility; graph_weights only tune MLC.
+  const maxDelta = envConfig.sentryWeightMaxDelta;
+  const reviewThreshold = envConfig.sentryWeightReviewThreshold;
+  let maxWeightChange = 0;
+  const prevGw = await loadJSONAsync(GRAPH_WEIGHTS, null);
+  const prevByKey = {};
+  if (prevGw && Array.isArray(prevGw.edges)) {
+    prevGw.edges.forEach(e => { prevByKey[e.from + '\x00' + e.to] = e; });
+  }
+  edges = edges.map(e => {
+    const key = e.from + '\x00' + e.to;
+    const prev = prevByKey[key];
+    if (!prev || typeof prev.weight !== 'number') return e;
+    const delta = Math.max(-maxDelta, Math.min(maxDelta, e.weight - prev.weight));
+    const newWeight = Math.round((prev.weight + delta) * 1000) / 1000;
+    const change = Math.abs(newWeight - prev.weight);
+    if (change > maxWeightChange) maxWeightChange = change;
+    return Object.assign({}, e, { weight: Math.max(0, Math.min(1, newWeight)) });
+  });
 
   const cohortId = 'c_' + crypto.createHash('sha256').update(largest.centroid.map(v => v.toFixed(4)).join(',')).digest('hex').slice(0, 8);
   const now = new Date().toISOString();
@@ -365,10 +392,23 @@ async function runAnalysis() {
     return;
   }
 
-  await saveJSONAsync(GRAPH_WEIGHTS, gw);
   _lastAnalysisAt = now;
-  _graphWeightsUpdatedAt = now;
-  log.info('Analysis complete', { eventsProcessed, edges: edges.length });
+  if (maxWeightChange >= reviewThreshold) {
+    await saveJSONAsync(GRAPH_WEIGHTS_PENDING, gw);
+    _pendingReviewPath = GRAPH_WEIGHTS_PENDING;
+    log.warn('Large weight change requires human review; wrote to pending', {
+      maxWeightChange, reviewThreshold, pendingPath: GRAPH_WEIGHTS_PENDING
+    });
+  } else {
+    _pendingReviewPath = null;
+    if (fs.existsSync(GRAPH_WEIGHTS)) {
+      const backup = await loadJSONAsync(GRAPH_WEIGHTS, null);
+      if (backup) await saveJSONAsync(GRAPH_WEIGHTS_BACKUP, backup);
+    }
+    await saveJSONAsync(GRAPH_WEIGHTS, gw);
+    _graphWeightsUpdatedAt = now;
+    log.info('Analysis complete', { eventsProcessed, edges: edges.length });
+  }
 
   pruneOldEvents(envConfig.sentryRetentionDays);
 }

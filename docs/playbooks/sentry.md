@@ -16,6 +16,10 @@ This playbook describes the **Sentry → graph_weights → theta** flow: how tel
 
 **MLC bounds:** Theta clamps MLC to [0, ∞) (floor `MIN_MLC` = 0.001). Edge `weight` and `confidence` must be in [0, 1] so MLC cannot become negative or degenerate. Sentry clamps edges; sync sanitizes incoming regional graph_weights before writing.
 
+### Invariant: graph_weights Affect Only MLC, Never Eligibility
+
+**Skill Collapse updates affect only lesson sort order (MLC), never eligibility.** Eligibility is determined solely by the ontology (`ontology.requires` / `ontology.provides`) and mastery thresholds. Theta will never offer a lesson unless all required skills are mastered — graph weights cannot make a lesson eligible. See `docs/ARCHITECTURE.md` §7.1 and §7.3.
+
 ### Data Flow Options
 
 | Mode | Path | When to use |
@@ -33,7 +37,7 @@ This playbook describes the **Sentry → graph_weights → theta** flow: how tel
 
 - **Endpoints:**
   - `GET /health` — Returns `{ ok: true }`. Use for liveness probes.
-  - `GET /api/sentry/status` — Returns `{ bufferSize, lastAnalysisAt, graphWeightsUpdatedAt, edgesCount }`. `edgesCount` is the number of edges in the current graph_weights.json (null if file missing).
+  - `GET /api/sentry/status` — Returns `{ bufferSize, lastAnalysisAt, graphWeightsUpdatedAt, edgesCount, pendingReview, pendingPath }`. `edgesCount` is the number of edges in the current graph_weights.json (null if file missing). `pendingReview` is true when a large update was written to graph-weights-pending.json; `pendingPath` is the file path when applicable.
   - `POST /api/telemetry` — Submit events (see below).
 - **Port:** `AGNI_SENTRY_PORT` (default `8081`)
 - **Body:** JSON with `events` array (or single event). Each event:
@@ -71,7 +75,25 @@ Events are validated, buffered in memory, and appended to **`data/events/YYYY-MM
    - `default_weight: 1.0`, `edges: [{ from, to, weight, confidence, sample_size }]`
    - `metadata` (e.g. `software_version`, `computation_date`)
 
+   Before writing, Sentry applies **rate limiting** and **human-review gating** (see §2.4 and §2.5).
+
 Schema: **`schemas/graph_weights.schema.json`**. Sentry output conforms so that theta and CI validation can rely on it.
+
+### 2.4 Weight Change Rate Limit
+
+Per-edge weight changes are capped per analysis run to prevent sudden wholesale curriculum reordering. `AGNI_SENTRY_WEIGHT_MAX_DELTA` (default `0.2`) limits how much any single edge's `weight` may move toward the new value. If a previous graph exists, each edge is blended: `newWeight = oldWeight + clamp(computed - oldWeight, -delta, +delta)`.
+
+### 2.5 Human Review for Large Updates
+
+If any edge's weight would change by more than `AGNI_SENTRY_WEIGHT_REVIEW_THRESHOLD` (default `0.3`), Sentry writes to **`data/graph-weights-pending.json`** instead of overwriting `graph_weights.json`. The live graph is unchanged; an operator must review and manually promote the pending file to `graph_weights.json` when satisfied. Status reports `pendingReview: true` and `pendingPath` when applicable.
+
+### 2.6 Rollback
+
+If a bad update was committed:
+
+1. **Restore from backup:** Sentry creates `data/graph-weights.backup.json` before each successful write. To rollback: copy `graph-weights.backup.json` over `graph-weights.json`, then restart theta (or wait for next cache invalidation).
+2. **Revert pending:** If the bad update is still in `graph-weights-pending.json`, simply delete or rename it; the live graph is untouched.
+3. **Restore from sync:** If regional graph exists, remove local `graph_weights.json` so theta falls back to regional; or import a known-good graph via sync.
 
 ---
 
@@ -127,6 +149,8 @@ So: **Sentry produces edges (prior → target, weight, confidence); theta uses t
 | Change when analysis runs | `packages/agni-hub/sentry.js`: ANALYSE_AFTER_N, MIN_MS_BETWEEN_ANALYSIS, setInterval |
 | Change cohort size or clustering | `env-config.js`: AGNI_SENTRY_JACCARD_THRESHOLD, AGNI_SENTRY_MIN_CLUSTER_SIZE |
 | Change edge thresholds (chi2, sample size) | `env-config.js`: AGNI_SENTRY_CHI2_THRESHOLD, AGNI_SENTRY_MIN_SAMPLE |
+| Weight change rate limit | `env-config.js`: AGNI_SENTRY_WEIGHT_MAX_DELTA (default 0.2) |
+| Human-review threshold (large updates) | `env-config.js`: AGNI_SENTRY_WEIGHT_REVIEW_THRESHOLD (default 0.3) |
 | Change theta’s graph selection | `packages/agni-hub/theta.js`: getEffectiveGraphWeights, MIN_LOCAL_SAMPLE_SIZE, MIN_LOCAL_EDGE_COUNT |
 | Change residual formula | `packages/agni-hub/theta.js`: getResidualCostFactor, MIN_RESIDUAL, MIN_CONFIDENCE |
 | Validate graph_weights shape | `schemas/graph-weights.schema.json`; CI in `.github/workflows/validate.yml` (fixtures and Sentry output). |

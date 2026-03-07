@@ -204,7 +204,7 @@ The compiler supports dual-mode distribution:
 | `approvedCatalog`, `governancePolicy`, `governancePolicySchema`, `approvedCatalogSchema`, `utuConstantsPath` | data-paths, policy, evaluateLessonCompliance |
 | `syncTransport`, `homeUrl` | sync |
 | `analyseAfter`, `analyseCron`, `sentryRetentionDays` | sentry |
-| `sentryChi2Threshold`, `sentryMinSample`, `sentryJaccardThreshold`, `sentryMinClusterSize`, `sentryForward` | sentry |
+| `sentryChi2Threshold`, `sentryMinSample`, `sentryJaccardThreshold`, `sentryMinClusterSize`, `sentryForward`, `sentryWeightMaxDelta`, `sentryWeightReviewThreshold` | sentry |
 | `markovWeight`, `pagerankWeight` | engine index (selectBestLesson) |
 | `logLevel` | logger |
 
@@ -355,6 +355,8 @@ The Village Sentry analyzes anonymized local learning logs to detect these colla
 
 Result: The graph weights (`graph_weights.json`) are updated over time as real cohort
 data accumulates, making the system progressively more culturally adapted.
+
+**Invariant: Skill Collapse affects only MLC sort, never eligibility.** Graph weights influence the ordering of lessons among those that are already eligible. Eligibility is determined solely by the ontology graph (`ontology.requires` / `ontology.provides`) and mastery thresholds — theta will never offer a lesson unless all required skills are mastered, regardless of graph weights. See `docs/playbooks/sentry.md` for rate limits, human-review of large updates, and rollback.
 
 ## 8. Knowledge Architecture: UTUs and Skill Ontology
 
