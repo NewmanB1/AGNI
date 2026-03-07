@@ -69,8 +69,19 @@ function outer(a, b) {
  * @returns {number[][]}
  */
 function addMat(A, B) {
-  if (A.length !== B.length || (A.length > 0 && A[0].length !== B[0].length)) {
-    throw new Error('[MATH] addMat: dimension mismatch (' + A.length + 'x' + (A[0] ? A[0].length : 0) + ' vs ' + B.length + 'x' + (B[0] ? B[0].length : 0) + ')');
+  var rows = A.length;
+  if (rows !== B.length) {
+    throw new Error('[MATH] addMat: dimension mismatch (' + rows + 'x? vs ' + B.length + 'x?)');
+  }
+  if (rows === 0) return [];
+  var cols = A[0].length;
+  if (cols !== B[0].length) {
+    throw new Error('[MATH] addMat: dimension mismatch (' + rows + 'x' + cols + ' vs ' + rows + 'x' + B[0].length + ')');
+  }
+  for (var i = 0; i < rows; i++) {
+    if (A[i].length !== cols || B[i].length !== cols) {
+      throw new Error('[MATH] addMat: jagged matrix at row ' + i);
+    }
   }
   return A.map(function(row, i) {
     return row.map(function(v, j) { return v + B[i][j]; });
@@ -96,8 +107,15 @@ function scaleMat(A, s) {
  * @returns {number[]}
  */
 function matVec(A, x) {
-  if (A.length > 0 && A[0].length !== x.length) {
-    throw new Error('[MATH] matVec: dimension mismatch (cols=' + A[0].length + ' vs vec=' + x.length + ')');
+  if (A.length === 0) return [];
+  var cols = A[0].length;
+  if (cols !== x.length) {
+    throw new Error('[MATH] matVec: dimension mismatch (cols=' + cols + ' vs vec=' + x.length + ')');
+  }
+  for (var i = 0; i < A.length; i++) {
+    if (A[i].length !== cols) {
+      throw new Error('[MATH] matVec: jagged matrix at row ' + i);
+    }
   }
   return A.map(function(row) { return dot(row, x); });
 }

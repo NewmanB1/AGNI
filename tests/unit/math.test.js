@@ -89,6 +89,12 @@ describe('addMat', () => {
     const B = [[5, 6], [7, 8]];
     assert.deepEqual(math.addMat(A, B), [[6, 8], [10, 12]]);
   });
+
+  it('throws for jagged matrix', () => {
+    const A = [[1, 2], [3, 4, 5]];
+    const B = [[1, 2], [3, 4]];
+    assert.throws(() => math.addMat(A, B), /jagged/);
+  });
 });
 
 describe('scaleMat', () => {
@@ -107,6 +113,11 @@ describe('matVec', () => {
   it('identity matrix preserves vector', () => {
     const I = math.identity(3);
     assert.deepEqual(math.matVec(I, [1, 2, 3]), [1, 2, 3]);
+  });
+
+  it('throws for jagged matrix', () => {
+    const A = [[1, 2], [3, 4, 5]];
+    assert.throws(() => math.matVec(A, [1, 2]), /jagged/);
   });
 });
 
