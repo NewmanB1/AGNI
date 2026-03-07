@@ -12,70 +12,47 @@
 var math = require('./math');
 var thompson = require('./thompson');
 
+/** Deep-copy a matrix (avoid returning live reference). */
+function copyMat(A) {
+  return A.map(function(row) { return row.slice(); });
+}
+
 /**
  * Export current bandit posterior summary for federation sync.
  *
  * The `precision` field is A from recursive least squares (A ≈ Σ⁻¹).
- * It is a *raw* precision matrix — not scaled by sampleSize. Downstream
- * consumers (e.g. mergeBanditSummaries) must be aware of this unit.
+ * It is a *raw* precision matrix — not scaled by sampleSize. A copy is
+ * returned so callers cannot mutate live bandit state.
  *
  * @param {import('../types').LMSState} state
  * @returns {import('../types').BanditSummary}
  */
 function getBanditSummary(state) {
   thompson.assertFeatureDimInvariant(state);
+  var n = state.bandit.observationCount;
+  if (typeof n !== 'number' || !Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
+    throw new Error('[FEDERATION] observationCount must be non-negative integer, got: ' + n);
+  }
   var Ainv = math.invertSPD(state.bandit.A);
   var mean = math.matVec(Ainv, state.bandit.b);
   return {
     embeddingDim: state.embedding.dim,  // Contract: federating hubs must use same value
     mean:         mean,
-    precision:    state.bandit.A,  // A ≈ Σ⁻¹ (raw, not scaled by sampleSize)
-    sampleSize:   state.bandit.observationCount
+    precision:    copyMat(state.bandit.A),  // A ≈ Σ⁻¹ (raw); copy to avoid aliasing
+    sampleSize:   n
   };
 }
 
 /**
  * Merge two bandit summaries using precision-weighted Bayesian combination.
  *
- * ## Scaled-precision convention
+ * Standard formula for independent Gaussian posteriors:
+ *   P_merged = P_local + P_remote
+ *   μ_merged = P_merged⁻¹ (P_local·μ_local + P_remote·μ_remote)
  *
- * When combining posteriors from two hubs that have seen different numbers
- * of observations, weighting the raw precision matrices equally would
- * over-count the larger hub's contribution: its A matrix already encodes
- * more observations, so adding it to a smaller hub's A would bias the
- * merged result toward the larger hub twice over.
- *
- * We address this by normalising each hub's precision matrix to "per-
- * observation" units before combining, then restoring total scale by
- * multiplying by the combined sample count:
- *
- *   mergedPrec = (localPrec/n_local + remotePrec/n_remote) * (n_local + n_remote)
- *              = scaleMat(localPrec, n_remote/(n_local+n_remote))   [local share]
- *            + scaleMat(remotePrec, n_local/(n_local+n_remote))    [remote share]
- *
- * This is equivalent to a precision-weighted average scaled back up to the
- * combined sample count, keeping A in the same unit as a raw recursive-
- * least-squares A matrix with (n_local + n_remote) total observations.
- *
- * ## Mean combination
- *
- * Given normalised precision matrices P_l and P_r (in per-observation units),
- * the precision-weighted mean is:
- *
- *   mergedMean = (P_local + P_remote)⁻¹ (P_local · μ_local + P_remote · μ_remote)
- *
- * We compute this using the scaled matrices directly so the inversion operates
- * on well-conditioned numbers. The scale factor cancels in the mean computation,
- * so the result is numerically equivalent regardless of which unit convention
- * is used for the intermediate matrices.
- *
- * ## invertSPD contract
- *
- * The merged precision matrix output by this function is in the same units as
- * each hub's raw A (total accumulated, not per-observation). Any caller that
- * passes it to invertSPD to recover a covariance will get the covariance
- * corresponding to the merged posterior with (n_local + n_remote) observations,
- * which is the correct interpretation.
+ * RLS A matrices scale with observation count, so adding them directly
+ * gives the combined precision. The hub with more observations (larger A)
+ * dominates the merged posterior.
  *
  * @param {import('../types').BanditSummary} local   Summary from the local hub
  * @param {import('../types').BanditSummary} remote  Summary from a remote hub
@@ -110,12 +87,24 @@ function mergeBanditSummaries(local, remote) {
       ', expected embeddingDim*2=' + expectedFeatureDim + '. Summary may be corrupt.'
     );
   }
+  if (!Array.isArray(local.precision) || local.precision.length !== expectedFeatureDim ||
+      !Array.isArray(remote.precision) || remote.precision.length !== expectedFeatureDim) {
+    throw new Error(
+      '[FEDERATION] Precision dimensions must match mean (embeddingDim*2=' + expectedFeatureDim + ')'
+    );
+  }
+
+  function validSampleSize(n, label) {
+    if (typeof n !== 'number' || !Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
+      throw new Error('[FEDERATION] ' + label + '.sampleSize must be non-negative integer, got: ' + n);
+    }
+  }
+  validSampleSize(local.sampleSize, 'local');
+  validSampleSize(remote.sampleSize, 'remote');
 
   var totalN = local.sampleSize + remote.sampleSize;
 
-  // Guard: if both sides have zero observations there is no posterior to merge.
-  // Return a neutral summary (identity precision, zero mean) rather than
-  // stale local data, so downstream invertSPD calls get a valid SPD matrix.
+  // Guard: both zero — return neutral summary
   if (totalN === 0) {
     var featDim = local.embeddingDim * 2;
     return {
@@ -126,22 +115,32 @@ function mergeBanditSummaries(local, remote) {
     };
   }
 
-  // Normalise each side to per-observation scale, then weight by sample share.
-  // This makes the merged precision matrix consistent with a raw A that has
-  // totalN observations behind it — safe to pass directly to invertSPD.
-  var localWeight  = local.sampleSize  > 0 ? remote.sampleSize / totalN : 0;
-  var remoteWeight = remote.sampleSize > 0 ? local.sampleSize  / totalN : 0;
+  // Bug 3: one side has zero — return copy of the non-zero side
+  if (local.sampleSize === 0) {
+    return {
+      embeddingDim: remote.embeddingDim,
+      mean:         remote.mean.slice(),
+      precision:    copyMat(remote.precision),
+      sampleSize:   remote.sampleSize
+    };
+  }
+  if (remote.sampleSize === 0) {
+    return {
+      embeddingDim: local.embeddingDim,
+      mean:         local.mean.slice(),
+      precision:    copyMat(local.precision),
+      sampleSize:   local.sampleSize
+    };
+  }
 
-  var scaledLocalPrec  = math.scaleMat(local.precision,  localWeight);
-  var scaledRemotePrec = math.scaleMat(remote.precision, remoteWeight);
-  var mergedPrec       = math.addMat(scaledLocalPrec, scaledRemotePrec);
+  // Standard Bayesian merge: P_merged = P_local + P_remote (independent posteriors)
+  var mergedPrec = math.addMat(local.precision, remote.precision);
 
-  // Precision-weighted mean: P_merged⁻¹ (P_local·μ_local + P_remote·μ_remote)
-  // Use scaled matrices so the inversion is on the same-unit mergedPrec.
+  // Precision-weighted mean: μ = P_merged⁻¹ (P_local·μ_local + P_remote·μ_remote)
   var mergedCov    = math.invertSPD(mergedPrec);
   var weightedSum  = math.addVec(
-    math.matVec(scaledLocalPrec,  local.mean),
-    math.matVec(scaledRemotePrec, remote.mean)
+    math.matVec(local.precision,  local.mean),
+    math.matVec(remote.precision, remote.mean)
   );
   var mergedMean = math.matVec(mergedCov, weightedSum);
 

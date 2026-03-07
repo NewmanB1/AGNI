@@ -32,6 +32,20 @@ describe('getBanditSummary', () => {
     const summary = getBanditSummary(state);
     assert.equal(summary.sampleSize, 2);
   });
+
+  it('Bug 1: precision is copy, not live reference', () => {
+    const state = createState({ dim: 4 });
+    ensureBanditInitialized(state);
+    const summary = getBanditSummary(state);
+    assert.notStrictEqual(summary.precision, state.bandit.A);
+  });
+
+  it('Bug 9: throws on NaN observationCount', () => {
+    const state = createState({ dim: 4 });
+    ensureBanditInitialized(state);
+    state.bandit.observationCount = NaN;
+    assert.throws(() => getBanditSummary(state), /\[FEDERATION\].*observationCount/);
+  });
 });
 
 describe('mergeBanditSummaries', () => {
@@ -68,7 +82,7 @@ describe('mergeBanditSummaries', () => {
     assert.ok(merged.mean.every(v => v === 0), 'Mean should be zeros');
   });
 
-  it('weighted toward the side with more observations (accumulated precision)', () => {
+  it('Bug 2: Bayesian merge P1+P2 — larger hub dominates (not underweighted)', () => {
     const featureDim = 4;
     const embeddingDim = 2;
     // Precision matrices should reflect accumulated evidence (scale ~ sampleSize)
@@ -100,5 +114,27 @@ describe('mergeBanditSummaries', () => {
     const b = makeSummary(4, 20);
     const merged = mergeBanditSummaries(a, b);
     assert.doesNotThrow(() => math.invertSPD(merged.precision));
+  });
+
+  it('Bug 3: one-zero sampleSize returns copy of non-zero side (no zero-matrix crash)', () => {
+    const a = makeSummary(4, 0);
+    const b = makeSummary(4, 10);
+    const merged = mergeBanditSummaries(a, b);
+    assert.equal(merged.sampleSize, 10);
+    assert.doesNotThrow(() => math.invertSPD(merged.precision));
+  });
+
+  it('Bug 6: throws on invalid sampleSize', () => {
+    const valid = makeSummary(4, 5);
+    const bad = makeSummary(4, 5);
+    bad.sampleSize = NaN;
+    assert.throws(() => mergeBanditSummaries(valid, bad), /\[FEDERATION\].*sampleSize/);
+  });
+
+  it('Bug 5: throws on precision dimension mismatch', () => {
+    const valid = makeSummary(4, 5);
+    const bad = makeSummary(4, 5);
+    bad.precision = math.identity(2);  // wrong size for embeddingDim*2=4
+    assert.throws(() => mergeBanditSummaries(valid, bad), /\[FEDERATION\].*Precision.*dimension/);
   });
 });

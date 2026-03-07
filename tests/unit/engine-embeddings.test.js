@@ -131,6 +131,14 @@ describe('updateEmbedding', () => {
     assert.ok(dot1 > 0, 'Dot product should be positive after many positive gain updates, got: ' + dot1);
   });
 
+  it('Bug 8: throws on lr > 0.1', () => {
+    const state = createState({ dim: 4 });
+    state.embedding.lr = 0.5;
+    ensureStudentVector(state, 's1');
+    ensureLessonVector(state, 'L1');
+    assert.throws(() => updateEmbedding(state, 's1', 'L1', 0.5), /\[EMBEDDING\].*lr.*0\.1/);
+  });
+
   it('handles negative gain (reducing similarity)', () => {
     const state = createState({ dim: 4 });
     const math = require('../../src/engine/math');
