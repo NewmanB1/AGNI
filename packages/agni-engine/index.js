@@ -486,6 +486,7 @@ async function mergeRemoteSummary(remote) {
   _state.bandit.observationCount = merged.sampleSize;
   seenSyncIds.push(syncId);
   if (seenSyncIds.length > federation.MAX_SEEN_SYNC_IDS) {
+    // FIFO eviction: drop oldest entries, keep the 500 most recent
     _state.bandit.seenSyncIds = seenSyncIds.slice(-federation.MAX_SEEN_SYNC_IDS);
   }
 

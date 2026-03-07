@@ -107,6 +107,8 @@ Inbound `graph_weights` should conform to **`schemas/graph_weights.schema.json`*
 
 **Federation contract:** All hubs that merge bandit summaries **must** use the same `AGNI_EMBEDDING_DIM`. The `BanditSummary` includes `embeddingDim`; merge rejects summaries with a different value. This is an enforced runtime contract, not an assumption — deploy identical config on all federating nodes.
 
+**Node version pinning (Pi deployments):** Sync deduplication uses a content hash (`syncId`) of the bandit summary. The hash is derived from `JSON.stringify` of float arrays; different Node versions can serialize the same IEEE 754 double differently (e.g. last digit), producing different hashes for identical summaries. Two hubs on different Node versions would fail to deduplicate — duplicate syncs would double-count silently. **Pin the same Node version on all federating hubs** for federation correctness, not just API compatibility.
+
 ---
 
 ## 5. Where to Change What

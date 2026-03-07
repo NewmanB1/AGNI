@@ -198,7 +198,7 @@ function migrateLMSState(raw, opts) {
 
   var seenSyncIds = Array.isArray(bandit.seenSyncIds) ? bandit.seenSyncIds : [];
   if (seenSyncIds.length > 500) {
-    seenSyncIds = seenSyncIds.slice(-500);
+    seenSyncIds = seenSyncIds.slice(-500);  // FIFO: keep 500 most recent
     migrated = true;
   }
 

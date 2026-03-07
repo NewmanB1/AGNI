@@ -80,6 +80,17 @@ describe('getBanditSummary', () => {
     );
   });
 
+  it('validates A/b when n>0: throws on jagged A or non-finite values', () => {
+    const state = createState({ dim: 4 });
+    ensureBanditInitialized(state);
+    state.bandit.observationCount = 1;
+    state.bandit.A[2] = state.bandit.A[2].slice(0, 4);
+    assert.throws(() => getBanditSummary(state), /\[FEDERATION\].*jagged/);
+    ensureBanditInitialized(state);
+    state.bandit.A[1][1] = NaN;
+    assert.throws(() => getBanditSummary(state), /\[FEDERATION\].*non-finite/);
+  });
+
   it('E2: throws clear error on null state', () => {
     assert.throws(() => getBanditSummary(null), /\[FEDERATION\].*state.*non-null/);
   });
@@ -233,13 +244,14 @@ describe('mergeBanditSummaries', () => {
     assert.throws(() => mergeBanditSummaries(valid, bad), /\[FEDERATION\].*precision.*non-finite/);
   });
 
-  it('addSyncId adds deterministic syncId to summary', () => {
+  it('addSyncId adds deterministic syncId — returns new object, does not mutate', () => {
     const a = makeSummary(4, 5);
-    addSyncId(a);
-    assert.ok(typeof a.syncId === 'string' && a.syncId.length === 16);
+    const aWithId = addSyncId(a);
+    assert.ok(typeof aWithId.syncId === 'string' && aWithId.syncId.length === 16);
+    assert.equal(a.syncId, undefined, 'Input should not be mutated');
     const b = makeSummary(4, 5);
-    addSyncId(b);
-    assert.equal(a.syncId, b.syncId, 'Same content yields same syncId');
+    const bWithId = addSyncId(b);
+    assert.equal(aWithId.syncId, bWithId.syncId, 'Same content yields same syncId');
   });
 
   it('R4: merged mean matches invertSPD path (Cholesky solve correctness)', () => {

@@ -16,10 +16,16 @@ var thompson = require('./thompson');
 /** Max embeddingDim (matches thompson/embeddings). Prevents OOM from corrupt summaries. */
 var MAX_EMBEDDING_DIM = 1024;
 
-/** Max seenSyncIds to retain (prevents unbounded growth). */
+/** Max seenSyncIds to retain (prevents unbounded growth). Eviction is FIFO — oldest dropped. */
 var MAX_SEEN_SYNC_IDS = 500;
 
-/** Content hash for sync deduplication. Deterministic — same summary yields same syncId. */
+/**
+ * Content hash for sync deduplication. Deterministic — same summary yields same syncId.
+ * Uses only embeddingDim, mean, precision, sampleSize (syncId excluded).
+ * CONSTRAINT: Federating hubs should run the same Node version — JSON.stringify of
+ * floats can differ across engines (e.g. Node 14 vs 16), producing different hashes
+ * for identical summaries on heterogeneous deployments.
+ */
 function contentHash(summary) {
   var payload = JSON.stringify({
     embeddingDim: summary.embeddingDim,
@@ -117,6 +123,21 @@ function getBanditSummary(state) {
         '[FEDERATION] observationCount > 0 but bandit A/b missing or wrong size — state inconsistent'
       );
     }
+    for (var ri = 0; ri < A.length; ri++) {
+      if (!Array.isArray(A[ri]) || A[ri].length !== expectedFeatureDim) {
+        throw new Error('[FEDERATION] bandit A is jagged at row ' + ri + ' — state inconsistent');
+      }
+      for (var cj = 0; cj < A[ri].length; cj++) {
+        if (typeof A[ri][cj] !== 'number' || !Number.isFinite(A[ri][cj])) {
+          throw new Error('[FEDERATION] bandit A has non-finite value at [' + ri + '][' + cj + '] — state inconsistent');
+        }
+      }
+    }
+    for (var bi = 0; bi < b.length; bi++) {
+      if (typeof b[bi] !== 'number' || !Number.isFinite(b[bi])) {
+        throw new Error('[FEDERATION] bandit b has non-finite value at [' + bi + '] — state inconsistent');
+      }
+    }
   } else {
     thompson.ensureBanditInitialized(state);
   }
@@ -131,10 +152,10 @@ function getBanditSummary(state) {
   };
 }
 
-/** Add syncId (content hash) to summary for deduplication. Call before exporting. */
+/** Add syncId (content hash) to summary for deduplication. Returns new object; does not mutate input. */
 function addSyncId(summary) {
-  summary.syncId = contentHash(summary);
-  return summary;
+  var syncId = contentHash(summary);
+  return Object.assign({}, summary, { syncId: syncId });
 }
 
 /**
