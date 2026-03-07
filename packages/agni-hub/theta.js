@@ -26,7 +26,7 @@ const {
   GRAPH_WEIGHTS_LOCAL, GRAPH_WEIGHTS_REGIONAL,
   MASTERY_SUMMARY, SCHEDULES, CURRICULUM_GRAPH, APPROVED_CATALOG,
   SERVE_DIR, LESSON_INDEX, PORT,
-  MIN_RESIDUAL, MASTERY_THRESHOLD, MIN_CONFIDENCE,
+  MIN_RESIDUAL, MIN_MLC, MASTERY_THRESHOLD, MIN_CONFIDENCE,
   MIN_LOCAL_SAMPLE_SIZE, MIN_LOCAL_EDGE_COUNT,
   thetaCache, accountsService
 } = ctx;
@@ -169,7 +169,7 @@ function computeLessonTheta(lesson, pseudoId, baseCosts, masterySummary, graphWe
   const COHERENCE_WEIGHT = 0.08;
   const coherenceBonus = Math.round(coherence * COHERENCE_WEIGHT * 1000) / 1000;
 
-  const theta = Math.round(Math.max(0.001, repBaseCost * repResidual - coherenceBonus) * 1000) / 1000;
+  const theta = Math.round(Math.max(MIN_MLC, repBaseCost * repResidual - coherenceBonus) * 1000) / 1000;
   return {
     lessonId: lesson.lessonId, slug: lesson.slug, title: lesson.title, theta,
     baseCost: Math.round(repBaseCost * 1000) / 1000,

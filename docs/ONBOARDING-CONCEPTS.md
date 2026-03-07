@@ -46,7 +46,7 @@ The **file format and protocol** for lessons: YAML source with `meta`, `ontology
 **Theta** is the **lesson ordering engine**: it decides which lessons to show next based on prerequisites and a **Marginal Learning Cost (MLC)** heuristic. Implemented in **`packages/agni-hub/theta.js`** (`@agni/hub`).
 
 - **Skill graph:** Lessons declare `requires` and `provides` skills. Theta builds a graph and only offers lessons whose prerequisites are met.
-- **MLC:** Among eligible lessons, theta orders by “cost” so that lessons that fit the student’s background (e.g. weaving vs farming) are preferred. Formula: θ = BaseCost − CohortDiscount.
+- **MLC:** Among eligible lessons, theta orders by “cost” so that lessons that fit the student’s background (e.g. weaving vs farming) are preferred. Formula: θ = BaseCost − CohortDiscount. MLC is clamped to [0, ∞) to avoid negative values. BaseCost ∈ [0, 1]; graph edge weights must be in [0, 1].
 - **Pure core:** `computeLessonOrder(...)` and `applyRecommendationOverride(...)` are pure functions; HTTP and index loading are at the edge.
 
 See **`docs/ARCHITECTURE.md`** §7 and **`docs/playbooks/sentry.md`** for Sentry → graph_weights → theta flow.

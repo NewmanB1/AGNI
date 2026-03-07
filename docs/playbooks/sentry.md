@@ -14,6 +14,8 @@ This playbook describes the **Sentry → graph_weights → theta** flow: how tel
 
 **Data flow:** Device/runtime → `POST /api/telemetry` (theta or Sentry) → events on disk → analysis run → `graph_weights.json` → theta reads it → lesson list sorted by θ.
 
+**MLC bounds:** Theta clamps MLC to [0, ∞) (floor `MIN_MLC` = 0.001). Edge `weight` and `confidence` must be in [0, 1] so MLC cannot become negative or degenerate. Sentry clamps edges; sync sanitizes incoming regional graph_weights before writing.
+
 ### Data Flow Options
 
 | Mode | Path | When to use |
@@ -127,4 +129,5 @@ So: **Sentry produces edges (prior → target, weight, confidence); theta uses t
 | Change edge thresholds (chi2, sample size) | `env-config.js`: AGNI_SENTRY_CHI2_THRESHOLD, AGNI_SENTRY_MIN_SAMPLE |
 | Change theta’s graph selection | `packages/agni-hub/theta.js`: getEffectiveGraphWeights, MIN_LOCAL_SAMPLE_SIZE, MIN_LOCAL_EDGE_COUNT |
 | Change residual formula | `packages/agni-hub/theta.js`: getResidualCostFactor, MIN_RESIDUAL, MIN_CONFIDENCE |
-| Validate graph_weights shape | `schemas/graph_weights.schema.json`; CI in `.github/workflows/validate.yml` (fixtures and Sentry output). |
+| Validate graph_weights shape | `schemas/graph-weights.schema.json`; CI in `.github/workflows/validate.yml` (fixtures and Sentry output). |
+| Sync graph_weights validation | `packages/agni-hub/sync.js` — incoming regional graph_weights are sanitized: edge weight/confidence clamped to [0,1], self-loops rejected. Ensures MLC cannot become degenerate. |

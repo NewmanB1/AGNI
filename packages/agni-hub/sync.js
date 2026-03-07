@@ -238,10 +238,22 @@ function importInbound(filePath) {
   // 2. Regional / higher-level graph weights
   if (incoming.graph_weights?.level && incoming.graph_weights.level !== 'village' &&
       Array.isArray(incoming.graph_weights.edges) && incoming.graph_weights.edges.length > 0) {
-    const level = incoming.graph_weights.level;
-    const levelPath = path.join(DATA_DIR, `graph-weights-${level}.json`);
-    fs.writeFileSync(levelPath, JSON.stringify(incoming.graph_weights, null, 2));
-    log.info('Stored graph weights', { level, path: levelPath, edges: incoming.graph_weights.edges.length });
+    const gw = incoming.graph_weights;
+    const sanitized = { ...gw, edges: [] };
+    for (const e of gw.edges) {
+      if (e && typeof e.from === 'string' && typeof e.to === 'string' && e.from !== e.to) {
+        const w = typeof e.weight === 'number' ? Math.max(0, Math.min(1, e.weight)) : 1;
+        const c = typeof e.confidence === 'number' ? Math.max(0, Math.min(1, e.confidence)) : 0;
+        sanitized.edges.push({ ...e, weight: w, confidence: c });
+      }
+    }
+    if (sanitized.edges.length > 0) {
+      const levelPath = path.join(DATA_DIR, `graph-weights-${gw.level}.json`);
+      fs.writeFileSync(levelPath, JSON.stringify(sanitized, null, 2));
+      log.info('Stored graph weights', { level: gw.level, path: levelPath, edges: sanitized.edges.length });
+    } else {
+      log.warn('Graph weights import: no valid edges after validation (weight/confidence must be in [0,1])');
+    }
   }
 
   // 3. Jurisdictional Curriculum Overrides
