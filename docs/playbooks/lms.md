@@ -11,7 +11,7 @@ Use this when changing adaptive selection, Rasch, embeddings, bandit, or federat
 
 | Goal | Files to touch |
 |------|-----------------|
-| Change state shape (Rasch, embedding, bandit) | `packages/agni-engine/index.js` (`buildDefaultState`, load/save). Update `src/types/index.d.ts` (`LMSState`, `RaschState`, `EmbeddingState`, `BanditState`). Add migration in `packages/agni-engine/` if persisting old state. |
+| Change state shape (Rasch, embedding, bandit) | `packages/agni-engine/index.js` (`buildDefaultState`, load/save). Update `src/types/index.d.ts` (`LMSState`, `RaschState`, `EmbeddingState`, `BanditState`). **Add migration in `packages/agni-engine/migrations.js`** — migrations are mandatory; do not rely on "delete state file" as an upgrade path. |
 | Change ability estimation | `src/engine/rasch.js` — `updateAbility()`. Contract: receives probeResults, updates state.rasch.students, returns gain proxy. |
 | Change student/lesson vectors | `src/engine/embeddings.js` — `ensureStudentVector`, `ensureLessonVector`, `updateEmbedding()`. Dimension is `state.embedding.dim`. |
 | Change bandit (selection or update) | `src/engine/thompson.js` — `selectLesson()`, `updateBandit()`, `ensureBanditInitialized()`. Invariant: `featureDim === embeddingDim * 2`; feature vector = concat(studentVec, lessonVec). |
@@ -21,7 +21,7 @@ Use this when changing adaptive selection, Rasch, embeddings, bandit, or federat
 ## Do not
 
 - Bypass `src/services/lms.js` from theta or HTTP; keep a single entry point for the engine.
-- Change `featureDim` or embedding dim without a migration path for existing `lms_state.json` (or document “delete state file” as the upgrade path).
+- Change `featureDim` or embedding dim without a migration in `packages/agni-engine/migrations.js`. "Delete state file" is not acceptable — village deployments have no internet; data loss would be permanent.
 - Add new dependencies inside `src/engine/` without ensuring Node 18+ compatibility (per `docs/ARCHITECTURE.md` and `package.json` engines — hub target).
 
 ## Types
