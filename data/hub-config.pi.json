@@ -30,7 +30,10 @@
     "  Bandit b (16): 128 B",
     "  Markov transitions (sparse): ~50 KB typical",
     "  Markov history (60 students × 10): ~5 KB",
-    "  Total LMS state: ~80 KB on disk, ~200 KB in memory",
-    "  Total Node.js process: ~30-50 MB RSS (Pi 3B+ has 1 GB)"
+    "  Total LMS state: ~80 KB on disk (JSON).",
+    "  In-memory: engine uses plain Array, not TypedArray — V8 object overhead",
+    "  (hidden classes, property descriptors) can make in-RAM 3–5× raw bytes.",
+    "  Expect ~0.6–1 MB for LMS objects; still fine on Pi 3B+ (1 GB).",
+    "  Total Node.js process: ~30–50 MB RSS"
   ]
 }
