@@ -77,11 +77,11 @@ describe('AUDIT-1: confidence scores reflect actual analysis, not hardcoded 0.5'
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('AUDIT-2: .d.ts parameter counts match .js implementations', () => {
-  it('thompson.selectLesson has 2 params, not 3', () => {
+  it('thompson.selectLesson has 2 or 3 params (opts optional)', () => {
     const thompson = require('../../src/engine/thompson');
-    assert.equal(
-      thompson.selectLesson.length, 2,
-      'thompson.selectLesson should take (state, studentId), not (state, studentId, lessonIds). The .d.ts declares a phantom third parameter.'
+    assert.ok(
+      thompson.selectLesson.length >= 2 && thompson.selectLesson.length <= 3,
+      'thompson.selectLesson takes (state, studentId) and optional (state, studentId, opts)'
     );
   });
 
@@ -493,6 +493,34 @@ describe('AUDIT-INVARIANT: thompson Bug 3 — fallback returns zero vector, not 
     var theta = thompson.sampleTheta(state);
     assert.deepEqual(theta, [0, 0, 0, 0], 'fallback must return zero vector, not b');
     assert.ok(math.dot(theta, [1, 1, 1, 1]) === 0, 'dot with zero vector must be 0');
+  });
+});
+
+describe('AUDIT-INVARIANT: thompson Bug 4 — selectLesson(readOnly) does not mutate state', () => {
+  const thompson = require('../../src/engine/thompson');
+  const embeddings = require('../../src/engine/embeddings');
+  const { createState } = require('../helpers/engine-state');
+
+  it('selectLesson with readOnly does not create new embedding vectors', () => {
+    const state = createState({ dim: 2 });
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    thompson.ensureBanditInitialized(state);
+    var studentKeysBefore = Object.keys(state.embedding.students).length;
+    var lessonKeysBefore = Object.keys(state.embedding.lessons).length;
+    thompson.selectLesson(state, 's1', { readOnly: true });
+    assert.equal(Object.keys(state.embedding.students).length, studentKeysBefore);
+    assert.equal(Object.keys(state.embedding.lessons).length, lessonKeysBefore);
+  });
+
+  it('selectLesson with readOnly throws when student has no embedding', () => {
+    const state = createState({ dim: 2 });
+    embeddings.ensureLessonVector(state, 'l1');
+    thompson.ensureBanditInitialized(state);
+    assert.throws(
+      () => thompson.selectLesson(state, 'new-student-no-vector', { readOnly: true }),
+      /readOnly.*no embedding/
+    );
   });
 });
 

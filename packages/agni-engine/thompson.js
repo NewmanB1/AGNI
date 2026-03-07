@@ -178,22 +178,40 @@ function sampleTheta(state) {
 /**
  * Select the lesson with the highest sampled expected gain.
  *
+ * SIDE EFFECT: By default, lazily initializes student and lesson embedding vectors
+ * if missing (mutates state.embedding). For read-only selection (e.g. dry-run,
+ * governance report), pass opts.readOnly: true — then skips lessons without
+ * vectors and throws if student vector is missing.
+ *
  * @param {import('../types').LMSState} state
  * @param {string} studentId
+ * @param {{ readOnly?: boolean }} [opts]
  * @returns {string|null}
  */
-function selectLesson(state, studentId) {
+function selectLesson(state, studentId, opts) {
   ensureBanditInitialized(state);
+
+  var readOnly = opts && opts.readOnly;
+  var studentVec = readOnly
+    ? embeddings.getStudentVector(state, studentId)
+    : embeddings.ensureStudentVector(state, studentId);
+  if (readOnly && !studentVec) {
+    throw new Error('[BANDIT] selectLesson(readOnly): student ' + studentId + ' has no embedding');
+  }
 
   var theta = sampleTheta(state);
   var lessons = state.embedding.lessons;
   var bestId = null;
   var bestScore = -Infinity;
 
-  var studentVec = embeddings.ensureStudentVector(state, studentId);
-
   Object.keys(lessons).forEach(function (lessonId) {
-    var lessonVec = embeddings.ensureLessonVector(state, lessonId);
+    var lessonVec = readOnly
+      ? embeddings.getLessonVector(state, lessonId)
+      : embeddings.ensureLessonVector(state, lessonId);
+    if (!lessonVec) {
+      if (readOnly) return;
+      lessonVec = embeddings.ensureLessonVector(state, lessonId);
+    }
     var x = banditFeature(studentVec, lessonVec);
     if (x.length !== state.bandit.featureDim) {
       throw new Error('[BANDIT] Feature vector length mismatch in selectLesson for ' + lessonId);

@@ -13,6 +13,28 @@
 var math = require('./math');
 
 /**
+ * Get student embedding vector without creating. Returns undefined if missing.
+ * @param {import('../types').LMSState} state
+ * @param {string} studentId
+ * @returns {number[]|undefined}
+ */
+function getStudentVector(state, studentId) {
+  var rec = state.embedding.students[studentId];
+  return rec && rec.vector ? rec.vector : undefined;
+}
+
+/**
+ * Get lesson embedding vector without creating. Returns undefined if missing.
+ * @param {import('../types').LMSState} state
+ * @param {string} lessonId
+ * @returns {number[]|undefined}
+ */
+function getLessonVector(state, lessonId) {
+  var rec = state.embedding.lessons[lessonId];
+  return rec && rec.vector ? rec.vector : undefined;
+}
+
+/**
  * Lazy-initialize student embedding vector if missing.
  * Initializes with small random noise to break symmetry.
  * @param {import('../types').LMSState} state
@@ -105,6 +127,8 @@ function updateEmbedding(state, studentId, lessonId, gain) {
 }
 
 module.exports = {
+  getStudentVector:    getStudentVector,
+  getLessonVector:     getLessonVector,
   ensureStudentVector: ensureStudentVector,
   ensureLessonVector:  ensureLessonVector,
   updateEmbedding:     updateEmbedding

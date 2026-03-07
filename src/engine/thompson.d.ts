@@ -6,7 +6,8 @@ export function ensureBanditInitialized(state: LMSState): void;
 export function sampleTheta(state: LMSState): number[];
 export function selectLesson(
   state: LMSState,
-  studentId: string
+  studentId: string,
+  opts?: { readOnly?: boolean }
 ): string | null;
 export function updateBandit(
   state: LMSState,
