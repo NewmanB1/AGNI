@@ -45,7 +45,7 @@ describe('selectLesson', () => {
     ensureLessonVector(state, 'L1');
     ensureLessonVector(state, 'L2');
     ensureLessonVector(state, 'L3');
-    const selected = selectLesson(state, 'stu1');
+    const selected = selectLesson(state, 'stu1', { eligibleLessonIds: ['L1', 'L2', 'L3'] });
     assert.ok(['L1', 'L2', 'L3'].includes(selected),
       'Expected one of L1/L2/L3, got: ' + selected);
   });
@@ -59,7 +59,7 @@ describe('selectLesson', () => {
   it('returns a string (not undefined or object)', () => {
     const state = createState({ dim: 4 });
     ensureLessonVector(state, 'only-lesson');
-    const selected = selectLesson(state, 'stu1');
+    const selected = selectLesson(state, 'stu1', { eligibleLessonIds: ['only-lesson'] });
     assert.equal(typeof selected, 'string');
     assert.equal(selected, 'only-lesson');
   });

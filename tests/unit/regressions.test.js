@@ -470,8 +470,8 @@ describe('AUDIT-14: sampleTheta gracefully handles near-singular A', () => {
         state.bandit.A[i][j] = 0;
       }
     }
-    // This should not throw — it should return the mean (which is b = [0,...0])
-    var result = thompson.selectLesson(state, 's1');
+    // This should not throw — pass eligibleLessonIds to avoid cold-start early return
+    var result = thompson.selectLesson(state, 's1', { eligibleLessonIds: ['l1'] });
     // selectLesson returns a lessonId or null, not a crash
     assert.equal(typeof result === 'string' || result === null, true);
   });
@@ -518,7 +518,7 @@ describe('AUDIT-INVARIANT: thompson Bug 4 — selectLesson(readOnly) does not mu
     thompson.ensureBanditInitialized(state);
     var studentKeysBefore = Object.keys(state.embedding.students).length;
     var lessonKeysBefore = Object.keys(state.embedding.lessons).length;
-    thompson.selectLesson(state, 's1', { readOnly: true });
+    thompson.selectLesson(state, 's1', { readOnly: true, eligibleLessonIds: ['l1'] });
     assert.equal(Object.keys(state.embedding.students).length, studentKeysBefore);
     assert.equal(Object.keys(state.embedding.lessons).length, lessonKeysBefore);
   });
@@ -528,7 +528,7 @@ describe('AUDIT-INVARIANT: thompson Bug 4 — selectLesson(readOnly) does not mu
     embeddings.ensureLessonVector(state, 'l1');
     thompson.ensureBanditInitialized(state);
     assert.throws(
-      () => thompson.selectLesson(state, 'new-student-no-vector', { readOnly: true }),
+      () => thompson.selectLesson(state, 'new-student-no-vector', { readOnly: true, eligibleLessonIds: ['l1'] }),
       /readOnly.*no embedding/
     );
   });
@@ -560,6 +560,23 @@ describe('AUDIT-INVARIANT: thompson Bug 5 — selectLesson respects eligibleLess
 
     var result = thompson.selectLesson(state, 's1', { eligibleLessonIds: [] });
     assert.strictEqual(result, null, 'empty eligible set must return null');
+  });
+});
+
+describe('AUDIT-INVARIANT: thompson Bug 11 — selectLesson cold-start warns and returns null without eligibleLessonIds', () => {
+  const thompson = require('../../src/engine/thompson');
+  const embeddings = require('../../src/engine/embeddings');
+  const { createState } = require('../helpers/engine-state');
+
+  it('returns null and logs warn when observationCount=0 and eligibleLessonIds omitted', () => {
+    const state = createState({ dim: 2 });
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    thompson.ensureBanditInitialized(state);
+    assert.equal(state.bandit.observationCount, 0);
+
+    var result = thompson.selectLesson(state, 's1');
+    assert.strictEqual(result, null);
   });
 });
 
@@ -662,7 +679,7 @@ describe('AUDIT-15: sampleTheta jitter does not mutate state.bandit.A', () => {
     var Abefore = state.bandit.A.map(function (row) { return row.slice(); });
 
     // sampleTheta may succeed via jitter or fall back to mean — either way A must not change
-    thompson.selectLesson(state, 's1');
+    thompson.selectLesson(state, 's1', { eligibleLessonIds: ['l1'] });
 
     for (var r = 0; r < n; r++) {
       for (var c = 0; c < n; c++) {

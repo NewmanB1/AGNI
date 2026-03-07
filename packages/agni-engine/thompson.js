@@ -12,6 +12,7 @@
 
 var math       = require('./math');
 var embeddings = require('./embeddings');
+var log        = require('@agni/utils/logger').createLogger('bandit');
 
 // ── Tuneable constants ────────────────────────────────────────────────────────
 
@@ -197,6 +198,13 @@ function selectLesson(state, studentId, opts) {
 
   var readOnly = opts && opts.readOnly;
   var eligibleLessonIds = opts && opts.eligibleLessonIds;
+
+  // Cold-start safety (Bug 11): when b=0, theta is pure noise. Without eligibleLessonIds,
+  // we would score all lessons and pick arbitrarily. Warn and return null.
+  if (state.bandit.observationCount === 0 && !Array.isArray(eligibleLessonIds)) {
+    log.warn('selectLesson: cold-start with no eligibleLessonIds — returning null (pass theta-filtered candidates)');
+    return null;
+  }
   var studentVec = readOnly
     ? embeddings.getStudentVector(state, studentId)
     : embeddings.ensureStudentVector(state, studentId);
