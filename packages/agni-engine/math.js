@@ -218,6 +218,11 @@ function invertSPD(A) {
     }
   }
 
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < i; j++) {
+      inv[i][j] = inv[j][i] = (inv[i][j] + inv[j][i]) * 0.5;
+    }
+  }
   return inv;
 }
 

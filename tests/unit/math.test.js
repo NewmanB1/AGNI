@@ -238,6 +238,16 @@ describe('invertSPD', () => {
     const nearSingular = [[1, 1], [1, 1 + 1e-11]];
     assert.throws(() => math.invertSPD(nearSingular), /not SPD/);
   });
+
+  it('returns exactly symmetric inverse (floating-point symmetrization)', () => {
+    const A = [[4, 2, 1], [2, 3, 0.5], [1, 0.5, 2]];
+    const Ainv = math.invertSPD(A);
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < i; j++) {
+        assert.strictEqual(Ainv[i][j], Ainv[j][i], `inv[${i}][${j}] must equal inv[${j}][${i}]`);
+      }
+    }
+  });
 });
 
 // ── randn ────────────────────────────────────────────────────────────────────
