@@ -7,10 +7,10 @@ const path = require('path');
 const http = require('http');
 
 const { loadHubConfig } = require('@agni/utils/hub-config');
-const { validateEnv } = require('@agni/utils/env-validate');
-const envConfig = require('@agni/utils/env-config');
-validateEnv();
 loadHubConfig(path.join(__dirname, '../../data'));
+const { validateEnv } = require('@agni/utils/env-validate');
+validateEnv();
+const envConfig = require('@agni/utils/env-config');
 
 const { Router } = require('@agni/utils/router');
 const ctx = require('./shared');

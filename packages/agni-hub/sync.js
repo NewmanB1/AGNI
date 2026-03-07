@@ -8,6 +8,9 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const { loadHubConfig } = require('@agni/utils/hub-config');
+loadHubConfig(path.join(__dirname, '../../data'));
+
 const crypto = require('crypto');
 const https = require('https');
 const http = require('http');
@@ -15,9 +18,6 @@ const { createLogger } = require('@agni/utils/logger');
 const envConfig = require('@agni/utils/env-config');
 
 // â”€â”€ Hub config bootstrap (F1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const { loadHubConfig } = require('@agni/utils/hub-config');
-loadHubConfig(path.join(__dirname, '../../data'));
-
 // â”€â”€ Configuration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const DATA_DIR = envConfig.dataDir;
 const EVENTS_DIR = path.join(DATA_DIR, 'events');

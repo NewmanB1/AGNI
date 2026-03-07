@@ -1153,6 +1153,36 @@ describe('AUDIT-INVARIANT: featureDim === embeddingDim * 2 enforced defensively'
   });
 });
 
+describe('AUDIT-DOCS: hub-config.pi.json regression guards (memory arithmetic, JS overhead, Node version, embeddingDim)', () => {
+  it('check-hub-config-pi passes — correct memory math, JS overhead caveat, Node version, embeddingDim', () => {
+    const script = path.resolve(__dirname, '../../scripts/check-hub-config-pi.js');
+    const result = spawnSync(process.execPath, [script], {
+      cwd: path.resolve(__dirname, '../..'),
+      encoding: 'utf8',
+    });
+    assert.equal(
+      result.status,
+      0,
+      `check-hub-config-pi must pass. Guards: Bug 1 memory arithmetic, Bug 2 JS overhead caveat, Bug 3 Node version, Bug 4 embeddingDim in config.\n${result.stderr || result.stdout}`
+    );
+  });
+});
+
+describe('AUDIT-INVARIANT: hub-config bootstrap — embeddingDim flows from config to engine', () => {
+  it('check-hub-config-bootstrap passes — CONFIG_KEYS has embeddingDim, loadHubConfig before env-config', () => {
+    const script = path.resolve(__dirname, '../../scripts/check-hub-config-bootstrap.js');
+    const result = spawnSync(process.execPath, [script], {
+      cwd: path.resolve(__dirname, '../..'),
+      encoding: 'utf8',
+    });
+    assert.equal(
+      result.status,
+      0,
+      `check-hub-config-bootstrap must pass. embeddingDim must be in CONFIG_KEYS; loadHubConfig before env-config in theta/sentry/sync.\n${result.stderr || result.stdout}`
+    );
+  });
+});
+
 describe('AUDIT-DOCS: Node version docs consistent (hub Node 18+, not 14–16)', () => {
   it('check-node-version-docs passes — no conflicting Node 14/16 hub target in docs', () => {
     const script = path.resolve(__dirname, '../../scripts/check-node-version-docs.js');

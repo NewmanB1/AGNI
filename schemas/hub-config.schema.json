@@ -4,8 +4,14 @@
   "title": "AGNI Hub Configuration",
   "description": "Per-hub configuration for ports, directories, and hub identity. All properties are optional; defaults are resolved by env-config.js at runtime.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "properties": {
+    "embeddingDim": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1024,
+      "description": "Embedding dimension for LMS engine (featureDim = embeddingDim * 2). Must match across federating hubs. Default 16 if omitted."
+    },
     "thetaPort": {
       "type": "integer",
       "minimum": 1,

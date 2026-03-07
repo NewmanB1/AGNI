@@ -13,9 +13,10 @@
   "servePort": 8080,
 
   "hubId": "village-pi-01",
+  "embeddingDim": 8,
 
   "_engine_notes": [
-    "AGNI_EMBEDDING_DIM=8: Halves the default (16) to reduce matrix sizes.",
+    "embeddingDim=8 (above): Halves the default (16) to reduce matrix sizes.",
     "  - Bandit A matrix: 16x16 instead of 32x32 (4x less memory and compute).",
     "  - Cholesky inversion: O(16^3)=4096 vs O(32^3)=32768 FLOPs per selection.",
     "  - Embedding vectors: 8 floats per student/lesson instead of 16.",
@@ -24,7 +25,7 @@
     "  With 60 students, the bandit accumulates evidence slowly, so faster",
     "  forgetting keeps the model responsive to changing student performance.",
     "",
-    "Memory budget for 60 students, 200 lessons (AGNI_EMBEDDING_DIM=8, featureDim=16):",
+    "Memory budget for 60 students, 200 lessons (embeddingDim=8, featureDim=16):",
     "  Rasch students: 60 × 16 B = 960 B (ability+variance, 2×float64 per RaschStudentState)",
     "  Rasch probes: 200 × 24 B = 4.7 KB",
     "  Embeddings (students): 60 × 8 floats × 8 B = 3.8 KB",
