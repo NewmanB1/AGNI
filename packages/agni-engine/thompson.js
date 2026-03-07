@@ -21,10 +21,9 @@ var embeddings = require('./embeddings');
 var PRIOR_REGULARIZATION = 0.01;
 
 /** Diagonal jitter added to A before retrying a failed Cholesky inversion.
- *  Sized to be larger than floating-point rounding noise but smaller than
- *  any legitimate eigenvalue. A single retry is intentional: if A is still
- *  non-SPD after this jitter the state is corrupt and we should throw, not
- *  loop, so the bug surfaces visibly. */
+ *  JITTER_LIGHT tried first to minimize mean bias (A+εI)⁻¹b vs A⁻¹b.
+ *  JITTER used if light jitter still fails. If both fail, fall back to b. */
+var JITTER_LIGHT = 1e-10;
 var JITTER = 1e-5;
 
 
@@ -152,18 +151,26 @@ function sampleTheta(state) {
     return math.addVec(mean, noise);
   }
 
+  function jitteredMatrix(eps) {
+    var Ac = new Array(n);
+    for (var i = 0; i < n; i++) {
+      Ac[i] = A[i].slice();
+      Ac[i][i] += eps;
+    }
+    return Ac;
+  }
+
   try {
     return solveAndSample(A);
   } catch (_e) {
-    var Acopy = new Array(n);
-    for (var i = 0; i < n; i++) {
-      Acopy[i] = A[i].slice();
-      Acopy[i][i] += JITTER;
-    }
     try {
-      return solveAndSample(Acopy);
+      return solveAndSample(jitteredMatrix(JITTER_LIGHT));
     } catch (_e2) {
-      return b.slice();
+      try {
+        return solveAndSample(jitteredMatrix(JITTER));
+      } catch (_e3) {
+        return b.slice();
+      }
     }
   }
 }
