@@ -17,7 +17,7 @@ AGNI is organized as an **npm workspaces monorepo**. Each package has a clear bo
 | [`packages/agni-runtime`](../packages/agni-runtime/) | `@agni/runtime` | Browser runtime: player, sensors, SVG factories (ES5, Chrome 44+) |
 | [`packages/agni-governance`](../packages/agni-governance/) | `@agni/governance` | Policy enforcement, compliance evaluation, catalog management |
 | [`packages/agni-hub`](../packages/agni-hub/) | `@agni/hub` | Village Hub server: HTTP routes, theta, accounts, telemetry |
-| [`portal/`](../portal/) | `agni-portal` | SvelteKit lesson editor and admin portal |
+| [`portal/`](../portal/) | — | Vanilla HTML/CSS/JS teacher and admin portal |
 
 **Dependency flow** (each package only depends on packages above it):
 

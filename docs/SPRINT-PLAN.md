@@ -113,7 +113,7 @@ Multi-sprint plan based on recent work. All six numbered sprints and all remedia
 | **P2** | **Parent dashboard** | **Done** | Portal `/parent/dashboard`; parent ID, link via invite code, children list, per-child progress (mastery, skills, overrides). |
 | **S1** | **Student device setup** | **Done** | Runtime `showHubSetup()` banner prompt for hub URL; persists to localStorage; skip option for offline mode. |
 | **S2** | **Student accessibility** | **Done** | Gear icon settings panel: font size, high contrast, reduced motion, haptic intensity. Persists in localStorage. ARIA dialog. |
-| **L1** | **Public launch** | **Partial** | MANIFESTO.md written. Release tag still needed. |
+| **L1** | **Public launch** | **Done** | MANIFESTO.md, CONTRIBUTING.md. Release tag v1.0.0 exists. |
 | **L2** | **Community onboarding** | **Done** | CONTRIBUTING.md (186 lines), GitHub issue templates (bug_report, feature_request, lesson_submission), labels.yml, dependabot.yml. |
 
 **Remaining:** L1 needs a release tag (`git tag v1.0.0`).

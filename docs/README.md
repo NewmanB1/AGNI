@@ -38,7 +38,7 @@ AGNI is an **npm workspaces monorepo**. Each package has its own README with det
 | [`@agni/runtime`](../packages/agni-runtime/) | Browser runtime (player, sensors, SVG factories — ES5) |
 | [`@agni/governance`](../packages/agni-governance/) | Policy enforcement and compliance evaluation |
 | [`@agni/hub`](../packages/agni-hub/) | Village Hub server (HTTP routes, theta, accounts) |
-| [`portal/`](../portal/) | SvelteKit lesson editor and admin portal |
+| [`portal/`](../portal/) | Vanilla HTML/CSS/JS teacher and admin portal |
 
 ## Architecture & Design
 

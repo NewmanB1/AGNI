@@ -16,6 +16,8 @@ Single ordered list of remaining improvement work, merged from HUB-IMPROVEMENT-P
 | SVG-TOOLS | 1.1–4.1 | Done (except 2.3 Registry sync deferred) |
 | OPPORTUNISTIC-PRECACHE | All | Done |
 | GOVERNANCE-IMPROVEMENT | All | Done |
+| LESSON-CREATOR | Phases 1–8 | Done |
+| SPRINT-PLAN | Sprints 1–6, L1 | Done |
 
 ---
 
@@ -59,23 +61,21 @@ Single ordered list of remaining improvement work, merged from HUB-IMPROVEMENT-P
 | 13 | **BACKLOG Phase E: Deferred** | BACKLOG | Manual | — |
 | | E1–E5: Base45/QR, log aggregator, Android test, SVG 2.3, export | | | |
 
-### Tier 4: Feature / Spec Work
+### Tier 4: Feature / Spec Work (14–15 Done)
 
-| # | Task | Source | Effort | Dependencies |
-|---|------|--------|--------|--------------|
-| 14 | **LESSON-CREATOR-IMPROVEMENT** | LESSON-CREATOR | Separate | — |
-| | WYSIWYG, generate-lesson --portal, curriculum-gen | | | |
-| 15 | **SPRINT-PLAN follow-on** | SPRINT | Per sprint | — |
-| | Remaining sprints in docs/SPRINT-PLAN.md | | | |
+| # | Task | Source | Status |
+|---|------|--------|--------|
+| 14 | **LESSON-CREATOR-IMPROVEMENT** | LESSON-CREATOR | Done — Phases 1–8 (WYSIWYG, generate-lesson --portal, curriculum-gen import-to-hub) |
+| 15 | **SPRINT-PLAN follow-on** | SPRINT | Done — Sprints 1–6, L1 v1.0.0 tag, remediation complete |
 
 ---
 
 ## Execution Order (Recommended)
 
-1. **1 → 2 → 3** (Tier 1 in order)
-2. **4, 5, 6, 7** (Tier 2; 4–7 can be parallel or sequential)
-3. **8–13** (Tier 3 as time allows)
-4. **14–15** (Tier 4; separate projects)
+1. **1 → 2 → 3** (Tier 1 in order) ✓
+2. **4, 5, 6, 7** (Tier 2) ✓
+3. **8–13** (Tier 3; 8–11 done; 12–13 deferred)
+4. **14–15** (Tier 4) ✓ — All tiers complete
 
 ---
 

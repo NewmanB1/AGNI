@@ -4,8 +4,7 @@
   "description": "AGNI: The compiler and runtime for the Open Lesson Standard (OLS).",
   "private": true,
   "workspaces": [
-    "packages/*",
-    "portal"
+    "packages/*"
   ],
   "bin": {
     "agni": "./src/cli.js"
@@ -73,6 +72,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "typecheck:services": "tsc -p tsconfig.services.json --noEmit",
     "init:data": "node scripts/init-data.js",
+    "promote:admin": "node scripts/promote-admin.js",
     "validate": "node scripts/validate-all.js",
     "sneakernet": "node scripts/sneakernet.js",
     "test": "node --test tests/unit/*.test.js",
@@ -88,6 +88,7 @@
     "validate:lesson": "node src/utils/lesson-validator.js",
     "codegen:validate-schemas": "node scripts/codegen-validate-schemas.js",
     "dev:vite": "npx serve -l 5174 --no-port-switching dist",
+    "portal": "npx serve portal -l 3000",
     "test:es5": "node scripts/check-es5.js",
     "verify:dead-files": "node scripts/check-dead-files.js",
     "verify:dts": "node scripts/check-dts-arity.js",

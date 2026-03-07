@@ -38,9 +38,9 @@
   color: "c5def5"
   description: "Compiler, builders, and IR generation"
 
-- name: "area: portal"
+  - name: "area: portal"
   color: "bfdadc"
-  description: "SvelteKit portal UI"
+  description: "Vanilla HTML/CSS/JS portal UI"
 
 - name: "area: governance"
   color: "fef2c0"

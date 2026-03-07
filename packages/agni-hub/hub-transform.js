@@ -244,7 +244,7 @@ async function _doCompile(slug, loaded, options) {
 
   // Build factory dependency list (same logic as html.js Step 6)
   const RUNTIME_VERSION = require('../../package.json').version;
-  const factoryDeps     = [{ file: 'polyfills.js', version: RUNTIME_VERSION }, { file: 'binary-utils.js', version: RUNTIME_VERSION }, { file: 'shared-runtime.js', version: RUNTIME_VERSION }];
+  const factoryDeps     = [{ file: 'polyfills.js', version: RUNTIME_VERSION }, { file: 'binary-utils.js', version: RUNTIME_VERSION }, { file: 'shared-runtime.js', version: RUNTIME_VERSION }, { file: 'integrity.js', version: RUNTIME_VERSION }];
   const manifest        = (ir.inferredFeatures && ir.inferredFeatures.factoryManifest) || [];
   manifest.forEach(function (filename) {
     factoryDeps.push({ file: filename, version: RUNTIME_VERSION });
@@ -266,18 +266,18 @@ async function _doCompile(slug, loaded, options) {
   // Serialize and sign with canonical JSON for cross-platform consistency [R10 P1.5]
   const canonicalData = canonicalJSON(ir);
   const signature     = signContent(canonicalData, options.deviceId, options.privateKey);
-  const lessonScript = lessonAssembly.buildLessonScript(ir, {
+  // Generate a per-request nonce for the CSP <meta> tag.
+  // LESSON_DATA changes every compilation so a hash would have to be
+  // recomputed per request — a nonce is equivalent and simpler here.
+  const nonce = generateNonce();
+  const nonceBootstrap = 'window.AGNI_CSP_NONCE=' + JSON.stringify(nonce) + ';';
+  const lessonScript = nonceBootstrap + '\n' + lessonAssembly.buildLessonScript(ir, {
     signature:       signature,
     publicKeySpki:   options.publicKeySpki != null ? options.publicKeySpki : '',
     deviceId:        options.deviceId || '',
     factoryLoaderJs: factoryLoaderJs,
     playerJs:        playerJs
   });
-
-  // Generate a per-request nonce for the CSP <meta> tag.
-  // LESSON_DATA changes every compilation so a hash would have to be
-  // recomputed per request ΓÇö a nonce is equivalent and simpler here.
-  const nonce = generateNonce();
   const html = _buildPwaShell(ir, styles, lessonScript, nonce);
 
   const isUpdate = !!_lessonCache[slug];

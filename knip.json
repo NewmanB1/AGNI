@@ -1,9 +1,8 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
   "entry": [
-    "portal/src/routes/**/+*.{js,ts,svelte,jsm,server.js,server.ts}",
-    "portal/src/hooks.{js,ts,server.js,server.ts}",
-    "portal/src/app.html",
+    "portal/js/main.js",
+    "portal/index.html",
     "player.js",
     "src/runtime/ui/player.js",
     "src/runtime/integrity/integrity.js",
@@ -27,16 +26,15 @@
     "src/cli.js"
   ],
   "project": [
-    "portal/src/**/*.{js,ts,svelte,jsm}",
+    "portal/**/*.{js,html}",
     "src/**/*.{js,ts}",
     "server/**/*.{js}",
     "hub-tools/**/*.{js}",
-    "!portal/.svelte-kit/**",
+    "packages/**/*.{js,ts}",
     "!**/*.d.ts",
     "!**/*.test.{js,ts}"
   ],
   "ignoreFiles": [
-    "portal/.svelte-kit/**",
     "**/sw.js",
     "**/service-worker.js",
     "server/sw.js",

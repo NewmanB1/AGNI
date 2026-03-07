@@ -12,7 +12,7 @@ The system has three main parts:
 
 1. **Compiler** (`src/`) — YAML → IR → HTML/JSON pipeline
 2. **Village Hub** (`packages/agni-hub/`, `hub-tools/` wrappers, `server/`) — Node.js server that compiles and serves lessons, runs the adaptive ordering engine (theta), and collects telemetry. Canonical code in `@agni/hub` (packages/agni-hub/).
-3. **Portal** (`portal/`) — SvelteKit web app for teachers, administrators, and governance
+3. **Portal** (`portal/`) — Vanilla HTML/CSS/JS web app for teachers, administrators, and governance
 
 ---
 
@@ -42,9 +42,8 @@ npm run verify:all
 # Terminal 1: start the hub
 node hub-tools/theta.js
 
-# Terminal 2: start the portal against the hub
-cd portal
-VITE_HUB_URL=http://localhost:8082 npm run dev
+# Terminal 2: serve the portal (use ?hub=http://localhost:8082 or set Hub URL in Settings)
+npx serve portal -l 3000
 ```
 
 ---
@@ -77,7 +76,7 @@ Student phone ◄─── WiFi ◄─── Village Hub (Raspberry Pi)
 | `packages/agni-hub/` | Canonical hub: `theta.js`, `sentry.js`, `routes/`, `context/`, hub-transform, PWA. Use `@agni/hub` in code. |
 | `hub-tools/` | CLI wrappers that delegate to packages/agni-hub (e.g. `node hub-tools/theta.js`) |
 | `server/` | Legacy `hub-transform.js`; hub transform is in packages/agni-hub/ |
-| `portal/` | SvelteKit teacher/admin portal |
+| `portal/` | Vanilla HTML/CSS/JS teacher/admin portal |
 | `schemas/` | JSON Schema definitions for OLS, graph weights, governance policy |
 | `tests/` | Unit and integration tests (Node.js `test` runner) |
 | `scripts/` | CI verification scripts |

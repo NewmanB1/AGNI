@@ -8,6 +8,7 @@ const http = require('http');
 
 const { loadHubConfig } = require('@agni/utils/hub-config');
 const { validateEnv } = require('@agni/utils/env-validate');
+const envConfig = require('@agni/utils/env-config');
 validateEnv();
 loadHubConfig(path.join(__dirname, '../../data'));
 
@@ -440,6 +441,18 @@ function startApi(port) {
     const sendResponse = ctx.createResponseSender(req, res, { requestId });
     const [urlPath, queryStr] = req.url.split('?');
     const qs = Object.fromEntries(new URLSearchParams(queryStr || ''));
+
+    // CORS preflight: allow portal (and other configured origins) to call API
+    if (req.method === 'OPTIONS') {
+      const corsOrigin = envConfig.corsOrigin || '*';
+      res.setHeader('Access-Control-Allow-Origin', corsOrigin);
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+      res.setHeader('Access-Control-Max-Age', '86400');
+      res.writeHead(204);
+      res.end();
+      return;
+    }
 
     res.on('finish', () => {
       const durationMs = Number(process.hrtime.bigint() - startTime) / 1e6;

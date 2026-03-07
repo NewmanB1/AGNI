@@ -504,7 +504,7 @@
   S.sensorBridge = {
     needsPermissionGesture: needsPermissionGesture,
 
-    start:             function () { start(); _adapters.forEach(function (a) { if (a.start) a.start(_pub); }); },
+    start:             function () { var p = start(); _adapters.forEach(function (a) { if (a.start) a.start(_pub); }); return p; },
     stop:              function () { stop();  _adapters.forEach(function (a) { if (a.stop)  a.stop();       }); },
     isActive:          isActive,
     requestPermission: requestPermission,

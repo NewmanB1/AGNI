@@ -40,6 +40,7 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 | LMS engine (Rasch, bandit) | `packages/agni-engine/` |
 | Hub server (on-demand PWA) | `packages/agni-hub/` (hub-transform.js, sw.js, pwa/) |
 | Theta (lesson ordering) | `packages/agni-hub/theta.js` |
+| Portal (teacher/admin UI) | `portal/` (vanilla HTML/CSS/JS, no build) |
 | Schemas | `schemas/*.json`, `@ols/schema` |
 | Shared types | `src/types/index.d.ts` |
 | API contract | `docs/api-contract.md` |

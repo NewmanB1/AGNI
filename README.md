@@ -45,19 +45,17 @@ The compiled output lands in `dist/`. Open `dist/gravity.html` in any browser â€
 
 ### Running the portal against the hub
 
-The teacher portal (`portal/`) can talk to a live hub for theta, LMS, governance, and authoring APIs. Start the hub (theta) and the portal with the hub URL set:
+The teacher portal (`portal/`) is plain HTML/CSS/JS â€” no build step. Start the hub (theta) and serve the portal:
 
 ```bash
-# Terminal 1: build the LMS engine (required for bandit selection and sneakernet), then start the hub
-npm run build:engine
+# Terminal 1: start the hub
 node hub-tools/theta.js
 
-# Terminal 2: run the portal with the hub URL (from repo root)
-cd portal
-VITE_HUB_URL=http://localhost:8082 npm run dev
+# Terminal 2: serve the portal (from repo root)
+npx serve portal
 ```
 
-Then open the portal in your browser. With `VITE_HUB_URL` set, the UI uses the real hub APIs instead of mock data. See `portal/src/lib/api.ts` and `docs/api-contract.md` for the API contract.
+Then open http://localhost:3000 (or the port shown). Set the Hub URL in Settings, or add `?hub=http://localhost:8082` to the URL. See `portal/js/api.js` and `docs/api-contract.md` for the API contract.
 
 ---
 

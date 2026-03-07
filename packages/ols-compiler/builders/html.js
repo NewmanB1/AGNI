@@ -65,6 +65,7 @@ async function buildHtml(lessonData, options) {
   if (fs.existsSync(polyfillsSource)) factoryFilesToCopy.push('polyfills.js');
   if (fs.existsSync(binaryUtilsSource)) factoryFilesToCopy.push('binary-utils.js');
   factoryFilesToCopy.push('shared-runtime.js');
+  factoryFilesToCopy.push('integrity.js');
 
   const manifest = (ir.inferredFeatures && ir.inferredFeatures.factoryManifest) || [];
   manifest.forEach(function (filename) {
@@ -113,15 +114,15 @@ async function buildHtml(lessonData, options) {
       Buffer.from(publicKeySpki, 'base64').length + ' bytes)');
   }
 
-  const lessonScript = lessonAssembly.buildLessonScript(ir, {
+  const nonce = generateNonce();
+  const nonceBootstrap = 'window.AGNI_CSP_NONCE=' + JSON.stringify(nonce) + ';';
+  const lessonScript = nonceBootstrap + '\n' + lessonAssembly.buildLessonScript(ir, {
     signature:       signature,
     publicKeySpki:   publicKeySpki || '',
     deviceId:        options.deviceId || '',
     factoryLoaderJs: factoryLoaderJs,
     playerJs:        playerJs
   });
-
-  const nonce = generateNonce();
   const cspMeta = buildCspMeta(nonce);
   const nonceAttr = ' nonce="' + nonce + '"';
 

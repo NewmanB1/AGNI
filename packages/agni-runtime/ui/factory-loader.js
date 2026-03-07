@@ -231,6 +231,7 @@
     var script = document.createElement('script');
     script.dataset.loaderSrc = url;
     script.textContent = text;
+    if (global.AGNI_CSP_NONCE) script.setAttribute('nonce', global.AGNI_CSP_NONCE);
 
     try {
       document.head.appendChild(script);

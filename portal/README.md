@@ -1,56 +1,43 @@
 # AGNI Portal
 
-SvelteKit web application for teachers, administrators, and governance authorities to manage Village Hub operations.
+Plain HTML + CSS + JavaScript. No framework, no build step. Runs well on old phones and slow networks.
 
-## Pages
+## Run
 
-| Route | Purpose |
-|-------|---------|
-| `/hub` | Teacher hub — lesson management, student overview |
-| `/students` | Student roster, progress tracking |
-| `/groups` | Student group management and lesson assignment |
-| `/governance` | Governance authority tools — policy, catalog |
-| `/learn` | Student-facing lesson view |
-| `/settings` | Hub configuration |
-| `/admin/accounts` | Creator account management |
-| `/admin/hub` | Hub status and diagnostics |
-| `/admin/sync` | Federation sync controls |
-| `/admin/flags` | Feature flag management |
-| `/admin/deploy` | Deployment tools |
-| `/admin/onboarding` | First-run setup wizard |
-
-## Development
+Serve the directory over HTTP (ES modules require it). **Run from the AGNI repo root**:
 
 ```bash
-# From the repo root — start the hub first
-node hub-tools/theta.js
-
-# In a separate terminal — start the portal dev server
-cd portal
-VITE_HUB_URL=http://localhost:8082 npm run dev
+cd /path/to/AGNI
+npx serve portal -l 3000
 ```
 
-With `VITE_HUB_URL` set, the portal uses real hub APIs (theta, LMS, governance, authoring) instead of mock data. Without it, the portal runs in standalone mode.
+Then open http://localhost:3000. Use hash routes (e.g. http://localhost:3000/#/author/login).
 
-## Scripts
+To connect to the hub, set the Hub URL in Settings, or pass `?hub=http://localhost:8082` in the URL.
 
-| Command | Purpose |
-|---------|---------|
-| `npm run dev` | Start dev server (port 5173) |
-| `npm run build` | Production build (static adapter) |
-| `npm run preview` | Preview production build |
-| `npm run check` | TypeScript + Svelte type checking |
-| `npm run lint` | ESLint (zero warnings policy) |
-| `npm run test` | Run Vitest unit tests |
+## Structure
 
-## Tech Stack
+- `index.html` - Single-page app shell
+- `css/main.css` - Styles
+- `js/main.js` - Bootstrap, routing, nav
+- `js/router.js` - Hash-based router
+- `js/api.js` - Hub API client
+- `js/auth.js` - Creator auth
+- `js/pages/` - Page renderers (home, settings, author, stub)
 
-- **SvelteKit** with static adapter (no server-side rendering — the hub is the server)
-- **TypeScript** throughout
-- **Vite** for bundling
-- API client in `src/lib/api.ts` — all hub communication goes through `authGet()` / `authPost()`
+## Routes
 
-## References
+| Hash | Page |
+|------|------|
+| `#/` | Home |
+| `#/settings` | Hub URL, language |
+| `#/author` | Author landing (login if needed) |
+| `#/author/login` | Creator login/register |
+| `#/author/new` | New lesson (simplified) |
+| `#/author/:slug/edit` | Edit lesson (simplified) |
+| `#/hub`, `#/groups`, etc. | Stub placeholders |
 
-- **Hub API contract:** `docs/api-contract.md`
-- **Architecture:** `docs/ARCHITECTURE.md`
+## Notes
+
+- Lesson authoring is simplified; features will be added incrementally.
+- Hash-based routing (`#/path`) works with static file serving.

@@ -6,7 +6,7 @@ Use this when you need to know where TypeScript vs JavaScript is used and how ty
 
 - **LMS engine (`src/engine/`)** — Written in **TypeScript** (`.ts`). Compiled to `.js` via `npm run build:engine` (tsconfig.engine.json). The hub and theta load the compiled `src/engine/index.js`. Types are in the same repo; keep `src/types/index.d.ts` and engine types in sync when changing state or observation shapes.
 - **Rest of core** — **JavaScript** (Node and browser). Types are provided by **`src/types/index.d.ts`** (hand-maintained) and JSDoc where helpful. No TypeScript compilation for compiler, hub-tools, or runtime.
-- **Portal** — SvelteKit/TypeScript in `portal/` with its own tsconfig.
+- **Portal** — Vanilla HTML/CSS/JS in `portal/`. No build step; static files served directly.
 
 ## Why the mix?
 

@@ -52,7 +52,7 @@ const config = {
   servePort:          validPort(intVal('AGNI_SERVE_PORT', 8080), 'AGNI_SERVE_PORT'),
   sentryPort:         validPort(intVal('AGNI_SENTRY_PORT', 8081), 'AGNI_SENTRY_PORT'),
 
-  corsOrigin:         strVal('AGNI_CORS_ORIGIN', 'null'),
+  corsOrigin:         strVal('AGNI_CORS_ORIGIN', '*'),
   hubId:              strVal('AGNI_HUB_ID', 'hub-local'),
 
   approvedCatalog:    strVal('AGNI_APPROVED_CATALOG', path.join(DATA_DIR, 'approved-catalog.json')),
