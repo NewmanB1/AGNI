@@ -192,7 +192,7 @@ The compiler supports dual-mode distribution:
 | `servePort` | hub-transform |
 | `sentryPort` | sentry, telemetry routes |
 | `hubId` | sync |
-| `usbPath` | sync, admin routes (validate path prefix; wrong value = arbitrary write risk) |
+| `usbPath` | sync, admin routes — see *usbPath contract* below |
 | `embeddingDim` | engine migrations, engine index |
 | `forgetting` | engine migrations (bandit, embedding) |
 | `embeddingLr`, `embeddingReg` | engine migrations |
@@ -207,6 +207,15 @@ The compiler supports dual-mode distribution:
 | `sentryChi2Threshold`, `sentryMinSample`, `sentryJaccardThreshold`, `sentryMinClusterSize`, `sentryForward` | sentry |
 | `markovWeight`, `pagerankWeight` | engine index (selectBestLesson) |
 | `logLevel` | logger |
+
+**usbPath contract (arbitrary-write guard):** Wrong `usbPath` allows sync to write anywhere on disk. Enforcement:
+
+| Contract item | Value |
+|---------------|-------|
+| Allowed prefix | Fixed `/mnt/usb` (path.resolve). See `env-config.USB_SAFE_ROOT`. |
+| Validators | env-config (at load: validates AGNI_USB_PATH); sync.js (at startup: validates effective USB_PATH including CLI override); admin sync-test; admin config save |
+| Rejection | env-config/sync: throws at startup. Admin API: 400, `{ error: message }` or `{ ok: false, message }` |
+| Check | `path.resolve(p).indexOf(USB_SAFE_ROOT + path.sep) === 0` or `=== USB_SAFE_ROOT` |
 
 **Pi deployment:** Use `data/hub-config.pi.json` as a template; copy to `data/hub-config.json` or set `AGNI_DATA_DIR` to point at a dir containing hub-config.json. See `scripts/check-hub-config-pi.js` and `docs/RUN-ENVIRONMENTS.md`.
 

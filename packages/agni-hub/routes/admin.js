@@ -46,6 +46,12 @@ function register(router, ctx) {
           Object.prototype.hasOwnProperty.call(cfg, 'prototype')) {
         return sendResponse(400, { error: 'Payload contains forbidden keys' });
       }
+      if (cfg.usbPath != null && cfg.usbPath !== '') {
+        const ec = require('@agni/utils/env-config');
+        try { ec.validUsbPath(cfg.usbPath, 'usbPath'); } catch (e) {
+          return sendResponse(400, { error: e.message });
+        }
+      }
       const cfgPath = path.resolve(path.join(__dirname, '../../../data/hub-config.json'));
       const existing = await loadJSONAsync(cfgPath, {});
       const merged = Object.create(null);
@@ -60,7 +66,8 @@ function register(router, ctx) {
     });
   }));
 
-  const USB_PATH_PREFIX = process.env.AGNI_USB_PATH || '/mnt/usb/';
+  const envConfig = require('@agni/utils/env-config');
+  const USB_SAFE_ROOT = path.resolve(envConfig.USB_SAFE_ROOT || '/mnt/usb');
 
   const PRIVATE_IP_RANGES = [
     /^127\./,
@@ -90,9 +97,9 @@ function register(router, ctx) {
       const { transport, homeUrl, usbPath } = payload;
       const t = transport || 'starlink';
       if (t === 'usb') {
-        const p = path.resolve(usbPath || path.join(USB_PATH_PREFIX, 'agni-sync'));
-        if (!p.startsWith(path.resolve(USB_PATH_PREFIX))) {
-          return sendResponse(400, { ok: false, message: 'USB path must be under ' + USB_PATH_PREFIX });
+        const p = path.resolve(usbPath || path.join(USB_SAFE_ROOT, 'agni-sync'));
+        if (p !== USB_SAFE_ROOT && p.indexOf(USB_SAFE_ROOT + path.sep) !== 0) {
+          return sendResponse(400, { ok: false, message: 'USB path must be under ' + USB_SAFE_ROOT });
         }
         if (!fs.existsSync(p)) {
           try {

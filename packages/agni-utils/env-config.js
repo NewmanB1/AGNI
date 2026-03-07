@@ -39,6 +39,29 @@ function validRange(value, min, max, name) {
   return value;
 }
 
+/** Safe root for USB sync paths. Any usbPath must resolve under this to prevent arbitrary write. */
+var USB_SAFE_ROOT = path.resolve('/mnt/usb');
+
+/**
+ * Validate that a path is under the USB safe root (/mnt/usb).
+ * Throws if path is non-empty and resolves outside the safe root.
+ * @param {string} p - Path to validate (e.g. usbPath or effective USB_PATH)
+ * @param {string} name - Label for error message
+ * @returns {string} The path if valid
+ * @throws {Error} If path is outside safe root
+ */
+function validUsbPath(p, name) {
+  if (!p || typeof p !== 'string' || p.trim() === '') return p;
+  var resolved = path.resolve(p);
+  var root = path.resolve(USB_SAFE_ROOT);
+  if (resolved !== root && resolved.indexOf(root + path.sep) !== 0) {
+    throw new Error(
+      (name || 'AGNI_USB_PATH') + ' must be under ' + root + ', got: ' + p
+    );
+  }
+  return p;
+}
+
 const DATA_DIR = strVal('AGNI_DATA_DIR', path.join(__dirname, '../../data'));
 
 const config = {
@@ -73,7 +96,7 @@ const config = {
 
   syncTransport:      strVal('AGNI_SYNC_TRANSPORT', ''),
   homeUrl:            strVal('AGNI_HOME_URL', ''),
-  usbPath:            strVal('AGNI_USB_PATH', ''),
+  usbPath:            validUsbPath(strVal('AGNI_USB_PATH', ''), 'AGNI_USB_PATH'),
 
   analyseAfter:       intVal('AGNI_ANALYSE_AFTER', 50),
   analyseCron:        strVal('AGNI_ANALYSE_CRON', '02:00'),
@@ -94,4 +117,6 @@ const config = {
   logLevel:           strVal('AGNI_LOG_LEVEL', 'info'),
 };
 
+config.USB_SAFE_ROOT = USB_SAFE_ROOT;
+config.validUsbPath = validUsbPath;
 module.exports = config;

@@ -34,6 +34,7 @@ const args = parseArgs(process.argv.slice(2));
 const TRANSPORT = args['transport'] || envConfig.syncTransport || 'starlink';
 const HOME_URL = (args['home-url'] || envConfig.homeUrl || '').replace(/\/$/, '');
 const USB_PATH = args['usb-path'] || envConfig.usbPath || '/mnt/usb/agni-sync';
+envConfig.validUsbPath(USB_PATH, 'usb-path');
 const HUB_ID = envConfig.hubId;
 const IMPORT_FILE = args['import'] || null;
 
