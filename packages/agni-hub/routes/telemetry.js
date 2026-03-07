@@ -69,7 +69,7 @@ function register(router, ctx) {
                 .map(s => ({ probeId: s.stepId || lessonId + '_' + s.type, correct: !!s.passed }));
             }
             if (probeResults.length > 0) {
-              try { lmsEngine.recordObservation(pseudoId, lessonId, probeResults); }
+              try { await lmsEngine.recordObservation(pseudoId, lessonId, probeResults); }
               catch (e) { log.warn('LMS observation failed', { pseudoId, error: e.message }); }
             }
           }

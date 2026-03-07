@@ -20,12 +20,18 @@ function register(router, ctx) {
   })));
 
   router.post('/api/lms/observation', requireHubKey(requireLms((req, res, { sendResponse }) => {
-    handleJsonBody(req, sendResponse, (payload) => {
+    handleJsonBody(req, sendResponse, async (payload) => {
       if (!payload.studentId || !payload.lessonId || !Array.isArray(payload.probeResults)) {
         return sendResponse(400, { error: 'studentId, lessonId, probeResults required' });
       }
-      lmsEngine.recordObservation(payload.studentId, payload.lessonId, payload.probeResults);
-      sendResponse(200, { ok: true });
+      try {
+        await lmsEngine.recordObservation(payload.studentId, payload.lessonId, payload.probeResults);
+        return sendResponse(200, { ok: true });
+      } catch (err) {
+        const msg = err && err.message ? err.message : String(err);
+        if (/maxStudents|maxLessons/.test(msg)) return sendResponse(403, { error: msg });
+        throw err;
+      }
     });
   })));
 

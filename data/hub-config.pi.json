@@ -12,9 +12,13 @@
   "thetaPort": 8082,
   "servePort": 8080,
 
-  "hubId": "village-pi-01",
+  "hubId": "village-pi-CHANGE_ME",
+  "hubIdNote": "Replace CHANGE_ME with a unique per-hub ID before deploy. Duplicate hubIds corrupt sync attribution and USB filenames.",
   "embeddingDim": 8,
   "forgetting": 0.96,
+  "maxStudents": 60,
+  "maxLessons": 200,
+  "capacityNote": "Memory budget assumes maxStudents and maxLessons. Runtime enforced: engine and accounts reject when at cap.",
 
   "_engine_notes": [
     "embeddingDim=8 (above): Halves the default (16) to reduce matrix sizes.",
@@ -25,6 +29,10 @@
     "forgetting=0.96 (above): Slightly more aggressive forgetting for small cohorts. Valid range [0.5,1]; values outside corrupt bandit decay.",
     "  With 60 students, the bandit accumulates evidence slowly, so faster",
     "  forgetting keeps the model responsive to changing student performance.",
+    "",
+    "hubId (above): Must be unique per hub. If copying this config to a second Pi, change it.",
+    "",
+    "maxStudents/maxLessons (above): Budget assumes these limits. Runtime enforced.",
     "",
     "Memory budget for 60 students, 200 lessons (embeddingDim=8, featureDim=16):",
     "  Rasch students: 60 × 16 B = 960 B (ability+variance, 2×float64 per RaschStudentState)",

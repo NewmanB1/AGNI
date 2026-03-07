@@ -318,6 +318,10 @@ async function createStudent(opts) {
   opts = opts || {};
   return withLock(studentsPath, async function() {
     const data = await loadStudents();
+    const maxStudents = envConfig.maxStudents;
+    if (maxStudents > 0 && data.students.length >= maxStudents) {
+      return { error: 'maxStudents limit reached (' + maxStudents + '). Cannot add new student.' };
+    }
     const pseudoId = generatePseudoId();
     const ph = await hashPin(opts.pin);
     const student = buildStudentRecord({
@@ -338,6 +342,16 @@ async function createStudentsBulk(opts) {
   if (!Array.isArray(opts.names) || opts.names.length === 0) return { error: 'At least one name is required' };
   return withLock(studentsPath, async function() {
     const data = await loadStudents();
+    const maxStudents = envConfig.maxStudents;
+    if (maxStudents > 0) {
+      const wouldExceed = data.students.length + opts.names.length > maxStudents;
+      if (data.students.length >= maxStudents) {
+        return { error: 'maxStudents limit reached (' + maxStudents + '). Cannot add new students.' };
+      }
+      if (wouldExceed) {
+        return { error: 'maxStudents limit would be exceeded (' + maxStudents + '). Current: ' + data.students.length + ', requested: ' + opts.names.length + '.' };
+      }
+    }
     const created = [];
     for (let i = 0; i < opts.names.length; i++) {
       const pseudoId = generatePseudoId();

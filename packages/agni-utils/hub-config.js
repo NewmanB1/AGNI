@@ -12,6 +12,8 @@ const path = require('path');
 const CONFIG_KEYS = [
   ['embeddingDim', 'AGNI_EMBEDDING_DIM'],
   ['forgetting', 'AGNI_FORGETTING'],
+  ['maxStudents', 'AGNI_MAX_STUDENTS'],
+  ['maxLessons', 'AGNI_MAX_LESSONS'],
   ['dataDir', 'AGNI_DATA_DIR'],
   ['serveDir', 'AGNI_SERVE_DIR'],
   ['thetaPort', 'AGNI_THETA_PORT'],

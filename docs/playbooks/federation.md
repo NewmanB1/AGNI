@@ -20,7 +20,7 @@ This playbook documents **sync contracts** and **graph_weights deployment** so o
 ### 2.1 When Sync Runs
 
 - **CLI:** `node hub-tools/sync.js` (or with `--transport=starlink --home-url=<url>` / `--transport=usb --usb-path=<path>`).
-- **Inputs:** `AGNI_DATA_DIR/events/*.ndjson` (unsynced files), optional `AGNI_HUB_ID`, `AGNI_HOME_URL` (Starlink), `AGNI_USB_PATH` (sneakernet).
+- **Inputs:** `AGNI_DATA_DIR/events/*.ndjson` (unsynced files), optional `AGNI_HUB_ID`, `AGNI_HOME_URL` (Starlink), `AGNI_USB_PATH` (sneakernet). **hubId must be unique per hub** — duplicate IDs corrupt sync attribution and USB filenames.
 
 ### 2.2 Package Shape (buildPackage)
 

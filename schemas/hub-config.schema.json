@@ -18,6 +18,16 @@
       "maximum": 1,
       "description": "Exponential decay for bandit/embedding (0.5–1). Values outside [0.5,1] corrupt decay; engine rejects at runtime. Default 0.98 if omitted."
     },
+    "maxStudents": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Cap on students. 0 = no limit. Engine and accounts reject when at cap. For Pi budget use 60."
+    },
+    "maxLessons": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Cap on lessons. 0 = no limit. Engine rejects when at cap. For Pi budget use 200."
+    },
     "thetaPort": {
       "type": "integer",
       "minimum": 1,

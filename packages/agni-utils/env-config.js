@@ -88,6 +88,9 @@ const config = {
   markovWeight:       floatVal('AGNI_MARKOV_WEIGHT', 0.15),
   pagerankWeight:     floatVal('AGNI_PAGERANK_WEIGHT', 0.10),
 
+  maxStudents:        intVal('AGNI_MAX_STUDENTS', 0),
+  maxLessons:         intVal('AGNI_MAX_LESSONS', 0),
+
   logLevel:           strVal('AGNI_LOG_LEVEL', 'info'),
 };
 

@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * Regression guards for hub-config.pi.json (audit bugs 1–4).
+ * Regression guards for hub-config.pi.json (audit bugs 1–7).
  *
  * Bug 1: Memory arithmetic must be correct (960 B Rasch, 3.8 KB / 13 KB embeddings, 2.0 KB Bandit A).
  * Bug 2: _engine_notes must caveat JS object overhead (plain Array, V8, 3–5×).
@@ -41,6 +41,24 @@ if (typeof cfg.forgetting !== 'number') {
 }
 if (!notes.includes('0.5') && !notes.includes('[0.5') && !notes.includes('0.5,')) {
   errors.push('_engine_notes must document forgetting valid range [0.5,1].');
+}
+
+// Bug 7: maxStudents/maxLessons must be explicit; document that no enforcement exists
+if (typeof cfg.maxStudents !== 'number' || cfg.maxStudents < 1) {
+  errors.push('maxStudents must be present and >= 1. Budget assumes this limit; exceeding silently exceeds memory.');
+}
+if (typeof cfg.maxLessons !== 'number' || cfg.maxLessons < 1) {
+  errors.push('maxLessons must be present and >= 1. Budget assumes this limit; exceeding silently exceeds memory.');
+}
+if (!notes.includes('Runtime') && !notes.includes('runtime') && !notes.includes('enforced') && !notes.includes('enforcement')) {
+  errors.push('_engine_notes must document maxStudents/maxLessons enforcement (or lack thereof).');
+}
+
+// Bug 6: Template must use a placeholder so deployers replace it (duplicate hubIds corrupt sync)
+if (typeof cfg.hubId !== 'string' || cfg.hubId.trim().length === 0) {
+  errors.push('hubId must be present and non-empty.');
+} else if (!/CHANGE_ME|REPLACE|__REPLACE__|<REPLACE>/i.test(cfg.hubId)) {
+  errors.push('hubId must contain a placeholder (e.g. CHANGE_ME) so deployers replace it. Hardcoded values (e.g. village-pi-01) cause collisions when config is copied to a second Pi.');
 }
 
 // Bug 3: Node version must be documented

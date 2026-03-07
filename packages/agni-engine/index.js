@@ -201,10 +201,18 @@ function seedLesson(lessonId, difficulty, skill) {
  * @param {{ lessonId: string, difficulty: number, skill: string }[]} lessons
  */
 async function seedLessons(lessons) {
+  var maxLes = envConfig.maxLessons;
   var seeded = 0;
   for (var i = 0; i < lessons.length; i++) {
     var entry  = lessons[i];
     var wasNew = !_state.embedding.lessons[entry.lessonId];
+    if (wasNew && maxLes > 0) {
+      var nLes = Object.keys(_state.embedding.lessons).length;
+      if (nLes >= maxLes) {
+        log.warn('seedLessons: maxLessons limit reached, skipping remaining lessons', { maxLessons: maxLes });
+        break;
+      }
+    }
     seedLesson(entry.lessonId, entry.difficulty, entry.skill);
     if (wasNew) seeded++;
   }
@@ -256,10 +264,13 @@ function selectBestLesson(studentId, candidates, ontologyMap) {
   var fullLessons     = _state.embedding.lessons;
   var filteredLessons = {};
 
+  var maxLes = envConfig.maxLessons;
   for (var i = 0; i < candidates.length; i++) {
     var id = candidates[i];
     if (fullLessons[id]) {
       filteredLessons[id] = fullLessons[id];
+    } else if (maxLes > 0 && Object.keys(fullLessons).length >= maxLes) {
+      // At capacity, skip new lessons (they cannot be added)
     } else {
       embeddings.ensureLessonVector(_state, id);
       filteredLessons[id] = _state.embedding.lessons[id];
@@ -273,7 +284,18 @@ function selectBestLesson(studentId, candidates, ontologyMap) {
   var scoringState = Object.assign({}, _state, { embedding: scoringEmbedding });
 
   var thetaSample = sampleThetaForScoring(scoringState);
-  var studentVec = embeddings.ensureStudentVector(scoringState, studentId);
+  var maxStu = envConfig.maxStudents;
+  var studentVec;
+  if (maxStu > 0 && !scoringState.embedding.students[studentId]) {
+    var nStu = Object.keys(scoringState.embedding.students).length;
+    if (nStu >= maxStu) {
+      studentVec = Array(scoringState.embedding.dim).fill(0);
+    } else {
+      studentVec = embeddings.ensureStudentVector(scoringState, studentId);
+    }
+  } else {
+    studentVec = embeddings.ensureStudentVector(scoringState, studentId);
+  }
 
   var thompsonScores = {};
   for (var ti = 0; ti < candidates.length; ti++) {
@@ -378,6 +400,24 @@ function applyObservation(state, observation) {
  * @param {{ probeId: string, correct: boolean }[]} probeResults
  */
 async function recordObservation(studentId, lessonId, probeResults) {
+  var maxStu = envConfig.maxStudents;
+  var maxLes = envConfig.maxLessons;
+  if (maxStu > 0) {
+    var nStu = Object.keys(_state.rasch.students).length;
+    var isNewStudent = !_state.rasch.students[studentId];
+    if (isNewStudent && nStu >= maxStu) {
+      log.warn('recordObservation rejected: maxStudents limit reached', { maxStudents: maxStu, current: nStu });
+      throw new Error('[ENGINE] maxStudents limit reached (' + maxStu + '). Cannot add new student.');
+    }
+  }
+  if (maxLes > 0) {
+    var nLes = Object.keys(_state.embedding.lessons).length;
+    var isNewLesson = !_state.embedding.lessons[lessonId];
+    if (isNewLesson && nLes >= maxLes) {
+      log.warn('recordObservation rejected: maxLessons limit reached', { maxLessons: maxLes, current: nLes });
+      throw new Error('[ENGINE] maxLessons limit reached (' + maxLes + '). Cannot add new lesson.');
+    }
+  }
   _state = applyObservation(_state, { studentId: studentId, lessonId: lessonId, probeResults: probeResults });
   await saveState(_state);
 }

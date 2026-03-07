@@ -1163,7 +1163,7 @@ describe('AUDIT-DOCS: hub-config.pi.json regression guards (memory arithmetic, J
     assert.equal(
       result.status,
       0,
-      `check-hub-config-pi must pass. Guards: Bug 1 memory arithmetic, Bug 2 JS overhead caveat, Bug 3 Node version, Bug 4 embeddingDim, Bug 5 forgetting.\n${result.stderr || result.stdout}`
+      `check-hub-config-pi must pass. Guards: Bug 1–7 (memory, JS overhead, Node version, embeddingDim, forgetting, hubId, maxStudents/maxLessons).\n${result.stderr || result.stdout}`
     );
   });
 });
@@ -1186,6 +1186,54 @@ describe('AUDIT-INVARIANT: AGNI_FORGETTING valid range [0.5,1] enforced at start
       env: { ...process.env, AGNI_FORGETTING: '1.5' },
     });
     assert.notEqual(result.status, 0, 'env-config must reject AGNI_FORGETTING=1.5');
+  });
+});
+
+describe('AUDIT-INVARIANT: maxStudents/maxLessons enforced at runtime', () => {
+  it('recordObservation throws when maxStudents exceeded', async () => {
+    const os = require('os');
+    const tmpDir = path.join(os.tmpdir(), 'agni-cap-test-' + Date.now());
+    require('fs').mkdirSync(tmpDir, { recursive: true });
+    const dataPath = path.join(__dirname, '../..').replace(/\\/g, '\\\\');
+    const script = '(async function() {' +
+      "process.env.AGNI_DATA_DIR='" + tmpDir.replace(/\\/g, '\\\\') + "';" +
+      "process.env.AGNI_MAX_STUDENTS='2';" +
+      "process.env.AGNI_MAX_LESSONS='100';" +
+      "const { loadHubConfig } = require('@agni/utils/hub-config');" +
+      "loadHubConfig(require('path').join('" + dataPath + "', 'data'));" +
+      "const engine = require('@agni/engine');" +
+      "await engine.recordObservation('s1', 'L1', [{ probeId: 'p1', correct: true }]);" +
+      "await engine.recordObservation('s2', 'L1', [{ probeId: 'p1', correct: false }]);" +
+      "try { await engine.recordObservation('s3', 'L1', [{ probeId: 'p1', correct: true }]); process.exit(1); }" +
+      "catch (e) { if (/maxStudents/.test(e.message)) process.exit(0); process.exit(2); }" +
+      '})();';
+    const result = spawnSync(process.execPath, ['-e', script], {
+      cwd: path.resolve(__dirname, '../..'),
+      encoding: 'utf8',
+      env: { ...process.env, AGNI_DATA_DIR: tmpDir, AGNI_MAX_STUDENTS: '2', AGNI_MAX_LESSONS: '100' },
+    });
+    require('fs').rmSync(tmpDir, { recursive: true, force: true });
+    assert.equal(result.status, 0, 'recordObservation must throw when maxStudents exceeded. ' + (result.stderr || result.stdout));
+  });
+
+  it('createStudent returns error when maxStudents exceeded', async () => {
+    const os = require('os');
+    const tmpDir = path.join(os.tmpdir(), 'agni-accounts-cap-' + Date.now());
+    require('fs').mkdirSync(tmpDir, { recursive: true });
+    process.env.AGNI_DATA_DIR = tmpDir;
+    process.env.AGNI_MAX_STUDENTS = '1';
+    delete require.cache[require.resolve('@agni/utils/env-config')];
+    delete require.cache[require.resolve('@agni/services/accounts')];
+    const { createAccounts } = require('@agni/services/accounts');
+    const accounts = createAccounts({ dataDir: tmpDir });
+    const r1 = await accounts.createStudent({ displayName: 'A', pin: '1234' });
+    assert.ok(r1.ok, 'first createStudent should succeed');
+    const r2 = await accounts.createStudent({ displayName: 'B', pin: '5678' });
+    assert.ok(r2.error && /maxStudents/.test(r2.error), 'second createStudent should return maxStudents error');
+    process.env.AGNI_DATA_DIR = require('@agni/utils/env-config').dataDir;
+    delete require.cache[require.resolve('@agni/utils/env-config')];
+    delete require.cache[require.resolve('@agni/services/accounts')];
+    require('fs').rmSync(tmpDir, { recursive: true, force: true });
   });
 });
 

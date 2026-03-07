@@ -50,6 +50,10 @@ function register(router, ctx) {
         pin: payload.pin,
         createdBy: creator.id
       });
+      if (result.error) {
+        const code = /maxStudents/.test(result.error) ? 403 : 400;
+        return sendResponse(code, result);
+      }
       return sendResponse(201, result);
     });
   }));
@@ -61,7 +65,10 @@ function register(router, ctx) {
         pin: payload.pin,
         createdBy: creator.id
       });
-      if (result.error) return sendResponse(400, result);
+      if (result.error) {
+        const code = /maxStudents/.test(result.error) ? 403 : 400;
+        return sendResponse(code, result);
+      }
       return sendResponse(201, result);
     });
   }));

@@ -27,6 +27,14 @@ if (!hubConfigSrc.includes("['forgetting', 'AGNI_FORGETTING']") &&
     !hubConfigSrc.includes('["forgetting", "AGNI_FORGETTING"]')) {
   errors.push('hub-config.js CONFIG_KEYS must include forgetting → AGNI_FORGETTING.');
 }
+if (!hubConfigSrc.includes("['maxStudents', 'AGNI_MAX_STUDENTS']") &&
+    !hubConfigSrc.includes('["maxStudents", "AGNI_MAX_STUDENTS"]')) {
+  errors.push('hub-config.js CONFIG_KEYS must include maxStudents → AGNI_MAX_STUDENTS.');
+}
+if (!hubConfigSrc.includes("['maxLessons', 'AGNI_MAX_LESSONS']") &&
+    !hubConfigSrc.includes('["maxLessons", "AGNI_MAX_LESSONS"]')) {
+  errors.push('hub-config.js CONFIG_KEYS must include maxLessons → AGNI_MAX_LESSONS.');
+}
 
 // 2. Bootstrap order: loadHubConfig before env-config
 function checkBootstrap(filePath, label) {
