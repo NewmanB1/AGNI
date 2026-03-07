@@ -214,6 +214,13 @@ function migrateLMSState(raw, opts) {
     markov: markovState
   };
 
+  // Hard invariant: featureDim === embedding.dim * 2
+  if (state.bandit.featureDim !== state.embedding.dim * 2) {
+    throw new Error(
+      '[MIGRATIONS] featureDim invariant violated: bandit.featureDim=' + state.bandit.featureDim +
+      ' but embedding.dim*2=' + (state.embedding.dim * 2)
+    );
+  }
   return { state: state, migrated: migrated };
 }
 

@@ -53,6 +53,26 @@ function banditFeature(studentVec, lessonVec) {
 }
 
 
+// ── Invariant (hard constraint) ───────────────────────────────────────────────
+
+/**
+ * Assert featureDim === embeddingDim * 2. Throws if violated.
+ * Call defensively at any engine entry point that touches bandit or feature vectors.
+ *
+ * @param {import('../types').LMSState} state
+ * @throws {Error}
+ */
+function assertFeatureDimInvariant(state) {
+  var embeddingDim = state.embedding.dim;
+  var expectedFeatureDim = embeddingDim * 2;
+  if (state.bandit.featureDim !== expectedFeatureDim) {
+    throw new Error(
+      '[BANDIT] featureDim invariant violated: state.bandit.featureDim=' + state.bandit.featureDim +
+      ' but embedding.dim*2=' + expectedFeatureDim + '. State may be corrupt.'
+    );
+  }
+}
+
 // ── Initialization ────────────────────────────────────────────────────────────
 
 /**
@@ -71,16 +91,8 @@ function banditFeature(studentVec, lessonVec) {
  * @param {import('../types').LMSState} state
  */
 function ensureBanditInitialized(state) {
-  var embeddingDim      = state.embedding.dim;
-  var expectedFeatureDim = embeddingDim * 2;
-
-  if (state.bandit.featureDim !== expectedFeatureDim) {
-    throw new Error(
-      '[BANDIT] featureDim mismatch: state.bandit.featureDim is ' + state.bandit.featureDim +
-      ' but embedding.dim * 2 = ' + expectedFeatureDim + '. ' +
-      'State file may be corrupt or from a different configuration.'
-    );
-  }
+  assertFeatureDimInvariant(state);
+  var expectedFeatureDim = state.bandit.featureDim;
 
   if (!state.bandit.A || state.bandit.A.length !== expectedFeatureDim) {
     state.bandit.A = math.identity(expectedFeatureDim).map(function (row) {
@@ -218,8 +230,9 @@ function updateBandit(state, studentId, lessonId, gain) {
 }
 
 module.exports = {
-  ensureBanditInitialized: ensureBanditInitialized,
-  selectLesson:            selectLesson,
-  updateBandit:            updateBandit
+  assertFeatureDimInvariant: assertFeatureDimInvariant,
+  ensureBanditInitialized:   ensureBanditInitialized,
+  selectLesson:             selectLesson,
+  updateBandit:             updateBandit
 };
 

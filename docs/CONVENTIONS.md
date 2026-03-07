@@ -6,7 +6,7 @@ These rules keep the codebase navigable and safe to change with tooling and LLM 
 
 - **One clear role per module.** If a file grows beyond a single responsibility, split it (e.g. player → player/state, player/navigation).
 - **Re-exports in `src/`:** When adding or editing a thin re-export file, use the standard format: `'use strict';` + `// Phase 1: Re-export from <package> (canonical ownership)` + `module.exports = require('...');`. See `.cursor/rules/canonical-ownership.md`.
-- **Public API via index.** Each logical module (`src/compiler`, `src/engine`, `src/governance`, `@agni/services`) exposes a small surface via an `index.js` (or `index.ts`). New public functions should be exported from that index so they're discoverable; hide helpers inside the module.
+- **Public API via index.** Each logical module (`src/compiler`, `src/engine`, `src/governance`, `@agni/services`) exposes a small surface via an `index.js`. New public functions should be exported from that index so they're discoverable; hide helpers inside the module.
 - **Top-down entry points.** Callers (CLI, hub, portal) use the **services layer** (`@agni/services` canonical; `src/services/` are shims) or documented HTTP API; they do not require compiler/engine/governance internals directly.
 
 ## Functions and state
@@ -84,7 +84,7 @@ Use these instead of ad-hoc mtime checks or inline escape functions.
 ## Summary for LLMs
 
 1. Prefer small, pure functions; no hidden globals in Node.
-2. Export new public API from the module's `index.js` / `index.ts`.
+2. Export new public API from the module's `index.js`.
 3. Add a header comment and JSDoc for public functions.
 4. Service-layer functions return `{ error }` on failure; internal functions throw.
 5. Use middleware wrappers (`adminOnly`, `requireLms`, `withRateLimit`) for route guards.

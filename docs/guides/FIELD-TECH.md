@@ -6,7 +6,7 @@ How to deploy, configure, maintain, and troubleshoot an AGNI Village Hub.
 
 ## What is a Village Hub?
 
-A Village Hub is a local server (typically a Raspberry Pi) that:
+A Village Hub is a Raspberry Pi server that:
 
 - Compiles and serves lessons to student phones over WiFi
 - Runs the adaptive ordering engine (theta) that personalizes lesson paths

@@ -5,13 +5,26 @@
  * end-to-end: health check, student creation, lesson listing, theta ranking,
  * governance catalog, and learning paths.
  *
- * Before running: start the server on AGNI_TEST_PORT (default 8082).
- *   AGNI_DATA_DIR=./data node hub-tools/theta.js
+ * Setup:
+ *   1. npm run init:data
+ *   2. AGNI_HUB_API_KEY=e2e-test-hub-key node hub-tools/theta.js
+ *      (or: npm run start:hub with AGNI_HUB_API_KEY set)
  *
  * Run:
- *   npx playwright test
+ *   AGNI_HUB_API_KEY=e2e-test-hub-key npx playwright test
  */
+import * as fs from 'fs';
+import * as path from 'path';
 import { test, expect } from '@playwright/test';
+
+const adminTokenPath = path.join(__dirname, '.e2e-admin-token');
+function getAdminToken(): string {
+  try {
+    return fs.readFileSync(adminTokenPath, 'utf8').trim();
+  } catch {
+    return '';
+  }
+}
 
 test.describe('Health & infrastructure', () => {
   test('GET /health returns ok', async ({ request }) => {
@@ -36,31 +49,11 @@ test.describe('Health & infrastructure', () => {
 });
 
 test.describe('Student account lifecycle', () => {
-  const uniqueEmail = `e2e-${Date.now()}@test.agni`;
-  let token = '';
-
-  test('register a new creator account', async ({ request }) => {
-    const res = await request.post('/api/auth/register', {
-      data: { name: 'E2E Test Creator', email: uniqueEmail, password: 'testPass1234' }
-    });
-    expect(res.status()).toBe(201);
-    const body = await res.json();
-    expect(body.ok).toBeTruthy();
-    token = body.token || '';
-  });
-
-  test('login with the new creator account', async ({ request }) => {
-    const res = await request.post('/api/auth/login', {
-      data: { email: uniqueEmail, password: 'testPass1234' }
-    });
-    expect(res.ok()).toBeTruthy();
-    const body = await res.json();
-    expect(body.ok).toBeTruthy();
-    expect(body.token).toBeTruthy();
-    token = body.token;
-  });
-
-  test('create a student account', async ({ request }) => {
+  test('create a student account (admin)', async ({ request }) => {
+    const token = getAdminToken();
+    if (!token) {
+      test.skip(true, 'Run npm run init:data first; globalSetup creates admin');
+    }
     const res = await request.post('/api/accounts/student', {
       headers: { Authorization: `Bearer ${token}` },
       data: { displayName: 'E2E Student' }
@@ -103,7 +96,10 @@ test.describe('Lesson & theta ranking', () => {
   });
 
   test('GET /api/theta/all returns all students', async ({ request }) => {
-    const res = await request.get('/api/theta/all');
+    const token = getAdminToken();
+    const res = await request.get('/api/theta/all', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
     expect(typeof body.total).toBe('number');
@@ -117,14 +113,20 @@ test.describe('Lesson & theta ranking', () => {
 
 test.describe('Governance', () => {
   test('GET /api/governance/catalog returns approved catalog', async ({ request }) => {
-    const res = await request.get('/api/governance/catalog');
+    const token = getAdminToken();
+    const res = await request.get('/api/governance/catalog', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
     expect(Array.isArray(body.lessonIds)).toBeTruthy();
   });
 
   test('GET /api/governance/report returns report', async ({ request }) => {
-    const res = await request.get('/api/governance/report');
+    const token = getAdminToken();
+    const res = await request.get('/api/governance/report', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
     expect(res.ok()).toBeTruthy();
   });
 });
@@ -138,8 +140,14 @@ test.describe('Learning paths & diagnostics', () => {
   });
 
   test('POST /api/learning-paths creates a path', async ({ request }) => {
+    const token = getAdminToken();
     const res = await request.post('/api/learning-paths', {
-      data: { name: 'E2E Test Path', skills: ['arithmetic', 'fractions'] }
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      data: {
+        name: 'E2E Test Path',
+        description: 'E2E test path description',
+        skills: ['arithmetic', 'fractions']
+      }
     });
     expect(res.status()).toBe(201);
     const body = await res.json();

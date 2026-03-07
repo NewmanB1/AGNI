@@ -115,7 +115,7 @@ Result: After first lesson, new lessons are tiny (no duplicated code), and bandw
 
 ## 3. The Compiler & Hub Architecture (agni-core + Village Hub)
 
-The compiler is a modular Node.js application running on the Village Hub (e.g. Raspberry Pi).
+The compiler is a modular Node.js application running on the Village Hub (Raspberry Pi).
 It transforms the YAML source into executable artifacts based on the requesting device's capabilities.
 
 ### 3.1 Modular Structure
@@ -460,6 +460,7 @@ prescribing specific lesson content.
 | — | Refactor backlog: LMS migrations, IR/runtime types, runtimeManifest, binary utils, engine `.d.ts`, sneakernet script | Complete |
 
 - **Hardware:** Android 6.0+ (Marshmallow), <2GB RAM, intermittent power. Runtime and hot paths use ES5-friendly patterns (e.g. no Map/Set in critical paths, Promise-based async) for broad device support.
+- **Village Hub (Node.js):** Node 18+ required (see `package.json` engines). Older Node (e.g. 14–16 on legacy Pi images) is not supported — native `fetch`, `structuredClone`, and other Node 18+ features are used by hub and engine code.
 - **Network:** 100% Offline capability. Intermittent "Village Hub" updates via Satellite/LoRa/USB/SD.
 - **Input:** Haptic/Sensor-first (Accelerometer, Vibration) + Touch.
 - **Trust:** Hub-and-Spoke Distribution for content (security), Mesh for signaling (interaction).

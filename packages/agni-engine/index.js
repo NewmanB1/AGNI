@@ -26,7 +26,7 @@
 //   to .tmp then renamed over the real path so a process crash mid-write cannot
 //   corrupt the state file.
 //
-// Target: Node.js 18+. CommonJS.
+// Target: Node.js 18+. CommonJS. ES5 syntax only (no TypeScript, no build step).
 // ─────────────────────────────────────────────────────────────────────────────
 
 'use strict';
@@ -360,7 +360,7 @@ function sampleThetaForScoring(state) {
  * @returns {import('../types').LMSState}
  */
 function applyObservation(state, observation) {
-  var next = structuredClone(state);
+  var next = JSON.parse(JSON.stringify(state));
   var gain = rasch.updateAbility(next, observation.studentId, observation.probeResults);
   embeddings.updateEmbedding(next, observation.studentId, observation.lessonId, gain);
   thompson.updateBandit(next, observation.studentId, observation.lessonId, gain);
@@ -413,6 +413,13 @@ async function mergeRemoteSummary(remote) {
   var local  = federation.getBanditSummary(_state);
   var merged = federation.mergeBanditSummaries(local, remote);
 
+  var expectedFeatureDim = _state.embedding.dim * 2;
+  if (merged.mean.length !== expectedFeatureDim) {
+    throw new Error(
+      '[ENGINE] mergeRemoteSummary: merged mean length ' + merged.mean.length +
+      ' !== embedding.dim*2=' + expectedFeatureDim
+    );
+  }
   _state.bandit.A                = merged.precision;
   _state.bandit.b                = math.matVec(merged.precision, merged.mean);
   _state.bandit.observationCount = merged.sampleSize;

@@ -2,7 +2,7 @@
 
 /**
  * Factory for building clean LMSState objects for engine tests.
- * Avoids coupling test setup to the full engine/index.ts boot path.
+ * Avoids coupling test setup to the full engine/index.js boot path.
  */
 
 /**

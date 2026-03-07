@@ -77,6 +77,10 @@ jobs:
         run: npm run verify:schema-sync
       - name: Verify canonical package ownership
         run: npm run verify:canonical
+      - name: Verify Node version docs (hub Node 18+, not 14–16)
+        run: npm run verify:node-version-docs
+      - name: Verify engine uses JS only (no TypeScript)
+        run: npm run verify:engine-no-ts
       - name: Verify unauthed routes (hub auth)
         run: npm run verify:unauthed-routes
       - name: Verify version sync

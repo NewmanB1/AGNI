@@ -10,6 +10,8 @@
 
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
+const { spawnSync } = require('child_process');
+const path = require('path');
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Feature inference: confidence scores must reflect actual keyword density
@@ -1039,10 +1041,10 @@ describe('R16-C1: withLock is used in all mutating route handlers', () => {
 
 describe('AUDIT-9: student listing does not expose sensitive fields', () => {
   it('listStudents returns sanitized records', async () => {
-    const path = require('path');
+    const pathMod = require('path');
     const fs = require('fs');
     const os = require('os');
-    const dir = path.join(os.tmpdir(), 'agni-accounts-test-' + Date.now());
+    const dir = pathMod.join(os.tmpdir(), 'agni-accounts-test-' + Date.now());
     fs.mkdirSync(dir, { recursive: true });
     const saved = process.env.AGNI_DATA_DIR;
     process.env.AGNI_DATA_DIR = dir;
@@ -1066,5 +1068,75 @@ describe('AUDIT-9: student listing does not expose sensitive fields', () => {
       delete require.cache[require.resolve('../../src/utils/env-config')];
       delete require.cache[require.resolve('@agni/utils/env-config')];
     }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Node version docs: hub target must be Node 18+, not Node 14–16 (Raspberry Pi)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-DOCS: engine uses JS only (no TypeScript, no compile step)', () => {
+  it('check-engine-no-ts passes — no index.ts or build:engine in non-archive docs', () => {
+    const script = path.resolve(__dirname, '../../scripts/check-engine-no-ts.js');
+    const result = spawnSync(process.execPath, [script], {
+      cwd: path.resolve(__dirname, '../..'),
+      encoding: 'utf8',
+    });
+    assert.equal(
+      result.status,
+      0,
+      `check-engine-no-ts must pass. Engine is ES5 JS only; no TypeScript.\n${result.stderr || result.stdout}`
+    );
+  });
+});
+
+describe('AUDIT-INVARIANT: featureDim === embeddingDim * 2 enforced defensively', () => {
+  const thompson = require('../../packages/agni-engine/thompson');
+  const federation = require('../../packages/agni-engine/federation');
+  const migrations = require('../../packages/agni-engine/migrations');
+
+  it('assertFeatureDimInvariant throws on mismatch', () => {
+    const bad = {
+      rasch: {},
+      embedding: { dim: 8 },
+      bandit: { featureDim: 99, A: [], b: [], forgetting: 0.98, observationCount: 0 }
+    };
+    assert.throws(() => thompson.assertFeatureDimInvariant(bad), /featureDim.*embedding\.dim/);
+  });
+
+  it('getBanditSummary throws on invariant violation', () => {
+    const bad = {
+      rasch: {},
+      embedding: { dim: 8 },
+      bandit: { featureDim: 99, A: [[1]], b: [1], forgetting: 0.98, observationCount: 0 }
+    };
+    assert.throws(() => federation.getBanditSummary(bad), /featureDim.*embedding\.dim|embedding\.dim\*2/);
+  });
+
+  it('mergeBanditSummaries throws on odd-length local mean', () => {
+    const oddLocal = { mean: [1, 2, 3], precision: [[1,0,0],[0,1,0],[0,0,1]], sampleSize: 1 };
+    const remote = { mean: [1, 2, 3], precision: [[1,0,0],[0,1,0],[0,0,1]], sampleSize: 1 };
+    assert.throws(() => federation.mergeBanditSummaries(oddLocal, remote), /Invalid local summary|mean\.length/);
+  });
+
+  it('migrateLMSState output satisfies invariant', () => {
+    const { state } = migrations.migrateLMSState({});
+    assert.equal(state.bandit.featureDim, state.embedding.dim * 2);
+    thompson.assertFeatureDimInvariant(state);
+  });
+});
+
+describe('AUDIT-DOCS: Node version docs consistent (hub Node 18+, not 14–16)', () => {
+  it('check-node-version-docs passes — no conflicting Node 14/16 hub target in docs', () => {
+    const script = path.resolve(__dirname, '../../scripts/check-node-version-docs.js');
+    const result = spawnSync(process.execPath, [script], {
+      cwd: path.resolve(__dirname, '../..'),
+      encoding: 'utf8',
+    });
+    assert.equal(
+      result.status,
+      0,
+      `check-node-version-docs must pass. ARCHITECTURE must state Node 18+ for hub; no Node 14/14-16 target in non-archive docs.\n${result.stderr || result.stdout}`
+    );
   });
 });

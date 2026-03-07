@@ -27,7 +27,7 @@ describe('ensureBanditInitialized', () => {
   it('throws on featureDim mismatch', () => {
     const state = createState({ dim: 4 });
     state.bandit.featureDim = 99;
-    assert.throws(() => ensureBanditInitialized(state), /featureDim mismatch/);
+    assert.throws(() => ensureBanditInitialized(state), /featureDim (invariant violated|mismatch)/);
   });
 
   it('is idempotent', () => {

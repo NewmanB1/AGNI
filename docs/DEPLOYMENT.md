@@ -1,6 +1,6 @@
 # Deployment Guide: Village Hub on Raspberry Pi
 
-How to set up AGNI on a Raspberry Pi (or any Linux single-board computer) as a Village Hub serving lessons to student phones over local WiFi.
+How to set up AGNI on a Raspberry Pi as a Village Hub serving lessons to student phones over local WiFi.
 
 ---
 

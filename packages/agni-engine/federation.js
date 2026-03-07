@@ -10,6 +10,7 @@
 'use strict';
 
 var math = require('./math');
+var thompson = require('./thompson');
 
 /**
  * Export current bandit posterior summary for federation sync.
@@ -22,6 +23,7 @@ var math = require('./math');
  * @returns {import('../types').BanditSummary}
  */
 function getBanditSummary(state) {
+  thompson.assertFeatureDimInvariant(state);
   var Ainv = math.invertSPD(state.bandit.A);
   var mean = math.matVec(Ainv, state.bandit.b);
   return {
@@ -79,6 +81,12 @@ function getBanditSummary(state) {
  * @returns {import('../types').BanditSummary}        Merged summary. precision is in raw (total) units.
  */
 function mergeBanditSummaries(local, remote) {
+  // Invariant: featureDim === embeddingDim * 2. Mean length equals featureDim.
+  if (local.mean.length % 2 !== 0 || local.mean.length < 2) {
+    throw new Error(
+      '[FEDERATION] Invalid local summary: mean.length=' + local.mean.length + ' (must be embeddingDim*2, even >= 2).'
+    );
+  }
   // Dimension guard: merging summaries from different feature spaces is a
   // configuration error, not a recoverable runtime condition.
   if (local.mean.length !== remote.mean.length) {

@@ -4,19 +4,19 @@ Use this when you need to know where TypeScript vs JavaScript is used and how ty
 
 ## Current state
 
-- **LMS engine (`src/engine/`)** — Written in **TypeScript** (`.ts`). Compiled to `.js` via `npm run build:engine` (tsconfig.engine.json). The hub and theta load the compiled `src/engine/index.js`. Types are in the same repo; keep `src/types/index.d.ts` and engine types in sync when changing state or observation shapes.
+- **LMS engine (`packages/agni-engine/`, `src/engine/`)** — **Plain JavaScript (ES5 syntax)**. No TypeScript; no compile step. The hub and theta load `@agni/engine` directly. Types are provided by JSDoc and `src/types/index.d.ts`; keep these in sync when changing state or observation shapes.
 - **Rest of core** — **JavaScript** (Node and browser). Types are provided by **`src/types/index.d.ts`** (hand-maintained) and JSDoc where helpful. No TypeScript compilation for compiler, hub-tools, or runtime.
 - **Portal** — Vanilla HTML/CSS/JS in `portal/`. No build step; static files served directly.
 
 ## Why the mix?
 
-The engine has numerical and stateful logic (Rasch, embeddings, bandit) where type safety pays off. The compiler and runtime are stable and ES5-friendly; adding TypeScript there would be a larger migration. The reference is: **engine = TypeScript; everything else = JavaScript + index.d.ts**.
+The engine uses ES5-only JavaScript to avoid a compile step and prevent stale-build bugs on the Raspberry Pi hub. The compiler and runtime are ES5-friendly; types are enforced via JSDoc + `checkJs` where applicable.
 
 ## Conventions
 
-- When adding or changing **engine** APIs (e.g. `applyObservation`, `LMSState`), update `src/types/index.d.ts` and the engine `.ts` files; run `npm run build:engine`.
+- When adding or changing **engine** APIs (e.g. `applyObservation`, `LMSState`), update `src/types/index.d.ts` and `packages/agni-engine/*.js`. No build step — Node loads the `.js` files directly.
 - When changing **IR or sidecar** shapes, update `src/types/index.d.ts` (LessonIR, LessonSidecar, etc.) and the compiler/sidecar code. See `docs/playbooks/compiler.md`.
-- CI runs `npm run build:engine` so engine TypeScript must compile. Optionally run `npm run typecheck` if the root tsconfig.json is set up for the rest of the repo.
+- Run `npm run typecheck` to validate JSDoc types across the repo.
 
 ## Single place for shared types
 
