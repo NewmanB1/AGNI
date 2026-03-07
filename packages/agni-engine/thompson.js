@@ -303,6 +303,7 @@ function updateBandit(state, studentId, lessonId, gain) {
 module.exports = {
   assertEmbeddingDimValid:   assertEmbeddingDimValid,
   assertFeatureDimInvariant: assertFeatureDimInvariant,
+  banditFeature:            banditFeature,
   ensureBanditInitialized:   ensureBanditInitialized,
   sampleTheta:              sampleTheta,
   selectLesson:             selectLesson,

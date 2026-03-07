@@ -2,6 +2,7 @@
 
 import type { LMSState } from '../types';
 
+export function banditFeature(studentVec: number[], lessonVec: number[]): number[];
 export function ensureBanditInitialized(state: LMSState): void;
 export function sampleTheta(state: LMSState): number[];
 export function selectLesson(
