@@ -244,15 +244,31 @@ function invertSPD(A) {
   return inv;
 }
 
+var _randnCache = null;
+
 /**
- * Gaussian random variable (Box–Muller).
+ * Gaussian random variable (Box–Muller). Caches the second sample to avoid waste.
  * @returns {number}
  */
 function randn() {
-  var u = 0, v = 0;
-  while (u === 0) u = Math.random();
-  while (v === 0) v = Math.random();
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  if (_randnCache !== null) {
+    var out = _randnCache;
+    _randnCache = null;
+    return out;
+  }
+  var u, v, lim = 1000;
+  do {
+    u = Math.random();
+    v = Math.random();
+    if (--lim <= 0) {
+      u = 1e-10;
+      v = 1e-10;
+      break;
+    }
+  } while (u === 0 || v === 0);
+  var r = Math.sqrt(-2 * Math.log(u));
+  _randnCache = r * Math.sin(2 * Math.PI * v);
+  return r * Math.cos(2 * Math.PI * v);
 }
 
 module.exports = {
