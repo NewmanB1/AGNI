@@ -140,10 +140,8 @@ function matVec(A, x) {
 function identity(n) {
   var I = new Array(n);
   for (var i = 0; i < n; i++) {
-    I[i] = new Array(n);
-    for (var j = 0; j < n; j++) {
-      I[i][j] = i === j ? 1 : 0;
-    }
+    I[i] = new Array(n).fill(0);
+    I[i][i] = 1;
   }
   return I;
 }
