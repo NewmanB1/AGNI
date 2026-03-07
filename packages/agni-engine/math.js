@@ -17,6 +17,9 @@
  *  JITTER in thompson.js must be >= CHOLESKY_EPSILON for jitter retry to succeed. */
 var CHOLESKY_EPSILON = 1e-10;
 
+/** Symmetry tolerance for Cholesky. Relaxed from 1e-12 to accommodate JSON round-trip error in post-federation merged precision matrices. */
+var CHOLESKY_SYMMETRY_TOL = 1e-8;
+
 /**
  * Dot product of two vectors.
  * @param {number[]} a
@@ -30,7 +33,11 @@ function dot(a, b) {
     throw new Error('[MATH] dot: vector length mismatch (' + a.length + ' vs ' + b.length + ')');
   }
   var sum = 0;
-  for (var i = 0; i < a.length; i++) sum += a[i] * b[i];
+  for (var i = 0; i < a.length; i++) {
+    if (!(i in a)) throw new Error('[MATH] dot: sparse first vector (hole at ' + i + ')');
+    if (!(i in b)) throw new Error('[MATH] dot: sparse second vector (hole at ' + i + ')');
+    sum += a[i] * b[i];
+  }
   return sum;
 }
 
@@ -46,7 +53,11 @@ function addVec(a, b) {
   if (a.length !== b.length) {
     throw new Error('[MATH] addVec: vector length mismatch (' + a.length + ' vs ' + b.length + ')');
   }
-  return a.map(function(v, i) { return v + b[i]; });
+  for (var i = 0; i < a.length; i++) {
+    if (!(i in a)) throw new Error('[MATH] addVec: sparse first vector (hole at ' + i + ')');
+    if (!(i in b)) throw new Error('[MATH] addVec: sparse second vector (hole at ' + i + ')');
+  }
+  return a.map(function(v, i) { return Number(v) + Number(b[i]); });
 }
 
 /**
@@ -57,8 +68,14 @@ function addVec(a, b) {
  */
 function scaleVec(v, s) {
   if (v == null) throw new Error('[MATH] scaleVec: vector is null or undefined');
+  if (!Array.isArray(v)) {
+    throw new Error('[MATH] scaleVec: vector must be array');
+  }
   if (typeof s !== 'number' || !isFinite(s)) {
     throw new Error('[MATH] scaleVec: scalar must be finite number');
+  }
+  for (var i = 0; i < v.length; i++) {
+    if (!(i in v)) throw new Error('[MATH] scaleVec: sparse vector (hole at ' + i + ')');
   }
   return v.map(function(x) { return x * s; });
 }
@@ -75,8 +92,8 @@ function outer(a, b) {
   for (var i = 0; i < a.length; i++) {
     if (!(i in a)) throw new Error('[MATH] outer: sparse first vector (hole at ' + i + ')');
   }
-  for (i = 0; i < b.length; i++) {
-    if (!(i in b)) throw new Error('[MATH] outer: sparse second vector (hole at ' + i + ')');
+  for (var j = 0; j < b.length; j++) {
+    if (!(j in b)) throw new Error('[MATH] outer: sparse second vector (hole at ' + j + ')');
   }
   return a.map(function(ai) {
     return b.map(function(bj) { return ai * bj; });
@@ -101,13 +118,13 @@ function addMat(A, B) {
   if (cols !== B[0].length) {
     throw new Error('[MATH] addMat: dimension mismatch (' + rows + 'x' + cols + ' vs ' + rows + 'x' + B[0].length + ')');
   }
-  for (var i = 0; i < rows; i++) {
+  for (var i = 1; i < rows; i++) {
     if (A[i].length !== cols || B[i].length !== cols) {
       throw new Error('[MATH] addMat: jagged matrix at row ' + i);
     }
   }
   return A.map(function(row, i) {
-    return row.map(function(v, j) { return v + B[i][j]; });
+    return row.map(function(v, j) { return Number(v) + Number(B[i][j]); });
   });
 }
 
@@ -145,6 +162,9 @@ function scaleMat(A, s) {
 function matVec(A, x) {
   if (A == null) throw new Error('[MATH] matVec: matrix is null or undefined');
   if (x == null) throw new Error('[MATH] matVec: vector is null or undefined');
+  if (!Array.isArray(x)) {
+    throw new Error('[MATH] matVec: vector must be array');
+  }
   if (A.length === 0) return [];
   var cols = A[0].length;
   if (cols !== x.length) {
@@ -168,6 +188,9 @@ function identity(n) {
   if (typeof n !== 'number' || !Number.isInteger(n) || n < 0) {
     throw new Error('[MATH] identity: n must be non-negative integer, got ' + n);
   }
+  if (n === 0) {
+    throw new Error('[MATH] identity: n must be positive (zero-dimensional identity not supported)');
+  }
   var I = new Array(n);
   for (var i = 0; i < n; i++) {
     I[i] = new Array(n).fill(0);
@@ -185,15 +208,21 @@ function identity(n) {
 function cholesky(A) {
   if (A == null) throw new Error('[MATH] cholesky: matrix is null or undefined');
   var n = A.length;
-  var i, j, k, sum, diag;
+  var i, j, k, sum, diag, aij, aji;
   for (i = 0; i < n; i++) {
     if (!A[i] || A[i].length !== n) {
       throw new Error('[MATH] cholesky: matrix must be square (got ' + n + 'x' + (A[i] ? A[i].length : '?') + ')');
     }
-  }
-  for (i = 0; i < n; i++) {
+    if (typeof A[i][i] !== 'number' || !isFinite(A[i][i])) {
+      throw new Error('[MATH] cholesky: non-numeric diagonal at [' + i + ']');
+    }
     for (j = i + 1; j < n; j++) {
-      if (Math.abs((A[i][j] || 0) - (A[j][i] || 0)) > 1e-12) {
+      aij = A[i][j];
+      aji = A[j][i];
+      if (typeof aij !== 'number' || typeof aji !== 'number' || !isFinite(aij) || !isFinite(aji)) {
+        throw new Error('[MATH] cholesky: non-numeric entry at [' + i + '][' + j + ']');
+      }
+      if (Math.abs(aij - aji) > CHOLESKY_SYMMETRY_TOL) {
         throw new Error('[MATH] cholesky: matrix is not symmetric (A[' + i + '][' + j + '] !== A[' + j + '][' + i + '])');
       }
     }
@@ -230,8 +259,14 @@ function cholesky(A) {
  * @returns {number[]}
  */
 function forwardSub(L, b) {
+  if (L == null) throw new Error('[MATH] forwardSub: L is null or undefined');
   if (b == null) throw new Error('[MATH] forwardSub: RHS vector is null or undefined');
   var n = L.length;
+  for (var ri = 0; ri < n; ri++) {
+    if (!L[ri] || !Array.isArray(L[ri]) || L[ri].length !== n) {
+      throw new Error('[MATH] forwardSub: L must be square matrix (got row ' + ri + ' with length ' + (L[ri] ? L[ri].length : '?') + ')');
+    }
+  }
   if (b.length !== n) {
     throw new Error('[MATH] forwardSub: dimension mismatch (L is ' + n + 'x' + n + ', b.length=' + b.length + ')');
   }
@@ -255,8 +290,14 @@ function forwardSub(L, b) {
  * @returns {number[]}
  */
 function backSub(L, y) {
+  if (L == null) throw new Error('[MATH] backSub: L is null or undefined');
   if (y == null) throw new Error('[MATH] backSub: RHS vector is null or undefined');
   var n = L.length;
+  for (var ri = 0; ri < n; ri++) {
+    if (!L[ri] || !Array.isArray(L[ri]) || L[ri].length !== n) {
+      throw new Error('[MATH] backSub: L must be square matrix (got row ' + ri + ' with length ' + (L[ri] ? L[ri].length : '?') + ')');
+    }
+  }
   if (y.length !== n) {
     throw new Error('[MATH] backSub: dimension mismatch (L is ' + n + 'x' + n + ', y.length=' + y.length + ')');
   }
@@ -271,6 +312,25 @@ function backSub(L, y) {
     x[i] = (y[i] - sum) / L[i][i];
   }
   return x;
+}
+
+/**
+ * Force matrix to be symmetric (mutates A): A[i][j] = A[j][i] = (A[i][j] + A[j][i]) * 0.5.
+ * Use after addMat when inputs may have float asymmetry from JSON round-trip.
+ * Call only on matrices you own; do not pass aliased/shared state.
+ * @param {number[][]} A  Square matrix (mutated).
+ * @returns {number[][]}  A (same reference).
+ */
+function symmetrize(A) {
+  if (A == null) throw new Error('[MATH] symmetrize: matrix is null or undefined');
+  var n = A.length;
+  for (var i = 0; i < n; i++) {
+    for (var j = 0; j < i; j++) {
+      var v = (A[i][j] + A[j][i]) * 0.5;
+      A[i][j] = A[j][i] = v;
+    }
+  }
+  return A;
 }
 
 /**
@@ -308,23 +368,27 @@ function invertSPD(A) {
 
 /**
  * Gaussian random variable (Box–Muller). Pure — no module-level state.
+ * Assumes Math.random() ∈ [0,1) per spec. For pathological PRNG returning 0,
+ * logs and returns 0 to avoid unhandled throw in selection hot path.
+ * Box–Muller generates two samples; this returns one (cos sample; sin discarded).
  * @returns {number}
  */
 function randn() {
-  var u, v, lim = 1000;
-  do {
-    u = Math.random();
-    v = Math.random();
-    if (--lim <= 0) {
-      throw new Error('[MATH] randn: PRNG returned zero 1000 times');
+  var u = Math.random();
+  var v = Math.random();
+  if (u === 0 || v === 0) {
+    if (typeof console !== 'undefined' && console.error) {
+      console.error('[MATH] randn: PRNG returned zero (broken runtime)');
     }
-  } while (u === 0 || v === 0);
+    return 0;
+  }
   var r = Math.sqrt(-2 * Math.log(u));
   return r * Math.cos(2 * Math.PI * v);
 }
 
 module.exports = {
   CHOLESKY_EPSILON: CHOLESKY_EPSILON,
+  CHOLESKY_SYMMETRY_TOL: CHOLESKY_SYMMETRY_TOL,
   dot:       dot,
   addVec:    addVec,
   scaleVec:  scaleVec,
@@ -337,6 +401,7 @@ module.exports = {
   forwardSub: forwardSub,
   backSub:   backSub,
   invertSPD: invertSPD,
-  randn:     randn
+  randn:     randn,
+  symmetrize: symmetrize
 };
 

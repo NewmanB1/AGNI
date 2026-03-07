@@ -45,6 +45,12 @@ describe('dot', () => {
     assert.throws(() => math.dot([1, 2], null), /null or undefined/);
     assert.throws(() => math.dot(undefined, [1, 2]), /null or undefined/);
   });
+
+  it('throws for sparse vector', () => {
+    const sparse = [1, , 3];
+    assert.throws(() => math.dot(sparse, [1, 2, 3]), /sparse/);
+    assert.throws(() => math.dot([1, 2, 3], sparse), /sparse/);
+  });
 });
 
 // ── addVec / scaleVec ────────────────────────────────────────────────────────
@@ -69,6 +75,16 @@ describe('addVec', () => {
     assert.throws(() => math.addVec(null, [1, 2]), /null or undefined/);
     assert.throws(() => math.addVec([1, 2], undefined), /null or undefined/);
   });
+
+  it('throws for sparse vector', () => {
+    const sparse = [1, , 3];
+    assert.throws(() => math.addVec(sparse, [1, 2, 3]), /sparse/);
+    assert.throws(() => math.addVec([1, 2, 3], sparse), /sparse/);
+  });
+
+  it('coerces string numbers to numeric addition', () => {
+    assert.deepEqual(math.addVec(['1', 2], [1, '2']), [2, 4]);
+  });
 });
 
 describe('scaleVec', () => {
@@ -86,6 +102,10 @@ describe('scaleVec', () => {
 
   it('throws for null or undefined vector', () => {
     assert.throws(() => math.scaleVec(null, 2), /null or undefined/);
+  });
+
+  it('throws for non-array vector', () => {
+    assert.throws(() => math.scaleVec({ length: 2 }, 2), /scaleVec.*array/);
   });
 
   it('throws for undefined or NaN scalar', () => {
@@ -213,6 +233,10 @@ describe('identity', () => {
   it('throws for non-integer n', () => {
     assert.throws(() => math.identity(2.5), /identity.*non-negative integer/);
   });
+
+  it('throws for n=0 (zero-dimensional identity not supported)', () => {
+    assert.throws(() => math.identity(0), /identity.*positive/);
+  });
 });
 
 // ── cholesky ─────────────────────────────────────────────────────────────────
@@ -265,6 +289,10 @@ describe('cholesky', () => {
   it('throws for non-symmetric matrix', () => {
     assert.throws(() => math.cholesky([[4, 1], [2, 3]]), /not symmetric/);
   });
+
+  it('throws for matrix with NaN (non-numeric entry)', () => {
+    assert.throws(() => math.cholesky([[1, NaN], [NaN, 1]]), /non-numeric/);
+  });
 });
 
 // ── forwardSub / backSub ─────────────────────────────────────────────────────
@@ -309,6 +337,14 @@ describe('forwardSub and backSub', () => {
     const L = [[1, 0], [1, 1]];
     assert.throws(() => math.backSub(L, [1]), /backSub.*dimension mismatch/);
     assert.throws(() => math.backSub(L, [1, 2, 3]), /backSub.*dimension mismatch/);
+  });
+
+  it('forwardSub throws when L is null', () => {
+    assert.throws(() => math.forwardSub(null, [1, 1]), /forwardSub.*L is null/);
+  });
+
+  it('backSub throws when L is null', () => {
+    assert.throws(() => math.backSub(null, [1, 1]), /backSub.*L is null/);
   });
 });
 
@@ -365,6 +401,21 @@ describe('invertSPD', () => {
   });
 });
 
+// ── symmetrize ────────────────────────────────────────────────────────────────
+
+describe('symmetrize', () => {
+  it('forces matrix to be symmetric', () => {
+    const A = [[1, 1.0001], [0.9999, 2]];
+    math.symmetrize(A);
+    assert.strictEqual(A[0][1], A[1][0]);
+    assert.ok(Math.abs(A[0][1] - 1) < 1e-10);
+  });
+
+  it('throws for null', () => {
+    assert.throws(() => math.symmetrize(null), /symmetrize.*null or undefined/);
+  });
+});
+
 // ── randn ────────────────────────────────────────────────────────────────────
 
 describe('randn', () => {
@@ -395,11 +446,13 @@ describe('randn', () => {
     assert.ok(Math.abs(variance - 1) < 0.15, 'Variance ' + variance + ' should be near 1');
   });
 
-  it('throws when Math.random returns zero repeatedly', () => {
+  it('returns 0 (does not throw) when Math.random returns zero', () => {
     const origRandom = Math.random;
     Math.random = function () { return 0; };
     try {
-      assert.throws(() => math.randn(), /randn.*PRNG returned zero/);
+      const val = math.randn();
+      assert.strictEqual(val, 0, 'randn must return safe fallback 0, not throw');
+      assert.ok(isFinite(val), 'returned value must be finite');
     } finally {
       Math.random = origRandom;
     }

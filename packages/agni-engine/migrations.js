@@ -169,6 +169,20 @@ function migrateLMSState(raw, opts) {
       }
       if (A.length === 0) break;
     }
+    // Validate symmetry (BUG 4: catch corrupted state at load time)
+    if (A.length === featureDim) {
+      var math = require('./math');
+      for (ri = 0; ri < A.length; ri++) {
+        for (var cj = ri + 1; cj < A[ri].length; cj++) {
+          if (Math.abs(A[ri][cj] - A[cj][ri]) > math.CHOLESKY_SYMMETRY_TOL) {
+            A = [];
+            migrated = true;
+            break;
+          }
+        }
+        if (A.length === 0) break;
+      }
+    }
   }
   if (b.length !== featureDim) {
     b = new Array(featureDim).fill(0);

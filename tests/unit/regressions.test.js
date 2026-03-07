@@ -1618,11 +1618,13 @@ describe('MATH-2: randn has no module-level state', () => {
 describe('MATH-3: randn fallback does not produce degenerate u=v sample', () => {
   const math = require('../../src/engine/math');
 
-  it('throws when Math.random returns zero repeatedly', () => {
+  it('returns 0 (does not throw) when Math.random returns zero', () => {
     const origRandom = Math.random;
     Math.random = function () { return 0; };
     try {
-      assert.throws(() => math.randn(), /randn.*PRNG returned zero/);
+      const val = math.randn();
+      assert.strictEqual(val, 0, 'randn must return safe fallback 0, not throw');
+      assert.ok(isFinite(val), 'returned value must be finite');
     } finally {
       Math.random = origRandom;
     }

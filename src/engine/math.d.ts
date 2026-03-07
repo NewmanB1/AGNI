@@ -1,5 +1,7 @@
 // src/engine/math.d.ts — type declarations for math.js (Backlog task 14)
 
+export const CHOLESKY_EPSILON: number;
+export const CHOLESKY_SYMMETRY_TOL: number;
 export function dot(a: number[], b: number[]): number;
 export function addVec(a: number[], b: number[]): number[];
 export function scaleVec(v: number[], s: number): number[];
@@ -13,3 +15,4 @@ export function forwardSub(L: number[][], b: number[]): number[];
 export function backSub(L: number[][], y: number[]): number[];
 export function invertSPD(A: number[][]): number[][];
 export function randn(): number;
+export function symmetrize(A: number[][]): number[][];
