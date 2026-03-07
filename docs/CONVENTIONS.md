@@ -34,13 +34,13 @@ Wrap individual route handlers: `router.get('/path', adminOnly((req, res, ctx) =
 
 ## Schema-backed JSON persistence (governance)
 
-Use `createSchemaStore(schemaPath, defaults, logger)` from `src/governance/schema-store.js` for any JSON file that has an associated JSON Schema. Returns `{ validate, load, save }` — encapsulates Ajv setup, validation on load/save, atomic writes, and fallback defaults.
+Use `createSchemaStore(schemaPath, defaults, logger)` from `packages/agni-governance/schema-store.js` for any JSON file that has an associated JSON Schema. Returns `{ validate, load, save }` — encapsulates Ajv setup, validation on load/save, atomic writes, and fallback defaults.
 
 Used by `policy.js` and `catalog.js`. Prefer this over manual Ajv + fs.readFile + fs.writeFile patterns.
 
 ## Shared runtime registration (ES5 browser modules)
 
-Browser runtime modules register on `global.AGNI_*` namespaces. Shared utilities live in `src/runtime/shared-runtime.js` (registered as `AGNI_SHARED`).
+Browser runtime modules register on `global.AGNI_*` namespaces. Shared utilities live in `packages/agni-runtime/shared-runtime.js` (registered as `AGNI_SHARED`).
 
 When adding a new shared utility:
 1. Add the function to `shared-runtime.js` inside the IIFE.
@@ -51,7 +51,7 @@ When adding a new shared utility:
 
 ## Shared I/O utilities
 
-`src/utils/io.js` provides reusable file and string helpers:
+`packages/agni-utils/io.js` provides reusable file and string helpers:
 
 - **`ensureDir(dir)`** — recursive mkdir if missing.
 - **`readFileSafe(path)`** — returns content or null on ENOENT.
@@ -69,7 +69,7 @@ Use these instead of ad-hoc mtime checks or inline escape functions.
 ## Types and contracts
 
 - **Shared types in `src/types/index.d.ts`.** IR, sidecar, LMS state, governance, and API payloads. When you add a new field to the IR or sidecar, update the type and the compiler/governance code together.
-- **API contract in `docs/api-contract.md`.** Any new or changed hub HTTP endpoint must be documented there and reflected in `portal/src/lib/api.ts` if the portal uses it.
+- **API contract in `docs/api-contract.md`.** Any new or changed hub HTTP endpoint must be documented there and reflected in `portal/js/api.js` if the portal uses it.
 
 ## Playbooks
 

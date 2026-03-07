@@ -4,21 +4,21 @@ Use this when changing how lessons are compiled from YAML to IR or to HTML/nativ
 
 ## Entry points
 
-- **CLI:** `src/cli.js` parses args and calls `src/services/compiler.compileLessonFromYamlFile()`.
-- **Service:** `src/services/compiler.js` — `compileLessonFromYamlFile()`, `parseLessonYaml()`, `validateLessonStructure()`. Use this from the CLI or from future authoring/hub code.
-- **Barrel:** `src/compiler/index.js` re-exports `buildLessonIR` and `buildLessonSidecar`. Prefer requiring `../compiler` from builders/hub instead of `../compiler/buildLessonIR`.
+- **CLI:** `src/cli.js` parses args and calls `@agni/services/compiler` (or `src/services/compiler.js` re-export) `compileLessonFromYamlFile()`.
+- **Service:** `packages/agni-services/compiler.js` → `@ols/compiler/services/compiler`. Exposes `compileLessonFromYamlFile()`, `parseLessonYaml()`, `validateLessonStructure()`.
+- **Barrel:** `src/compiler/index.js` re-exports from `@ols/compiler`. Canonical IR: `packages/ols-compiler/compiler/build-lesson-ir.js`.
 
 ## Where to change what
 
 | Goal | Files to touch |
 |------|-----------------|
-| Change IR shape or sidecar fields | `src/compiler/buildLessonIR.js` — keep `buildLessonSidecar()` in sync with `src/types/index.d.ts` and `docs/api-contract.md` (sidecar). |
+| Change IR shape or sidecar fields | `packages/ols-compiler/compiler/build-lesson-ir.js` — keep `buildLessonSidecar()` in sync with `src/types/index.d.ts` and `docs/api-contract.md` (sidecar). |
 | Add a new YAML meta field (e.g. author, UTU) | 1) `schemas/ols.schema.json` (meta.properties). 2) `src/types/index.d.ts` (LessonMeta, LessonSidecar). 3) `buildLessonSidecar()` to pass the field through. 4) Optionally `packages/agni-hub/theta.js` when building the lesson index from sidecar. |
-| Change Markdown or math pipeline | `src/config.js` — `processMarkdown()`. Used by `buildLessonIR` only. |
+| Change Markdown or math pipeline | `packages/ols-compiler/markdown-pipeline.js` — `processMarkdown()`. Used by `buildLessonIR` only. |
 | Change what gets inferred (features, factories) | `packages/agni-utils/feature-inference.js` — `inferFeatures()`. Factory list and order: `packages/agni-utils/runtimeManifest.js` (FACTORY_LOAD_ORDER, FACTORY_FILE_MAP). Keep in sync with `packages/agni-runtime/` filenames. |
-| Change HTML output or signing | `src/builders/html.js` — shared runtime path, integrity globals, and `server/hub-transform.js` (PWA shell) should stay in sync; consider a shared lesson-assembly layer later. |
-| Change native bundle layout | `src/builders/native.js`. |
-| Change YAML packet layout | `src/builders/yaml-packet.js`. See also `docs/playbooks/thin-client-targets.md`. |
+| Change HTML output or signing | `packages/ols-compiler/builders/html.js` — shared runtime path, integrity globals, and `packages/agni-hub/hub-transform.js` (PWA shell) should stay in sync; `packages/ols-compiler/services/lesson-assembly.js` is shared. |
+| Change native bundle layout | `packages/ols-compiler/builders/native.js`. |
+| Change YAML packet layout | `packages/ols-compiler/builders/yaml-packet.js`. See also `docs/playbooks/thin-client-targets.md`. |
 
 ## Do not
 

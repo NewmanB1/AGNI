@@ -55,13 +55,13 @@ See **`docs/ARCHITECTURE.md`** §7 and **`docs/playbooks/sentry.md`** for Sentry
 
 ## Rasch model
 
-Used inside the **LMS engine** to estimate **student ability** from quiz outcomes. Each lesson can expose “probes” (e.g. quiz items); correct/incorrect answers update a Rasch ability estimate. Implemented in **`src/engine/rasch.js`**. The engine uses this ability as a **gain** signal for embeddings and the bandit.
+Used inside the **LMS engine** to estimate **student ability** from quiz outcomes. Each lesson can expose “probes” (e.g. quiz items); correct/incorrect answers update a Rasch ability estimate. Implemented in **`packages/agni-engine/rasch.js`**. The engine uses this ability as a **gain** signal for embeddings and the bandit.
 
 ---
 
 ## Thompson sampling (bandit)
 
-The **LMS engine** uses **Thompson sampling** to choose which lesson to recommend next among the set that **theta** has already filtered (by prerequisites). It balances exploration and exploitation using a Bayesian bandit over lesson features. Implemented in **`src/engine/thompson.js`**. Pure function: `selectLesson(state, studentId)`; persistence is at the edge.
+The **LMS engine** uses **Thompson sampling** to choose which lesson to recommend next among the set that **theta** has already filtered (by prerequisites). It balances exploration and exploitation using a Bayesian bandit over lesson features. Implemented in **`packages/agni-engine/thompson.js`**. Pure function: `selectLesson(state, studentId)`; persistence is at the edge.
 
 ---
 
@@ -73,7 +73,7 @@ Lessons declare **`ontology.requires`** and **`ontology.provides`** (skills, e.g
 
 ## Village Hub / hub-transform
 
-The **Village Hub** is the edge server that compiles YAML to HTML or JSON on demand and serves the theta/LMS APIs. **`server/hub-transform.js`** turns a lesson YAML request into a PWA-style bundle. Theta runs in the same process and provides `/api/theta`, `/api/lms/...`, and governance endpoints.
+The **Village Hub** is the edge server that compiles YAML to HTML or JSON on demand and serves the theta/LMS APIs. **`packages/agni-hub/hub-transform.js`** (server/ is a shim) turns a lesson YAML request into a PWA-style bundle. Theta runs in the same process and provides `/api/theta`, `/api/lms/...`, and governance endpoints.
 
 ---
 

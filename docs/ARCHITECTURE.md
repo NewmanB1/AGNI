@@ -124,37 +124,25 @@ It transforms the YAML source into executable artifacts based on the requesting 
 agni-core/
 ├── src/
 │   ├── cli.js                    # Orchestration & argument parsing
-│   ├── config.js                 # Markdown/unified processor (remark + rehype-katex)
-│   ├── compiler/
-│   │   └── buildLessonIR.js      # Canonical IR layer — single source of truth for all builders
-│   ├── utils/
-│   │   ├── featureInference.js   # Build-time feature inference (uses runtimeManifest for filenames)
-│   │   ├── runtimeManifest.js   # Capability → runtime file names and load order
-│   │   ├── binary.js            # Node: base64/bytes, UTF-8 (builders/crypto)
-│   │   ├── crypto.js            # Ed25519 signing & device binding
-│   │   └── io.js                # File system & asset hydration
-│   ├── builders/
-│   │   ├── html.js               # Strategy A: The "Universal" SPA (HTML + sidecar)
-│   │   └── native.js             # Strategy B: The "Efficient" Native Bundle [Phase 6]
-│   └── runtime/                  # The player engine (compiled into lesson HTML)
-│       ├── player.js             # Core logic (state machine, sensors, routing)
-│       ├── style.css             # High-contrast UI
-│       ├── binary-utils.js       # Browser: base64/bytes, concatBytes (loaded before shared-runtime)
-│       ├── shared-runtime.js     # Cached: pub/sub, vibration, device detection, visual lifecycle
-│       ├── sensor-bridge.js      # Hardware sensor abstraction (iOS/Android motion)
-│       └── svg-stage.js          # Cached: spec-driven SVG factory + stage system
+│   ├── compiler/                 # Re-exports from @ols/compiler
+│   ├── utils/                    # Re-exports from @agni/utils
+│   ├── builders/                 # Re-exports from @ols/compiler
+│   └── runtime/                  # Re-exports from @agni/runtime
+│
+├── packages/
+│   ├── ols-compiler/             # Canonical: build-lesson-ir.js, markdown-pipeline, builders
+│   ├── agni-utils/               # feature-inference.js, runtimeManifest.js, crypto, io, etc.
+│   ├── agni-runtime/             # player, shared-runtime, sensor-bridge, svg-stage (ES5, Chrome 44)
+│   └── agni-hub/                 # theta, hub-transform, sw.js, pwa/, routes
 │
 ├── hub-tools/
-│   └── theta.js                  # Adaptive scheduling engine (skill graph, MLC, lesson index)
+│   └── theta.js                  # Wrapper: spawns packages/agni-hub/theta.js
 │
-└── server/                       # Implemented: on-demand PWA delivery
-    ├── hub-transform.js          # YAML → PWA/JSON transformation (attachRoutes or standalone)
-    ├── pwa/                      # PWA shell assets
-    ├── sw.js                     # Service Worker for caching
-    └── manifest.json             # PWA manifest
+└── server/
+    └── hub-transform.js          # Shim: re-exports from @agni/hub
 ```
 
-The server runs hub-transform for on-demand lesson compilation; theta provides the API (scheduling, LMS, governance). Key directories: `src/services/` (accounts, lesson assembly), `src/governance/` (compliance evaluation), `src/engine/` (Rasch, Thompson, embeddings, PageRank).
+The server runs hub-transform for on-demand lesson compilation; theta provides the API (scheduling, LMS, governance). Key packages: `packages/agni-services/` (accounts, lesson assembly), `packages/agni-governance/` (compliance evaluation), `packages/agni-engine/` (Rasch, Thompson, embeddings, PageRank).
 
 #### The IR Layer (new in Phase 2)
 
@@ -273,7 +261,7 @@ The engine has two layers with distinct responsibilities.
 
 ### 7.1 Theta — Prerequisite Enforcement & Eligibility Filtering (Implemented)
 
-`theta.js` (hub-tools/) maintains the lesson graph and enforces prerequisite readiness
+`theta.js` (packages/agni-hub/theta.js; hub-tools/ is a wrapper) maintains the lesson graph and enforces prerequisite readiness
 before any lesson is offered to a student.
 
 - **Skill graph:** BFS traversal with cycle guard. Lessons are only eligible if all
@@ -288,16 +276,16 @@ before any lesson is offered to a student.
 ### 7.2 LMS Engine — Adaptive Selection (Implemented)
 
 A principled ML engine that selects among theta-eligible lessons using observed learning gain.
-Theta handles prerequisite enforcement; the LMS engine handles selection within the eligible set. The engine lives in `src/engine/` (Rasch, embeddings, Thompson bandit, federation); theta exposes it via `src/services/lms` and HTTP routes (`/api/lms/select`, `POST /api/lms/observation`, `/api/lms/status`, `POST /api/lms/federation/merge`).
+Theta handles prerequisite enforcement; the LMS engine handles selection within the eligible set. The engine lives in `packages/agni-engine/` (Rasch, embeddings, Thompson bandit, federation); theta exposes it via `@agni/services/lms` and HTTP routes (`/api/lms/select`, `POST /api/lms/observation`, `/api/lms/status`, `POST /api/lms/federation/merge`).
 
 **Architecture (Option B integration):**
 
 | Layer | Algorithm | Role |
 |-------|-----------|------|
-| `rasch.ts` | 1PL IRT (Newton-Raphson MAP) | Estimates student ability on logit scale; produces gain proxy |
-| `embeddings.ts` | Online matrix factorization | Student × lesson latent factors with forgetting |
-| `thompson.ts` | Linear Thompson Sampling | Selects next lesson by sampling from posterior over gain-given-features |
-| `federation.ts` | Precision-weighted Bayesian merge | Merges bandit posteriors across village hubs without raw data sharing |
+| `rasch.js` | 1PL IRT (Newton-Raphson MAP) | Estimates student ability on logit scale; produces gain proxy |
+| `embeddings.js` | Online matrix factorization | Student × lesson latent factors with forgetting |
+| `thompson.js` | Linear Thompson Sampling | Selects next lesson by sampling from posterior over gain-given-features |
+| `federation.js` | Precision-weighted Bayesian merge | Merges bandit posteriors across village hubs without raw data sharing |
 
 **Feature vectors:**
 - Lesson feature vector populated from `lesson-ir.json` sidecar `inferredFeatures`
@@ -308,7 +296,7 @@ Theta handles prerequisite enforcement; the LMS engine handles selection within 
 `federation.ts` without sharing raw student data. Each hub improves from the
 collective without centralising sensitive learning logs.
 
-**State and sneakernet:** LMS state is migrated/repaired on load via `src/engine/migrations.js`; CLI supports `lms-repair`. Progress can be exported/imported as gzip+base64 with `scripts/sneakernet.js` (`npm run sneakernet -- export|import`).
+**State and sneakernet:** LMS state is migrated/repaired on load via `packages/agni-engine/migrations.js`; CLI supports `lms-repair`. Progress can be exported/imported as gzip+base64 with `scripts/sneakernet.js` (`npm run sneakernet -- export|import`).
 
 ### 7.3 The Skill Collapse Concept
 
