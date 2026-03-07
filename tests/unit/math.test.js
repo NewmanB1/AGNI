@@ -39,6 +39,12 @@ describe('dot', () => {
   it('handles single-element vectors', () => {
     assert.equal(math.dot([5], [3]), 15);
   });
+
+  it('throws for null or undefined input', () => {
+    assert.throws(() => math.dot(null, [1, 2]), /null or undefined/);
+    assert.throws(() => math.dot([1, 2], null), /null or undefined/);
+    assert.throws(() => math.dot(undefined, [1, 2]), /null or undefined/);
+  });
 });
 
 // ── addVec / scaleVec ────────────────────────────────────────────────────────
@@ -50,6 +56,11 @@ describe('addVec', () => {
 
   it('handles negative values', () => {
     assert.deepEqual(math.addVec([1, -2], [-1, 2]), [0, 0]);
+  });
+
+  it('throws for null or undefined input', () => {
+    assert.throws(() => math.addVec(null, [1, 2]), /null or undefined/);
+    assert.throws(() => math.addVec([1, 2], undefined), /null or undefined/);
   });
 });
 
@@ -65,6 +76,10 @@ describe('scaleVec', () => {
   it('handles negative scalar', () => {
     assert.deepEqual(math.scaleVec([1, -1], -3), [-3, 3]);
   });
+
+  it('throws for null or undefined vector', () => {
+    assert.throws(() => math.scaleVec(null, 2), /null or undefined/);
+  });
 });
 
 // ── outer ────────────────────────────────────────────────────────────────────
@@ -78,6 +93,11 @@ describe('outer', () => {
     const result = math.outer([1, 2, 3], [4, 5]);
     assert.equal(result.length, 3);
     assert.equal(result[0].length, 2);
+  });
+
+  it('throws for null or undefined input', () => {
+    assert.throws(() => math.outer(null, [1, 2]), /null or undefined/);
+    assert.throws(() => math.outer([1, 2], undefined), /null or undefined/);
   });
 });
 
@@ -95,11 +115,20 @@ describe('addMat', () => {
     const B = [[1, 2], [3, 4]];
     assert.throws(() => math.addMat(A, B), /jagged/);
   });
+
+  it('throws for null or undefined input', () => {
+    assert.throws(() => math.addMat(null, [[1]]), /null or undefined/);
+    assert.throws(() => math.addMat([[1]], undefined), /null or undefined/);
+  });
 });
 
 describe('scaleMat', () => {
   it('scales matrix by scalar', () => {
     assert.deepEqual(math.scaleMat([[1, 2], [3, 4]], 3), [[3, 6], [9, 12]]);
+  });
+
+  it('throws for null or undefined matrix', () => {
+    assert.throws(() => math.scaleMat(null, 2), /null or undefined/);
   });
 });
 
@@ -118,6 +147,11 @@ describe('matVec', () => {
   it('throws for jagged matrix', () => {
     const A = [[1, 2], [3, 4, 5]];
     assert.throws(() => math.matVec(A, [1, 2]), /jagged/);
+  });
+
+  it('throws for null or undefined input', () => {
+    assert.throws(() => math.matVec(null, [1, 2]), /null or undefined/);
+    assert.throws(() => math.matVec([[1]], undefined), /null or undefined/);
   });
 });
 

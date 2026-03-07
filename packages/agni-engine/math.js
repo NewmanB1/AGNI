@@ -19,6 +19,8 @@ var CHOLESKY_EPSILON = 1e-10;
  * @returns {number}
  */
 function dot(a, b) {
+  if (a == null) throw new Error('[MATH] dot: first argument is null or undefined');
+  if (b == null) throw new Error('[MATH] dot: second argument is null or undefined');
   if (a.length !== b.length) {
     throw new Error('[MATH] dot: vector length mismatch (' + a.length + ' vs ' + b.length + ')');
   }
@@ -34,6 +36,8 @@ function dot(a, b) {
  * @returns {number[]}
  */
 function addVec(a, b) {
+  if (a == null) throw new Error('[MATH] addVec: first argument is null or undefined');
+  if (b == null) throw new Error('[MATH] addVec: second argument is null or undefined');
   if (a.length !== b.length) {
     throw new Error('[MATH] addVec: vector length mismatch (' + a.length + ' vs ' + b.length + ')');
   }
@@ -47,6 +51,7 @@ function addVec(a, b) {
  * @returns {number[]}
  */
 function scaleVec(v, s) {
+  if (v == null) throw new Error('[MATH] scaleVec: vector is null or undefined');
   return v.map(function(x) { return x * s; });
 }
 
@@ -57,6 +62,8 @@ function scaleVec(v, s) {
  * @returns {number[][]}
  */
 function outer(a, b) {
+  if (a == null) throw new Error('[MATH] outer: first argument is null or undefined');
+  if (b == null) throw new Error('[MATH] outer: second argument is null or undefined');
   return a.map(function(ai) {
     return b.map(function(bj) { return ai * bj; });
   });
@@ -69,6 +76,8 @@ function outer(a, b) {
  * @returns {number[][]}
  */
 function addMat(A, B) {
+  if (A == null) throw new Error('[MATH] addMat: first argument is null or undefined');
+  if (B == null) throw new Error('[MATH] addMat: second argument is null or undefined');
   var rows = A.length;
   if (rows !== B.length) {
     throw new Error('[MATH] addMat: dimension mismatch (' + rows + 'x? vs ' + B.length + 'x?)');
@@ -95,6 +104,7 @@ function addMat(A, B) {
  * @returns {number[][]}
  */
 function scaleMat(A, s) {
+  if (A == null) throw new Error('[MATH] scaleMat: matrix is null or undefined');
   return A.map(function(row) {
     return row.map(function(v) { return v * s; });
   });
@@ -107,6 +117,8 @@ function scaleMat(A, s) {
  * @returns {number[]}
  */
 function matVec(A, x) {
+  if (A == null) throw new Error('[MATH] matVec: matrix is null or undefined');
+  if (x == null) throw new Error('[MATH] matVec: vector is null or undefined');
   if (A.length === 0) return [];
   var cols = A[0].length;
   if (cols !== x.length) {
