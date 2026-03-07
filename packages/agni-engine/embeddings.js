@@ -14,6 +14,7 @@ var math = require('./math');
 
 /**
  * Get student embedding vector without creating. Returns undefined if missing.
+ * Returns the stored reference; do not mutate. Use .slice() if you need a copy.
  * @param {import('../types').LMSState} state
  * @param {string} studentId
  * @returns {number[]|undefined}
@@ -25,6 +26,7 @@ function getStudentVector(state, studentId) {
 
 /**
  * Get lesson embedding vector without creating. Returns undefined if missing.
+ * Returns the stored reference; do not mutate. Use .slice() if you need a copy.
  * @param {import('../types').LMSState} state
  * @param {string} lessonId
  * @returns {number[]|undefined}
@@ -37,6 +39,8 @@ function getLessonVector(state, lessonId) {
 /**
  * Lazy-initialize student embedding vector if missing.
  * Initializes with small random noise to break symmetry.
+ * Returns the stored reference. Only updateEmbedding may mutate it. For read-only
+ * use (e.g. feature construction, scoring), treat as read-only or call .slice().
  * @param {import('../types').LMSState} state
  * @param {string} studentId
  * @returns {number[]}
@@ -55,6 +59,8 @@ function ensureStudentVector(state, studentId) {
 /**
  * Lazy-initialize lesson embedding vector if missing.
  * Initializes with small random noise to break symmetry.
+ * Returns the stored reference. Only updateEmbedding may mutate it. For read-only
+ * use (e.g. feature construction, scoring), treat as read-only or call .slice().
  * @param {import('../types').LMSState} state
  * @param {string} lessonId
  * @returns {number[]}

@@ -54,6 +54,39 @@
       "approved": false,
       "createdAt": "2026-03-07T14:24:18.032Z",
       "lessonsAuthored": []
+    },
+    {
+      "id": "cr-ffbef1e47862",
+      "name": "Test User",
+      "email": "test-1772897715308@example.com",
+      "passwordHash": "b178e44edb875594bd26a44760b2521901145551dc227bdaf61f64a18d5e80a39565e1fe7970ea977eec22cbf1cd7d029167d93944c74ef4eaf9a02a3cfef919",
+      "salt": "ab9a330cdc4b241487297921811a9505",
+      "role": "creator",
+      "approved": false,
+      "createdAt": "2026-03-07T15:35:15.371Z",
+      "lessonsAuthored": []
+    },
+    {
+      "id": "cr-bb2b07b4e169",
+      "name": "Test User",
+      "email": "test-1772897728638@example.com",
+      "passwordHash": "f5e5b291c51df26d02ded14cae6edd688b8df259b6ab30d5b5f81b3ea699657273ce54fb229f692c85e7605585acd6c03352615c262cee4ec805e2572c8536b1",
+      "salt": "da9ed6851dc6b2071a95a4505ea427bc",
+      "role": "creator",
+      "approved": false,
+      "createdAt": "2026-03-07T15:35:28.704Z",
+      "lessonsAuthored": []
+    },
+    {
+      "id": "cr-ff07a4dce849",
+      "name": "Test User",
+      "email": "test-1772898301006@example.com",
+      "passwordHash": "2e7b84a37d013d28c77153a917699e14e73f61a72c65e954197d06cb9f43e7b27b3c0303bf47f27f85daae5d02a8c56a7898502200c9f768c099699ee94974b2",
+      "salt": "fa96e8f5a583fadf4bba187168b976db",
+      "role": "creator",
+      "approved": false,
+      "createdAt": "2026-03-07T15:45:01.070Z",
+      "lessonsAuthored": []
     }
   ]
 }

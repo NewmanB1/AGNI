@@ -26,6 +26,19 @@ describe('ensureStudentVector', () => {
     const v2 = ensureStudentVector(state, 'stu2');
     assert.notEqual(v1, v2);
   });
+
+  it('Bug 4: returns live reference — mutation corrupts state; use .slice() for safe copy', () => {
+    const state = createState({ dim: 4 });
+    const vec = ensureStudentVector(state, 'stu1');
+    const stored = state.embedding.students.stu1.vector;
+    assert.strictEqual(vec, stored);
+    const orig = vec[0];
+    vec[0] = 999;
+    assert.equal(state.embedding.students.stu1.vector[0], 999);
+    const copy = ensureStudentVector(state, 'stu1').slice();
+    copy[0] = 0;
+    assert.equal(state.embedding.students.stu1.vector[0], 999);
+  });
 });
 
 describe('ensureLessonVector', () => {
