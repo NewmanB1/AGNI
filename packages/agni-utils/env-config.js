@@ -67,7 +67,7 @@ const config = {
   minLocalEdges:      intVal('AGNI_MIN_LOCAL_EDGES', 5),
 
   embeddingDim:       validRange(intVal('AGNI_EMBEDDING_DIM', 16), 1, 1024, 'AGNI_EMBEDDING_DIM'),
-  forgetting:         floatVal('AGNI_FORGETTING', 0.98),
+  forgetting:         validRange(floatVal('AGNI_FORGETTING', 0.98), 0.5, 1, 'AGNI_FORGETTING'),
   embeddingLr:        floatVal('AGNI_EMBEDDING_LR', 0.01),
   embeddingReg:       floatVal('AGNI_EMBEDDING_REG', 0.001),
 

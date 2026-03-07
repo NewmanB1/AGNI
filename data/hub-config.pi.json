@@ -14,6 +14,7 @@
 
   "hubId": "village-pi-01",
   "embeddingDim": 8,
+  "forgetting": 0.96,
 
   "_engine_notes": [
     "embeddingDim=8 (above): Halves the default (16) to reduce matrix sizes.",
@@ -21,7 +22,7 @@
     "  - Cholesky inversion: O(16^3)=4096 vs O(32^3)=32768 FLOPs per selection.",
     "  - Embedding vectors: 8 floats per student/lesson instead of 16.",
     "",
-    "AGNI_FORGETTING=0.96: Slightly more aggressive forgetting for small cohorts.",
+    "forgetting=0.96 (above): Slightly more aggressive forgetting for small cohorts. Valid range [0.5,1]; values outside corrupt bandit decay.",
     "  With 60 students, the bandit accumulates evidence slowly, so faster",
     "  forgetting keeps the model responsive to changing student performance.",
     "",

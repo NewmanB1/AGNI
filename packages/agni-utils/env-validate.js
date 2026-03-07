@@ -56,7 +56,7 @@ function validateEnv() {
   intEnv('AGNI_MIN_LOCAL_SAMPLE', 40, 1, 100000);
   intEnv('AGNI_MIN_LOCAL_EDGES', 5, 1, 100000);
   intEnv('AGNI_EMBEDDING_DIM', 16, 4, 256);
-  floatEnv('AGNI_FORGETTING', 0.98, 0, 1);
+  floatEnv('AGNI_FORGETTING', 0.98, 0.5, 1);
   floatEnv('AGNI_EMBEDDING_LR', 0.01, 0.0001, 1);
   floatEnv('AGNI_EMBEDDING_REG', 0.001, 0, 1);
   dirEnv('AGNI_DATA_DIR');

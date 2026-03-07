@@ -12,6 +12,12 @@
       "maximum": 1024,
       "description": "Embedding dimension for LMS engine (featureDim = embeddingDim * 2). Must match across federating hubs. Default 16 if omitted."
     },
+    "forgetting": {
+      "type": "number",
+      "minimum": 0.5,
+      "maximum": 1,
+      "description": "Exponential decay for bandit/embedding (0.5–1). Values outside [0.5,1] corrupt decay; engine rejects at runtime. Default 0.98 if omitted."
+    },
     "thetaPort": {
       "type": "integer",
       "minimum": 1,

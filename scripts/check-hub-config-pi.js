@@ -33,6 +33,16 @@ if (typeof cfg.embeddingDim !== 'number' || cfg.embeddingDim < 1 || cfg.embeddin
   errors.push('embeddingDim must be present and in [1,1024]. Prefer config over env to avoid mismatch with lms_state.json.');
 }
 
+// Bug 5: forgetting must be explicit; valid range [0.5,1] documented
+if (typeof cfg.forgetting !== 'number') {
+  errors.push('forgetting must be present (e.g. 0.96). Values outside [0.5,1] corrupt bandit decay.');
+} else if (cfg.forgetting < 0.5 || cfg.forgetting > 1) {
+  errors.push('forgetting must be in [0.5,1]; got ' + cfg.forgetting + '. Values outside range corrupt decay.');
+}
+if (!notes.includes('0.5') && !notes.includes('[0.5') && !notes.includes('0.5,')) {
+  errors.push('_engine_notes must document forgetting valid range [0.5,1].');
+}
+
 // Bug 3: Node version must be documented
 if (!cfg.nodeVersionRequired) {
   errors.push('nodeVersionRequired must be present (e.g. ">=18"). Bullseye ships Node 12; deployers need this documented.');

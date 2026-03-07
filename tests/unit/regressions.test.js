@@ -1163,8 +1163,29 @@ describe('AUDIT-DOCS: hub-config.pi.json regression guards (memory arithmetic, J
     assert.equal(
       result.status,
       0,
-      `check-hub-config-pi must pass. Guards: Bug 1 memory arithmetic, Bug 2 JS overhead caveat, Bug 3 Node version, Bug 4 embeddingDim in config.\n${result.stderr || result.stdout}`
+      `check-hub-config-pi must pass. Guards: Bug 1 memory arithmetic, Bug 2 JS overhead caveat, Bug 3 Node version, Bug 4 embeddingDim, Bug 5 forgetting.\n${result.stderr || result.stdout}`
     );
+  });
+});
+
+describe('AUDIT-INVARIANT: AGNI_FORGETTING valid range [0.5,1] enforced at startup', () => {
+  it('env-config throws on forgetting < 0.5', () => {
+    const result = spawnSync(process.execPath, ['-e', "process.env.AGNI_FORGETTING='0'; require('@agni/utils/env-config');"], {
+      cwd: path.resolve(__dirname, '../..'),
+      encoding: 'utf8',
+      env: { ...process.env, AGNI_FORGETTING: '0' },
+    });
+    assert.notEqual(result.status, 0, 'env-config must reject AGNI_FORGETTING=0');
+    assert.ok((result.stderr || result.stdout || '').includes('0.5') || (result.stderr || result.stdout || '').includes('AGNI_FORGETTING'), 'error must mention range or key');
+  });
+
+  it('env-config throws on forgetting > 1', () => {
+    const result = spawnSync(process.execPath, ['-e', "process.env.AGNI_FORGETTING='1.5'; require('@agni/utils/env-config');"], {
+      cwd: path.resolve(__dirname, '../..'),
+      encoding: 'utf8',
+      env: { ...process.env, AGNI_FORGETTING: '1.5' },
+    });
+    assert.notEqual(result.status, 0, 'env-config must reject AGNI_FORGETTING=1.5');
   });
 });
 

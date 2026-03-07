@@ -23,6 +23,10 @@ if (!hubConfigSrc.includes("['embeddingDim', 'AGNI_EMBEDDING_DIM']") &&
     !hubConfigSrc.includes('["embeddingDim", "AGNI_EMBEDDING_DIM"]')) {
   errors.push('hub-config.js CONFIG_KEYS must include embeddingDim → AGNI_EMBEDDING_DIM.');
 }
+if (!hubConfigSrc.includes("['forgetting', 'AGNI_FORGETTING']") &&
+    !hubConfigSrc.includes('["forgetting", "AGNI_FORGETTING"]')) {
+  errors.push('hub-config.js CONFIG_KEYS must include forgetting → AGNI_FORGETTING.');
+}
 
 // 2. Bootstrap order: loadHubConfig before env-config
 function checkBootstrap(filePath, label) {
