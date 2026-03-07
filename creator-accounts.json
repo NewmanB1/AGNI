@@ -186,6 +186,17 @@
       "approved": false,
       "createdAt": "2026-03-07T19:39:54.560Z",
       "lessonsAuthored": []
+    },
+    {
+      "id": "cr-a703bcf047df",
+      "name": "Test User",
+      "email": "test-1772922651068@example.com",
+      "passwordHash": "c203327a9893cbb5414577f3d3328ea66271cebe4bb196a7bca3a80048ad0a564aee6b6eb493486f49fce6b0b753e2e7fc5b9e587fac1e00ecb70a8ab0ba9711",
+      "salt": "3c2504536d685cb52c758fe97e9dfc3f",
+      "role": "creator",
+      "approved": false,
+      "createdAt": "2026-03-07T22:30:51.143Z",
+      "lessonsAuthored": []
     }
   ]
 }

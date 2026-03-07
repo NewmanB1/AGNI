@@ -24,4 +24,5 @@ module.exports = {
   archetypeMatch:   require('./archetype-match'),
   runtimeManifest:  require('./runtimeManifest'),
   katexCssBuilder:  require('./katex-css-builder'),
+  skillDagValidate: require('./skill-dag-validate'),
 };

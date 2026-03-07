@@ -309,17 +309,13 @@ The engine has two layers with distinct responsibilities.
 
 ### 7.1 Theta — Prerequisite Enforcement & Eligibility Filtering (Implemented)
 
-`theta.js` (packages/agni-hub/theta.js; hub-tools/ is a wrapper) maintains the lesson graph and enforces prerequisite readiness
-before any lesson is offered to a student.
+`theta.js` (packages/agni-hub/theta.js; hub-tools/ is a wrapper) maintains the lesson graph and enforces prerequisite readiness before any lesson is offered to a student.
 
-- **Skill graph:** BFS traversal with cycle guard. Lessons are only eligible if all
-  `ontology.requires` skills are mastered.
-- **MLC heuristic:** Among eligible lessons, sorts by Marginal Learning Cost:
-  `θ = BaseCost − CohortDiscount`
-  Students with background in weaving see "Loops" first; students with farming background
-  may see "Modulo Arithmetic" first.
-- **Lesson index:** Built from `lesson-ir.json` sidecar files written by the compiler.
-  Falls back to HTML scraping for lessons compiled before Phase 2.
+- **Skill graph:** BFS traversal with cycle guard at runtime. Lessons are only eligible if all `ontology.requires` skills are mastered.
+- **Runtime cycle handling:** The cycle guard (visited set + depth limit) prevents infinite BFS loops and logs a warning if the depth limit is reached. It does **not** resolve cycles. A cycle (e.g. A→B→C→A) makes all lessons in the cycle permanently ineligible — the student hits a dead end with no error surfaced.
+- **Compile-time DAG validation:** `scripts/check-skill-dag.js` validates the skill graph (lesson-index.json + curriculum.json) for cycles. Run `npm run verify:skill-dag` or after reboot to check for corruption. Exit 1 on cycles; exit 0 if no lesson-index (nothing to validate). Included in `verify:all`.
+- **MLC heuristic:** Among eligible lessons, sorts by Marginal Learning Cost: `θ = BaseCost − CohortDiscount`. Students with background in weaving see "Loops" first; students with farming background may see "Modulo Arithmetic" first.
+- **Lesson index:** `rebuildLessonIndex()` builds lesson-index.json from catalog.json and IR sidecars (serveDir/lessons/{slug}/index-ir.json). Falls back to HTML scraping for lessons compiled before Phase 2.
 
 ### 7.2 LMS Engine — Adaptive Selection (Implemented)
 

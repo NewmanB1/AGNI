@@ -1,0 +1,14 @@
+[
+  {
+    "lessonId": "lesson-loops",
+    "slug": "loops",
+    "skillsProvided": [{ "skill": "ols.coding:loops", "declaredLevel": 1 }],
+    "skillsRequired": []
+  },
+  {
+    "lessonId": "lesson-modulo",
+    "slug": "modulo",
+    "skillsProvided": [{ "skill": "ols.math:modulo", "declaredLevel": 1 }],
+    "skillsRequired": []
+  }
+]
