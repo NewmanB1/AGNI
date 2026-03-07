@@ -79,8 +79,12 @@ function ensureLessonVector(state, lessonId) {
  *
  * Update rule (err and z_k, w_k captured pre-update; both vectors use same snapshot):
  *   err = gain − z·w
- *   z_k ← γ·z_k + lr·(err·w_k − reg·z_k)
- *   w_k ← γ·w_k + lr·(err·z_k − reg·w_k)
+ *   raw_z_k = γ·z_k + lr·(err·w_k − reg·z_k)
+ *   raw_w_k = γ·w_k + lr·(err·z_k − reg·w_k)
+ *   δ_z = clamp(raw_z_k − z_k, −MAX_DELTA, MAX_DELTA)
+ *   δ_w = clamp(raw_w_k − w_k, −MAX_DELTA, MAX_DELTA)
+ *   z_k ← clamp(z_k + δ_z, −MAG_CAP, MAG_CAP)
+ *   w_k ← clamp(w_k + δ_w, −MAG_CAP, MAG_CAP)
  *
  * Forgetting semantic: Each update multiplies current components by γ before
  * adding the gradient term. Recent observations therefore dominate; after many
@@ -118,18 +122,28 @@ function updateEmbedding(state, studentId, lessonId, gain) {
   var dotZW = math.dot(z, w);
   var err   = gain - dotZW;
 
-  var MAG_CAP = 10;
+  // Bug 2: value cap scaled to gain range; gradient clipping avoids saturation oscillation.
+  // Rasch gain (ability delta) is typically in [-2, 2]. Cap components at 2 so max
+  // dot(z,w) ≈ dim*4; prevents err = gain - 800 when both vectors hit ±10.
+  var MAG_CAP = 2;
+  // Per-step delta clamp prevents single-update explosion; avoids oscillation at cap.
+  var MAX_DELTA = 0.5;
+
   for (var k = 0; k < z.length; k++) {
     var zk = z[k];
     var wk = w[k];
     var newZk = gamma * zk + lr * (err * wk - reg * zk);
     var newWk = gamma * wk + lr * (err * zk - reg * wk);
-    // Revert to previous value on NaN/Infinity instead of zeroing
     if (!isFinite(newZk)) newZk = zk;
     if (!isFinite(newWk)) newWk = wk;
-    // Clamp magnitude to prevent unbounded growth
-    z[k] = Math.max(-MAG_CAP, Math.min(MAG_CAP, newZk));
-    w[k] = Math.max(-MAG_CAP, Math.min(MAG_CAP, newWk));
+
+    var deltaZk = newZk - zk;
+    var deltaWk = newWk - wk;
+    deltaZk = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, deltaZk));
+    deltaWk = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, deltaWk));
+
+    z[k] = Math.max(-MAG_CAP, Math.min(MAG_CAP, zk + deltaZk));
+    w[k] = Math.max(-MAG_CAP, Math.min(MAG_CAP, wk + deltaWk));
   }
 }
 

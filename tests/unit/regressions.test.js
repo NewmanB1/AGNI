@@ -315,7 +315,7 @@ describe('AUDIT-INVARIANT: embeddings Bug 1 — updateEmbedding uses pre-update 
   const math = require('../../src/engine/math');
   const { createState } = require('../helpers/engine-state');
 
-  it('update rule applies gamma and gradient to pre-update z_k, w_k (symmetric)', () => {
+  it('update rule applies gamma, gradient, delta clamp, and value cap', () => {
     const state = createState({ dim: 2 });
     embeddings.ensureStudentVector(state, 's1');
     embeddings.ensureLessonVector(state, 'l1');
@@ -325,6 +325,8 @@ describe('AUDIT-INVARIANT: embeddings Bug 1 — updateEmbedding uses pre-update 
     var lr = state.embedding.lr;
     var reg = state.embedding.reg;
     var gain = 0.8;
+    var MAG_CAP = 2;
+    var MAX_DELTA = 0.5;
 
     embeddings.updateEmbedding(state, 's1', 'l1', gain);
 
@@ -332,11 +334,37 @@ describe('AUDIT-INVARIANT: embeddings Bug 1 — updateEmbedding uses pre-update 
     var w1 = state.embedding.lessons.l1.vector;
     var err = gain - math.dot(z, w);
     for (var k = 0; k < z.length; k++) {
-      var expectedZk = Math.max(-10, Math.min(10, gamma * z[k] + lr * (err * w[k] - reg * z[k])));
-      var expectedWk = Math.max(-10, Math.min(10, gamma * w[k] + lr * (err * z[k] - reg * w[k])));
-      assert.ok(Math.abs(z1[k] - expectedZk) < 1e-9, 'z[' + k + '] must match documented update rule');
-      assert.ok(Math.abs(w1[k] - expectedWk) < 1e-9, 'w[' + k + '] must match documented update rule');
+      var rawZk = gamma * z[k] + lr * (err * w[k] - reg * z[k]);
+      var rawWk = gamma * w[k] + lr * (err * z[k] - reg * w[k]);
+      var dZ = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, rawZk - z[k]));
+      var dW = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, rawWk - w[k]));
+      var expectedZk = Math.max(-MAG_CAP, Math.min(MAG_CAP, z[k] + dZ));
+      var expectedWk = Math.max(-MAG_CAP, Math.min(MAG_CAP, w[k] + dW));
+      assert.ok(Math.abs(z1[k] - expectedZk) < 1e-9, 'z[' + k + '] must match update rule (gradient clip + cap)');
+      assert.ok(Math.abs(w1[k] - expectedWk) < 1e-9, 'w[' + k + '] must match update rule (gradient clip + cap)');
     }
+  });
+});
+
+describe('AUDIT-INVARIANT: embeddings Bug 2 — MAG_CAP and gradient clipping prevent saturation', () => {
+  const embeddings = require('../../src/engine/embeddings');
+  const math = require('../../src/engine/math');
+  const { createState } = require('../helpers/engine-state');
+
+  it('vectors stay within MAG_CAP=2 under large repeated gains', () => {
+    const state = createState({ dim: 4 });
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    for (var i = 0; i < 200; i++) {
+      embeddings.updateEmbedding(state, 's1', 'l1', 5.0);
+    }
+    var z = state.embedding.students.s1.vector;
+    var w = state.embedding.lessons.l1.vector;
+    var maxZ = Math.max.apply(null, z.map(function (v) { return Math.abs(v); }));
+    var maxW = Math.max.apply(null, w.map(function (v) { return Math.abs(v); }));
+    assert.ok(maxZ <= 2 && maxW <= 2, 'components must not exceed MAG_CAP=2');
+    var dotZW = math.dot(z, w);
+    assert.ok(Math.abs(dotZW) < 50, 'dot(z,w) must stay bounded; old cap=10 gave dot~800 and oscillation');
   });
 });
 
@@ -476,7 +504,7 @@ describe('AUDIT-13: embedding updates are magnitude-capped', () => {
     }
     var vec = state.embedding.students['s1'].vector;
     var maxMag = Math.max.apply(null, vec.map(function (v) { return Math.abs(v); }));
-    assert.ok(maxMag <= 10, 'Vector magnitude should be capped at 10, got ' + maxMag);
+    assert.ok(maxMag <= 2, 'Vector magnitude should be capped at 2 (Bug 2), got ' + maxMag);
   });
 });
 
