@@ -124,18 +124,19 @@ function identity(n) {
 function cholesky(A) {
   var n = A.length;
   var L = new Array(n);
-  for (var i = 0; i < n; i++) {
+  var i, j, k, sum, diag;
+  for (i = 0; i < n; i++) {
     L[i] = new Array(n).fill(0);
   }
 
-  for (var i = 0; i < n; i++) {
-    for (var j = 0; j <= i; j++) {
-      var sum = 0;
-      for (var k = 0; k < j; k++) {
+  for (i = 0; i < n; i++) {
+    for (j = 0; j <= i; j++) {
+      sum = 0;
+      for (k = 0; k < j; k++) {
         sum += L[i][k] * L[j][k];
       }
       if (i === j) {
-        var diag = A[i][i] - sum;
+        diag = A[i][i] - sum;
         if (diag <= 0 || !isFinite(diag)) {
           throw new Error('[MATH] Matrix is not SPD (Cholesky failed at i=' + i + ')');
         }
@@ -157,9 +158,10 @@ function cholesky(A) {
 function forwardSub(L, b) {
   var n = L.length;
   var y = new Array(n);
-  for (var i = 0; i < n; i++) {
-    var sum = 0;
-    for (var j = 0; j < i; j++) sum += L[i][j] * y[j];
+  var i, j, sum;
+  for (i = 0; i < n; i++) {
+    sum = 0;
+    for (j = 0; j < i; j++) sum += L[i][j] * y[j];
     y[i] = (b[i] - sum) / L[i][i];
   }
   return y;
@@ -174,9 +176,10 @@ function forwardSub(L, b) {
 function backSub(L, y) {
   var n = L.length;
   var x = new Array(n);
-  for (var i = n - 1; i >= 0; i--) {
-    var sum = 0;
-    for (var j = i + 1; j < n; j++) sum += L[j][i] * x[j];
+  var i, j, sum;
+  for (i = n - 1; i >= 0; i--) {
+    sum = 0;
+    for (j = i + 1; j < n; j++) sum += L[j][i] * x[j];
     x[i] = (y[i] - sum) / L[i][i];
   }
   return x;
@@ -191,16 +194,17 @@ function invertSPD(A) {
   var n = A.length;
   var L = cholesky(A);
   var inv = new Array(n);
-  for (var i = 0; i < n; i++) {
+  var i, j, e, y, x;
+  for (i = 0; i < n; i++) {
     inv[i] = new Array(n);
   }
 
-  for (var j = 0; j < n; j++) {
-    var e = new Array(n).fill(0);
+  for (j = 0; j < n; j++) {
+    e = new Array(n).fill(0);
     e[j] = 1;
-    var y = forwardSub(L, e);
-    var x = backSub(L, y);
-    for (var i = 0; i < n; i++) {
+    y = forwardSub(L, e);
+    x = backSub(L, y);
+    for (i = 0; i < n; i++) {
       inv[i][j] = x[i];
     }
   }
