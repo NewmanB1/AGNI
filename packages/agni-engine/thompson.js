@@ -114,7 +114,8 @@ function ensureBanditInitialized(state) {
   assertFeatureDimInvariant(state);
   var expectedFeatureDim = state.bandit.featureDim;
 
-  if (!state.bandit.A || state.bandit.A.length !== expectedFeatureDim) {
+  if (!state.bandit.A || state.bandit.A.length !== expectedFeatureDim ||
+      !state.bandit.A[0] || state.bandit.A[0].length !== expectedFeatureDim) {
     state.bandit.A = math.identity(expectedFeatureDim).map(function (row) {
       return row.map(function (v) { return v * PRIOR_REGULARIZATION; });
     });

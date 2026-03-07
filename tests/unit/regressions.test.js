@@ -617,6 +617,27 @@ describe('AUDIT-INVARIANT: thompson Bug 6 — updateBandit rejects overflow atom
   });
 });
 
+describe('AUDIT-INVARIANT: thompson Bug 8 — ensureBanditInitialized rejects jagged A', () => {
+  const thompson = require('../../src/engine/thompson');
+  const embeddings = require('../../src/engine/embeddings');
+  const { createState } = require('../helpers/engine-state');
+
+  it('re-initializes A when row has wrong column count (jagged matrix)', () => {
+    const state = createState({ dim: 2 });
+    embeddings.ensureStudentVector(state, 's1');
+    embeddings.ensureLessonVector(state, 'l1');
+    thompson.ensureBanditInitialized(state);
+
+    // Corrupt: truncate first row (4 cols -> 3 cols); row count still correct
+    state.bandit.A[0] = [1, 0, 0];
+
+    thompson.ensureBanditInitialized(state);
+
+    assert.equal(state.bandit.A[0].length, 4, 'A[0] must have featureDim columns after reinit');
+    assert.equal(state.bandit.A.length, 4, 'A must have featureDim rows');
+  });
+});
+
 describe('AUDIT-15: sampleTheta jitter does not mutate state.bandit.A', () => {
   const thompson = require('../../src/engine/thompson');
   const embeddings = require('../../src/engine/embeddings');
