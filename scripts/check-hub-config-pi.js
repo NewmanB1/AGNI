@@ -20,23 +20,46 @@ const CONFIG_PATH = path.join(ROOT, 'data', 'hub-config.pi.json');
 
 const errors = [];
 
-if (!fs.existsSync(CONFIG_PATH)) {
-  console.error('check-hub-config-pi: data/hub-config.pi.json not found.');
-  process.exit(1);
-}
+/** Rasch bytes per student (ability + variance = 2×float64). Update if engine changes. */
+var RASCH_BYTES_PER_STUDENT = 16;
+
+var MAX_CAPACITY = 100000;
 
 let cfg;
 try {
-  cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  var raw = fs.readFileSync(CONFIG_PATH, 'utf8');
+  cfg = JSON.parse(raw);
 } catch (e) {
-  console.error('check-hub-config-pi: failed to parse JSON:', e.message);
+  if (e.code === 'ENOENT') {
+    console.error('check-hub-config-pi: data/hub-config.pi.json not found.');
+  } else if (e instanceof SyntaxError) {
+    console.error('check-hub-config-pi: failed to parse JSON:', e.message);
+  } else {
+    console.error('check-hub-config-pi: failed to read config:', e.message);
+  }
   process.exit(1);
 }
 
-function toNotes(val) {
-  return Array.isArray(val) ? val.join('\n') : (typeof val === 'string' ? val : '');
+if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) {
+  console.error('check-hub-config-pi: config must be a non-null object.');
+  process.exit(1);
 }
-const notes = toNotes(cfg._engine_notes);
+
+function toNotes(val, key) {
+  if (Array.isArray(val)) return val.join('\n');
+  if (typeof val === 'string') return val;
+  if (val !== undefined && val !== null) {
+    errors.push(key + ' must be array or string; got ' + typeof val + '.');
+  }
+  return '';
+}
+/** Match number as whole word to avoid "4" matching "40" or "14". */
+function notesIncludeNum(notes, num) {
+  var s = String(num);
+  var re = new RegExp('\\b' + s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b');
+  return re.test(notes);
+}
+const notes = toNotes(cfg._engine_notes, '_engine_notes');
 
 // Bug 4: embeddingDim must be explicit and integer
 if (typeof cfg.embeddingDim !== 'number' || !Number.isInteger(cfg.embeddingDim) || cfg.embeddingDim < 1 || cfg.embeddingDim > 1024) {
@@ -44,8 +67,8 @@ if (typeof cfg.embeddingDim !== 'number' || !Number.isInteger(cfg.embeddingDim) 
 }
 
 // Bug 5: forgetting must be explicit; valid range [0.9,1] documented (0.5 floor was too permissive, degenerate bandit)
-if (typeof cfg.forgetting !== 'number') {
-  errors.push('forgetting must be present (e.g. 0.96). Values outside [0.9,1] corrupt bandit decay.');
+if (typeof cfg.forgetting !== 'number' || !Number.isFinite(cfg.forgetting)) {
+  errors.push('forgetting must be present and finite (e.g. 0.96). Values outside [0.9,1] corrupt bandit decay.');
 } else if (cfg.forgetting < 0.9 || cfg.forgetting > 1) {
   errors.push('forgetting must be in [0.9,1]; got ' + cfg.forgetting + '. Values outside range corrupt decay.');
 }
@@ -54,28 +77,38 @@ if (!notes.includes('0.9') && !notes.includes('[0.9') && !notes.includes('0.9,')
 }
 
 // Bug 7: maxStudents/maxLessons must be explicit integers
-if (typeof cfg.maxStudents !== 'number' || !Number.isInteger(cfg.maxStudents) || cfg.maxStudents < 1) {
-  errors.push('maxStudents must be present and integer >= 1. Budget assumes this limit; exceeding silently exceeds memory.');
+if (typeof cfg.maxStudents !== 'number' || !Number.isInteger(cfg.maxStudents) || cfg.maxStudents < 1 || cfg.maxStudents > MAX_CAPACITY) {
+  errors.push('maxStudents must be present and integer in [1,' + MAX_CAPACITY + ']. Budget assumes this limit; exceeding silently exceeds memory.');
 }
-if (typeof cfg.maxLessons !== 'number' || !Number.isInteger(cfg.maxLessons) || cfg.maxLessons < 1) {
-  errors.push('maxLessons must be present and integer >= 1. Budget assumes this limit; exceeding silently exceeds memory.');
+if (typeof cfg.maxLessons !== 'number' || !Number.isInteger(cfg.maxLessons) || cfg.maxLessons < 1 || cfg.maxLessons > MAX_CAPACITY) {
+  errors.push('maxLessons must be present and integer in [1,' + MAX_CAPACITY + ']. Budget assumes this limit; exceeding silently exceeds memory.');
 }
 if (!notes.includes('Runtime') && !notes.includes('runtime') && !notes.includes('enforced') && !notes.includes('enforcement')) {
   errors.push('_engine_notes must document maxStudents/maxLessons enforcement (or lack thereof).');
 }
 
+// Path fields required for hub operation
+var pathKeys = ['dataDir', 'serveDir', 'yamlDir'];
+for (var pi = 0; pi < pathKeys.length; pi++) {
+  var pk = pathKeys[pi];
+  var pv = cfg[pk];
+  if (typeof pv !== 'string' || pv.trim().length === 0) {
+    errors.push(pk + ' must be non-empty string.');
+  }
+}
+
 // Bug 6: Template must use a placeholder so deployers replace it (duplicate hubIds corrupt sync)
 if (typeof cfg.hubId !== 'string' || cfg.hubId.trim().length === 0) {
   errors.push('hubId must be present and non-empty.');
-} else if (!/CHANGE_ME|REPLACE|__REPLACE__|<REPLACE>/i.test(cfg.hubId)) {
+} else if (!/CHANGE_ME|REPLACE|__REPLACE__|<REPLACE>|\bTODO\b|\bFIXME\b/i.test(cfg.hubId)) {
   errors.push('hubId must contain a placeholder (e.g. CHANGE_ME) so deployers replace it. Hardcoded values (e.g. village-pi-01) cause collisions when config is copied to a second Pi.');
 }
 
 // Bug 3: Node version must be documented
-if (!cfg.nodeVersionRequired) {
-  errors.push('nodeVersionRequired must be present (e.g. ">=18"). Bullseye ships Node 12; deployers need this documented.');
+if (typeof cfg.nodeVersionRequired !== 'string' || cfg.nodeVersionRequired.trim().length === 0) {
+  errors.push('nodeVersionRequired must be present string (e.g. ">=18"). Bullseye ships Node 12; deployers need this documented.');
 }
-if (!cfg.nodeVersionNote) {
+if (typeof cfg.nodeVersionNote !== 'string' || cfg.nodeVersionNote.trim().length === 0) {
   errors.push('nodeVersionNote must warn about Bullseye Node 12 and silent failures.');
 }
 
@@ -84,21 +117,31 @@ const dim = (typeof cfg.embeddingDim === 'number' && Number.isInteger(cfg.embedd
 const nStu = (typeof cfg.maxStudents === 'number' && Number.isInteger(cfg.maxStudents)) ? cfg.maxStudents : 60;
 const nLes = (typeof cfg.maxLessons === 'number' && Number.isInteger(cfg.maxLessons)) ? cfg.maxLessons : 200;
 const featureDim = dim * 2;
-const raschBytes = nStu * 16;
+const raschBytes = nStu * RASCH_BYTES_PER_STUDENT;
 const embStudentsBytes = nStu * dim * 8;
 const embLessonsBytes = nLes * dim * 8;
 const banditABytes = featureDim * featureDim * 8;
-if (!notes.includes('960 B') && !notes.includes('960B')) {
-  errors.push(`_engine_notes must show Rasch students: 60 × 16 B = 960 B (got ${raschBytes} bytes).`);
+
+const raschSizeOk = notesIncludeNum(notes, raschBytes) || notes.includes(raschBytes + ' B') || notes.includes(raschBytes + 'B');
+if (!raschSizeOk) {
+  errors.push(`_engine_notes must show Rasch students: ${nStu} × ${RASCH_BYTES_PER_STUDENT} B = ${raschBytes} B (ability+variance).`);
 }
-if (!notes.includes('3.8 KB') && !notes.includes('3.75')) {
-  errors.push(`_engine_notes must show Embeddings (students) ≈ 3.8 KB (60×8×8 = ${embStudentsBytes} B).`);
+
+const embStuKB = embStudentsBytes / 1024;
+const embStuSizeOk = notesIncludeNum(notes, embStudentsBytes) || notes.includes(embStuKB.toFixed(1)) ||
+  notesIncludeNum(notes, Math.round(embStuKB)) || (embStuKB >= 1 && notes.includes((embStuKB).toFixed(1) + ' KB'));
+if (!embStuSizeOk) {
+  errors.push(`_engine_notes must show Embeddings (students): ${nStu}×${dim}×8 = ${embStudentsBytes} B (≈${embStuKB.toFixed(1)} KB).`);
 }
-if (!notes.includes('13 KB') && !notes.includes('12.5')) {
-  errors.push(`_engine_notes must show Embeddings (lessons) ≈ 13 KB (200×8×8 = ${embLessonsBytes} B).`);
+
+const embLesKB = embLessonsBytes / 1024;
+const embLesSizeOk = notesIncludeNum(notes, embLessonsBytes) || notes.includes(embLesKB.toFixed(1)) ||
+  notesIncludeNum(notes, Math.round(embLesKB)) || (embLesKB >= 1 && notes.includes((embLesKB).toFixed(1) + ' KB'));
+if (!embLesSizeOk) {
+  errors.push(`_engine_notes must show Embeddings (lessons): ${nLes}×${dim}×8 = ${embLessonsBytes} B (≈${embLesKB.toFixed(1)} KB).`);
 }
 const banditKB = banditABytes / 1024;
-const banditSizeOk = notes.includes(String(banditABytes)) || notes.includes(banditKB.toFixed(1)) ||
+const banditSizeOk = notesIncludeNum(notes, banditABytes) || notes.includes(banditKB.toFixed(1)) ||
   notes.includes(String(Math.round(banditKB)) + ' KB') || notes.includes(String(Math.round(banditKB)) + '.0 KB');
 if (!banditSizeOk) {
   errors.push(`_engine_notes must show Bandit A ≈ ${banditKB >= 1 ? banditKB.toFixed(1) + ' KB' : banditABytes + ' B'} (${featureDim}×${featureDim}×8 = ${banditABytes} B).`);
@@ -106,12 +149,12 @@ if (!banditSizeOk) {
 if (!notes.includes('ability+variance') && !notes.includes('RaschStudentState')) {
   errors.push('_engine_notes must clarify Rasch 16 B = ability+variance (2×float64).');
 }
-if (!notes.includes('featureDim') && !notes.includes('embeddingDim×2')) {
+if (!notes.includes('featureDim') && !notes.includes('embeddingDim×2') && !notes.includes('embeddingDim*2')) {
   errors.push('_engine_notes must note featureDim=embeddingDim×2 invariant for Bandit A.');
 }
 
 // Bug 8: Path assumptions — existence, fallback, permissions, failure mode
-const pathNotes = toNotes(cfg._path_notes);
+const pathNotes = toNotes(cfg._path_notes, '_path_notes');
 if (!pathNotes.includes('ENOENT') && !pathNotes.includes('no such file')) {
   errors.push('_path_notes must document failure mode when dataDir missing (ENOENT at first file access).');
 }
