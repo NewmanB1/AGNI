@@ -178,6 +178,13 @@ describe('scaleMat', () => {
     assert.throws(() => math.scaleMat([123, [1, 2]], 2), /scaleMat.*first row must be array/);
   });
 
+  it('throws [MATH] error when row 1..n is null or non-array (no TypeError)', () => {
+    assert.throws(() => math.scaleMat([[1, 2], null, [5, 6]], 2), /scaleMat.*row 1 must be array/);
+    assert.throws(() => math.scaleMat([[1, 2], 99, [5, 6]], 2), /scaleMat.*row 1 must be array/);
+    assert.throws(() => math.scaleMat([[1, 2], 'x', [5, 6]], 2), /scaleMat.*row 1 must be array/);
+    assert.throws(() => math.scaleMat([[1, 2], [3, 4], undefined], 2), /scaleMat.*row 2 must be array/);
+  });
+
   it('throws for sparse/jagged or non-finite matrix', () => {
     const sparseRow = [1, , 3];
     assert.throws(() => math.scaleMat([sparseRow, [4, 5, 6]], 2), /non-finite/);
@@ -204,6 +211,12 @@ describe('matVec', () => {
   it('throws for jagged matrix', () => {
     const A = [[1, 2], [3, 4, 5]];
     assert.throws(() => math.matVec(A, [1, 2]), /jagged/);
+  });
+
+  it('throws [MATH] error when row 1..n is null or non-array (no TypeError)', () => {
+    assert.throws(() => math.matVec([[1, 2], null, [5, 6]], [1, 1]), /matVec.*row 1 must be array/);
+    assert.throws(() => math.matVec([[1, 2], 99, [5, 6]], [1, 1]), /matVec.*row 1 must be array/);
+    assert.throws(() => math.matVec([[1, 2], [3, 4], undefined], [1, 1]), /matVec.*row 2 must be array/);
   });
 
   it('throws for null or undefined input', () => {

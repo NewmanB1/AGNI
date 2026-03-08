@@ -40,6 +40,15 @@ function isNonNegativeInteger(x) {
   return typeof x === 'number' && isFinite(x) && x === Math.floor(x) && x >= 0;
 }
 
+/** Inner dot product (no validation). Call only after inputs are validated. */
+function dotInner(a, b) {
+  var sum = 0;
+  for (var i = 0; i < a.length; i++) {
+    sum += a[i] * b[i];
+  }
+  return sum;
+}
+
 /**
  * Dot product of two vectors.
  * @param {number[]} a
@@ -52,7 +61,6 @@ function dot(a, b) {
   if (a.length !== b.length) {
     throw new Error('[MATH] dot: vector length mismatch (' + a.length + ' vs ' + b.length + ')');
   }
-  var sum = 0;
   for (var i = 0; i < a.length; i++) {
     if (typeof a[i] !== 'number' || !isFinite(a[i])) {
       throw new Error('[MATH] dot: non-finite element at first vector index ' + i);
@@ -60,9 +68,8 @@ function dot(a, b) {
     if (typeof b[i] !== 'number' || !isFinite(b[i])) {
       throw new Error('[MATH] dot: non-finite element at second vector index ' + i);
     }
-    sum += a[i] * b[i];
   }
-  return sum;
+  return dotInner(a, b);
 }
 
 /**
@@ -148,19 +155,21 @@ function addMat(A, B) {
     throw new Error('[MATH] addMat: dimension mismatch (' + rows + 'x? vs ' + B.length + 'x?)');
   }
   if (rows === 0) return [];
-  if (!Array.isArray(A[0]) || !Array.isArray(B[0])) {
-    throw new Error('[MATH] addMat: first row must be array');
-  }
-  var cols = A[0].length;
-  if (cols !== B[0].length) {
-    throw new Error('[MATH] addMat: dimension mismatch (' + rows + 'x' + cols + ' vs ' + rows + 'x' + B[0].length + ')');
-  }
+  var cols;
   for (var i = 0; i < rows; i++) {
-    if (!A[i] || !Array.isArray(A[i]) || A[i].length !== cols) {
-      throw new Error('[MATH] addMat: jagged matrix at row ' + i);
+    if (!Array.isArray(A[i])) {
+      throw new Error('[MATH] addMat: row ' + i + ' of A must be array');
     }
-    if (!B[i] || !Array.isArray(B[i]) || B[i].length !== cols) {
-      throw new Error('[MATH] addMat: jagged matrix B at row ' + i);
+    if (!Array.isArray(B[i])) {
+      throw new Error('[MATH] addMat: row ' + i + ' of B must be array');
+    }
+    if (i === 0) {
+      cols = A[0].length;
+      if (cols !== B[0].length) {
+        throw new Error('[MATH] addMat: dimension mismatch (' + rows + 'x' + cols + ' vs ' + rows + 'x' + B[0].length + ')');
+      }
+    } else if (A[i].length !== cols || B[i].length !== cols) {
+      throw new Error('[MATH] addMat: jagged matrix at row ' + i);
     }
     for (var c = 0; c < cols; c++) {
       if (typeof A[i][c] !== 'number' || !isFinite(A[i][c])) {
@@ -188,12 +197,17 @@ function scaleMat(A, s) {
     throw new Error('[MATH] scaleMat: scalar must be finite number');
   }
   if (A.length > 0) {
-    if (!Array.isArray(A[0])) {
+    if (!A[0] || !Array.isArray(A[0])) {
       throw new Error('[MATH] scaleMat: first row must be array');
     }
     var cols = A[0].length;
     for (var i = 0; i < A.length; i++) {
-      if (A[i].length !== cols) throw new Error('[MATH] scaleMat: jagged matrix at row ' + i);
+      if (!A[i] || !Array.isArray(A[i])) {
+        throw new Error('[MATH] scaleMat: row ' + i + ' must be array');
+      }
+      if (A[i].length !== cols) {
+        throw new Error('[MATH] scaleMat: jagged matrix at row ' + i);
+      }
       for (var j = 0; j < cols; j++) {
         if (typeof A[i][j] !== 'number' || !isFinite(A[i][j])) {
           throw new Error('[MATH] scaleMat: non-finite element at row ' + i + ', col ' + j);
@@ -219,7 +233,7 @@ function matVec(A, x) {
     throw new Error('[MATH] matVec: vector must be array');
   }
   if (A.length === 0) return [];
-  if (!Array.isArray(A[0])) {
+  if (!A[0] || !Array.isArray(A[0])) {
     throw new Error('[MATH] matVec: first row must be array');
   }
   var cols = A[0].length;
@@ -227,7 +241,10 @@ function matVec(A, x) {
     throw new Error('[MATH] matVec: dimension mismatch (cols=' + cols + ' vs vec=' + x.length + ')');
   }
   for (var i = 0; i < A.length; i++) {
-    if (!A[i] || !Array.isArray(A[i]) || A[i].length !== cols) {
+    if (!A[i] || !Array.isArray(A[i])) {
+      throw new Error('[MATH] matVec: row ' + i + ' must be array');
+    }
+    if (A[i].length !== cols) {
       throw new Error('[MATH] matVec: jagged matrix at row ' + i);
     }
     for (var c = 0; c < cols; c++) {
@@ -241,7 +258,7 @@ function matVec(A, x) {
       throw new Error('[MATH] matVec: non-finite element in vector at index ' + xi);
     }
   }
-  return A.map(function(row) { return dot(row, x); });
+  return A.map(function(row) { return dotInner(row, x); });
 }
 
 /**
@@ -276,8 +293,11 @@ function cholesky(A) {
   }
   var i, j, k, sum, diag, aij, aji;
   for (i = 0; i < n; i++) {
-    if (!A[i] || A[i].length !== n) {
-      throw new Error('[MATH] cholesky: matrix must be square (got ' + n + 'x' + (A[i] ? A[i].length : '?') + ')');
+    if (!Array.isArray(A[i])) {
+      throw new Error('[MATH] cholesky: row ' + i + ' must be array');
+    }
+    if (A[i].length !== n) {
+      throw new Error('[MATH] cholesky: matrix must be square (got row ' + i + ' with length ' + A[i].length + ')');
     }
     if (typeof A[i][i] !== 'number' || !isFinite(A[i][i])) {
       throw new Error('[MATH] cholesky: non-numeric diagonal at [' + i + ']');
@@ -330,8 +350,11 @@ function forwardSub(L, b) {
   if (b == null) throw new Error('[MATH] forwardSub: RHS vector is null or undefined');
   var n = L.length;
   for (var ri = 0; ri < n; ri++) {
-    if (!L[ri] || !Array.isArray(L[ri]) || L[ri].length !== n) {
-      throw new Error('[MATH] forwardSub: L must be square matrix (got row ' + ri + ' with length ' + (L[ri] ? L[ri].length : '?') + ')');
+    if (!Array.isArray(L[ri])) {
+      throw new Error('[MATH] forwardSub: row ' + ri + ' of L must be array');
+    }
+    if (L[ri].length !== n) {
+      throw new Error('[MATH] forwardSub: L must be square matrix (got row ' + ri + ' with length ' + L[ri].length + ')');
     }
   }
   if (b.length !== n) {
@@ -366,8 +389,11 @@ function backSub(L, y) {
   if (y == null) throw new Error('[MATH] backSub: RHS vector is null or undefined');
   var n = L.length;
   for (var ri = 0; ri < n; ri++) {
-    if (!L[ri] || !Array.isArray(L[ri]) || L[ri].length !== n) {
-      throw new Error('[MATH] backSub: L must be square matrix (got row ' + ri + ' with length ' + (L[ri] ? L[ri].length : '?') + ')');
+    if (!Array.isArray(L[ri])) {
+      throw new Error('[MATH] backSub: row ' + ri + ' of L must be array');
+    }
+    if (L[ri].length !== n) {
+      throw new Error('[MATH] backSub: L must be square matrix (got row ' + ri + ' with length ' + L[ri].length + ')');
     }
   }
   if (y.length !== n) {
@@ -404,13 +430,17 @@ function symmetrize(A) {
   if (A == null) throw new Error('[MATH] symmetrize: matrix is null or undefined');
   var n = A.length;
   for (var i = 0; i < n; i++) {
-    if (!A[i] || !Array.isArray(A[i]) || A[i].length !== n) {
+    if (!Array.isArray(A[i]) || A[i].length !== n) {
       throw new Error('[MATH] symmetrize: matrix must be square (got row ' + i + ' with length ' + (A[i] ? A[i].length : '?') + ')');
     }
-    for (var j = 0; j < i; j++) {
-      if (typeof A[i][j] !== 'number' || !isFinite(A[i][j]) || typeof A[j][i] !== 'number' || !isFinite(A[j][i])) {
+    for (var j = 0; j < n; j++) {
+      if (typeof A[i][j] !== 'number' || !isFinite(A[i][j])) {
         throw new Error('[MATH] symmetrize: non-finite element at [' + i + '][' + j + ']');
       }
+    }
+  }
+  for (i = 0; i < n; i++) {
+    for (var j = 0; j < i; j++) {
       var v = (A[i][j] + A[j][i]) * 0.5;
       A[i][j] = A[j][i] = v;
     }
@@ -461,6 +491,9 @@ function _randnClearCache() {
  * Gaussian random variable (Box–Muller). Caches second sample to avoid discarding entropy.
  * Assumes Math.random() ∈ [0,1) per spec. If PRNG returns 0 (pathological),
  * retries with new draws; returning 0 would corrupt Thompson sampling (deterministic draw).
+ *
+ * Test pollution: _randnCache persists across tests. Call _randnClearCache() before mocking
+ * Math.random. If randn throws, call _randnClearCache() before retrying (cache survives).
  * @returns {number}
  */
 function randn() {
