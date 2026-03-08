@@ -2,11 +2,11 @@
   "students": {
     "test-student": {
       "lesson-1": {
-        "interval": 845834617970,
+        "interval": 2114586544925,
         "easeFactor": 2.5,
-        "repetition": 30,
-        "lastReviewAt": 1772973378875,
-        "nextReviewAt": 73080112765581380000,
+        "repetition": 31,
+        "lastReviewAt": 1772974636129,
+        "nextReviewAt": 182700279254494640000,
         "quality": 4
       }
     }
