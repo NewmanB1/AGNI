@@ -26,7 +26,7 @@
 //   to .tmp then renamed over the real path so a process crash mid-write cannot
 //   corrupt the state file.
 //
-// Target: Node.js 18+. CommonJS. ES5 syntax only (no TypeScript, no build step).
+// Target: Node.js 18+. CommonJS. ES2017+ syntax (async/await, Object.assign).
 // ─────────────────────────────────────────────────────────────────────────────
 
 'use strict';
@@ -142,6 +142,7 @@ async function saveState(state) {
   } catch (err) {
     var msg = err instanceof Error ? err.message : String(err);
     log.error('Failed to save state:', msg);
+    throw err;
   }
 }
 
@@ -157,6 +158,7 @@ function saveStateSync(state) {
   } catch (err) {
     var msg = err instanceof Error ? err.message : String(err);
     log.error('Failed to save state:', msg);
+    throw err;
   }
 }
 
@@ -280,17 +282,22 @@ function selectBestLesson(studentId, candidates, ontologyMap) {
 
   // ── Thompson Sampling scores (primary signal) ──────────────────────────
   // Build a lightweight scoring view that shares all sub-objects except
-  // embedding.lessons, so the module-level _state is never mutated.
-  var scoringEmbedding = Object.assign({}, _state.embedding, { lessons: filteredLessons });
+  // embedding.lessons and embedding.students, so the module-level _state is
+  // never mutated. Shallow-copy students so ensureStudentVector writes only
+  // to the scoring copy, not live state (avoids ghost vectors and unpersisted mutations).
+  var scoringEmbedding = Object.assign({}, _state.embedding, {
+    lessons:  filteredLessons,
+    students: Object.assign({}, _state.embedding.students)
+  });
   var scoringState = Object.assign({}, _state, { embedding: scoringEmbedding });
 
   var thetaSample = sampleThetaForScoring(scoringState);
   var maxStu = envConfig.maxStudents;
   var studentVec;
   if (maxStu > 0 && !scoringState.embedding.students[studentId]) {
-    var nStu = Object.keys(scoringState.embedding.students).length;
+    var nStu = Object.keys(_state.embedding.students).length;
     if (nStu >= maxStu) {
-      studentVec = Array(scoringState.embedding.dim).fill(0);
+      studentVec = math.zeros(scoringState.embedding.dim);
     } else {
       studentVec = embeddings.ensureStudentVector(scoringState, studentId);
     }
@@ -364,13 +371,31 @@ function selectBestLesson(studentId, candidates, ontologyMap) {
  * @returns {number[]}
  */
 function sampleThetaForScoring(state) {
-  var Ainv = math.invertSPD(state.bandit.A);
-  var mean = math.matVec(Ainv, state.bandit.b);
-  var L = math.cholesky(Ainv);
+  var L = math.cholesky(state.bandit.A);
+  var mean = math.backSub(L, math.forwardSub(L, state.bandit.b));
   var z = [];
   for (var i = 0; i < mean.length; i++) z.push(math.randn());
-  var noise = math.matVec(L, z);
-  return mean.map(function (m, idx) { return m + noise[idx]; });
+  var noise = math.backSub(L, z);
+  return math.addVec(mean, noise);
+}
+
+/**
+ * Assert bandit.A is finite before cloning. JSON.stringify turns NaN/Infinity
+ * into null; a pre-clone check surfaces [ENGINE] state corruption early.
+ * @param {import('../types').LMSState} state
+ */
+function assertBanditAFinite(state) {
+  var A = state.bandit && state.bandit.A;
+  if (!A || !Array.isArray(A)) return;
+  for (var i = 0; i < A.length; i++) {
+    var row = A[i];
+    if (!Array.isArray(row)) continue;
+    for (var j = 0; j < row.length; j++) {
+      if (typeof row[j] !== 'number' || !isFinite(row[j])) {
+        throw new Error('[ENGINE] bandit.A has non-finite entry at [' + i + '][' + j + '] — state may be corrupt');
+      }
+    }
+  }
 }
 
 /**
@@ -383,6 +408,7 @@ function sampleThetaForScoring(state) {
  * @returns {import('../types').LMSState}
  */
 function applyObservation(state, observation) {
+  assertBanditAFinite(state);
   var next = JSON.parse(JSON.stringify(state));
   thompson.assertEmbeddingDimValid(next);
   var gain = rasch.updateAbility(next, observation.studentId, observation.probeResults);
