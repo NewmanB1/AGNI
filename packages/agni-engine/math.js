@@ -293,7 +293,7 @@ function cholesky(A) {
   }
   var i, j, k, sum, diag, aij, aji;
   for (i = 0; i < n; i++) {
-    if (!Array.isArray(A[i])) {
+    if (!A[i] || !Array.isArray(A[i])) {
       throw new Error('[MATH] cholesky: row ' + i + ' must be array');
     }
     if (A[i].length !== n) {
@@ -350,7 +350,7 @@ function forwardSub(L, b) {
   if (b == null) throw new Error('[MATH] forwardSub: RHS vector is null or undefined');
   var n = L.length;
   for (var ri = 0; ri < n; ri++) {
-    if (!Array.isArray(L[ri])) {
+    if (!L[ri] || !Array.isArray(L[ri])) {
       throw new Error('[MATH] forwardSub: row ' + ri + ' of L must be array');
     }
     if (L[ri].length !== n) {
@@ -389,7 +389,7 @@ function backSub(L, y) {
   if (y == null) throw new Error('[MATH] backSub: RHS vector is null or undefined');
   var n = L.length;
   for (var ri = 0; ri < n; ri++) {
-    if (!Array.isArray(L[ri])) {
+    if (!L[ri] || !Array.isArray(L[ri])) {
       throw new Error('[MATH] backSub: row ' + ri + ' of L must be array');
     }
     if (L[ri].length !== n) {
@@ -430,8 +430,11 @@ function symmetrize(A) {
   if (A == null) throw new Error('[MATH] symmetrize: matrix is null or undefined');
   var n = A.length;
   for (var i = 0; i < n; i++) {
-    if (!Array.isArray(A[i]) || A[i].length !== n) {
-      throw new Error('[MATH] symmetrize: matrix must be square (got row ' + i + ' with length ' + (A[i] ? A[i].length : '?') + ')');
+    if (!A[i] || !Array.isArray(A[i])) {
+      throw new Error('[MATH] symmetrize: row ' + i + ' must be array');
+    }
+    if (A[i].length !== n) {
+      throw new Error('[MATH] symmetrize: matrix must be square (got row ' + i + ' with length ' + A[i].length + ')');
     }
     for (var j = 0; j < n; j++) {
       if (typeof A[i][j] !== 'number' || !isFinite(A[i][j])) {
