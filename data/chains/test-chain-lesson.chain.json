@@ -1,0 +1,37 @@
+{
+  "slug": "test-chain-lesson",
+  "versions": [
+    {
+      "version": 1,
+      "contentHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "parentHash": null,
+      "creatorId": "cr-1",
+      "uri": null,
+      "timestamp": "2026-01-01T00:00:00Z"
+    },
+    {
+      "version": 2,
+      "contentHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "parentHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "creatorId": "cr-1",
+      "uri": null,
+      "timestamp": "2026-01-02T00:00:00Z"
+    },
+    {
+      "version": 3,
+      "contentHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "parentHash": null,
+      "creatorId": "cr-1",
+      "uri": null,
+      "timestamp": "2026-01-01T00:00:00Z"
+    },
+    {
+      "version": 4,
+      "contentHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "parentHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "creatorId": "cr-1",
+      "uri": null,
+      "timestamp": "2026-01-02T00:00:00Z"
+    }
+  ]
+}

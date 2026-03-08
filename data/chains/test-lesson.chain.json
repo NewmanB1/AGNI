@@ -1,0 +1,37 @@
+{
+  "slug": "test-lesson",
+  "versions": [
+    {
+      "version": 1,
+      "contentHash": "sha256:0b45e18dcf62a2dc468a97841da261eceec76de83a341d69f597847c725b8fee",
+      "parentHash": null,
+      "creatorId": null,
+      "uri": null,
+      "timestamp": "2026-03-08T19:58:06.268Z"
+    },
+    {
+      "version": 2,
+      "contentHash": "sha256:40286241a9241466a94441848ad3d688a4ab75d816efa69e519634225d7a5fbc",
+      "parentHash": "sha256:0b45e18dcf62a2dc468a97841da261eceec76de83a341d69f597847c725b8fee",
+      "creatorId": null,
+      "uri": null,
+      "timestamp": "2026-03-08T19:58:06.272Z"
+    },
+    {
+      "version": 3,
+      "contentHash": "sha256:29b0ab037d5413a39ac0958e42b562ef69669c54f3352607279adb4becf7851a",
+      "parentHash": "sha256:40286241a9241466a94441848ad3d688a4ab75d816efa69e519634225d7a5fbc",
+      "creatorId": null,
+      "uri": null,
+      "timestamp": "2026-03-08T20:15:01.290Z"
+    },
+    {
+      "version": 4,
+      "contentHash": "sha256:47bd42f2657f9c6a143f5b730b5dcd4c8fcdf8609368d8cc2ee3fbc3c5a4c202",
+      "parentHash": "sha256:29b0ab037d5413a39ac0958e42b562ef69669c54f3352607279adb4becf7851a",
+      "creatorId": null,
+      "uri": null,
+      "timestamp": "2026-03-08T20:15:01.296Z"
+    }
+  ]
+}

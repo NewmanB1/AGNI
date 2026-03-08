@@ -1,0 +1,15 @@
+{
+  "badges": [
+    { "id": "first_lesson", "name": "First Step", "desc": "Complete your first lesson", "icon": "\u{1F31F}", "metric": "lessonCount", "threshold": 1 },
+    { "id": "five_lessons", "name": "Getting Started", "desc": "Complete 5 lessons", "icon": "\u{1F4DA}", "metric": "lessonCount", "threshold": 5 },
+    { "id": "ten_lessons", "name": "Dedicated Learner", "desc": "Complete 10 lessons", "icon": "\u{1F3C6}", "metric": "lessonCount", "threshold": 10 },
+    { "id": "twentyfive_lessons", "name": "Knowledge Seeker", "desc": "Complete 25 lessons", "icon": "\u{1F48E}", "metric": "lessonCount", "threshold": 25 },
+    { "id": "first_skill", "name": "Skill Unlocked", "desc": "Master your first skill", "icon": "\u{1F511}", "metric": "skillCount", "threshold": 1 },
+    { "id": "five_skills", "name": "Multi-Skilled", "desc": "Master 5 skills", "icon": "\u{2B50}", "metric": "skillCount", "threshold": 5 },
+    { "id": "ten_skills", "name": "Skill Master", "desc": "Master 10 skills", "icon": "\u{1F451}", "metric": "skillCount", "threshold": 10 },
+    { "id": "streak_3", "name": "On a Roll", "desc": "3-day learning streak", "icon": "\u{1F525}", "metric": "longestStreak", "threshold": 3 },
+    { "id": "streak_7", "name": "Week Warrior", "desc": "7-day learning streak", "icon": "\u{26A1}", "metric": "longestStreak", "threshold": 7 },
+    { "id": "streak_30", "name": "Unstoppable", "desc": "30-day learning streak", "icon": "\u{1F680}", "metric": "longestStreak", "threshold": 30 },
+    { "id": "all_skills", "name": "Completionist", "desc": "Master every skill", "icon": "\u{1F396}", "metric": "allSkills", "threshold": 1 }
+  ]
+}

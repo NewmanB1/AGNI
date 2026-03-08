@@ -1,3 +1,14 @@
 {
-  "groups": []
+  "groups": [
+    {
+      "id": "group-mmi6cqvy-f1207ffc4c",
+      "name": "Test Group",
+      "studentIds": []
+    },
+    {
+      "id": "group-mmi6yhsh-3096c96303",
+      "name": "Test Group",
+      "studentIds": []
+    }
+  ]
 }
