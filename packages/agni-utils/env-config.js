@@ -132,6 +132,8 @@ const config = {
   maxStudents:        intVal('AGNI_MAX_STUDENTS', 0),
   maxLessons:         intVal('AGNI_MAX_LESSONS', 0),
 
+  yamlMaxBytes:       Math.max(65536, intVal('AGNI_YAML_MAX_BYTES', 2 * 1024 * 1024)),
+
   logLevel:           strVal('AGNI_LOG_LEVEL', 'info'),
 };
 

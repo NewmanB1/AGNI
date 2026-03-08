@@ -56,6 +56,7 @@ const buildCspMeta       = require('@agni/utils/csp').buildCspMeta;
 const lessonAssembly     = require('@ols/compiler/services/lesson-assembly');
 const _escapeHtml        = require('@agni/utils/io').escapeHtml;
 const { resolveFactoryPath } = require('@agni/utils/runtimeManifest');
+const lessonChain        = require('@agni/services/lesson-chain');
 
 // ΓöÇΓöÇ Version (from package.json, used for SW stamping) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const PKG_VERSION   = require('../../package.json').version || '0.0.0';
@@ -78,6 +79,9 @@ const SERVE_PORT    = envConfig.servePort;
 const _lessonCache   = {};
 let _cacheSize       = 0;
 const MAX_CACHE_ENTRIES = parseInt(process.env.AGNI_CACHE_MAX || '100', 10);
+const MAX_CONCURRENT_COMPILES = parseInt(process.env.AGNI_COMPILE_CONCURRENCY || '3', 10);
+let _compileSlots = MAX_CONCURRENT_COMPILES;
+const _compileQueue = [];
 
 // ΓöÇΓöÇ Per-slug in-flight compilation guard ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 // Prevents concurrent requests for the same slug from each triggering a
@@ -140,6 +144,15 @@ const MIME = {
 
 
 // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+// Compile concurrency (Pi memory)
+function _acquireCompileSlot() {
+  if (_compileSlots > 0) { _compileSlots--; return Promise.resolve(); }
+  return new Promise(function (r) { _compileQueue.push(r); });
+}
+function _releaseCompileSlot() {
+  if (_compileQueue.length > 0) _compileQueue.shift()();
+  else _compileSlots++;
+}
 // YAML loader
 // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 
@@ -170,9 +183,23 @@ function loadYaml(slug) {
     if (!resolved.startsWith(base + path.sep)) return null;  // traversal guard
 
     try {
+      const stat = fs.statSync(yamlPath);
+      const maxBytes = (envConfig.yamlMaxBytes != null) ? envConfig.yamlMaxBytes : (2 * 1024 * 1024);
+      if (stat.size > maxBytes) {
+        log.warn('YAML exceeds max size', { slug, size: stat.size, max: maxBytes });
+        return null;
+      }
       const raw        = fs.readFileSync(yamlPath, 'utf8');
       const lessonData = yaml.load(raw, { schema: yaml.JSON_SCHEMA });
-      const mtime      = fs.statSync(yamlPath).mtimeMs;
+      const claimed = (lessonData.meta && lessonData.meta.content_hash) || '';
+      if (claimed && process.env.AGNI_VERIFY_YAML_HASH === '1') {
+        const v = lessonChain.verifyContentHash(lessonData);
+        if (!v.valid) {
+          log.warn('YAML content_hash mismatch', { slug, claimed: v.claimed, computed: v.computed });
+          return null;
+        }
+      }
+      const mtime = stat.mtimeMs;
       return { lessonData: lessonData, yamlPath: yamlPath, mtime: mtime };
     } catch (err) {
       log.error('YAML parse error', { slug, error: err.message });
@@ -220,8 +247,15 @@ async function compileLesson(slug, options) {
     return _compilingNow[slug];
   }
 
+  function runCompile() {
+    return _acquireCompileSlot().then(function () {
+      return _doCompile(slug, loaded, options);
+    }).finally(function () {
+      _releaseCompileSlot();
+    });
+  }
   log.info('Compiling', { slug });
-  _compilingNow[slug] = _doCompile(slug, loaded, options)
+  _compilingNow[slug] = runCompile()
     .catch(function (err) {
       const stale = _lessonCache[slug];
       if (stale) {
@@ -420,35 +454,34 @@ function _sendJson(req, res, statusCode, payload) {
 }
 
 function _sendFile(req, res, filePath, contentType, maxAge) {
-  let buf;
-  try {
-    buf = fs.readFileSync(filePath);
-  } catch {
-    res.writeHead(404);
-    res.end('Not found');
-    return;
-  }
-  res.setHeader('Access-Control-Allow-Origin', envConfig.corsOrigin || 'null');
-  res.setHeader('Content-Type', contentType);
-  res.setHeader('Cache-Control', 'public, max-age=' + (maxAge || 0));
+  fs.readFile(filePath, function (err, buf) {
+    if (err) {
+      res.writeHead(404);
+      res.end('Not found');
+      return;
+    }
+    res.setHeader('Access-Control-Allow-Origin', envConfig.corsOrigin || 'null');
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=' + (maxAge || 0));
 
-  if (req.headers['accept-encoding'] &&
-      req.headers['accept-encoding'].indexOf('gzip') !== -1 &&
-      buf.length > 1024) {
-    _gzip(buf, function (err, compressed) {
-      if (err) {
-        res.writeHead(200);
-        res.end(buf);
-      } else {
-        res.setHeader('Content-Encoding', 'gzip');
-        res.writeHead(200);
-        res.end(compressed);
-      }
-    });
-  } else {
-    res.writeHead(200);
-    res.end(buf);
-  }
+    if (req.headers['accept-encoding'] &&
+        req.headers['accept-encoding'].indexOf('gzip') !== -1 &&
+        buf.length > 1024) {
+      _gzip(buf, function (gzipErr, compressed) {
+        if (gzipErr) {
+          res.writeHead(200);
+          res.end(buf);
+        } else {
+          res.setHeader('Content-Encoding', 'gzip');
+          res.writeHead(200);
+          res.end(compressed);
+        }
+      });
+    } else {
+      res.writeHead(200);
+      res.end(buf);
+    }
+  });
 }
 
 

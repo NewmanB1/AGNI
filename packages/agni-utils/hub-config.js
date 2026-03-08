@@ -42,7 +42,9 @@ function loadHubConfig(baseDir) {
   try {
     const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
     for (const [jsonKey, envKey] of CONFIG_KEYS) {
-      if (cfg[jsonKey] != null) process.env[envKey] = String(cfg[jsonKey]);
+      if (cfg[jsonKey] != null && process.env[envKey] === undefined) {
+        process.env[envKey] = String(cfg[jsonKey]);
+      }
     }
     _loaded = true;
     _config = cfg;
