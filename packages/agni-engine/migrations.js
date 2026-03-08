@@ -10,6 +10,7 @@
 'use strict';
 
 var envConfig = require('@agni/utils/env-config');
+var math = require('./math');
 
 /**
  * Ensure a plain object; return {} if missing or not an object.
@@ -29,7 +30,7 @@ function ensureObject(o) {
  * @returns {number}
  */
 function ensureNumber(v, def, bounds) {
-  var n = typeof v === 'number' && !Number.isNaN(v) ? v : def;
+  var n = (typeof v === 'number' && !isNaN(v) && isFinite(v)) ? v : def;
   if (bounds) {
     if (bounds.min != null && n < bounds.min) n = bounds.min;
     if (bounds.max != null && n > bounds.max) n = bounds.max;
@@ -91,7 +92,7 @@ function migrateLMSState(raw, opts) {
   };
 
   // ── Embedding ─────────────────────────────────────────────────────────────
-  var embDim = ensureNumber(embedding.dim, dim, { min: 4, max: 256 });
+  var embDim = ensureNumber(embedding.dim, dim, { min: 4, max: 1024 });
   if (embedding.dim !== embDim) migrated = true;
   var embLr = ensureNumber(embedding.lr, envConfig.embeddingLr, { min: 1e-6, max: 0.1 });
   if (embedding.lr !== embLr) migrated = true;
@@ -103,19 +104,23 @@ function migrateLMSState(raw, opts) {
   var embStudents = ensureObject(embedding.students);
   var embLessons = ensureObject(embedding.lessons);
 
-  // Ensure embedding entity vectors are arrays of numbers or null
+  // Ensure embedding entity vectors are arrays of numbers; delete invalid so
+  // ensureStudentVector/ensureLessonVector will re-initialize on next access
   function normalizeEmbeddingEntities(entities) {
     Object.keys(entities).forEach(function (id) {
       var e = entities[id];
       if (e == null || typeof e !== 'object') {
-        entities[id] = { vector: null };
+        delete entities[id];
         migrated = true;
         return;
       }
       var vec = Array.isArray(e.vector) ? e.vector : null;
       if (vec && !vec.every(function (x) { return typeof x === 'number'; })) vec = null;
       if (vec && vec.length !== embDim) vec = null;
-      if (e.vector !== vec) {
+      if (vec == null) {
+        delete entities[id];
+        migrated = true;
+      } else if (e.vector !== vec) {
         entities[id] = { vector: vec };
         migrated = true;
       } else {
@@ -143,6 +148,11 @@ function migrateLMSState(raw, opts) {
     migrated = true;
   }
   var observationCount = ensureNumber(bandit.observationCount, 0, { min: 0 });
+  if (!math.isNonNegativeInteger(observationCount)) {
+    observationCount = Math.floor(observationCount);
+    if (observationCount < 0) observationCount = 0;
+    migrated = true;
+  }
   var banditForgetting = ensureNumber(bandit.forgetting, envConfig.forgetting, { min: 0.9, max: 1 });
   if (bandit.forgetting !== banditForgetting) migrated = true;
 
@@ -171,7 +181,6 @@ function migrateLMSState(raw, opts) {
     }
     // Validate symmetry (BUG 4: catch corrupted state at load time)
     if (A.length === featureDim) {
-      var math = require('./math');
       for (ri = 0; ri < A.length; ri++) {
         for (var cj = ri + 1; cj < A[ri].length; cj++) {
           if (Math.abs(A[ri][cj] - A[cj][ri]) > math.CHOLESKY_SYMMETRY_TOL) {
@@ -185,7 +194,7 @@ function migrateLMSState(raw, opts) {
     }
   }
   if (b.length !== featureDim) {
-    b = new Array(featureDim).fill(0);
+    b = math.zeros(featureDim);
     migrated = true;
   } else {
     for (var bi = 0; bi < b.length; bi++) {
@@ -196,7 +205,9 @@ function migrateLMSState(raw, opts) {
     }
   }
 
-  var seenSyncIds = Array.isArray(bandit.seenSyncIds) ? bandit.seenSyncIds : [];
+  var rawSeenSyncIds = Array.isArray(bandit.seenSyncIds) ? bandit.seenSyncIds : [];
+  var seenSyncIds = rawSeenSyncIds.filter(function (id) { return typeof id === 'string'; });
+  if (seenSyncIds.length !== rawSeenSyncIds.length) migrated = true;
   if (seenSyncIds.length > 500) {
     seenSyncIds = seenSyncIds.slice(-500);  // FIFO: keep 500 most recent
     migrated = true;
@@ -236,8 +247,7 @@ function migrateLMSState(raw, opts) {
   };
 
   // embedding.dim drives vector sizing — must be present and positive
-  if (typeof state.embedding.dim !== 'number' || !Number.isInteger(state.embedding.dim) ||
-      state.embedding.dim < 1 || state.embedding.dim > 1024) {
+  if (!math.isPositiveInteger(state.embedding.dim) || state.embedding.dim > 1024) {
     throw new Error(
       '[MIGRATIONS] embedding.dim invalid: must be integer in [1,1024], got ' +
       (state.embedding.dim === undefined ? 'undefined' : state.embedding.dim)

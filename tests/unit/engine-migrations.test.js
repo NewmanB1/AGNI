@@ -116,11 +116,11 @@ describe('migrateLMSState: repairs broken data', () => {
     assert.ok(migrated);
   });
 
-  it('clamps embedding.dim to [4, 256]', () => {
+  it('clamps embedding.dim to [4, 1024]', () => {
     const low = migrateLMSState({ rasch: {}, embedding: { dim: 1 }, bandit: {} });
     assert.ok(low.state.embedding.dim >= 4);
     const high = migrateLMSState({ rasch: {}, embedding: { dim: 9999 }, bandit: {} });
-    assert.ok(high.state.embedding.dim <= 256);
+    assert.ok(high.state.embedding.dim <= 1024);
   });
 
   it('repairs wrong-length bandit b vector', () => {
@@ -130,21 +130,21 @@ describe('migrateLMSState: repairs broken data', () => {
     assert.ok(migrated);
   });
 
-  it('repairs invalid embedding entity vectors', () => {
+  it('repairs invalid embedding entity vectors by deleting them', () => {
     const raw = {
       rasch: {}, embedding: { dim: 4, students: { s1: { vector: 'bad' } }, lessons: {} }, bandit: {}
     };
     const { state, migrated } = migrateLMSState(raw);
-    assert.equal(state.embedding.students.s1.vector, null);
+    assert.ok(!('s1' in state.embedding.students));
     assert.ok(migrated);
   });
 
-  it('repairs wrong-dimension embedding vectors', () => {
+  it('repairs wrong-dimension embedding vectors by deleting them', () => {
     const raw = {
       rasch: {}, embedding: { dim: 4, students: {}, lessons: { L1: { vector: [1, 2] } } }, bandit: {}
     };
     const { state, migrated } = migrateLMSState(raw);
-    assert.equal(state.embedding.lessons.L1.vector, null);
+    assert.ok(!('L1' in state.embedding.lessons));
     assert.ok(migrated);
   });
 });
