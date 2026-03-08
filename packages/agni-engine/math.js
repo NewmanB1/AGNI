@@ -29,8 +29,8 @@
  *  JITTER in thompson.js must be > CHOLESKY_EPSILON for jitter retry to succeed. */
 var CHOLESKY_EPSILON = 1e-10;
 
-/** Symmetry tolerance for Cholesky. Relaxed from 1e-12 to accommodate JSON round-trip error in post-federation merged precision matrices. */
-var CHOLESKY_SYMMETRY_TOL = 1e-8;
+/** Symmetry tolerance for Cholesky. Tight enough to catch merge bugs; federation must call symmetrize() before Cholesky. */
+var CHOLESKY_SYMMETRY_TOL = 1e-12;
 
 /**
  * ES5-safe zero-filled array of length n. Always allocates fresh — never cached or shared.
@@ -205,7 +205,8 @@ function addMat(A, B) {
         throw new Error('[MATH] addMat: dimension mismatch (' + rows + 'x' + cols + ' vs ' + rows + 'x' + B[0].length + ')');
       }
     } else if (A[i].length !== cols || B[i].length !== cols) {
-      throw new Error('[MATH] addMat: jagged matrix at row ' + i);
+      var which = (A[i].length !== cols) ? 'A' : 'B';
+      throw new Error('[MATH] addMat: jagged matrix ' + which + ' at row ' + i);
     }
     for (var c = 0; c < cols; c++) {
       if (typeof A[i][c] !== 'number' || !isFinite(A[i][c])) {
@@ -339,8 +340,10 @@ function cholesky(A) {
     if (typeof A[i][i] !== 'number' || !isFinite(A[i][i])) {
       throw new Error('[MATH] cholesky: non-numeric diagonal at [' + i + ']');
     }
-    if (A[i][i] <= 0) {
-      throw new Error('[MATH] cholesky: non-positive diagonal at [' + i + '][' + i + '] = ' + A[i][i] + ' (matrix is not SPD)');
+    /* Fast-fail for obviously non-SPD; diag < CHOLESKY_EPSILON aligns with decomposition check.
+     * Decomposition can still fail (e.g. off-diagonal sum eats diagonal) — that throws with i=N. */
+    if (A[i][i] < CHOLESKY_EPSILON) {
+      throw new Error('[MATH] cholesky: diagonal at [' + i + '][' + i + '] = ' + A[i][i] + ' (matrix is not SPD)');
     }
     /* Off-diagonal: j>i covers each pair once; aij and aji together validate upper and lower triangle */
     for (j = i + 1; j < n; j++) {
@@ -368,7 +371,7 @@ function cholesky(A) {
       if (i === j) {
         diag = A[i][i] - sum;
         if (diag < CHOLESKY_EPSILON || !isFinite(diag)) {
-          throw new Error('[MATH] Matrix is not SPD (Cholesky failed at i=' + i + ')');
+          throw new Error('[MATH] cholesky: matrix is not SPD (Cholesky failed at i=' + i + ')');
         }
         L[i][j] = Math.sqrt(diag);
       } else {
@@ -411,6 +414,11 @@ function forwardSub(L, b) {
     }
   }
   var y = zeros(n);
+  return forwardSubInner(L, b, n, y);
+}
+
+/** Inner forward substitution (no validation). Call only after L and b are validated. */
+function forwardSubInner(L, b, n, y) {
   var i, j, sum;
   for (i = 0; i < n; i++) {
     sum = 0;
@@ -455,6 +463,11 @@ function backSub(L, y) {
     }
   }
   var x = zeros(n);
+  return backSubInner(L, y, n, x);
+}
+
+/** Inner back substitution (no validation). Call only after L and y are validated. */
+function backSubInner(L, y, n, x) {
   var i, j, sum;
   for (i = n - 1; i >= 0; i--) {
     sum = 0;
@@ -469,14 +482,11 @@ function backSub(L, y) {
 }
 
 /**
- * Force matrix to be symmetric (mutates A): A[i][j] = A[j][i] = (A[i][j] + A[j][i]) * 0.5.
- * Use after addMat when inputs may have float asymmetry from JSON round-trip.
- * WARNING: Mutates A in place. Call only on matrices you own — never pass shared/aliased
- * state (e.g. bandit precision matrix). Use a copy if the original must be preserved.
+ * Internal: symmetrize in place. Mutates A. Call only on matrices you own.
  * @param {number[][]} A  Square matrix (mutated).
  * @returns {number[][]}  A (same reference).
  */
-function symmetrize(A) {
+function symmetrizeInPlace(A) {
   if (A == null) throw new Error('[MATH] symmetrize: matrix is null or undefined');
   var n = A.length;
   for (var i = 0; i < n; i++) {
@@ -502,8 +512,24 @@ function symmetrize(A) {
 }
 
 /**
+ * Return a symmetric copy of A. Does not mutate input — safe for shared/aliased matrices.
+ * Use symmetrizeInPlace only when you own the matrix and want to mutate.
+ * @param {number[][]} A  Square matrix.
+ * @returns {number[][]}  New symmetric matrix (copy).
+ */
+function symmetrize(A) {
+  if (A == null) throw new Error('[MATH] symmetrize: matrix is null or undefined');
+  var copy = [];
+  for (var r = 0; r < A.length; r++) {
+    copy[r] = A[r].slice();
+  }
+  return symmetrizeInPlace(copy);
+}
+
+/**
  * Invert a symmetric positive-definite matrix using Cholesky decomposition.
- * inv is freshly allocated; symmetrize(inv) mutates our own array, not the caller's.
+ * inv is freshly allocated; symmetrizeInPlace(inv) mutates our own array, not the caller's.
+ * Uses forwardSubInner/backSubInner to avoid O(n³) validation (L validated by cholesky).
  * @param {number[][]} A
  * @returns {number[][]}
  */
@@ -512,6 +538,9 @@ function invertSPD(A) {
   var n = A.length;
   if (n === 0) {
     throw new Error('[MATH] invertSPD: empty matrix not supported (zero-dim invalid)');
+  }
+  if (!A[0] || !Array.isArray(A[0]) || A[0].length !== n) {
+    throw new Error('[MATH] invertSPD: matrix must be square (got ' + n + 'x' + (A[0] ? A[0].length : '?') + ')');
   }
   var L = cholesky(A);
   var inv = new Array(n);
@@ -523,14 +552,14 @@ function invertSPD(A) {
   for (j = 0; j < n; j++) {
     e = zeros(n);
     e[j] = 1;
-    y = forwardSub(L, e);
-    x = backSub(L, y);
+    y = forwardSubInner(L, e, n, zeros(n));
+    x = backSubInner(L, y, n, zeros(n));
     for (i = 0; i < n; i++) {
       inv[i][j] = x[i];
     }
   }
 
-  return symmetrize(inv);
+  return symmetrizeInPlace(inv);
 }
 
 /** Cached sin sample from previous Box–Muller; halves entropy use on headless Pi. */

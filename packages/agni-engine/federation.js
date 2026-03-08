@@ -259,8 +259,7 @@ function mergeBanditSummaries(local, remote) {
   }
 
   // Standard Bayesian merge: P_merged = P_local + P_remote (independent posteriors)
-  var mergedPrec = math.addMat(local.precision, remote.precision);
-  math.symmetrize(mergedPrec);  // Fix float asymmetry from JSON round-trip (BUG 13)
+  var mergedPrec = math.symmetrize(math.addMat(local.precision, remote.precision));  // Fix float asymmetry from JSON round-trip
 
   // Precision-weighted mean: μ = P_merged⁻¹ (P_local·μ_local + P_remote·μ_remote)
   // Cholesky solve (O(n²)) instead of invertSPD (O(n³)) — same optimization as getBanditSummary

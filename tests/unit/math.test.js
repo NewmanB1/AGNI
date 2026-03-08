@@ -21,6 +21,18 @@ function matApproxEqual(A, B, eps) {
   return true;
 }
 
+// ── zeros ────────────────────────────────────────────────────────────────────
+
+describe('zeros', () => {
+  it('returns fresh arrays (never cached or shared)', () => {
+    const a = math.zeros(5);
+    const b = math.zeros(5);
+    assert.notStrictEqual(a, b);
+    a[0] = 1;
+    assert.strictEqual(b[0], 0);
+  });
+});
+
 // ── dot ──────────────────────────────────────────────────────────────────────
 
 describe('dot', () => {
@@ -444,16 +456,22 @@ describe('invertSPD', () => {
   it('throws for empty matrix', () => {
     assert.throws(() => math.invertSPD([]), /invertSPD.*empty matrix/);
   });
+
+  it('throws for non-square matrix (clear invertSPD error, not cholesky)', () => {
+    assert.throws(() => math.invertSPD([[1, 0, 0], [0, 1, 0]]), /invertSPD.*square/);
+  });
 });
 
 // ── symmetrize ────────────────────────────────────────────────────────────────
 
 describe('symmetrize', () => {
-  it('forces matrix to be symmetric', () => {
+  it('returns symmetric copy without mutating input', () => {
     const A = [[1, 1.0001], [0.9999, 2]];
-    math.symmetrize(A);
-    assert.strictEqual(A[0][1], A[1][0]);
-    assert.ok(Math.abs(A[0][1] - 1) < 1e-10);
+    const result = math.symmetrize(A);
+    assert.strictEqual(result[0][1], result[1][0]);
+    assert.ok(Math.abs(result[0][1] - 1) < 1e-10);
+    assert.notStrictEqual(A, result);
+    assert.strictEqual(A[0][1], 1.0001, 'input must not be mutated');
   });
 
   it('throws for null', () => {
