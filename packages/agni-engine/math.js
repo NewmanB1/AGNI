@@ -26,7 +26,7 @@
 'use strict';
 
 /** Minimum diagonal for Cholesky. Below this, sqrt(diag) and divisions blow up (NaN-poison Thompson).
- *  JITTER in thompson.js must be >= CHOLESKY_EPSILON for jitter retry to succeed. */
+ *  JITTER in thompson.js must be > CHOLESKY_EPSILON for jitter retry to succeed. */
 var CHOLESKY_EPSILON = 1e-10;
 
 /** Symmetry tolerance for Cholesky. Relaxed from 1e-12 to accommodate JSON round-trip error in post-federation merged precision matrices. */

@@ -318,6 +318,28 @@
       "approved": false,
       "createdAt": "2026-03-08T02:27:10.521Z",
       "lessonsAuthored": []
+    },
+    {
+      "id": "cr-88e243424320",
+      "name": "Test User",
+      "email": "test-1772970713700@example.com",
+      "passwordHash": "30c1cd8aceb910bb702cbebb5d2e1264243be8ac6d201bbcbfd9ccccb0dabe73be99e0ef3848852f5c73cdacd438e1d310802be68343b8e8674a1fc1cb33117a",
+      "salt": "e85aecf08212cd588978cba160dcae49",
+      "role": "creator",
+      "approved": false,
+      "createdAt": "2026-03-08T11:51:53.768Z",
+      "lessonsAuthored": []
+    },
+    {
+      "id": "cr-f67fb4af95dd",
+      "name": "Test User",
+      "email": "test-1772973378797@example.com",
+      "passwordHash": "a09bd4a9a873d4efc57c4a8cc8d9d07c964deeb7f1171061a3af24c3408780e0f88a5e4c223c07f427dca8656995377495173ab821cc093f58167a5ca9099559",
+      "salt": "f32ac280c4b09e846012ebf0b887ed17",
+      "role": "creator",
+      "approved": false,
+      "createdAt": "2026-03-08T12:36:18.867Z",
+      "lessonsAuthored": []
     }
   ]
 }

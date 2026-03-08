@@ -33,8 +33,9 @@ var PRIOR_REGULARIZATION = 0.01;
 /** Diagonal jitter added to A before retrying a failed Cholesky inversion.
  *  JITTER_LIGHT tried first to minimize mean bias (A+εI)⁻¹b vs A⁻¹b.
  *  JITTER used if light jitter still fails. If both fail, fall back to b.
- *  Both must be >= math.CHOLESKY_EPSILON for jitter retry to succeed. */
-var JITTER_LIGHT = 1e-10;
+ *  Both must be > math.CHOLESKY_EPSILON for jitter retry to succeed
+ *  (strictly greater to avoid boundary fragility if CHOLESKY_EPSILON is ever increased). */
+var JITTER_LIGHT = 1e-9;
 var JITTER = 1e-5;
 
 
@@ -77,7 +78,7 @@ function assertEmbeddingDimValid(state) {
     throw new Error('[BANDIT] state.embedding missing — cannot size vectors.');
   }
   var dim = state.embedding.dim;
-  if (typeof dim !== 'number' || !Number.isInteger(dim) || dim < 1 || dim > 1024) {
+  if (!math.isPositiveInteger(dim) || dim > 1024) {
     throw new Error(
       '[BANDIT] embedding.dim invalid: must be integer in [1,1024], got ' +
       (dim === undefined ? 'undefined' : dim) + '. State may be corrupt.'
@@ -93,6 +94,9 @@ function assertEmbeddingDimValid(state) {
  * @throws {Error}
  */
 function assertFeatureDimInvariant(state) {
+  if (!state || !state.bandit) {
+    throw new Error('[BANDIT] state.bandit missing — cannot run bandit operations.');
+  }
   assertEmbeddingDimValid(state);
   var embeddingDim = state.embedding.dim;
   var expectedFeatureDim = embeddingDim * 2;
@@ -132,7 +136,11 @@ function ensureBanditInitialized(state) {
     });
   }
   if (!state.bandit.b || state.bandit.b.length !== expectedFeatureDim) {
-    state.bandit.b = new Array(expectedFeatureDim).fill(0);
+    state.bandit.b = math.zeros(expectedFeatureDim);
+  }
+  if (typeof state.bandit.observationCount !== 'number' ||
+      !math.isNonNegativeInteger(state.bandit.observationCount)) {
+    state.bandit.observationCount = 0;
   }
 }
 
@@ -181,6 +189,10 @@ function sampleTheta(state) {
       try {
         return solveAndSample(jitteredMatrix(JITTER));
       } catch (_e3) {
+        log.warn(
+          'sampleTheta: Cholesky failed after jitter retries — returning zero vector. ' +
+          'A matrix may be singular; consider resetting bandit state. All lessons will score 0.'
+        );
         return math.scaleVec(b, 0);
       }
     }
@@ -236,7 +248,7 @@ function selectLesson(state, studentId, opts) {
       : embeddings.ensureLessonVector(state, lessonId);
     if (!lessonVec) {
       if (readOnly) return;
-      lessonVec = embeddings.ensureLessonVector(state, lessonId);
+      throw new Error('[BANDIT] ensureLessonVector returned null for ' + lessonId + ' — unexpected');
     }
     var x = banditFeature(studentVec, lessonVec);
     if (x.length !== state.bandit.featureDim) {
