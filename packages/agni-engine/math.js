@@ -482,7 +482,7 @@ function invertSPD(A) {
 /** Cached sin sample from previous Box–Muller; halves entropy use on headless Pi. */
 var _randnCache = null;
 
-/** Reset randn cache (for tests that mock Math.random). Not part of public API. */
+/** Reset randn cache. Call before mocking Math.random or between tests. See randn() JSDoc for test-pollution details. Not part of public API. */
 function _randnClearCache() {
   _randnCache = null;
 }
@@ -492,8 +492,13 @@ function _randnClearCache() {
  * Assumes Math.random() ∈ [0,1) per spec. If PRNG returns 0 (pathological),
  * retries with new draws; returning 0 would corrupt Thompson sampling (deterministic draw).
  *
- * Test pollution: _randnCache persists across tests. Call _randnClearCache() before mocking
- * Math.random. If randn throws, call _randnClearCache() before retrying (cache survives).
+ * WARNING — Test pollution: randn uses module-level _randnCache. If one test calls randn()
+ * and consumes the cos sample, the sin sample remains in the cache and will be returned as
+ * the first randn() value in the next test, even if Math.random is mocked to a fresh sequence.
+ * Call math._randnClearCache() before mocking Math.random or between tests that require
+ * deterministic randn behavior. If randn throws (e.g. broken PRNG), call _randnClearCache()
+ * before retrying — the cache survives the throw.
+ *
  * @returns {number}
  */
 function randn() {
