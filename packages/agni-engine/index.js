@@ -270,12 +270,15 @@ var PAGERANK_WEIGHT           = envConfig.pagerankWeight;
 function selectBestLesson(studentId, candidates, ontologyMap) {
   if (!candidates || candidates.length === 0) return null;
 
+  var topK = envConfig.topKCandidates;
+  var capped = candidates.length > topK ? candidates.slice(0, topK) : candidates;
+
   var fullLessons     = _state.embedding.lessons;
   var filteredLessons = {};
 
   var maxLes = envConfig.maxLessons;
-  for (var i = 0; i < candidates.length; i++) {
-    var id = candidates[i];
+  for (var i = 0; i < capped.length; i++) {
+    var id = capped[i];
     if (fullLessons[id]) {
       filteredLessons[id] = fullLessons[id];
     } else if (maxLes > 0 && Object.keys(fullLessons).length >= maxLes) {
@@ -312,8 +315,8 @@ function selectBestLesson(studentId, candidates, ontologyMap) {
   }
 
   var thompsonScores = {};
-  for (var ti = 0; ti < candidates.length; ti++) {
-    var cid = candidates[ti];
+  for (var ti = 0; ti < capped.length; ti++) {
+    var cid = capped[ti];
     var lessonVec = embeddings.ensureLessonVector(scoringState, cid);
     var x = studentVec.concat(lessonVec);
     thompsonScores[cid] = math.dot(thetaSample, x);
@@ -321,14 +324,14 @@ function selectBestLesson(studentId, candidates, ontologyMap) {
 
   // ── Markov transition scores (with bigrams, dropout, cooldown) ──────
   var markovScores = {};
-  for (var mi = 0; mi < candidates.length; mi++) {
-    markovScores[candidates[mi]] = markov.scoreCandidate(_state, studentId, candidates[mi]);
+  for (var mi = 0; mi < capped.length; mi++) {
+    markovScores[capped[mi]] = markov.scoreCandidate(_state, studentId, capped[mi]);
   }
 
   // ── PageRank scores (cached, quality-weighted) ─────────────────────
   var pagerankScores = {};
   try {
-    pagerankScores = pagerank.scoreCandidates(_state, studentId, candidates, ontologyMap);
+    pagerankScores = pagerank.scoreCandidates(_state, studentId, capped, ontologyMap);
   } catch (err) {
     log.warn('PageRank scoring failed, falling back', { error: err.message || String(err) });
   }
@@ -340,8 +343,8 @@ function selectBestLesson(studentId, candidates, ontologyMap) {
   var DROPOUT_PENALTY_WEIGHT = 0.20;
   var COOLDOWN_PENALTY_WEIGHT = 0.30;
 
-  for (var ci = 0; ci < candidates.length; ci++) {
-    var lid = candidates[ci];
+  for (var ci = 0; ci < capped.length; ci++) {
+    var lid = capped[ci];
 
     var ts = thompsonScores[lid] || 0;
     var ms = markovScores[lid] || {
@@ -549,6 +552,7 @@ function getStatus() {
     observations:   _state.bandit.observationCount,
     embeddingDim:   _state.embedding.dim,
     featureDim:     _state.bandit.featureDim,
+    topKCandidates: envConfig.topKCandidates,
     statePath:      STATE_PATH,
     markovEdges:    Object.keys(markovState.transitions).length,
     trackedPaths:   Object.keys(markovState.studentHistory).length

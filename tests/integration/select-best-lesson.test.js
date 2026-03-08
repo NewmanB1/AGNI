@@ -136,6 +136,25 @@ describe('selectBestLesson integration', () => {
     assert.ok(status.observations > 0, 'Should have recorded observations');
     assert.ok(typeof status.embeddingDim === 'number');
     assert.ok(typeof status.featureDim === 'number');
+    assert.ok(typeof status.topKCandidates === 'number', 'topKCandidates should be in status');
+    assert.ok(status.topKCandidates >= 1 && status.topKCandidates <= 2000, 'topKCandidates should be in valid range');
+  });
+
+  it('caps candidates to topK — selection only from first 500', async () => {
+    const topK = 500;
+    const totalCandidates = 550;
+    const seedEntries = Array.from({ length: totalCandidates }, (_, i) => ({
+      lessonId: 'TK-' + i,
+      difficulty: 2,
+      skill: 'topk-skill'
+    }));
+    await engine.seedLessons(seedEntries);
+    const candidates = seedEntries.map(e => e.lessonId);
+    const firstKSet = new Set(candidates.slice(0, topK));
+    for (let t = 0; t < 15; t++) {
+      const pick = engine.selectBestLesson('s-topk', candidates);
+      assert.ok(firstKSet.has(pick), `Pick ${pick} must be in first ${topK} (topK cap)`);
+    }
   });
 
   it('R1: mergeRemoteSummary is idempotent — duplicate sync skipped', async () => {

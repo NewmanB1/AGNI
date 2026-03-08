@@ -15,6 +15,7 @@ Use this when changing adaptive selection, Rasch, embeddings, bandit, or federat
 | Change ability estimation | `packages/agni-engine/rasch.js` — `updateAbility()`. Contract: receives probeResults, updates state.rasch.students, returns gain proxy. |
 | Change student/lesson vectors | `packages/agni-engine/embeddings.js` — `ensureStudentVector`, `ensureLessonVector`, `updateEmbedding()`. Dimension is `state.embedding.dim`. |
 | Change bandit (selection or update) | `packages/agni-engine/thompson.js` — `selectLesson()`, `updateBandit()`, `ensureBanditInitialized()`. Invariant: `featureDim === embeddingDim * 2`; feature vector = concat(studentVec, lessonVec). |
+| Change top-K cap for selection | `AGNI_TOP_K_CANDIDATES` (default 500). `packages/agni-engine/index.js` caps candidates to topK before Thompson/Markov/PageRank scoring; theta returns topK lessons. Reduces CPU on Pi for 10k+ lessons. |
 | Change federation merge | `packages/agni-engine/federation.js` — `getBanditSummary()`, `mergeBanditSummaries()`. **Contract:** `BanditSummary.embeddingDim` must match across federating hubs; all must deploy with identical `AGNI_EMBEDDING_DIM`. |
 | Change math (linear algebra) | `packages/agni-engine/math.js` — pure helpers; no state. See `docs/playbooks/math.md` for conventions and testing. |
 

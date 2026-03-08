@@ -14,6 +14,7 @@ const CONFIG_KEYS = [
   ['forgetting', 'AGNI_FORGETTING'],
   ['maxStudents', 'AGNI_MAX_STUDENTS'],
   ['maxLessons', 'AGNI_MAX_LESSONS'],
+  ['topKCandidates', 'AGNI_TOP_K_CANDIDATES'],
   ['dataDir', 'AGNI_DATA_DIR'],
   ['serveDir', 'AGNI_SERVE_DIR'],
   ['thetaPort', 'AGNI_THETA_PORT'],

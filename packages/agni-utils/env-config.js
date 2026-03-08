@@ -131,6 +131,7 @@ const config = {
 
   maxStudents:        intVal('AGNI_MAX_STUDENTS', 0),
   maxLessons:         intVal('AGNI_MAX_LESSONS', 0),
+  topKCandidates:     validRange(intVal('AGNI_TOP_K_CANDIDATES', 500), 1, 2000, 'AGNI_TOP_K_CANDIDATES'),
 
   yamlMaxBytes:       Math.max(65536, intVal('AGNI_YAML_MAX_BYTES', 2 * 1024 * 1024)),
 

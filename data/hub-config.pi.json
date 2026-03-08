@@ -18,7 +18,8 @@
   "forgetting": 0.99,
   "maxStudents": 60,
   "maxLessons": 200,
-  "capacityNote": "Memory budget assumes maxStudents and maxLessons. Runtime enforced: engine and accounts reject when at cap.",
+  "topKCandidates": 500,
+  "capacityNote": "Memory budget assumes maxStudents and maxLessons. Runtime enforced: engine and accounts reject when at cap. topKCandidates caps bandit selection to reduce CPU on Pi.",
 
   "_path_notes": [
     "Paths above are absolute for dedicated Pi deployment. No fallback: if dataDir/serveDir/yamlDir do not exist, hub startup fails with ENOENT at first file access.",
@@ -42,6 +43,8 @@
     "hubId (above): Must be unique per hub. If copying this config to a second Pi, change it.",
     "",
     "maxStudents/maxLessons (above): Budget assumes these limits. Runtime enforced.",
+    "",
+    "topKCandidates=500 (above): Limits bandit selection and theta payload to 500 lessons by MLC. Reduces Cholesky/scoring work on Pi.",
     "",
     "Memory budget for 60 students, 200 lessons (embeddingDim=8, featureDim=16):",
     "  Rasch students: 60 × 16 B = 960 B (ability+variance, 2×float64 per RaschStudentState)",

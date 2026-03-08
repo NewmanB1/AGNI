@@ -359,6 +359,11 @@ async function getLessonsSortedByTheta(pseudoId) {
     log.warn('Frustration feedback loop failed (non-critical)', { error: e.message });
   }
 
+  const topK = envConfig.topKCandidates || 500;
+  if (results.length > topK) {
+    results = results.slice(0, topK);
+  }
+
   thetaCache.set(pseudoId, { lessons: results, computedAt: new Date().toISOString(), masteryMtime: currentMasteryMtime });
   return results;
 }

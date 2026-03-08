@@ -28,6 +28,12 @@
       "minimum": 0,
       "description": "Cap on lessons. 0 = no limit. Engine rejects when at cap. For Pi budget use 200."
     },
+    "topKCandidates": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000,
+      "description": "Max candidates for bandit selection (top-K by MLC). Reduces CPU on Pi. Default 500."
+    },
     "thetaPort": {
       "type": "integer",
       "minimum": 1,
