@@ -5,7 +5,7 @@
  * Validates orientation, shake, and threshold evaluator behavior.
  */
 
-const { describe, it, before, after } = require('node:test');
+const { describe, it, before, after } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const { setupGlobals, teardownGlobals } = require('../helpers/browser-globals');
 

@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it } = require('node:test');
+const { describe, it } = require('../../../tests/helpers/test-api');
 const assert = require('node:assert/strict');
 const { validateYaml } = require('../src/lesson-validate');
 const { buildPrompt } = require('../src/prompt-builder');

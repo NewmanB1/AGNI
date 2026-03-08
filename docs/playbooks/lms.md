@@ -22,7 +22,7 @@ Use this when changing adaptive selection, Rasch, embeddings, bandit, or federat
 
 - Bypass `@agni/services/lms` (or `src/services/lms.js` re-export) from theta or HTTP; keep a single entry point for the engine.
 - Change `featureDim` or embedding dim without a migration in `packages/agni-engine/migrations.js`. "Delete state file" is not acceptable — village deployments have no internet; data loss would be permanent.
-- Add new dependencies inside `packages/agni-engine/` without ensuring Node 18+ compatibility (per `docs/ARCHITECTURE.md` and `package.json` engines — hub target).
+- Add new dependencies inside `packages/agni-engine/` without ensuring Node 14+ compatibility (per `docs/ARCHITECTURE.md` and `package.json` engines — hub target).
 
 ## Types
 

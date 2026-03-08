@@ -14,7 +14,7 @@
  * unit tests or CI gate scripts say about the source code.
  */
 
-const { describe, it, before, after } = require('node:test');
+const { describe, it, before, after } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const http = require('http');
 const path = require('path');

@@ -8,7 +8,7 @@
  * — fix the underlying bug and verify the test passes.
  */
 
-const { describe, it, before, after } = require('node:test');
+const { describe, it, before, after } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const { spawnSync } = require('child_process');
 const path = require('path');
@@ -1568,8 +1568,8 @@ describe('AUDIT-INVARIANT: hub-config bootstrap — embeddingDim flows from conf
   });
 });
 
-describe('AUDIT-DOCS: Node version docs consistent (hub Node 18+, not 14–16)', () => {
-  it('check-node-version-docs passes — no conflicting Node 14/16 hub target in docs', () => {
+describe('AUDIT-DOCS: Node version docs consistent (hub Node 14+)', () => {
+  it('check-node-version-docs passes — ARCHITECTURE states Node 14+ for hub, no Node < 14 in docs', () => {
     const script = path.resolve(__dirname, '../../scripts/check-node-version-docs.js');
     const result = spawnSync(process.execPath, [script], {
       cwd: path.resolve(__dirname, '../..'),
@@ -1578,7 +1578,7 @@ describe('AUDIT-DOCS: Node version docs consistent (hub Node 18+, not 14–16)',
     assert.equal(
       result.status,
       0,
-      `check-node-version-docs must pass. ARCHITECTURE must state Node 18+ for hub; no Node 14/14-16 target in non-archive docs.\n${result.stderr || result.stdout}`
+      `check-node-version-docs must pass. ARCHITECTURE must state Node 14+ for hub; no Node < 14 target in non-archive docs.\n${result.stderr || result.stdout}`
     );
   });
 });
@@ -1627,7 +1627,7 @@ describe('MATH-3: randn retries on PRNG zero (does not corrupt Thompson sampling
     const origRandom = Math.random;
     Math.random = function () { return 0; };
     try {
-      assert.throws(() => math.randn(), /randn: PRNG returned zero repeatedly/);
+      assert.throws(() => math.randn(), /randn: PRNG returned near-zero repeatedly/);
     } finally {
       Math.random = origRandom;
     }

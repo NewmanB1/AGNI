@@ -5,7 +5,7 @@
  * Covers validation, contingency logic, chi-squared, cohort discovery, and output shape.
  */
 
-const { describe, it } = require('node:test');
+const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 
 const sentryAnalysis = require('../../packages/agni-hub/sentry-analysis');

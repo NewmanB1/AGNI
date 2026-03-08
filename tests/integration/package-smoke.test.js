@@ -5,7 +5,7 @@
  * Catches wiring breakage, missing dependencies, and require-path mistakes early.
  */
 
-const { describe, it } = require('node:test');
+const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 
 describe('Package smoke tests', function () {

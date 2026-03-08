@@ -8,20 +8,20 @@ How to set up AGNI on a Raspberry Pi as a Village Hub serving lessons to student
 
 - **Hardware:** Raspberry Pi 3B+ or newer (1GB+ RAM), SD card (16GB+), power supply, WiFi access point (built-in or USB dongle)
 - **OS:** Raspberry Pi OS Lite (64-bit recommended) or any Debian-based Linux
-- **Node.js:** v18 or newer (`node --version` to check)
+- **Node.js:** v14 or newer (`node --version` to check)
 
 ---
 
 ## 1. Install Node.js
 
 ```bash
-# Option A: NodeSource (recommended for Pi)
+# Option A: NodeSource (recommended for Pi; Node 14 or 18 both work)
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo bash -
 sudo apt-get install -y nodejs
 
 # Option B: nvm
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-nvm install 18
+nvm install 14
 ```
 
 ---

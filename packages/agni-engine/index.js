@@ -26,7 +26,7 @@
 //   to .tmp then renamed over the real path so a process crash mid-write cannot
 //   corrupt the state file.
 //
-// Target: Node.js 18+. CommonJS. ES2017+ syntax (async/await, Object.assign).
+// Target: Node.js 14+. CommonJS. ES2017+ syntax (async/await, Object.assign).
 // ─────────────────────────────────────────────────────────────────────────────
 
 'use strict';

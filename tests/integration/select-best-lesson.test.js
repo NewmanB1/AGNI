@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it, before, after } = require('node:test');
+const { describe, it, before, after } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const os = require('os');
 const fs = require('fs');

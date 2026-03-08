@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it } = require('node:test');
+const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const { updateSchedule } = require('../../src/engine/sm2');
 

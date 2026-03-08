@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it } = require('node:test');
+const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const { updateAbility } = require('../../src/engine/rasch');
 const { createState, seedProbes } = require('../helpers/engine-state');

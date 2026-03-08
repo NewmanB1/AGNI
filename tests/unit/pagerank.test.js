@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it, beforeEach } = require('node:test');
+const { describe, it, beforeEach } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 
 const pagerank = require('../../src/engine/pagerank');

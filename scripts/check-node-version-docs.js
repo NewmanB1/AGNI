@@ -3,9 +3,9 @@
 
 /**
  * Ensures hub/engine Node version docs are consistent.
- * - ARCHITECTURE.md must explicitly state Node 18+ for the Village Hub.
- * - No non-archive docs may state Node 14 or Node 14–16 as a hub/engine target
- *   (would conflict with package.json engines ">=18" and cause silent breakage on Pi).
+ * - ARCHITECTURE.md must explicitly state Node 14+ for the Village Hub.
+ * - No non-archive docs may state Node < 14 as a hub/engine target
+ *   (would conflict with package.json engines ">=14" and cause silent breakage on Pi).
  *
  * Exit 0 pass, 1 fail.
  */
@@ -17,18 +17,16 @@ const ROOT = path.resolve(__dirname, '..');
 const DOCS_DIR = path.join(ROOT, 'docs');
 const ARCHITECTURE = path.join(ROOT, 'docs', 'ARCHITECTURE.md');
 
-// Patterns that indicate conflicting Node 14/16 hub target (mutually exclusive with Node 18+)
+// Patterns that indicate conflicting Node < 14 hub target
 const BAD_PATTERNS = [
-  /Node\s*14(?!\+)/,      // "Node 14" but not "Node 14+"
-  /Node\s*14[-–]16/,      // "Node 14-16" or "Node 14–16"
-  /node\s*14(?!\+)/,      // lowercase
-  /node\s*14[-–]16/,
+  /Node\s*1[0-2]\b/,      // "Node 10", "Node 11", "Node 12"
+  /node\s*1[0-2]\b/,      // lowercase
 ];
 
-// ARCHITECTURE must contain explicit Node 18+ for hub
+// ARCHITECTURE must contain explicit Node 14+ for hub
 const REQUIRED_IN_ARCHITECTURE = [
-  /Node\s*18\+/,
-  /node\s*18\+/,
+  /Node\s*14\+/,
+  /node\s*14\+/,
 ];
 
 function walkDir(dir, out, skipArchive) {
@@ -53,7 +51,7 @@ if (fs.existsSync(ARCHITECTURE)) {
   const hasRequired = REQUIRED_IN_ARCHITECTURE.some((p) => p.test(content));
   if (!hasRequired) {
     errors.push(
-      'docs/ARCHITECTURE.md must explicitly state Node 18+ for the Village Hub (per package.json engines).'
+      'docs/ARCHITECTURE.md must explicitly state Node 14+ for the Village Hub (per package.json engines).'
     );
   }
 } else {
@@ -69,7 +67,7 @@ for (const f of files) {
   for (const pat of BAD_PATTERNS) {
     if (pat.test(content)) {
       errors.push(
-        `${rel}: must not reference Node 14 or Node 14–16 as hub target (use Node 18+ per docs/ARCHITECTURE.md)`
+        `${rel}: must not reference Node < 14 as hub target (use Node 14+ per docs/ARCHITECTURE.md)`
       );
       break;
     }

@@ -1,16 +1,17 @@
 'use strict';
 
-const { describe, it, before, after } = require('node:test');
+const { describe, it, before, after } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const { setupGlobals, teardownGlobals, makeElement, dom } = require('../helpers/browser-globals');
 
+let gates;
 before(() => {
   setupGlobals();
   const app = makeElement('div');
   dom.setById('app', app);
+  require('../../src/runtime/rendering/gate-renderer');
+  gates = globalThis.AGNI_GATES;
 });
-require('../../src/runtime/rendering/gate-renderer');
-const gates = globalThis.AGNI_GATES;
 after(() => teardownGlobals());
 
 // ── parseDurationMs ──────────────────────────────────────────────────────────

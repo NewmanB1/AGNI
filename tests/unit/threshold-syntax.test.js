@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it } = require('node:test');
+const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const { validateThresholdSyntax, tokenise, parse } = require('../../src/utils/threshold-syntax');
 

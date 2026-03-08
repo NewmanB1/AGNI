@@ -6,7 +6,7 @@
  * Break-it: remove opts support from createAccounts/createLessonChain → this test fails.
  */
 
-const { describe, it, after } = require('node:test');
+const { describe, it, after } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const { tempDir } = require('../helpers/fixtures');
 const { minimalLesson } = require('../helpers/fixtures');

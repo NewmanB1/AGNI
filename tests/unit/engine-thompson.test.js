@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it } = require('node:test');
+const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const { ensureBanditInitialized, selectLesson, updateBandit } = require('../../src/engine/thompson');
 const { ensureLessonVector } = require('../../src/engine/embeddings');

@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it } = require('node:test');
+const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const { base64ToBytes, bytesToBase64, utf8ToBytes, bytesToUtf8 } = require('../../src/utils/binary');
 

@@ -1,7 +1,7 @@
 # AGNI Run Environments
 
 **Hardware constraints (canonical):**
-- **Village Hub:** Raspberry Pi — Node.js 18+, ARM, limited RAM
+- **Village Hub:** Raspberry Pi — Node.js 14+, ARM, limited RAM
 - **Edge devices (students):** Android 6.0 Marshmallow — Chrome 44 WebView, ES5 only, vanilla JS/HTML5/CSS3
 
 This document maps every piece of code to its run environment and enforced constraints.
@@ -29,7 +29,7 @@ Runs in the student's browser/WebView. Must be **ES5** and **vanilla JavaScript,
 
 ## 2. Village Hub (Node.js on Raspberry Pi)
 
-Runs on the Raspberry Pi server. Node 18+.
+Runs on the Raspberry Pi server. Node 14+.
 
 | Path | Role |
 |------|------|

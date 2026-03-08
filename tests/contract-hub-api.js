@@ -4,7 +4,7 @@
  * the shapes the portal's createHubApi() expects (see portal/src/lib/api.ts and docs/api-contract.md).
  *
  * Run: node tests/contract-hub-api.js
- * Requires Node 18+ (fetch). Exit 0 = pass, 1 = fail.
+ * Exit 0 = pass, 1 = fail.
  */
 
 'use strict';

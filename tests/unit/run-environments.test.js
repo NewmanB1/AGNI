@@ -6,8 +6,8 @@
  * See docs/RUN-ENVIRONMENTS.md.
  */
 
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
+const { describe, it } = require('../helpers/test-api');
+const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 

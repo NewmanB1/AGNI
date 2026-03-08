@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it } = require('node:test');
+const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const lessonSchema = require('@agni/services/lesson-schema');
 const { minimalLesson } = require('../helpers/fixtures');
