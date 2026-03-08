@@ -6,7 +6,7 @@
 // isNonNegativeInteger, etc. instead of Array.fill/Number.isInteger for future-proofing.
 //
 // No external dependencies. Used across Rasch, embeddings, and bandit layers.
-// All functions are pure (no side effects, no state).
+// All functions are pure except randn (two-sample cache for entropy efficiency on Pi).
 //
 // CONTRACT: Do not add in-place variants. Callers may pass aliased arrays
 // (e.g. addVec(a, a)); implementations must never mutate inputs. An in-place
@@ -22,7 +22,13 @@ var CHOLESKY_EPSILON = 1e-10;
 /** Symmetry tolerance for Cholesky. Relaxed from 1e-12 to accommodate JSON round-trip error in post-federation merged precision matrices. */
 var CHOLESKY_SYMMETRY_TOL = 1e-8;
 
-/** ES5-safe zero-filled array. Use instead of new Array(n).fill(0) for boundary-creep safety if math.js ever reaches edge runtime. */
+/**
+ * ES5-safe zero-filled array of length n. Always allocates fresh — never cached or shared.
+ * Callers (identity, cholesky, forwardSub, backSub, invertSPD) depend on this for correctness.
+ * Use instead of new Array(n).fill(0) for boundary-creep safety if math.js ever reaches edge runtime.
+ * @param {number} n
+ * @returns {number[]}
+ */
 function zeros(n) {
   var arr = new Array(n);
   for (var k = 0; k < n; k++) arr[k] = 0;
@@ -182,6 +188,9 @@ function scaleMat(A, s) {
     throw new Error('[MATH] scaleMat: scalar must be finite number');
   }
   if (A.length > 0) {
+    if (!Array.isArray(A[0])) {
+      throw new Error('[MATH] scaleMat: first row must be array');
+    }
     var cols = A[0].length;
     for (var i = 0; i < A.length; i++) {
       if (A[i].length !== cols) throw new Error('[MATH] scaleMat: jagged matrix at row ' + i);
@@ -210,13 +219,26 @@ function matVec(A, x) {
     throw new Error('[MATH] matVec: vector must be array');
   }
   if (A.length === 0) return [];
+  if (!Array.isArray(A[0])) {
+    throw new Error('[MATH] matVec: first row must be array');
+  }
   var cols = A[0].length;
   if (cols !== x.length) {
     throw new Error('[MATH] matVec: dimension mismatch (cols=' + cols + ' vs vec=' + x.length + ')');
   }
   for (var i = 0; i < A.length; i++) {
-    if (A[i].length !== cols) {
+    if (!A[i] || !Array.isArray(A[i]) || A[i].length !== cols) {
       throw new Error('[MATH] matVec: jagged matrix at row ' + i);
+    }
+    for (var c = 0; c < cols; c++) {
+      if (typeof A[i][c] !== 'number' || !isFinite(A[i][c])) {
+        throw new Error('[MATH] matVec: non-finite element at row ' + i + ', col ' + c);
+      }
+    }
+  }
+  for (var xi = 0; xi < x.length; xi++) {
+    if (typeof x[xi] !== 'number' || !isFinite(x[xi])) {
+      throw new Error('[MATH] matVec: non-finite element in vector at index ' + xi);
     }
   }
   return A.map(function(row) { return dot(row, x); });
@@ -260,6 +282,7 @@ function cholesky(A) {
     if (typeof A[i][i] !== 'number' || !isFinite(A[i][i])) {
       throw new Error('[MATH] cholesky: non-numeric diagonal at [' + i + ']');
     }
+    /* Off-diagonal: j>i covers each pair once; aij and aji together validate upper and lower triangle */
     for (j = i + 1; j < n; j++) {
       aij = A[i][j];
       aji = A[j][i];
@@ -314,6 +337,11 @@ function forwardSub(L, b) {
   if (b.length !== n) {
     throw new Error('[MATH] forwardSub: dimension mismatch (L is ' + n + 'x' + n + ', b.length=' + b.length + ')');
   }
+  for (var bi = 0; bi < n; bi++) {
+    if (typeof b[bi] !== 'number' || !isFinite(b[bi])) {
+      throw new Error('[MATH] forwardSub: non-finite RHS element at index ' + bi);
+    }
+  }
   var y = zeros(n);
   var i, j, sum;
   for (i = 0; i < n; i++) {
@@ -344,6 +372,11 @@ function backSub(L, y) {
   }
   if (y.length !== n) {
     throw new Error('[MATH] backSub: dimension mismatch (L is ' + n + 'x' + n + ', y.length=' + y.length + ')');
+  }
+  for (var yi = 0; yi < n; yi++) {
+    if (typeof y[yi] !== 'number' || !isFinite(y[yi])) {
+      throw new Error('[MATH] backSub: non-finite RHS element at index ' + yi);
+    }
   }
   var x = zeros(n);
   var i, j, sum;
@@ -413,23 +446,30 @@ function invertSPD(A) {
     }
   }
 
-  for (i = 0; i < n; i++) {
-    for (j = 0; j < i; j++) {
-      inv[i][j] = inv[j][i] = (inv[i][j] + inv[j][i]) * 0.5;
-    }
-  }
-  return inv;
+  return symmetrize(inv);
+}
+
+/** Cached sin sample from previous Box–Muller; halves entropy use on headless Pi. */
+var _randnCache = null;
+
+/** Reset randn cache (for tests that mock Math.random). Not part of public API. */
+function _randnClearCache() {
+  _randnCache = null;
 }
 
 /**
- * Gaussian random variable (Box–Muller). Pure — no module-level state.
+ * Gaussian random variable (Box–Muller). Caches second sample to avoid discarding entropy.
  * Assumes Math.random() ∈ [0,1) per spec. If PRNG returns 0 (pathological),
  * retries with new draws; returning 0 would corrupt Thompson sampling (deterministic draw).
- * Box–Muller generates two samples; this returns one (cos sample; sin discarded).
  * @returns {number}
  */
 function randn() {
-  var u, v, r;
+  var u, v, r, theta;
+  if (_randnCache !== null) {
+    var out = _randnCache;
+    _randnCache = null;
+    return out;
+  }
   for (var retries = 0; retries < 8; retries++) {
     u = Math.random();
     v = Math.random();
@@ -440,7 +480,9 @@ function randn() {
       continue;
     }
     r = Math.sqrt(-2 * Math.log(u));
-    return r * Math.cos(2 * Math.PI * v);
+    theta = 2 * Math.PI * v;
+    _randnCache = r * Math.sin(theta);
+    return r * Math.cos(theta);
   }
   throw new Error('[MATH] randn: PRNG returned zero repeatedly — broken runtime');
 }
@@ -448,6 +490,7 @@ function randn() {
 module.exports = {
   CHOLESKY_EPSILON: CHOLESKY_EPSILON,
   CHOLESKY_SYMMETRY_TOL: CHOLESKY_SYMMETRY_TOL,
+  _randnClearCache: _randnClearCache,
   dot:       dot,
   addVec:    addVec,
   scaleVec:  scaleVec,

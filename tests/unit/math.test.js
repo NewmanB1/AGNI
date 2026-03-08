@@ -174,6 +174,10 @@ describe('scaleMat', () => {
     assert.throws(() => math.scaleMat(null, 2), /null or undefined/);
   });
 
+  it('throws when first row is not array', () => {
+    assert.throws(() => math.scaleMat([123, [1, 2]], 2), /scaleMat.*first row must be array/);
+  });
+
   it('throws for sparse/jagged or non-finite matrix', () => {
     const sparseRow = [1, , 3];
     assert.throws(() => math.scaleMat([sparseRow, [4, 5, 6]], 2), /non-finite/);
@@ -205,6 +209,11 @@ describe('matVec', () => {
   it('throws for null or undefined input', () => {
     assert.throws(() => math.matVec(null, [1, 2]), /null or undefined/);
     assert.throws(() => math.matVec([[1]], undefined), /null or undefined/);
+  });
+
+  it('throws for non-finite element in matrix or vector', () => {
+    assert.throws(() => math.matVec([[1, NaN], [3, 4]], [1, 2]), /matVec.*non-finite/);
+    assert.throws(() => math.matVec([[1, 2], [3, 4]], [1, 'x']), /matVec.*non-finite/);
   });
 });
 
@@ -355,6 +364,16 @@ describe('forwardSub and backSub', () => {
   it('backSub throws when L is null', () => {
     assert.throws(() => math.backSub(null, [1, 1]), /backSub.*L is null/);
   });
+
+  it('forwardSub throws for non-finite RHS element', () => {
+    const L = [[1, 0], [1, 1]];
+    assert.throws(() => math.forwardSub(L, [1, NaN]), /forwardSub.*non-finite RHS/);
+  });
+
+  it('backSub throws for non-finite RHS element', () => {
+    const L = [[1, 0], [1, 1]];
+    assert.throws(() => math.backSub(L, [1, NaN]), /backSub.*non-finite RHS/);
+  });
 });
 
 // ── invertSPD ────────────────────────────────────────────────────────────────
@@ -468,6 +487,7 @@ describe('randn', () => {
   });
 
   it('retries then throws when Math.random returns zero repeatedly', () => {
+    math._randnClearCache();
     const origRandom = Math.random;
     Math.random = function () { return 0; };
     try {

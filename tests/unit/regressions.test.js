@@ -1603,10 +1603,10 @@ describe('MATH-1: cholesky rejects null, non-square, and non-symmetric input', (
   });
 });
 
-describe('MATH-2: randn has no module-level state', () => {
+describe('MATH-2: randn produces valid N(0,1) samples', () => {
   const math = require('../../src/engine/math');
 
-  it('produces statistically independent samples regardless of call order', () => {
+  it('produces statistically independent samples (cache alternates cos/sin from Box-Muller)', () => {
     // Call randn odd times (no cache anymore — was the bug). Verify samples are valid N(0,1).
     const N = 2000;
     const samples = [];
@@ -1623,6 +1623,7 @@ describe('MATH-3: randn retries on PRNG zero (does not corrupt Thompson sampling
   const math = require('../../src/engine/math');
 
   it('retries then throws when Math.random returns zero repeatedly', () => {
+    math._randnClearCache();
     const origRandom = Math.random;
     Math.random = function () { return 0; };
     try {
