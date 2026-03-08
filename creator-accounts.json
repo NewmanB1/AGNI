@@ -252,6 +252,28 @@
       "approved": false,
       "createdAt": "2026-03-08T01:26:20.048Z",
       "lessonsAuthored": []
+    },
+    {
+      "id": "cr-7ae04b685f71",
+      "name": "Test User",
+      "email": "test-1772936187262@example.com",
+      "passwordHash": "453a8e40322c82b0980ce2db2aa81819a18ed7dfc660f037c378c12b652b6a3561d9029d0230972d32c460c7f51f18b3320a91629bb1bac1c3ab55b4829cd58d",
+      "salt": "2850404088303f7a4a7f5b78998617a3",
+      "role": "creator",
+      "approved": false,
+      "createdAt": "2026-03-08T02:16:27.355Z",
+      "lessonsAuthored": []
+    },
+    {
+      "id": "cr-47df583415a1",
+      "name": "Test User",
+      "email": "test-1772936209615@example.com",
+      "passwordHash": "b02ad2446345c9ec10f488cd03abdba9d6ad62f96fb409041777a88cbf5e5f448e9936a2b8c667a6c1eb3f6bf70d7a8a4f5cfd0c062a30bdb155677ad1526364",
+      "salt": "47ebe5f778b4f2dd3af0ba4c69b24312",
+      "role": "creator",
+      "approved": false,
+      "createdAt": "2026-03-08T02:16:49.689Z",
+      "lessonsAuthored": []
     }
   ]
 }

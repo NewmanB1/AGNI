@@ -158,6 +158,11 @@ describe('addMat', () => {
     assert.throws(() => math.addMat(null, [[1]]), /null or undefined/);
     assert.throws(() => math.addMat([[1]], undefined), /null or undefined/);
   });
+
+  it('throws for non-finite element (no Number coercion)', () => {
+    assert.throws(() => math.addMat([[1, 'x']], [[1, 1]]), /addMat.*non-finite/);
+    assert.throws(() => math.addMat([[1, 1]], [[1, NaN]]), /addMat.*non-finite/);
+  });
 });
 
 describe('scaleMat', () => {
@@ -227,15 +232,15 @@ describe('identity', () => {
   });
 
   it('throws for negative n', () => {
-    assert.throws(() => math.identity(-1), /identity.*non-negative integer/);
+    assert.throws(() => math.identity(-1), /identity.*positive integer/);
   });
 
   it('throws for non-integer n', () => {
-    assert.throws(() => math.identity(2.5), /identity.*non-negative integer/);
+    assert.throws(() => math.identity(2.5), /identity.*positive integer/);
   });
 
-  it('returns [] for n=0 (empty matrix, consistent with cholesky/invertSPD)', () => {
-    assert.deepEqual(math.identity(0), []);
+  it('throws for n=0 (zero-dim invalid, wrong embeddingDim would not throw otherwise)', () => {
+    assert.throws(() => math.identity(0), /identity.*positive integer/);
   });
 });
 
@@ -293,6 +298,10 @@ describe('cholesky', () => {
   it('throws for matrix with NaN (non-numeric entry)', () => {
     assert.throws(() => math.cholesky([[1, NaN], [NaN, 1]]), /non-numeric/);
   });
+
+  it('throws for empty matrix', () => {
+    assert.throws(() => math.cholesky([]), /cholesky.*empty matrix/);
+  });
 });
 
 // ── forwardSub / backSub ─────────────────────────────────────────────────────
@@ -317,14 +326,14 @@ describe('forwardSub and backSub', () => {
     assert.ok(approxEqual(Ax[1], b[1], 1e-8));
   });
 
-  it('forwardSub throws on zero diagonal', () => {
+  it('forwardSub throws on zero or tiny diagonal', () => {
     const L = [[0, 0], [1, 1]];
-    assert.throws(() => math.forwardSub(L, [1, 1]), /forwardSub.*zero.*diagonal/);
+    assert.throws(() => math.forwardSub(L, [1, 1]), /forwardSub.*diagonal/);
   });
 
-  it('backSub throws on zero diagonal', () => {
+  it('backSub throws on zero or tiny diagonal', () => {
     const L = [[1, 0], [1, 0]];
-    assert.throws(() => math.backSub(L, [1, 1]), /backSub.*zero.*diagonal/);
+    assert.throws(() => math.backSub(L, [1, 1]), /backSub.*diagonal/);
   });
 
   it('forwardSub throws when b.length !== L.length', () => {
@@ -399,6 +408,10 @@ describe('invertSPD', () => {
     assert.throws(() => math.invertSPD(null), /invertSPD.*null or undefined/);
     assert.throws(() => math.invertSPD(undefined), /invertSPD.*null or undefined/);
   });
+
+  it('throws for empty matrix', () => {
+    assert.throws(() => math.invertSPD([]), /invertSPD.*empty matrix/);
+  });
 });
 
 // ── symmetrize ────────────────────────────────────────────────────────────────
@@ -413,6 +426,14 @@ describe('symmetrize', () => {
 
   it('throws for null', () => {
     assert.throws(() => math.symmetrize(null), /symmetrize.*null or undefined/);
+  });
+
+  it('throws for non-square matrix', () => {
+    assert.throws(() => math.symmetrize([[1, 2], [3]]), /symmetrize.*square/);
+  });
+
+  it('throws for non-finite element', () => {
+    assert.throws(() => math.symmetrize([[1, NaN], [NaN, 2]]), /symmetrize.*non-finite/);
   });
 });
 

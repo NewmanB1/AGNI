@@ -149,13 +149,24 @@ function addMat(A, B) {
   if (cols !== B[0].length) {
     throw new Error('[MATH] addMat: dimension mismatch (' + rows + 'x' + cols + ' vs ' + rows + 'x' + B[0].length + ')');
   }
-  for (var i = 1; i < rows; i++) {
-    if (A[i].length !== cols || B[i].length !== cols) {
+  for (var i = 0; i < rows; i++) {
+    if (!A[i] || !Array.isArray(A[i]) || A[i].length !== cols) {
       throw new Error('[MATH] addMat: jagged matrix at row ' + i);
+    }
+    if (!B[i] || !Array.isArray(B[i]) || B[i].length !== cols) {
+      throw new Error('[MATH] addMat: jagged matrix B at row ' + i);
+    }
+    for (var c = 0; c < cols; c++) {
+      if (typeof A[i][c] !== 'number' || !isFinite(A[i][c])) {
+        throw new Error('[MATH] addMat: non-finite element at A[' + i + '][' + c + ']');
+      }
+      if (typeof B[i][c] !== 'number' || !isFinite(B[i][c])) {
+        throw new Error('[MATH] addMat: non-finite element at B[' + i + '][' + c + ']');
+      }
     }
   }
   return A.map(function(row, i) {
-    return row.map(function(v, j) { return Number(v) + Number(B[i][j]); });
+    return row.map(function(v, j) { return v + B[i][j]; });
   });
 }
 
@@ -218,13 +229,12 @@ function matVec(A, x) {
  */
 function identity(n) {
   if (n == null) throw new Error('[MATH] identity: n is null or undefined');
-  if (!isNonNegativeInteger(n)) {
-    throw new Error('[MATH] identity: n must be non-negative integer, got ' + n);
+  if (!isNonNegativeInteger(n) || n < 1) {
+    throw new Error('[MATH] identity: n must be positive integer, got ' + n);
   }
-  if (n === 0) return [];
   var I = new Array(n);
   for (var i = 0; i < n; i++) {
-    I[i] = zeros(n).slice();
+    I[i] = zeros(n);
     I[i][i] = 1;
   }
   return I;
@@ -239,6 +249,9 @@ function identity(n) {
 function cholesky(A) {
   if (A == null) throw new Error('[MATH] cholesky: matrix is null or undefined');
   var n = A.length;
+  if (n === 0) {
+    throw new Error('[MATH] cholesky: empty matrix not supported (zero-dim invalid)');
+  }
   var i, j, k, sum, diag, aij, aji;
   for (i = 0; i < n; i++) {
     if (!A[i] || A[i].length !== n) {
@@ -260,7 +273,7 @@ function cholesky(A) {
   }
   var L = new Array(n);
   for (i = 0; i < n; i++) {
-    L[i] = zeros(n).slice();
+    L[i] = zeros(n);
   }
 
   for (i = 0; i < n; i++) {
@@ -301,13 +314,13 @@ function forwardSub(L, b) {
   if (b.length !== n) {
     throw new Error('[MATH] forwardSub: dimension mismatch (L is ' + n + 'x' + n + ', b.length=' + b.length + ')');
   }
-  var y = zeros(n).slice();
+  var y = zeros(n);
   var i, j, sum;
   for (i = 0; i < n; i++) {
     sum = 0;
     for (j = 0; j < i; j++) sum += L[i][j] * y[j];
-    if (L[i][i] === 0 || !isFinite(L[i][i])) {
-      throw new Error('[MATH] forwardSub: zero or invalid diagonal at i=' + i);
+    if (L[i][i] < CHOLESKY_EPSILON || !isFinite(L[i][i])) {
+      throw new Error('[MATH] forwardSub: diagonal too small or invalid at i=' + i);
     }
     y[i] = (b[i] - sum) / L[i][i];
   }
@@ -332,14 +345,14 @@ function backSub(L, y) {
   if (y.length !== n) {
     throw new Error('[MATH] backSub: dimension mismatch (L is ' + n + 'x' + n + ', y.length=' + y.length + ')');
   }
-  var x = zeros(n).slice();
+  var x = zeros(n);
   var i, j, sum;
   for (i = n - 1; i >= 0; i--) {
     sum = 0;
     /* Lᵀ x = y: read column j of L (L[j][i]) for the transpose, not row */
     for (j = i + 1; j < n; j++) sum += L[j][i] * x[j];
-    if (L[i][i] === 0 || !isFinite(L[i][i])) {
-      throw new Error('[MATH] backSub: zero or invalid diagonal at i=' + i);
+    if (L[i][i] < CHOLESKY_EPSILON || !isFinite(L[i][i])) {
+      throw new Error('[MATH] backSub: diagonal too small or invalid at i=' + i);
     }
     x[i] = (y[i] - sum) / L[i][i];
   }
@@ -358,7 +371,13 @@ function symmetrize(A) {
   if (A == null) throw new Error('[MATH] symmetrize: matrix is null or undefined');
   var n = A.length;
   for (var i = 0; i < n; i++) {
+    if (!A[i] || !Array.isArray(A[i]) || A[i].length !== n) {
+      throw new Error('[MATH] symmetrize: matrix must be square (got row ' + i + ' with length ' + (A[i] ? A[i].length : '?') + ')');
+    }
     for (var j = 0; j < i; j++) {
+      if (typeof A[i][j] !== 'number' || !isFinite(A[i][j]) || typeof A[j][i] !== 'number' || !isFinite(A[j][i])) {
+        throw new Error('[MATH] symmetrize: non-finite element at [' + i + '][' + j + ']');
+      }
       var v = (A[i][j] + A[j][i]) * 0.5;
       A[i][j] = A[j][i] = v;
     }
@@ -374,15 +393,18 @@ function symmetrize(A) {
 function invertSPD(A) {
   if (A == null) throw new Error('[MATH] invertSPD: matrix is null or undefined');
   var n = A.length;
+  if (n === 0) {
+    throw new Error('[MATH] invertSPD: empty matrix not supported (zero-dim invalid)');
+  }
   var L = cholesky(A);
   var inv = new Array(n);
   var i, j, e, y, x;
   for (i = 0; i < n; i++) {
-    inv[i] = new Array(n);
+    inv[i] = zeros(n);
   }
 
   for (j = 0; j < n; j++) {
-    e = zeros(n).slice();
+    e = zeros(n);
     e[j] = 1;
     y = forwardSub(L, e);
     x = backSub(L, y);
@@ -412,8 +434,8 @@ function randn() {
     u = Math.random();
     v = Math.random();
     if (u === 0 || v === 0) {
-      if (typeof console !== 'undefined' && console.error && retries === 0) {
-        console.error('[MATH] randn: PRNG returned zero (broken runtime), retrying');
+      if (typeof console !== 'undefined' && console.error) {
+        console.error('[MATH] randn: PRNG returned zero (broken runtime), retry ' + (retries + 1) + '/8');
       }
       continue;
     }

@@ -1666,11 +1666,11 @@ describe('MATH-5: identity rejects invalid n', () => {
   });
 
   it('throws for negative n', () => {
-    assert.throws(() => math.identity(-1), /identity.*non-negative integer/);
+    assert.throws(() => math.identity(-1), /identity.*positive integer/);
   });
 
   it('throws for non-integer n', () => {
-    assert.throws(() => math.identity(2.5), /identity.*non-negative integer/);
+    assert.throws(() => math.identity(2.5), /identity.*positive integer/);
   });
 });
 
