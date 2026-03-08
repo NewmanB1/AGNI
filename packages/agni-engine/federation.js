@@ -85,7 +85,7 @@ function validatePrecision(prec, label, expectedDim) {
 
 /** Validate sampleSize is non-negative integer. Module-level to avoid per-call allocation. */
 function validSampleSize(n, label) {
-  if (typeof n !== 'number' || !Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
+  if (!math.isNonNegativeInteger(n)) {
     throw new Error('[FEDERATION] ' + label + '.sampleSize must be non-negative integer, got: ' + n);
   }
 }
@@ -142,7 +142,15 @@ function getBanditSummary(state) {
     thompson.ensureBanditInitialized(state);
   }
   // Cholesky solve A*mean = b → mean = A⁻¹b (O(n²)), avoid O(n³) invertSPD
-  var L = math.cholesky(state.bandit.A);
+  var L;
+  try {
+    L = math.cholesky(state.bandit.A);
+  } catch (e) {
+    throw new Error(
+      '[FEDERATION] getBanditSummary: Cholesky failed — bandit A may be non-SPD (corrupt state). ' +
+      'Original: ' + (e && e.message ? e.message : String(e))
+    );
+  }
   var mean = math.backSub(L, math.forwardSub(L, state.bandit.b));
   return {
     embeddingDim: state.embedding.dim,  // Contract: federating hubs must use same value
@@ -152,10 +160,16 @@ function getBanditSummary(state) {
   };
 }
 
-/** Add syncId (content hash) to summary for deduplication. Returns new object; does not mutate input. */
+/** Add syncId (content hash) to summary for deduplication. Returns new object with deep-copied mean/precision; does not mutate input. */
 function addSyncId(summary) {
   var syncId = contentHash(summary);
-  return Object.assign({}, summary, { syncId: syncId });
+  return {
+    embeddingDim: summary.embeddingDim,
+    mean:         summary.mean.slice(),
+    precision:    copyMat(summary.precision),
+    sampleSize:   summary.sampleSize,
+    syncId:       syncId
+  };
 }
 
 /**
@@ -179,13 +193,13 @@ function mergeBanditSummaries(local, remote) {
   }
 
   // Contract: embeddingDim must be present — federating hubs declare their config explicitly.
-  if (typeof local.embeddingDim !== 'number' || !Number.isInteger(local.embeddingDim) || local.embeddingDim < 1) {
+  if (!math.isPositiveInteger(local.embeddingDim)) {
     throw new Error(
       '[FEDERATION] BanditSummary must include embeddingDim (integer >= 1). ' +
       'Federating hubs must use identical AGNI_EMBEDDING_DIM; re-export from hub to get current format.'
     );
   }
-  if (typeof remote.embeddingDim !== 'number' || !Number.isInteger(remote.embeddingDim) || remote.embeddingDim < 1) {
+  if (!math.isPositiveInteger(remote.embeddingDim)) {
     throw new Error(
       '[FEDERATION] Remote BanditSummary must include embeddingDim (integer >= 1). ' +
       'Cannot merge with hub using different export format or config.'
@@ -220,7 +234,7 @@ function mergeBanditSummaries(local, remote) {
     var featDim = local.embeddingDim * 2;
     return {
       embeddingDim: local.embeddingDim,
-      mean:         Array(featDim).fill(0),
+      mean:         math.zeros(featDim),
       precision:    math.identity(featDim),
       sampleSize:   0
     };
@@ -254,13 +268,21 @@ function mergeBanditSummaries(local, remote) {
     math.matVec(local.precision,  local.mean),
     math.matVec(remote.precision, remote.mean)
   );
-  var L_merged = math.cholesky(mergedPrec);
+  var L_merged;
+  try {
+    L_merged = math.cholesky(mergedPrec);
+  } catch (e) {
+    throw new Error(
+      '[FEDERATION] mergeBanditSummaries: Cholesky failed — merged precision may be non-SPD (corrupt local or remote summary). ' +
+      'Original: ' + (e && e.message ? e.message : String(e))
+    );
+  }
   var mergedMean = math.backSub(L_merged, math.forwardSub(L_merged, weightedSum));
 
   return {
     embeddingDim: local.embeddingDim,
     mean:         mergedMean,
-    precision:    mergedPrec,  // total-unit scaled precision (consistent with raw A)
+    precision:    copyMat(mergedPrec),  // total-unit scaled precision; copy to avoid aliasing
     sampleSize:   totalN
   };
 }

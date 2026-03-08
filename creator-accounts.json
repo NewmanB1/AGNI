@@ -351,6 +351,17 @@
       "approved": false,
       "createdAt": "2026-03-08T12:57:16.121Z",
       "lessonsAuthored": []
+    },
+    {
+      "id": "cr-6acd22ffbdbb",
+      "name": "Test User",
+      "email": "test-1772975917090@example.com",
+      "passwordHash": "72fb00e770c4971506e9c64a3b39883795405879bfbf7b1b2acb1ceef80200955de20cf67deced6674b19462a4782d867abf5c99730ab7108a3eb0568cefed59",
+      "salt": "4e695171fbb622fb578471c7898464df",
+      "role": "creator",
+      "approved": false,
+      "createdAt": "2026-03-08T13:18:37.160Z",
+      "lessonsAuthored": []
     }
   ]
 }
