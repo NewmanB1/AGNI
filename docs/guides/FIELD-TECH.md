@@ -148,5 +148,6 @@ SD cards wear out, especially with frequent writes. Mitigate:
 ## What to read next
 
 - [Deployment guide](../DEPLOYMENT.md) — full initial setup instructions
+- [Village security playbook](../playbooks/village-security.md) — hub hardening, WiFi client isolation, edge kiosk
 - [Teachers guide](TEACHERS.md) — to understand what teachers see and do
 - [API contract](../api-contract.md) — full list of hub HTTP endpoints

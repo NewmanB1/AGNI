@@ -116,6 +116,7 @@ Each major subsystem has a playbook that explains how it works and where to make
 | [sentry.md](../playbooks/sentry.md) | Telemetry → graph weights → theta |
 | [governance.md](../playbooks/governance.md) | Policy, compliance, catalog |
 | [federation.md](../playbooks/federation.md) | Hub-to-hub sync, sneakernet |
+| [village-security.md](../playbooks/village-security.md) | Village deployment hardening, hub/edge security |
 | [typing-and-languages.md](../playbooks/typing-and-languages.md) | TypeScript vs JavaScript, type definitions |
 
 ### Concepts glossary

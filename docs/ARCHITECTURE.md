@@ -287,6 +287,8 @@ When the lesson runs:
 - **Check 2 (Integrity):** Does the signature match the content?
   Mismatch → "Corrupted File." (Stops malicious editing.)
 
+**Village deployment hardening:** For hardened hub and edge device configurations (firewall, WiFi client isolation, kiosk, safe state writes), see **`docs/playbooks/village-security.md`**.
+
 ---
 
 ## 6. The Signaling Mesh (Allowed P2P)

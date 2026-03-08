@@ -103,4 +103,4 @@ The **Village Hub** is the edge server that compiles YAML to HTML or JSON on dem
 - **Verification:** **`docs/VERIFICATION-REPORT.md`** — cross-check of architectural claims vs codebase.
 - **Gaps & mitigations:** **`docs/GAP-ANALYSIS-AND-MITIGATIONS.md`** — known gaps and proposed actions.
 - **Reference implementation:** **`docs/REFERENCE-IMPLEMENTATION-VISION.md`** (schema-based, pure core, boundaries).
-- **Playbooks:** **`docs/playbooks/`** — compiler, runtime, governance, theta, thin-client targets, typing, Sentry, federation.
+- **Playbooks:** **`docs/playbooks/`** — compiler, runtime, governance, theta, thin-client targets, typing, Sentry, federation, village-security.

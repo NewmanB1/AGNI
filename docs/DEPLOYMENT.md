@@ -226,3 +226,4 @@ du -sh /home/pi/AGNI/data/
 - **Environment variables:** `src/utils/env-config.js` (canonical source of all defaults)
 - **Sentry playbook:** `docs/playbooks/sentry.md`
 - **Federation:** `docs/playbooks/federation.md`
+- **Village security:** `docs/playbooks/village-security.md` — hardening, WiFi client isolation, edge kiosk, safe state writes

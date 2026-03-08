@@ -78,6 +78,7 @@ AGNI is an **npm workspaces monorepo**. Each package has its own README with det
 - [playbooks/step-sensor-dependency.md](playbooks/step-sensor-dependency.md) — Step-level sensor dependency tracking for analytics and offline behaviour.
 - [playbooks/thin-client-targets.md](playbooks/thin-client-targets.md) — Building lesson artifacts for thin clients (native Android, Flutter, minimal YAML).
 - [playbooks/typing-and-languages.md](playbooks/typing-and-languages.md) — Where TypeScript vs JavaScript is used and how types are maintained.
+- [playbooks/village-security.md](playbooks/village-security.md) — Village deployment hardening: hub, WiFi, edge kiosk, safe state writes.
 
 ## Specs
 
