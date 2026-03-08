@@ -43,6 +43,9 @@ AGNI is an **npm workspaces monorepo**. Each package has its own README with det
 ## Architecture & Design
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — System architecture for AGNI/OLS: phases, governance, and design decisions. **Canonical single source of truth.**
+- [OLS-QUICK-REFERENCE.md](OLS-QUICK-REFERENCE.md) — Condensed flow, components, and key paths.
+- [VERIFICATION-REPORT.md](VERIFICATION-REPORT.md) — Cross-check of architectural claims vs codebase.
+- [GAP-ANALYSIS-AND-MITIGATIONS.md](GAP-ANALYSIS-AND-MITIGATIONS.md) — Known gaps, severity, and proposed mitigations.
 - [REFERENCE-IMPLEMENTATION-VISION.md](REFERENCE-IMPLEMENTATION-VISION.md) — Future refactor direction toward a schema-based, functional reference implementation.
 - [ONBOARDING-CONCEPTS.md](ONBOARDING-CONCEPTS.md) — Short glossary of key concepts for new contributors.
 

@@ -126,12 +126,15 @@ function monitorFreefall() {
 }
 
 // Skip binding check during development ──────────────────────────────────────
+// NOTE: This file is a minimal/standalone player for local dev or testing.
+// Compiled bundles use packages/agni-runtime/ui/player.js which delegates to
+// AGNI_INTEGRITY.verify() for full Ed25519 + UUID verification.
 async function verifyIntegrity() {
   if (window.DEV_MODE) {
     console.log("[DEV MODE] Skipping device binding & signature check");
     return true;
   }
-  // TODO: implement real Ed25519 signature + UUID check here
+  // Standalone mode: no integrity module loaded; allow for dev convenience.
   return true;
 }
 

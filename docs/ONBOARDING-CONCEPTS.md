@@ -71,6 +71,24 @@ Lessons declare **`ontology.requires`** and **`ontology.provides`** (skills, e.g
 
 ---
 
+## Device binding & integrity
+
+Lessons are signed per device. The Hub compiles for a given device UUID, computes `Hash(Content + NUL + UUID)`, and signs with Ed25519. Compiled HTML contains `OLS_SIGNATURE`, `OLS_PUBLIC_KEY`, `OLS_INTENDED_OWNER`. At runtime, **`packages/agni-runtime/integrity/integrity.js`** verifies identity (prevents P2P cloning) and signature (detects corruption). Signing: **`packages/agni-utils/crypto.js`**; globals injection: **`packages/ols-compiler/services/lesson-assembly.js`**.
+
+---
+
+## SVG factory pattern
+
+Lessons reference specs (e.g. `type: "pendulum"`, `params: { length: 120 }`). The device generates visuals locally from **`packages/agni-runtime/rendering/svg-stage.js`** and factories. Bandwidth savings: only parameters change per lesson; shared factory code cached once via Service Worker.
+
+---
+
+## Federation (hub-to-hub merge)
+
+Village hubs merge bandit posteriors without raw student data. **`packages/agni-engine/federation.js`** does precision-weighted Bayesian merge. `contentHash` enables dedup; `MAX_SEEN_SYNC_IDS` bounds memory. See **`docs/playbooks/federation.md`**.
+
+---
+
 ## Village Hub / hub-transform
 
 The **Village Hub** is the edge server that compiles YAML to HTML or JSON on demand and serves the theta/LMS APIs. **`packages/agni-hub/hub-transform.js`** (server/ is a shim) turns a lesson YAML request into a PWA-style bundle. Theta runs in the same process and provides `/api/theta`, `/api/lms/...`, and governance endpoints.
@@ -81,5 +99,8 @@ The **Village Hub** is the edge server that compiles YAML to HTML or JSON on dem
 
 - **Package READMEs:** Start with the package closest to your area of interest — each has a self-contained `README.md`.
 - **Architecture:** **`docs/ARCHITECTURE.md`** (canonical single source of truth).
+- **Quick reference:** **`docs/OLS-QUICK-REFERENCE.md`** — condensed flow and key paths.
+- **Verification:** **`docs/VERIFICATION-REPORT.md`** — cross-check of architectural claims vs codebase.
+- **Gaps & mitigations:** **`docs/GAP-ANALYSIS-AND-MITIGATIONS.md`** — known gaps and proposed actions.
 - **Reference implementation:** **`docs/REFERENCE-IMPLEMENTATION-VISION.md`** (schema-based, pure core, boundaries).
 - **Playbooks:** **`docs/playbooks/`** — compiler, runtime, governance, theta, thin-client targets, typing, Sentry, federation.

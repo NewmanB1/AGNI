@@ -514,7 +514,7 @@ prescribing specific lesson content.
 | **Device UUID trust** | Hub binds content to client-supplied UUID. UUID is not authenticated or hardware-bound. | Documented: device sends UUID; hub signs Hash(Content + UUID). Trust boundary is hub–device; P2P cloning prevented by signature. |
 | **Signature scope** | `Content` in Hash(Content + UUID) is the canonical JSON of the lesson IR (HTML payload). | See `utils/crypto.js` and `lessonAssembly`; same scope for CLI and hub-transform. |
 | **Cached assets unsigned** | Service Worker caches `shared-runtime.js`, `svg-stage.js`. These are not per-lesson signed. | Shared assets are hub-served over TLS; integrity relies on first-fetch authenticity. |
-| **Federation merge** | No explicit version/timestamp in merge. Duplicate or out-of-order merges could affect posteriors. | `federation.js` merges by precision-weighting; idempotent for same inputs. |
+| **Federation merge** | No explicit version/timestamp in merge. Duplicate or out-of-order merges could affect posteriors. | `federation.js` uses contentHash (embeddingDim, mean, precision, sampleSize) for dedup; idempotent for same inputs. See `docs/GAP-ANALYSIS-AND-MITIGATIONS.md`. |
 | **LMS migration** | State migrated on load. Power loss during migration could corrupt state. | Atomic write: write to `.tmp` then rename. See `packages/agni-engine/index.js` `saveState`. |
 | **Service Worker** | Android Marshmallow WebView has inconsistent SW support. | No fallback defined; may need cache polyfill or degraded mode. |
 | **Atomic compilation** | On-demand compile writes to response stream; no partial-file race for GET. Static build uses temp+rename. | hub-transform streams; no intermediate file. CLI uses atomic write. |
