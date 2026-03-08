@@ -46,10 +46,10 @@ describe('dot', () => {
     assert.throws(() => math.dot(undefined, [1, 2]), /null or undefined/);
   });
 
-  it('throws for sparse vector', () => {
+  it('throws for sparse or non-finite vector', () => {
     const sparse = [1, , 3];
-    assert.throws(() => math.dot(sparse, [1, 2, 3]), /sparse/);
-    assert.throws(() => math.dot([1, 2, 3], sparse), /sparse/);
+    assert.throws(() => math.dot(sparse, [1, 2, 3]), /non-finite/);
+    assert.throws(() => math.dot([1, 2, 3], sparse), /non-finite/);
   });
 });
 
@@ -76,14 +76,14 @@ describe('addVec', () => {
     assert.throws(() => math.addVec([1, 2], undefined), /null or undefined/);
   });
 
-  it('throws for sparse vector', () => {
+  it('throws for sparse or non-finite vector', () => {
     const sparse = [1, , 3];
-    assert.throws(() => math.addVec(sparse, [1, 2, 3]), /sparse/);
-    assert.throws(() => math.addVec([1, 2, 3], sparse), /sparse/);
+    assert.throws(() => math.addVec(sparse, [1, 2, 3]), /non-finite/);
+    assert.throws(() => math.addVec([1, 2, 3], sparse), /non-finite/);
   });
 
-  it('coerces string numbers to numeric addition', () => {
-    assert.deepEqual(math.addVec(['1', 2], [1, '2']), [2, 4]);
+  it('throws for non-numeric elements (no string coercion)', () => {
+    assert.throws(() => math.addVec(['1', 2], [1, '2']), /non-finite/);
   });
 });
 
@@ -132,10 +132,10 @@ describe('outer', () => {
     assert.throws(() => math.outer([1, 2], undefined), /null or undefined/);
   });
 
-  it('throws for sparse vector', () => {
+  it('throws for sparse or non-finite vector', () => {
     const sparse = [1, , 3];  // hole at index 1
-    assert.throws(() => math.outer(sparse, [1, 2, 3]), /sparse/);
-    assert.throws(() => math.outer([1, 2], sparse), /sparse/);
+    assert.throws(() => math.outer(sparse, [1, 2, 3]), /non-finite/);
+    assert.throws(() => math.outer([1, 2], sparse), /non-finite/);
   });
 });
 
@@ -169,9 +169,9 @@ describe('scaleMat', () => {
     assert.throws(() => math.scaleMat(null, 2), /null or undefined/);
   });
 
-  it('throws for sparse or jagged matrix', () => {
+  it('throws for sparse/jagged or non-finite matrix', () => {
     const sparseRow = [1, , 3];
-    assert.throws(() => math.scaleMat([sparseRow, [4, 5, 6]], 2), /sparse/);
+    assert.throws(() => math.scaleMat([sparseRow, [4, 5, 6]], 2), /non-finite/);
     assert.throws(() => math.scaleMat([[1, 2], [3, 4, 5]], 2), /jagged/);
   });
 
@@ -234,8 +234,8 @@ describe('identity', () => {
     assert.throws(() => math.identity(2.5), /identity.*non-negative integer/);
   });
 
-  it('throws for n=0 (zero-dimensional identity not supported)', () => {
-    assert.throws(() => math.identity(0), /identity.*positive/);
+  it('returns [] for n=0 (empty matrix, consistent with cholesky/invertSPD)', () => {
+    assert.deepEqual(math.identity(0), []);
   });
 });
 
@@ -446,13 +446,11 @@ describe('randn', () => {
     assert.ok(Math.abs(variance - 1) < 0.15, 'Variance ' + variance + ' should be near 1');
   });
 
-  it('returns 0 (does not throw) when Math.random returns zero', () => {
+  it('retries then throws when Math.random returns zero repeatedly', () => {
     const origRandom = Math.random;
     Math.random = function () { return 0; };
     try {
-      const val = math.randn();
-      assert.strictEqual(val, 0, 'randn must return safe fallback 0, not throw');
-      assert.ok(isFinite(val), 'returned value must be finite');
+      assert.throws(() => math.randn(), /randn: PRNG returned zero repeatedly/);
     } finally {
       Math.random = origRandom;
     }

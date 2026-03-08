@@ -2,6 +2,8 @@
 // AGNI LMS Engine — pure math utilities
 //
 // Runs on: Village Hub (Raspberry Pi, Node 14+). CommonJS.
+// BOUNDARY: Must NOT be imported by packages/agni-runtime (Chrome 44 / ES5). Use zeros(),
+// isNonNegativeInteger, etc. instead of Array.fill/Number.isInteger for future-proofing.
 //
 // No external dependencies. Used across Rasch, embeddings, and bandit layers.
 // All functions are pure (no side effects, no state).
@@ -20,6 +22,18 @@ var CHOLESKY_EPSILON = 1e-10;
 /** Symmetry tolerance for Cholesky. Relaxed from 1e-12 to accommodate JSON round-trip error in post-federation merged precision matrices. */
 var CHOLESKY_SYMMETRY_TOL = 1e-8;
 
+/** ES5-safe zero-filled array. Use instead of new Array(n).fill(0) for boundary-creep safety if math.js ever reaches edge runtime. */
+function zeros(n) {
+  var arr = new Array(n);
+  for (var k = 0; k < n; k++) arr[k] = 0;
+  return arr;
+}
+
+/** ES5-safe integer check. Use instead of Number.isInteger for IE/edge compatibility. */
+function isNonNegativeInteger(x) {
+  return typeof x === 'number' && isFinite(x) && x === Math.floor(x) && x >= 0;
+}
+
 /**
  * Dot product of two vectors.
  * @param {number[]} a
@@ -34,8 +48,12 @@ function dot(a, b) {
   }
   var sum = 0;
   for (var i = 0; i < a.length; i++) {
-    if (!(i in a)) throw new Error('[MATH] dot: sparse first vector (hole at ' + i + ')');
-    if (!(i in b)) throw new Error('[MATH] dot: sparse second vector (hole at ' + i + ')');
+    if (typeof a[i] !== 'number' || !isFinite(a[i])) {
+      throw new Error('[MATH] dot: non-finite element at first vector index ' + i);
+    }
+    if (typeof b[i] !== 'number' || !isFinite(b[i])) {
+      throw new Error('[MATH] dot: non-finite element at second vector index ' + i);
+    }
     sum += a[i] * b[i];
   }
   return sum;
@@ -54,10 +72,14 @@ function addVec(a, b) {
     throw new Error('[MATH] addVec: vector length mismatch (' + a.length + ' vs ' + b.length + ')');
   }
   for (var i = 0; i < a.length; i++) {
-    if (!(i in a)) throw new Error('[MATH] addVec: sparse first vector (hole at ' + i + ')');
-    if (!(i in b)) throw new Error('[MATH] addVec: sparse second vector (hole at ' + i + ')');
+    if (typeof a[i] !== 'number' || !isFinite(a[i])) {
+      throw new Error('[MATH] addVec: non-finite element at first vector index ' + i);
+    }
+    if (typeof b[i] !== 'number' || !isFinite(b[i])) {
+      throw new Error('[MATH] addVec: non-finite element at second vector index ' + i);
+    }
   }
-  return a.map(function(v, i) { return Number(v) + Number(b[i]); });
+  return a.map(function(v, i) { return v + b[i]; });
 }
 
 /**
@@ -75,7 +97,9 @@ function scaleVec(v, s) {
     throw new Error('[MATH] scaleVec: scalar must be finite number');
   }
   for (var i = 0; i < v.length; i++) {
-    if (!(i in v)) throw new Error('[MATH] scaleVec: sparse vector (hole at ' + i + ')');
+    if (typeof v[i] !== 'number' || !isFinite(v[i])) {
+      throw new Error('[MATH] scaleVec: non-finite element at index ' + i);
+    }
   }
   return v.map(function(x) { return x * s; });
 }
@@ -90,10 +114,14 @@ function outer(a, b) {
   if (a == null) throw new Error('[MATH] outer: first argument is null or undefined');
   if (b == null) throw new Error('[MATH] outer: second argument is null or undefined');
   for (var i = 0; i < a.length; i++) {
-    if (!(i in a)) throw new Error('[MATH] outer: sparse first vector (hole at ' + i + ')');
+    if (typeof a[i] !== 'number' || !isFinite(a[i])) {
+      throw new Error('[MATH] outer: non-finite element at first vector index ' + i);
+    }
   }
   for (var j = 0; j < b.length; j++) {
-    if (!(j in b)) throw new Error('[MATH] outer: sparse second vector (hole at ' + j + ')');
+    if (typeof b[j] !== 'number' || !isFinite(b[j])) {
+      throw new Error('[MATH] outer: non-finite element at second vector index ' + j);
+    }
   }
   return a.map(function(ai) {
     return b.map(function(bj) { return ai * bj; });
@@ -114,6 +142,9 @@ function addMat(A, B) {
     throw new Error('[MATH] addMat: dimension mismatch (' + rows + 'x? vs ' + B.length + 'x?)');
   }
   if (rows === 0) return [];
+  if (!Array.isArray(A[0]) || !Array.isArray(B[0])) {
+    throw new Error('[MATH] addMat: first row must be array');
+  }
   var cols = A[0].length;
   if (cols !== B[0].length) {
     throw new Error('[MATH] addMat: dimension mismatch (' + rows + 'x' + cols + ' vs ' + rows + 'x' + B[0].length + ')');
@@ -144,7 +175,9 @@ function scaleMat(A, s) {
     for (var i = 0; i < A.length; i++) {
       if (A[i].length !== cols) throw new Error('[MATH] scaleMat: jagged matrix at row ' + i);
       for (var j = 0; j < cols; j++) {
-        if (!(j in A[i])) throw new Error('[MATH] scaleMat: sparse row at ' + i + ',' + j);
+        if (typeof A[i][j] !== 'number' || !isFinite(A[i][j])) {
+          throw new Error('[MATH] scaleMat: non-finite element at row ' + i + ', col ' + j);
+        }
       }
     }
   }
@@ -185,15 +218,13 @@ function matVec(A, x) {
  */
 function identity(n) {
   if (n == null) throw new Error('[MATH] identity: n is null or undefined');
-  if (typeof n !== 'number' || !Number.isInteger(n) || n < 0) {
+  if (!isNonNegativeInteger(n)) {
     throw new Error('[MATH] identity: n must be non-negative integer, got ' + n);
   }
-  if (n === 0) {
-    throw new Error('[MATH] identity: n must be positive (zero-dimensional identity not supported)');
-  }
+  if (n === 0) return [];
   var I = new Array(n);
   for (var i = 0; i < n; i++) {
-    I[i] = new Array(n).fill(0);
+    I[i] = zeros(n).slice();
     I[i][i] = 1;
   }
   return I;
@@ -229,7 +260,7 @@ function cholesky(A) {
   }
   var L = new Array(n);
   for (i = 0; i < n; i++) {
-    L[i] = new Array(n).fill(0);
+    L[i] = zeros(n).slice();
   }
 
   for (i = 0; i < n; i++) {
@@ -270,7 +301,7 @@ function forwardSub(L, b) {
   if (b.length !== n) {
     throw new Error('[MATH] forwardSub: dimension mismatch (L is ' + n + 'x' + n + ', b.length=' + b.length + ')');
   }
-  var y = new Array(n);
+  var y = zeros(n).slice();
   var i, j, sum;
   for (i = 0; i < n; i++) {
     sum = 0;
@@ -301,10 +332,11 @@ function backSub(L, y) {
   if (y.length !== n) {
     throw new Error('[MATH] backSub: dimension mismatch (L is ' + n + 'x' + n + ', y.length=' + y.length + ')');
   }
-  var x = new Array(n);
+  var x = zeros(n).slice();
   var i, j, sum;
   for (i = n - 1; i >= 0; i--) {
     sum = 0;
+    /* Lᵀ x = y: read column j of L (L[j][i]) for the transpose, not row */
     for (j = i + 1; j < n; j++) sum += L[j][i] * x[j];
     if (L[i][i] === 0 || !isFinite(L[i][i])) {
       throw new Error('[MATH] backSub: zero or invalid diagonal at i=' + i);
@@ -317,7 +349,8 @@ function backSub(L, y) {
 /**
  * Force matrix to be symmetric (mutates A): A[i][j] = A[j][i] = (A[i][j] + A[j][i]) * 0.5.
  * Use after addMat when inputs may have float asymmetry from JSON round-trip.
- * Call only on matrices you own; do not pass aliased/shared state.
+ * WARNING: Mutates A in place. Call only on matrices you own — never pass shared/aliased
+ * state (e.g. bandit precision matrix). Use a copy if the original must be preserved.
  * @param {number[][]} A  Square matrix (mutated).
  * @returns {number[][]}  A (same reference).
  */
@@ -349,7 +382,7 @@ function invertSPD(A) {
   }
 
   for (j = 0; j < n; j++) {
-    e = new Array(n).fill(0);
+    e = zeros(n).slice();
     e[j] = 1;
     y = forwardSub(L, e);
     x = backSub(L, y);
@@ -368,22 +401,26 @@ function invertSPD(A) {
 
 /**
  * Gaussian random variable (Box–Muller). Pure — no module-level state.
- * Assumes Math.random() ∈ [0,1) per spec. For pathological PRNG returning 0,
- * logs and returns 0 to avoid unhandled throw in selection hot path.
+ * Assumes Math.random() ∈ [0,1) per spec. If PRNG returns 0 (pathological),
+ * retries with new draws; returning 0 would corrupt Thompson sampling (deterministic draw).
  * Box–Muller generates two samples; this returns one (cos sample; sin discarded).
  * @returns {number}
  */
 function randn() {
-  var u = Math.random();
-  var v = Math.random();
-  if (u === 0 || v === 0) {
-    if (typeof console !== 'undefined' && console.error) {
-      console.error('[MATH] randn: PRNG returned zero (broken runtime)');
+  var u, v, r;
+  for (var retries = 0; retries < 8; retries++) {
+    u = Math.random();
+    v = Math.random();
+    if (u === 0 || v === 0) {
+      if (typeof console !== 'undefined' && console.error && retries === 0) {
+        console.error('[MATH] randn: PRNG returned zero (broken runtime), retrying');
+      }
+      continue;
     }
-    return 0;
+    r = Math.sqrt(-2 * Math.log(u));
+    return r * Math.cos(2 * Math.PI * v);
   }
-  var r = Math.sqrt(-2 * Math.log(u));
-  return r * Math.cos(2 * Math.PI * v);
+  throw new Error('[MATH] randn: PRNG returned zero repeatedly — broken runtime');
 }
 
 module.exports = {
