@@ -17,6 +17,7 @@ const crypto = require('crypto');
 const https = require('https');
 const http = require('http');
 const { createLogger } = require('@agni/utils/logger');
+const { saveJSON } = require('@agni/utils/json-store');
 const envConfig = require('@agni/utils/env-config');
 const { ensureDataDirExists } = require('@agni/utils/ensure-paths');
 ensureDataDirExists(envConfig);
@@ -82,7 +83,7 @@ function loadSyncState() {
 }
 
 function saveSyncState(state) {
-  fs.writeFileSync(SYNC_STATE, JSON.stringify(state, null, 2));
+  saveJSON(SYNC_STATE, state);
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -195,7 +196,7 @@ function sendViaUsb(pkg) {
 
   const filename = `sync_${HUB_ID}_${new Date().toISOString().slice(0,10)}_${pkg.packageId}.json`;
   const dest = path.join(USB_PATH, filename);
-  fs.writeFileSync(dest, JSON.stringify(pkg, null, 2));
+  saveJSON(dest, pkg);
 
   log.info('Package written to USB', { dest, count: pkg.eventCount });
   return Promise.resolve({ accepted: pkg.eventCount, packageFile: dest });
@@ -231,7 +232,7 @@ function importInbound(filePath) {
       try { existing = JSON.parse(fs.readFileSync(BASE_COSTS, 'utf8')); } catch { /* use default */ }
     }
     const merged = { ...existing, ...incoming.costs };
-    fs.writeFileSync(BASE_COSTS, JSON.stringify(merged, null, 2));
+    saveJSON(BASE_COSTS, merged);
     log.info('BaseCosts updated', { updated: Object.keys(incoming.costs).length, total: Object.keys(merged).length });
   }
 
@@ -249,7 +250,7 @@ function importInbound(filePath) {
     }
     if (sanitized.edges.length > 0) {
       const levelPath = path.join(DATA_DIR, `graph-weights-${gw.level}.json`);
-      fs.writeFileSync(levelPath, JSON.stringify(sanitized, null, 2));
+      saveJSON(levelPath, sanitized);
       log.info('Stored graph weights', { level: gw.level, path: levelPath, edges: sanitized.edges.length });
     } else {
       log.warn('Graph weights import: no valid edges after validation (weight/confidence must be in [0,1])');
@@ -259,14 +260,14 @@ function importInbound(filePath) {
   // 3. Jurisdictional Curriculum Overrides
   if (incoming.curriculum?.graph && typeof incoming.curriculum.graph === 'object') {
     const dest = path.join(DATA_DIR, 'curriculum.json');
-    fs.writeFileSync(dest, JSON.stringify(incoming.curriculum, null, 2));
+    saveJSON(dest, incoming.curriculum);
     log.info('Jurisdictional curriculum imported', { skills: Object.keys(incoming.curriculum.graph).length });
   }
 
   // 4. Governance Student Schedules
   if (incoming.schedules?.students && typeof incoming.schedules.students === 'object') {
     const dest = path.join(DATA_DIR, 'schedules.json');
-    fs.writeFileSync(dest, JSON.stringify(incoming.schedules, null, 2));
+    saveJSON(dest, incoming.schedules);
     log.info('Student schedules imported', { students: Object.keys(incoming.schedules.students).length });
   }
 

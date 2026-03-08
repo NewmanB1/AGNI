@@ -601,7 +601,8 @@
             },
             "opts": {
               "type": "object",
-              "description": "Factory-specific options. See svg-registry.js for valid keys per factory."
+              "maxProperties": 64,
+              "description": "Factory-specific options. See svg-registry.js for valid keys per factory. Limited to 64 keys to prevent DoS."
             },
             "description": {
               "type": "string",
@@ -613,6 +614,7 @@
             },
             "layers": {
               "type": "array",
+              "maxItems": 32,
               "items": {
                 "type": "object",
                 "properties": {
@@ -620,21 +622,26 @@
                     "type": "string"
                   },
                   "opts": {
-                    "type": "object"
+                    "type": "object",
+                    "maxProperties": 64
                   },
                   "name": {
                     "type": "string"
                   }
                 }
               },
-              "description": "Array of factory layers when compose is true."
+              "description": "Array of factory layers when compose is true. Limited to 32 layers to prevent memory DoS."
             },
             "w": {
               "type": "integer",
+              "minimum": 1,
+              "maximum": 4096,
               "description": "Viewport width override (shared across layers in compose mode)."
             },
             "h": {
               "type": "integer",
+              "minimum": 1,
+              "maximum": 4096,
               "description": "Viewport height override."
             }
           }

@@ -78,6 +78,42 @@ function buildSkillGraph(lessonIndex, curriculum) {
   return graph;
 }
 
+/**
+ * Detect cycles in the skill graph. Returns the first cycle found (array of skill IDs) or null.
+ * Uses DFS. A back edge to a gray node indicates a cycle.
+ */
+function detectSkillGraphCycles(graph) {
+  const visited = new Set();
+  const gray = new Set();
+  let cycle = null;
+
+  function dfs(skill, path) {
+    if (gray.has(skill)) {
+      cycle = path.slice(path.indexOf(skill)).concat(skill);
+      return true;
+    }
+    if (visited.has(skill)) return false;
+    visited.add(skill);
+    gray.add(skill);
+    path.push(skill);
+    const reqs = graph[skill];
+    if (reqs) {
+      for (const r of reqs) {
+        if (dfs(r, path)) return true;
+      }
+    }
+    gray.delete(skill);
+    path.pop();
+    return false;
+  }
+
+  for (const skill of Object.keys(graph)) {
+    if (visited.has(skill)) continue;
+    if (dfs(skill, [])) return cycle;
+  }
+  return null;
+}
+
 async function updateSharedCacheIfNeeded() {
   const mtimes = await Promise.all([
     getFileMtimeAsync(CURRICULUM_GRAPH),
@@ -91,7 +127,18 @@ async function updateSharedCacheIfNeeded() {
     loadCurriculumAsync(),
     loadSchedulesAsync()
   ]);
-  sharedCache.skillGraph = buildSkillGraph(lessonIndex, curriculum);
+  const skillGraph = buildSkillGraph(lessonIndex, curriculum);
+  const cycle = detectSkillGraphCycles(skillGraph);
+  if (cycle && cycle.length > 0) {
+    const err = new Error(
+      'Fatal: skill graph contains a cycle. All lessons in the cycle are permanently ineligible. ' +
+      'Cycle: ' + cycle.join(' → ') + '. Fix the curriculum graph or lesson prerequisites.'
+    );
+    err.code = 'SKILL_GRAPH_CYCLE';
+    err.cycle = cycle;
+    throw err;
+  }
+  sharedCache.skillGraph = skillGraph;
   const allScheduled = new Set();
   Object.values(schedules.students || {}).flat().forEach(s => allScheduled.add(s));
   sharedCache.eligibleLessons = lessonIndex.filter(lesson => {
@@ -169,7 +216,12 @@ function computeLessonTheta(lesson, pseudoId, baseCosts, masterySummary, graphWe
   const COHERENCE_WEIGHT = 0.08;
   const coherenceBonus = Math.round(coherence * COHERENCE_WEIGHT * 1000) / 1000;
 
-  const theta = Math.round(Math.max(MIN_MLC, repBaseCost * repResidual - coherenceBonus) * 1000) / 1000;
+  const rawTheta = repBaseCost * repResidual - coherenceBonus;
+  const theta = Math.round(Math.max(MIN_MLC, rawTheta) * 1000) / 1000;
+  if (rawTheta < MIN_MLC) {
+    log.warn('MLC anomaly: raw theta below MIN_MLC (clamped). May indicate invalid model or graph weights.',
+      { lessonId: lesson.lessonId, rawTheta, MIN_MLC, baseCost: repBaseCost, residualFactor: repResidual, coherenceBonus });
+  }
   return {
     lessonId: lesson.lessonId, slug: lesson.slug, title: lesson.title, theta,
     baseCost: Math.round(repBaseCost * 1000) / 1000,
@@ -540,5 +592,6 @@ module.exports = {
   getBaseCost,
   rebuildLessonIndex,
   getEffectiveGraphWeights,
-  applyRecommendationOverride
+  applyRecommendationOverride,
+  detectSkillGraphCycles
 };

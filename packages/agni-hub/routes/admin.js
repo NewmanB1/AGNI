@@ -97,9 +97,11 @@ function register(router, ctx) {
       const { transport, homeUrl, usbPath } = payload;
       const t = transport || 'starlink';
       if (t === 'usb') {
-        const p = path.resolve(usbPath || path.join(USB_SAFE_ROOT, 'agni-sync'));
-        if (p !== USB_SAFE_ROOT && p.indexOf(USB_SAFE_ROOT + path.sep) !== 0) {
-          return sendResponse(400, { ok: false, message: 'USB path must be under ' + USB_SAFE_ROOT });
+        const p = usbPath || path.join(USB_SAFE_ROOT, 'agni-sync');
+        try {
+          envConfig.validUsbPath(p, 'USB path');
+        } catch (err) {
+          return sendResponse(400, { ok: false, message: err.message });
         }
         if (!fs.existsSync(p)) {
           try {

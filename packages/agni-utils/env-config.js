@@ -8,6 +8,7 @@
  * All other modules import from here instead of parsing process.env inline.
  */
 
+const fs  = require('fs');
 const path = require('path');
 
 function intVal(key, fallback) {
@@ -44,6 +45,7 @@ var USB_SAFE_ROOT = path.resolve('/mnt/usb');
 
 /**
  * Validate that a path is under the USB safe root (/mnt/usb).
+ * Resolves symlinks via fs.realpathSync to prevent escape (e.g. /mnt/usb/link -> /).
  * Throws if path is non-empty and resolves outside the safe root.
  * @param {string} p - Path to validate (e.g. usbPath or effective USB_PATH)
  * @param {string} name - Label for error message
@@ -53,10 +55,24 @@ var USB_SAFE_ROOT = path.resolve('/mnt/usb');
 function validUsbPath(p, name) {
   if (!p || typeof p !== 'string' || p.trim() === '') return p;
   var resolved = path.resolve(p);
+  if (fs.existsSync(resolved)) {
+    try {
+      resolved = fs.realpathSync(resolved);
+    } catch (e) {
+      throw new Error(
+        (name || 'AGNI_USB_PATH') + ' path exists but cannot be resolved: ' + e.message
+      );
+    }
+  }
   var root = path.resolve(USB_SAFE_ROOT);
+  if (fs.existsSync(root)) {
+    try {
+      root = fs.realpathSync(root);
+    } catch (e) { /* keep path.resolve result */ }
+  }
   if (resolved !== root && resolved.indexOf(root + path.sep) !== 0) {
     throw new Error(
-      (name || 'AGNI_USB_PATH') + ' must be under ' + root + ', got: ' + p
+      (name || 'AGNI_USB_PATH') + ' must be under ' + root + ', got: ' + resolved
     );
   }
   return p;

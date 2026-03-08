@@ -16,6 +16,9 @@ var thompson = require('./thompson');
 /** Max embeddingDim (matches thompson/embeddings). Prevents OOM from corrupt summaries. */
 var MAX_EMBEDDING_DIM = 1024;
 
+/** Clamp remote mean components to mitigate federation poisoning. */
+var MEAN_CLIP = 10;
+
 /** Max seenSyncIds to retain (prevents unbounded growth). Eviction is FIFO — oldest dropped. */
 var MAX_SEEN_SYNC_IDS = 500;
 
@@ -227,6 +230,11 @@ function mergeBanditSummaries(local, remote) {
   validSampleSize(local.sampleSize, 'local');
   validSampleSize(remote.sampleSize, 'remote');
 
+  // Clip remote mean to mitigate federation poisoning (malicious hub submitting extreme posteriors)
+  var remoteMeanClipped = remote.mean.map(function (v) {
+    return Math.max(-MEAN_CLIP, Math.min(MEAN_CLIP, v));
+  });
+
   var totalN = local.sampleSize + remote.sampleSize;
 
   // Guard: both zero — return neutral summary
@@ -262,10 +270,11 @@ function mergeBanditSummaries(local, remote) {
   var mergedPrec = math.symmetrize(math.addMat(local.precision, remote.precision));  // Fix float asymmetry from JSON round-trip
 
   // Precision-weighted mean: μ = P_merged⁻¹ (P_local·μ_local + P_remote·μ_remote)
+  // Use clipped remote mean to mitigate federation poisoning
   // Cholesky solve (O(n²)) instead of invertSPD (O(n³)) — same optimization as getBanditSummary
   var weightedSum = math.addVec(
     math.matVec(local.precision,  local.mean),
-    math.matVec(remote.precision, remote.mean)
+    math.matVec(remote.precision, remoteMeanClipped)
   );
   var L_merged;
   try {
@@ -277,6 +286,9 @@ function mergeBanditSummaries(local, remote) {
     );
   }
   var mergedMean = math.backSub(L_merged, math.forwardSub(L_merged, weightedSum));
+  mergedMean = mergedMean.map(function (v) {
+    return Math.max(-MEAN_CLIP, Math.min(MEAN_CLIP, v));
+  });
 
   return {
     embeddingDim: local.embeddingDim,

@@ -171,7 +171,7 @@ function loadYaml(slug) {
 
     try {
       const raw        = fs.readFileSync(yamlPath, 'utf8');
-      const lessonData = yaml.load(raw);
+      const lessonData = yaml.load(raw, { schema: yaml.JSON_SCHEMA });
       const mtime      = fs.statSync(yamlPath).mtimeMs;
       return { lessonData: lessonData, yamlPath: yamlPath, mtime: mtime };
     } catch (err) {
@@ -221,9 +221,18 @@ async function compileLesson(slug, options) {
   }
 
   log.info('Compiling', { slug });
-  _compilingNow[slug] = _doCompile(slug, loaded, options).finally(function () {
-    delete _compilingNow[slug];
-  });
+  _compilingNow[slug] = _doCompile(slug, loaded, options)
+    .catch(function (err) {
+      const stale = _lessonCache[slug];
+      if (stale) {
+        log.warn('Compilation failed, serving last successful cached artifact', { slug, error: err.message });
+        return { html: stale.html, sidecar: stale.sidecar, lessonIR: stale.lessonIR };
+      }
+      throw err;
+    })
+    .finally(function () {
+      delete _compilingNow[slug];
+    });
   return _compilingNow[slug];
 }
 
