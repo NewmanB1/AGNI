@@ -51,6 +51,16 @@ describe('ensureStudentVector', () => {
     }
   });
 
+  it('rejects null, undefined, or non-string studentId (ghost-record guard)', () => {
+    const state = createState({ dim: 4 });
+    for (const bad of [null, undefined, 123, '']) {
+      assert.throws(
+        () => ensureStudentVector(state, bad),
+        /\[EMBEDDING\] studentId must be a non-empty string/
+      );
+    }
+  });
+
   it('Bug 4: returns live reference — mutation corrupts state; use .slice() for safe copy', () => {
     const state = createState({ dim: 4 });
     const vec = ensureStudentVector(state, 'stu1');
@@ -98,6 +108,16 @@ describe('ensureLessonVector', () => {
     assert.throws(() => ensureLessonVector(state, 'new'), /\[EMBEDDING\] embedding\.dim invalid/);
   });
 
+  it('rejects null, undefined, or non-string lessonId (ghost-record guard)', () => {
+    const state = createState({ dim: 4 });
+    for (const bad of [null, undefined, 123, '']) {
+      assert.throws(
+        () => ensureLessonVector(state, bad),
+        /\[EMBEDDING\] lessonId must be a non-empty string/
+      );
+    }
+  });
+
   it('preserves pre-existing vectors', () => {
     const state = createState({ dim: 4 });
     state.embedding.lessons['L1'] = { vector: [1, 2, 3, 4] };
@@ -129,6 +149,22 @@ describe('updateEmbedding', () => {
     const w1 = ensureLessonVector(state, 'L1');
     const dot1 = math.dot(z1, w1);
     assert.ok(dot1 > 0, 'Dot product should be positive after many positive gain updates, got: ' + dot1);
+  });
+
+  it('rejects null/undefined/non-string studentId or lessonId', () => {
+    const state = createState({ dim: 4 });
+    ensureStudentVector(state, 's1');
+    ensureLessonVector(state, 'L1');
+    assert.throws(() => updateEmbedding(state, null, 'L1', 0.5), /studentId must be a non-empty string/);
+    assert.throws(() => updateEmbedding(state, 's1', undefined, 0.5), /lessonId must be a non-empty string/);
+  });
+
+  it('returns undefined for corrupt non-array rec.vector (Bug 3)', () => {
+    const state = createState({ dim: 4 });
+    state.embedding.students['corrupt'] = { vector: 'not-an-array' };
+    assert.strictEqual(getStudentVector(state, 'corrupt'), undefined);
+    state.embedding.lessons['corrupt'] = { vector: 42 };
+    assert.strictEqual(getLessonVector(state, 'corrupt'), undefined);
   });
 
   it('Bug 8: throws on lr > 0.1', () => {

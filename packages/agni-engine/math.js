@@ -55,6 +55,24 @@ function isPositiveInteger(x) {
   return typeof x === 'number' && isFinite(x) && x === Math.floor(x) && x >= 1;
 }
 
+/**
+ * Assert x is a valid embedding dimension: positive integer in [1,1024].
+ * Single source of truth for embedding.dim validation; use from embeddings.js and thompson.js
+ * to avoid divergence (e.g. Number.isInteger vs math.isPositiveInteger).
+ * @param {number} x
+ * @param {string} [prefix] - Error prefix, e.g. '[EMBEDDING]' or '[BANDIT]'
+ * @throws {Error}
+ */
+function assertEmbeddingDim(x, prefix) {
+  var p = (typeof prefix === 'string' && prefix) ? prefix + ' ' : '';
+  if (!isPositiveInteger(x) || x > 1024) {
+    throw new Error(
+      p + 'embedding.dim invalid: must be integer in [1,1024], got ' +
+      (x === undefined ? 'undefined' : String(x))
+    );
+  }
+}
+
 /** Inner dot product (no validation). Call only after inputs are validated. */
 function dotInner(a, b) {
   var sum = 0;
@@ -577,6 +595,7 @@ module.exports = {
   zeros: zeros,
   isNonNegativeInteger: isNonNegativeInteger,
   isPositiveInteger: isPositiveInteger,
+  assertEmbeddingDim: assertEmbeddingDim,
   dot:       dot,
   addVec:    addVec,
   scaleVec:  scaleVec,

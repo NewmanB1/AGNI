@@ -14,11 +14,10 @@ var math = require('./math');
 
 /** @param {import('../types').LMSState} state */
 function assertEmbeddingDimValid(state) {
-  var dim = state.embedding && state.embedding.dim;
-  if (typeof dim !== 'number' || !Number.isInteger(dim) || dim < 1 || dim > 1024) {
-    throw new Error('[EMBEDDING] embedding.dim invalid: must be integer in [1,1024], got ' +
-      (dim === undefined ? 'undefined' : String(dim)));
+  if (!state.embedding) {
+    throw new Error('[EMBEDDING] state.embedding missing — cannot size vectors.');
   }
+  math.assertEmbeddingDim(state.embedding.dim, '[EMBEDDING]');
 }
 
 /** @param {import('../types').LMSState} state @param {number[]} vector @param {string} label */
@@ -39,7 +38,7 @@ function assertVectorLengthMatchesDim(state, vector, label) {
  */
 function getStudentVector(state, studentId) {
   var rec = state.embedding.students[studentId];
-  var vec = rec && rec.vector ? rec.vector : undefined;
+  var vec = rec && Array.isArray(rec.vector) ? rec.vector : undefined;
   if (vec) assertVectorLengthMatchesDim(state, vec, 'student');
   return vec;
 }
@@ -53,7 +52,7 @@ function getStudentVector(state, studentId) {
  */
 function getLessonVector(state, lessonId) {
   var rec = state.embedding.lessons[lessonId];
-  var vec = rec && rec.vector ? rec.vector : undefined;
+  var vec = rec && Array.isArray(rec.vector) ? rec.vector : undefined;
   if (vec) assertVectorLengthMatchesDim(state, vec, 'lesson');
   return vec;
 }
@@ -68,10 +67,13 @@ function getLessonVector(state, lessonId) {
  * @returns {number[]}
  */
 function ensureStudentVector(state, studentId) {
+  if (typeof studentId !== 'string' || studentId === '') {
+    throw new Error('[EMBEDDING] studentId must be a non-empty string, got: ' + (studentId === undefined ? 'undefined' : studentId === null ? 'null' : typeof studentId));
+  }
   if (!state.embedding.students[studentId]) {
     assertEmbeddingDimValid(state);
     state.embedding.students[studentId] = {
-      vector: Array(state.embedding.dim).fill(0).map(function() {
+      vector: math.zeros(state.embedding.dim).map(function() {
         return 0.05 * math.randn();
       })
     };
@@ -91,10 +93,13 @@ function ensureStudentVector(state, studentId) {
  * @returns {number[]}
  */
 function ensureLessonVector(state, lessonId) {
+  if (typeof lessonId !== 'string' || lessonId === '') {
+    throw new Error('[EMBEDDING] lessonId must be a non-empty string, got: ' + (lessonId === undefined ? 'undefined' : lessonId === null ? 'null' : typeof lessonId));
+  }
   if (!state.embedding.lessons[lessonId]) {
     assertEmbeddingDimValid(state);
     state.embedding.lessons[lessonId] = {
-      vector: Array(state.embedding.dim).fill(0).map(function() {
+      vector: math.zeros(state.embedding.dim).map(function() {
         return 0.05 * math.randn();
       })
     };
@@ -137,6 +142,12 @@ function ensureLessonVector(state, lessonId) {
  * @param {number} gain
  */
 function updateEmbedding(state, studentId, lessonId, gain) {
+  if (typeof studentId !== 'string' || studentId === '') {
+    throw new Error('[EMBEDDING] studentId must be a non-empty string, got: ' + (studentId === undefined ? 'undefined' : studentId === null ? 'null' : typeof studentId));
+  }
+  if (typeof lessonId !== 'string' || lessonId === '') {
+    throw new Error('[EMBEDDING] lessonId must be a non-empty string, got: ' + (lessonId === undefined ? 'undefined' : lessonId === null ? 'null' : typeof lessonId));
+  }
   if (typeof gain !== 'number' || !isFinite(gain)) {
     throw new Error('[EMBEDDING] gain must be a finite number, got: ' + gain);
   }
@@ -155,6 +166,8 @@ function updateEmbedding(state, studentId, lessonId, gain) {
     }
   }
 
+  // Note: state.bandit.forgetting is separate; hub config uses single "forgetting" key.
+  // Migrations must populate both state.embedding.forgetting and state.bandit.forgetting.
   var gamma = state.embedding.forgetting;
   var lr    = state.embedding.lr;
   var reg   = state.embedding.reg;

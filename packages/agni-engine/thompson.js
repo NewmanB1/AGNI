@@ -69,6 +69,7 @@ function banditFeature(studentVec, lessonVec) {
 /**
  * Assert embedding.dim exists and is a positive integer. Drives all vector sizing;
  * if missing or zero, every vector operation is suspect.
+ * Uses math.assertEmbeddingDim for single source of truth.
  *
  * @param {import('../types').LMSState} state
  * @throws {Error}
@@ -77,13 +78,7 @@ function assertEmbeddingDimValid(state) {
   if (!state.embedding) {
     throw new Error('[BANDIT] state.embedding missing — cannot size vectors.');
   }
-  var dim = state.embedding.dim;
-  if (!math.isPositiveInteger(dim) || dim > 1024) {
-    throw new Error(
-      '[BANDIT] embedding.dim invalid: must be integer in [1,1024], got ' +
-      (dim === undefined ? 'undefined' : dim) + '. State may be corrupt.'
-    );
-  }
+  math.assertEmbeddingDim(state.embedding.dim, '[BANDIT]');
 }
 
 /**
