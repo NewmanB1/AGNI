@@ -16,7 +16,7 @@ Use this when changing adaptive selection, Rasch, embeddings, bandit, or federat
 | Change student/lesson vectors | `packages/agni-engine/embeddings.js` — `ensureStudentVector`, `ensureLessonVector`, `updateEmbedding()`. Dimension is `state.embedding.dim`. |
 | Change bandit (selection or update) | `packages/agni-engine/thompson.js` — `selectLesson()`, `updateBandit()`, `ensureBanditInitialized()`. Invariant: `featureDim === embeddingDim * 2`; feature vector = concat(studentVec, lessonVec). |
 | Change federation merge | `packages/agni-engine/federation.js` — `getBanditSummary()`, `mergeBanditSummaries()`. **Contract:** `BanditSummary.embeddingDim` must match across federating hubs; all must deploy with identical `AGNI_EMBEDDING_DIM`. |
-| Change math (linear algebra) | `packages/agni-engine/math.js` — pure helpers; no state. |
+| Change math (linear algebra) | `packages/agni-engine/math.js` — pure helpers; no state. See `docs/playbooks/math.md` for conventions and testing. |
 
 ## Do not
 

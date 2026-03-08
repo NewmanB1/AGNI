@@ -178,6 +178,7 @@ AGNI/
 - **Types:** Central place is **`src/types/index.d.ts`** (LessonIR, LessonSidecar, LMSState, etc.). Keep it aligned with `schemas/*.schema.json` and with compiler/engine usage. See **`docs/playbooks/typing-and-languages.md`** for TS vs JS and where types are enforced.
 - **Binary / base64:** **`src/utils/binary.js`** and **`src/runtime/binary-utils.js`** — use these for base64/bytes and UTF-8 helpers instead of ad-hoc logic in crypto or runtime.
 - **Validation:** Lesson builds require **schema validation** (Ajv). If validation fails with "Schema validation unavailable", run `npm install` so `ajv` and `ajv-formats` are present.
+- **Math module testing:** If you add or modify unit tests that mock `Math.random` or depend on deterministic `randn()` output, call **`math._randnClearCache()`** before mocking. See **`docs/playbooks/math.md`** for details (randn uses a module-level cache that causes test pollution).
 
 ---
 

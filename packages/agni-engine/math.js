@@ -11,6 +11,16 @@
 // CONTRACT: Do not add in-place variants. Callers may pass aliased arrays
 // (e.g. addVec(a, a)); implementations must never mutate inputs. An in-place
 // variant would silently corrupt shared state when a === b.
+//
+// DESIGN NOTES (contributors):
+// - Internal vs public: dot() is the public API; dotInner() is internal and
+//   skips validation. Use dotInner only after inputs are validated (e.g. matVec).
+// - Matrix row validation: use !A[i] || !Array.isArray(A[i]) before .length;
+//   then A[i].length !== cols for jagged. Separate errors: "row X must be array"
+//   vs "jagged matrix at row X".
+// - Purity: all functions are pure except randn (module-level _randnCache).
+//   No other shared mutable state.
+// - See docs/playbooks/math.md for testing (randn, _randnClearCache).
 // ─────────────────────────────────────────────────────────────────────────────
 
 'use strict';
