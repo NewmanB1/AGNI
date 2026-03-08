@@ -25,17 +25,21 @@
 //
 // state.markov = {
 //   transitions: { "<from>": { "<to>": { count, totalGain, avgGain } } }
-//   bigrams:     { "<from1>|<from2>": { "<to>": { count, totalGain, avgGain } } }
+//   bigrams:     { "<json>[from1,from2]": { "<to>": { count, totalGain, avgGain } } }  (JSON key = unambiguous)
 //   studentHistory: { "<studentId>": [ lessonId, ... ] }
-//   dropouts:    { "<lessonId>": { count, totalStudents } }
+//   dropouts:    { "<lessonId>": { count, totalContinuations } }  (totalReached = totalContinuations + count)
 //   cooldowns:   { "<studentId>": { "<lessonId>": { timestamp, gain } } }
 // }
 
 var MAX_HISTORY = 10;
 var FORGETTING = 0.995;
-var BIGRAM_SEPARATOR = '|';
 var COOLDOWN_WINDOW = 5;
 var DROPOUT_THRESHOLD_RATIO = 0.3;
+
+/** Unambiguous bigram key; avoids collisions when lesson IDs contain separator chars. */
+function bigramKey(prev2, prev1) {
+  return JSON.stringify([prev2, prev1]);
+}
 
 /**
  * Ensure the markov sub-state exists on the LMS state object.
@@ -81,6 +85,12 @@ function updateEdge(edges, toId, gain) {
  * @param {number} gain       ability delta from Rasch update
  */
 function recordTransition(state, studentId, lessonId, gain) {
+  if (typeof studentId !== 'string' || studentId === '') {
+    throw new Error('[MARKOV] studentId must be a non-empty string, got: ' + (studentId === undefined ? 'undefined' : studentId === null ? 'null' : typeof studentId));
+  }
+  if (typeof lessonId !== 'string' || lessonId === '') {
+    throw new Error('[MARKOV] lessonId must be a non-empty string, got: ' + (lessonId === undefined ? 'undefined' : lessonId === null ? 'null' : typeof lessonId));
+  }
   ensureMarkovState(state);
 
   var history = state.markov.studentHistory[studentId];
@@ -97,22 +107,22 @@ function recordTransition(state, studentId, lessonId, gain) {
     }
     updateEdge(state.markov.transitions[prev], lessonId, gain);
 
-    // Record that prev was NOT a dropout (student continued)
+    // Record that prev was NOT a dropout (student continued past prev)
     if (!state.markov.dropouts[prev]) {
-      state.markov.dropouts[prev] = { count: 0, totalStudents: 0 };
+      state.markov.dropouts[prev] = { count: 0, totalContinuations: 0 };
     }
-    state.markov.dropouts[prev].totalStudents += 1;
+    state.markov.dropouts[prev].totalContinuations += 1;
   }
 
   // ── Second-order (bigram) transition ──────────────────────────────────
   if (history.length >= 2) {
     var prev2 = history[history.length - 2];
     var prev1 = history[history.length - 1];
-    var bigramKey = prev2 + BIGRAM_SEPARATOR + prev1;
-    if (!state.markov.bigrams[bigramKey]) {
-      state.markov.bigrams[bigramKey] = {};
+    var bk = bigramKey(prev2, prev1);
+    if (!state.markov.bigrams[bk]) {
+      state.markov.bigrams[bk] = {};
     }
-    updateEdge(state.markov.bigrams[bigramKey], lessonId, gain);
+    updateEdge(state.markov.bigrams[bk], lessonId, gain);
   }
 
   // ── Cooldown tracking ────────────────────────────────────────────────
@@ -120,7 +130,7 @@ function recordTransition(state, studentId, lessonId, gain) {
     state.markov.cooldowns[studentId] = {};
   }
   state.markov.cooldowns[studentId][lessonId] = {
-    timestamp: Date.now(),
+    timestamp: Date.now(),  // non-deterministic; tests using applyObservation will see varying timestamps
     gain: gain
   };
 
@@ -151,16 +161,20 @@ function recordTransition(state, studentId, lessonId, gain) {
  * @param {string} studentId
  */
 function recordDropout(state, studentId) {
+  if (typeof studentId !== 'string' || studentId === '') {
+    throw new Error('[MARKOV] studentId must be a non-empty string, got: ' + (studentId === undefined ? 'undefined' : studentId === null ? 'null' : typeof studentId));
+  }
   ensureMarkovState(state);
   var history = state.markov.studentHistory[studentId];
   if (!history || history.length === 0) return;
 
   var lastLesson = history[history.length - 1];
   if (!state.markov.dropouts[lastLesson]) {
-    state.markov.dropouts[lastLesson] = { count: 0, totalStudents: 0 };
+    state.markov.dropouts[lastLesson] = { count: 0, totalContinuations: 0 };
   }
   state.markov.dropouts[lastLesson].count += 1;
-  state.markov.dropouts[lastLesson].totalStudents += 1;
+  // totalContinuations NOT incremented — student was already counted when they reached lastLesson
+  // (via recordTransition when they completed the prior lesson). totalReached = totalContinuations + count.
 }
 
 /**
@@ -255,8 +269,7 @@ function scoreCandidate(state, studentId, candidateId) {
   if (history.length >= 2) {
     var prev2 = history[history.length - 2];
     var prev1 = history[history.length - 1];
-    var bigramKey = prev2 + BIGRAM_SEPARATOR + prev1;
-    var bigramEdges = state.markov.bigrams[bigramKey];
+    var bigramEdges = state.markov.bigrams[bigramKey(prev2, prev1)];
 
     if (bigramEdges && bigramEdges[candidateId]) {
       var bEdge = bigramEdges[candidateId];
@@ -275,8 +288,11 @@ function scoreCandidate(state, studentId, candidateId) {
   // ── Dropout penalty ───────────────────────────────────────────────────
   var dropoutPenalty = 0;
   var dropoutData = state.markov.dropouts[candidateId];
-  if (dropoutData && dropoutData.totalStudents > 5) {
-    var dropoutRate = dropoutData.count / dropoutData.totalStudents;
+  var totalReached = dropoutData
+    ? (dropoutData.totalContinuations != null ? dropoutData.totalContinuations + dropoutData.count : dropoutData.totalStudents)
+    : 0;
+  if (dropoutData && totalReached > 5) {
+    var dropoutRate = dropoutData.count / totalReached;
     if (dropoutRate > DROPOUT_THRESHOLD_RATIO) {
       dropoutPenalty = (dropoutRate - DROPOUT_THRESHOLD_RATIO) * 2;
     }
@@ -337,11 +353,13 @@ function getTransitions(state, lessonId) {
 function getDropoutRate(state, lessonId) {
   ensureMarkovState(state);
   var d = state.markov.dropouts[lessonId];
-  if (!d || d.totalStudents === 0) return null;
+  if (!d) return null;
+  var totalReached = d.totalContinuations != null ? d.totalContinuations + d.count : d.totalStudents;
+  if (totalReached === 0) return null;
   return {
-    rate: d.count / d.totalStudents,
+    rate: d.count / totalReached,
     count: d.count,
-    total: d.totalStudents
+    total: totalReached
   };
 }
 
@@ -362,14 +380,15 @@ function findBottlenecks(state, minSample) {
   for (var i = 0; i < dropoutKeys.length; i++) {
     var lid = dropoutKeys[i];
     var d = state.markov.dropouts[lid];
-    if (d.totalStudents < minSample) continue;
-    var rate = d.count / d.totalStudents;
+    var totalReached = d.totalContinuations != null ? d.totalContinuations + d.count : d.totalStudents;
+    if (totalReached < minSample) continue;
+    var rate = d.count / totalReached;
     if (rate > DROPOUT_THRESHOLD_RATIO) {
       bottlenecks.push({
         lessonId: lid,
         dropoutRate: rate,
         count: d.count,
-        total: d.totalStudents
+        total: totalReached
       });
     }
   }
@@ -450,6 +469,5 @@ module.exports = {
   exportTransitionTable: exportTransitionTable,
   checkCooldown:     checkCooldown,
   MAX_HISTORY:       MAX_HISTORY,
-  COOLDOWN_WINDOW:   COOLDOWN_WINDOW,
-  BIGRAM_SEPARATOR:  BIGRAM_SEPARATOR
+  COOLDOWN_WINDOW:   COOLDOWN_WINDOW
 };

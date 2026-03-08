@@ -27,6 +27,31 @@ describe('markov — ensureMarkovState', function () {
   });
 });
 
+describe('markov — recordTransition (type guards)', function () {
+  it('throws on invalid studentId', function () {
+    const state = createState();
+    assert.throws(() => markov.recordTransition(state, null, 'L1', 0.5), /studentId must be a non-empty string/);
+    assert.throws(() => markov.recordTransition(state, '', 'L1', 0.5), /studentId must be a non-empty string/);
+    assert.throws(() => markov.recordTransition(state, undefined, 'L1', 0.5), /studentId must be a non-empty string/);
+  });
+
+  it('throws on invalid lessonId', function () {
+    const state = createState();
+    assert.throws(() => markov.recordTransition(state, 'stu1', null, 0.5), /lessonId must be a non-empty string/);
+    assert.throws(() => markov.recordTransition(state, 'stu1', '', 0.5), /lessonId must be a non-empty string/);
+    assert.throws(() => markov.recordTransition(state, 'stu1', undefined, 0.5), /lessonId must be a non-empty string/);
+  });
+});
+
+describe('markov — recordDropout (type guards)', function () {
+  it('throws on invalid studentId', function () {
+    const state = createState();
+    assert.throws(() => markov.recordDropout(state, null), /studentId must be a non-empty string/);
+    assert.throws(() => markov.recordDropout(state, ''), /studentId must be a non-empty string/);
+    assert.throws(() => markov.recordDropout(state, undefined), /studentId must be a non-empty string/);
+  });
+});
+
 describe('markov — recordTransition (first-order)', function () {
   it('does nothing on first lesson (no previous)', function () {
     const state = createState();
@@ -107,7 +132,7 @@ describe('markov — bigram (second-order) transitions', function () {
     markov.recordTransition(state, 'stu1', 'L2', 0.8);
     markov.recordTransition(state, 'stu1', 'L3', 1.0);
 
-    const key = 'L1' + markov.BIGRAM_SEPARATOR + 'L2';
+    const key = JSON.stringify(['L1', 'L2']);
     assert.ok(state.markov.bigrams[key]);
     assert.ok(state.markov.bigrams[key].L3);
     assert.ok(state.markov.bigrams[key].L3.count > 0);
@@ -126,7 +151,7 @@ describe('markov — bigram (second-order) transitions', function () {
     markov.recordTransition(state, 's2', 'L2', 0);
     markov.recordTransition(state, 's2', 'L3', 0.8);
 
-    const key = 'L1' + markov.BIGRAM_SEPARATOR + 'L2';
+    const key = JSON.stringify(['L1', 'L2']);
     assert.ok(state.markov.bigrams[key].L3.count > 1);
   });
 
@@ -158,7 +183,10 @@ describe('markov — dropout tracking', function () {
     const d = state.markov.dropouts.L1;
     assert.ok(d);
     assert.strictEqual(d.count, 1);
-    assert.strictEqual(d.totalStudents, 1);
+    assert.strictEqual(d.totalContinuations, 0, 'no prior continuation past L1');
+    const rate = markov.getDropoutRate(state, 'L1');
+    assert.strictEqual(rate.rate, 1);
+    assert.strictEqual(rate.total, 1);
   });
 
   it('does nothing for student with no history', function () {

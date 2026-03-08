@@ -226,6 +226,9 @@ function migrateLMSState(raw, opts) {
   var markov = ensureObject(root.markov);
   var markovTransitions = ensureObject(markov.transitions);
   var markovHistory = ensureObject(markov.studentHistory);
+  var markovBigrams = ensureObject(markov.bigrams);
+  var markovDropouts = ensureObject(markov.dropouts);
+  var markovCooldowns = ensureObject(markov.cooldowns);
 
   Object.keys(markovHistory).forEach(function (sid) {
     if (!Array.isArray(markovHistory[sid])) {
@@ -236,7 +239,10 @@ function migrateLMSState(raw, opts) {
 
   var markovState = {
     transitions: markovTransitions,
-    studentHistory: markovHistory
+    studentHistory: markovHistory,
+    bigrams: markovBigrams,
+    dropouts: markovDropouts,
+    cooldowns: markovCooldowns
   };
 
   var state = {
