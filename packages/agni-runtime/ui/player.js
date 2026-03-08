@@ -1116,6 +1116,10 @@
         })
         .catch(function (err) {
           console.error('[PLAYER] Visual mount failed:', step.id, err);
+          var placeholder = document.createElement('p');
+          placeholder.style.cssText = 'color:#996600;font-size:0.9em;';
+          placeholder.textContent = 'SVG preview unavailable' + (err && err.message ? ' (' + err.message + ')' : '');
+          specContainer.appendChild(placeholder);
         });
     }
 

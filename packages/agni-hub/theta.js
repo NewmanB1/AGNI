@@ -445,12 +445,12 @@ async function rebuildLessonIndex() {
   if (lmsEngine.isAvailable && lmsEngine.isAvailable()) {
     const seedEntries = index
       .filter(entry => entry.skillsProvided.length > 0)
-      .map(entry => ({
-        lessonId: entry.lessonId,
-        difficulty: (entry.inferredFeatures && typeof entry.inferredFeatures.difficulty === 'number')
-          ? entry.inferredFeatures.difficulty : (typeof entry.difficulty === 'number' ? entry.difficulty : 2),
-        skill: entry.skillsProvided[0].skill
-      }));
+      .map(entry => {
+        const raw = (entry.inferredFeatures && typeof entry.inferredFeatures.difficulty === 'number' && Number.isFinite(entry.inferredFeatures.difficulty))
+          ? entry.inferredFeatures.difficulty : (typeof entry.difficulty === 'number' && Number.isFinite(entry.difficulty) ? entry.difficulty : 2);
+        const difficulty = Math.max(1, Math.min(5, raw));
+        return { lessonId: entry.lessonId, difficulty, skill: entry.skillsProvided[0].skill };
+      });
     try { lmsEngine.seedLessons(seedEntries); }
     catch (err) { log.error('LMS engine seeding failed', { error: err.message }); }
   }

@@ -24,6 +24,8 @@ export interface LessonMeta {
   teaching_mode?: string;
   /** Whether this lesson is designed for group/collaborative work. */
   is_group?: boolean;
+  /** Optional schema version for forward-compat checks (e.g. 1.8.0). */
+  yamlSchemaVersion?: string;
   /** Author-declared pedagogical feature overrides (confidence 1.0). */
   declared_features?: {
     blooms_level?: 'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create';

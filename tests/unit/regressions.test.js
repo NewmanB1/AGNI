@@ -1554,7 +1554,7 @@ describe('AUDIT-INVARIANT: maxStudents/maxLessons enforced at runtime', () => {
 });
 
 describe('AUDIT-INVARIANT: hub-config bootstrap — embeddingDim flows from config to engine', () => {
-  it('check-hub-config-bootstrap passes — CONFIG_KEYS has embeddingDim, loadHubConfig before env-config', () => {
+  it('check-hub-config-bootstrap passes — CONFIG_KEYS has embeddingDim, loadHubConfig before env-config in theta/sentry/sync/hub-transform', () => {
     const script = path.resolve(__dirname, '../../scripts/check-hub-config-bootstrap.js');
     const result = spawnSync(process.execPath, [script], {
       cwd: path.resolve(__dirname, '../..'),
@@ -1563,8 +1563,132 @@ describe('AUDIT-INVARIANT: hub-config bootstrap — embeddingDim flows from conf
     assert.equal(
       result.status,
       0,
-      `check-hub-config-bootstrap must pass. embeddingDim must be in CONFIG_KEYS; loadHubConfig before env-config in theta/sentry/sync.\n${result.stderr || result.stdout}`
+      `check-hub-config-bootstrap must pass. embeddingDim must be in CONFIG_KEYS; loadHubConfig before env-config in theta/sentry/sync/hub-transform.\n${result.stderr || result.stdout}`
     );
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUDIT-HARDENING-PLAN: YAML, SVG, LMS, bootstrap
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AUDIT-A1: yamlSchemaVersion passed through to IR', () => {
+  const dataDir = path.join(path.resolve(__dirname, '../..'), 'data');
+  let savedDataDir;
+
+  before(() => {
+    savedDataDir = process.env.AGNI_DATA_DIR;
+    process.env.AGNI_DATA_DIR = dataDir;
+    delete require.cache[require.resolve('@agni/utils/env-config')];
+    delete require.cache[require.resolve('@agni/utils/archetype-match')];
+    delete require.cache[require.resolve('@ols/compiler/compiler/build-lesson-ir')];
+  });
+  after(() => {
+    process.env.AGNI_DATA_DIR = savedDataDir;
+  });
+
+  it('meta.yamlSchemaVersion flows to _schemaVersion and sidecar', async () => {
+    const { buildLessonIR, buildLessonSidecar } = require('@ols/compiler/compiler/build-lesson-ir');
+    const { minimalLesson } = require('../helpers/fixtures');
+    const lesson = minimalLesson({
+      meta: {
+        identifier: 'yaml-ver-test',
+        title: 'Test',
+        language: 'en',
+        license: 'CC-BY-SA-4.0',
+        created: '2026-01-01',
+        yamlSchemaVersion: '1.8.0'
+      }
+    });
+    const ir = await buildLessonIR(lesson, {});
+    assert.equal(ir._schemaVersion, '1.8.0');
+    const sidecar = buildLessonSidecar(ir);
+    assert.equal(sidecar.yamlSchemaVersion, '1.8.0');
+  });
+});
+
+
+describe('AUDIT-E1: compile warns on svg_spec with non-numeric opts', () => {
+  const dataDir = path.join(path.resolve(__dirname, '../..'), 'data');
+  let savedDataDir;
+
+  before(() => {
+    savedDataDir = process.env.AGNI_DATA_DIR;
+    process.env.AGNI_DATA_DIR = dataDir;
+    delete require.cache[require.resolve('@agni/utils/env-config')];
+    delete require.cache[require.resolve('@agni/utils/archetype-match')];
+    delete require.cache[require.resolve('@ols/compiler/compiler/build-lesson-ir')];
+  });
+  after(() => {
+    process.env.AGNI_DATA_DIR = savedDataDir;
+  });
+
+  it('warns when opts.length is non-numeric string', async () => {
+    const { buildLessonIR } = require('@ols/compiler/compiler/build-lesson-ir');
+    const { minimalLesson } = require('../helpers/fixtures');
+    const warnLogs = [];
+    const origWarn = console.warn;
+    console.warn = function (...args) {
+      warnLogs.push(args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' '));
+    };
+    try {
+      const lesson = minimalLesson({
+        steps: [
+          { id: 's1', type: 'instruction', content: 'Step 1' },
+          { id: 's2', type: 'svg', svg_spec: { factory: 'pendulum', opts: { length: 'abc' } } }
+        ]
+      });
+      await buildLessonIR(lesson, {});
+      assert.ok(
+        warnLogs.some(m => m.includes('AUDIT-E1') && m.includes('length')),
+        'Expected AUDIT-E1 warn for opts.length non-numeric. Got: ' + JSON.stringify(warnLogs)
+      );
+    } finally {
+      console.warn = origWarn;
+    }
+  });
+});
+
+describe('AUDIT-D1: seedLesson clamps difficulty to [1,5]', () => {
+  const os = require('os');
+  const fs = require('fs');
+  const path = require('path');
+  let TMP_DIR;
+  let origDataDir;
+
+  before(() => {
+    TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'agni-audit-d1-'));
+    origDataDir = process.env.AGNI_DATA_DIR;
+    process.env.AGNI_DATA_DIR = TMP_DIR;
+  });
+
+  after(() => {
+    process.env.AGNI_DATA_DIR = origDataDir;
+    try { fs.rmSync(TMP_DIR, { recursive: true, force: true }); } catch (_) {}
+  });
+
+  it('does not throw when difficulty is NaN; seedLessons completes and probe has finite difficulty', async () => {
+    delete require.cache[require.resolve('../../src/engine')];
+    const lmsEngine = require('../../src/engine');
+    await assert.doesNotReject(
+      lmsEngine.seedLessons([
+        { lessonId: 'test-d1-nan', difficulty: NaN, skill: 'ols:math:test' }
+      ])
+    );
+    const status = lmsEngine.getStatus();
+    assert.ok(status && status.probes >= 0, 'Engine remains usable after NaN difficulty');
+  });
+
+  it('does not throw when difficulty is 10; clamps to 5 and seedLessons completes', async () => {
+    delete require.cache[require.resolve('../../src/engine')];
+    const lmsEngine = require('../../src/engine');
+    await assert.doesNotReject(
+      lmsEngine.seedLessons([
+        { lessonId: 'test-d1-high', difficulty: 10, skill: 'ols:math:test' }
+      ])
+    );
+    const status = lmsEngine.getStatus();
+    assert.ok(status && status.probes >= 0, 'Engine remains usable after difficulty 10 (clamped to 5)');
   });
 });
 

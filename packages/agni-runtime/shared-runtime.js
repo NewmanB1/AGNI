@@ -191,7 +191,12 @@
         try {
           resolve(global.AGNI_SVG.fromSpec(spec, container));
         } catch (e) {
-          reject(e);
+          console.error('[SHARED] AGNI_SVG.fromSpec failed, showing placeholder:', e && e.message);
+          var placeholder = document.createElement('p');
+          placeholder.style.cssText = 'color:#996600;font-size:0.9em;';
+          placeholder.textContent = 'SVG preview unavailable' + (e && e.message ? ' (' + e.message + ')' : '');
+          if (container) container.appendChild(placeholder);
+          resolve({ stage: null });
         }
         return;
       }
@@ -206,7 +211,12 @@
       try {
         pending.resolve(global.AGNI_SVG.fromSpec(pending.spec, pending.container));
       } catch (e) {
-        pending.reject(e);
+        console.error('[SHARED] AGNI_SVG.fromSpec failed (pending), showing placeholder:', e && e.message);
+        var placeholder = document.createElement('p');
+        placeholder.style.cssText = 'color:#996600;font-size:0.9em;';
+        placeholder.textContent = 'SVG preview unavailable' + (e && e.message ? ' (' + e.message + ')' : '');
+        if (pending.container) pending.container.appendChild(placeholder);
+        pending.resolve({ stage: null });
       }
     });
     if (DEV_MODE && queue.length > 0) {

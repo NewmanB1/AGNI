@@ -38,8 +38,11 @@
 
 'use strict';
 
+const path = require('path');
+const { loadHubConfig } = require('@agni/utils/hub-config');
+loadHubConfig(path.join(__dirname, '../../data'));
+
 const fs      = require('fs');
-const path    = require('path');
 const zlib    = require('zlib');
 const yaml    = require('js-yaml');
 

@@ -23,6 +23,12 @@ async function buildLessonIR(lessonData, options) {
     coherenceResult.warnings.forEach(function (w) { log.warn(w); });
   }
 
+  const NUMERIC_PARAM_KEYS = [
+    'length', 'width', 'height', 'w', 'h', 'value', 'min', 'max', 'r', 'radius',
+    'x', 'y', 'sides', 'ticks', 'speed', 'opacity', 'fillOpacity', 'scale',
+    'minValue', 'maxValue', 'bob_radius', 'strokeWidth'
+  ];
+
   const steps = await Promise.all(
     (lessonData.steps || []).map(async function (step) {
       let htmlContent = '';
@@ -41,9 +47,35 @@ async function buildLessonIR(lessonData, options) {
             .replace(/\n/g, '<br>');
         }
       }
-      return Object.assign({}, step, { htmlContent: htmlContent });
+      var out = Object.assign({}, step, { htmlContent: htmlContent });
+      var spec = step.svg_spec || step.spec;
+      if (spec && spec.opts && typeof spec.opts === 'object') {
+        NUMERIC_PARAM_KEYS.forEach(function (key) {
+          if (!(key in spec.opts)) return;
+          var v = spec.opts[key];
+          if (v !== null && v !== undefined && typeof v !== 'number' && typeof v !== 'boolean') {
+            var n = parseFloat(v);
+            if (isNaN(n)) {
+              log.warn('AUDIT-E1: svg_spec opts.' + key + ' non-numeric (may crash runtime)', {
+                stepId: step.id, value: v
+              });
+            }
+          }
+        });
+      }
+      return out;
     })
   );
+
+  const meta = lessonData.meta || {};
+  const yamlSchemaVersion = meta.yamlSchemaVersion;
+  const KNOWN_SCHEMA_VERSIONS = ['1.6.0', '1.7.0', '1.8.0'];
+  if (yamlSchemaVersion && KNOWN_SCHEMA_VERSIONS.indexOf(yamlSchemaVersion) === -1) {
+    log.warn(
+      'yamlSchemaVersion "' + yamlSchemaVersion + '" not in known set [' +
+      KNOWN_SCHEMA_VERSIONS.join(', ') + ']; continuing with best-effort parse'
+    );
+  }
 
   const ir = Object.assign({}, lessonData, {
     steps:            steps,
@@ -51,7 +83,8 @@ async function buildLessonIR(lessonData, options) {
     metadata_source:  metadataSource,
     _devMode:         options.dev === true,
     _compiledAt:      new Date().toISOString(),
-    _schemaVersion:   lessonData.schema_version || lessonData.schemaVersion || '1.8.0',
+    _schemaVersion:   lessonData.schema_version || lessonData.schemaVersion ||
+                      yamlSchemaVersion || lessonData.version || '1.8.0',
     featureFlags:     options.featureFlags || {}
   });
 
@@ -79,6 +112,7 @@ function buildLessonSidecar(ir) {
 
     compiledAt:     ir._compiledAt,
     schemaVersion:  ir._schemaVersion,
+    yamlSchemaVersion: (ir.meta && ir.meta.yamlSchemaVersion) || undefined,
     metadata_source: ir.metadata_source,
 
     ontology: {

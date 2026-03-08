@@ -60,6 +60,7 @@ function checkBootstrap(filePath, label) {
 checkBootstrap(path.join(ROOT, 'packages', 'agni-hub', 'theta.js'), 'theta.js');
 checkBootstrap(path.join(ROOT, 'packages', 'agni-hub', 'sentry.js'), 'sentry.js');
 checkBootstrap(path.join(ROOT, 'packages', 'agni-hub', 'sync.js'), 'sync.js');
+checkBootstrap(path.join(ROOT, 'packages', 'agni-hub', 'hub-transform.js'), 'hub-transform.js');
 
 if (errors.length > 0) {
   console.error('check-hub-config-bootstrap: regression guards failed\n');

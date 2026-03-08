@@ -188,8 +188,14 @@ function seedLesson(lessonId, difficulty, skill) {
   embeddings.ensureLessonVector(_state, lessonId);
 
   if (!_state.rasch.probes[lessonId]) {
+    // Clamp difficulty to [1,5] to avoid NaN/Infinity from bad inferredFeatures
+    var d = typeof difficulty === 'number' && Number.isFinite(difficulty)
+      ? Math.max(1, Math.min(5, difficulty)) : 3;
+    if (difficulty !== d) {
+      log.warn('AUDIT-D1: difficulty out of range, clamped', { lessonId, original: difficulty, clamped: d });
+    }
     // Map 1–5 difficulty to logit scale: difficulty 3 = 0 logits (average)
-    var logitDifficulty = (difficulty - 3) * 1;  // [1,5] → [−2,+2]
+    var logitDifficulty = (d - 3) * 1;  // [1,5] → [−2,+2]
     _state.rasch.probes[lessonId] = {
       difficulty: logitDifficulty,
       skill:      skill

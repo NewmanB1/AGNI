@@ -193,6 +193,10 @@
           "description": "Whether this lesson is designed for group/collaborative work. When true, teachers can assign it to student groups.",
           "default": false
         },
+        "yamlSchemaVersion": {
+          "type": "string",
+          "description": "Optional schema version for forward-compat checks. When present, old compilers can warn on unknown versions. Convention: match OLS version (e.g. 1.8.0) or author-specific semver."
+        },
         "accessibility_mode": {
           "type": "string",
           "enum": [
