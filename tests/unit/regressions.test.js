@@ -1418,10 +1418,14 @@ describe('AUDIT-INVARIANT: featureDim === embeddingDim * 2 enforced defensively'
     assert.throws(() => federation.mergeBanditSummaries(noContract, withContract), /embeddingDim|include embeddingDim/);
   });
 
-  it('mergeBanditSummaries throws on embeddingDim mismatch across hubs', () => {
+  it('mergeBanditSummaries throws on embeddingDim mismatch (Hub A:8 vs Hub B:16) — error names both values', () => {
+    // Pi config (8) vs older default (16) — must reject before any matrix op to avoid corrupted posterior
     const local = { embeddingDim: 8, mean: Array(16).fill(0), precision: require('../../packages/agni-engine/math').identity(16).map(r => r.slice()), sampleSize: 1 };
     const remote = { embeddingDim: 16, mean: Array(32).fill(0), precision: require('../../packages/agni-engine/math').identity(32).map(r => r.slice()), sampleSize: 1 };
-    assert.throws(() => federation.mergeBanditSummaries(local, remote), /embeddingDim|Federation contract/);
+    assert.throws(
+      () => federation.mergeBanditSummaries(local, remote),
+      { message: /local\.embeddingDim=8.*remote\.embeddingDim=16|Federation contract.*8.*16/ }
+    );
   });
 
   it('migrateLMSState output satisfies invariant', () => {
