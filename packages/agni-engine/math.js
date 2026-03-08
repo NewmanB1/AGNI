@@ -45,9 +45,14 @@ function zeros(n) {
   return arr;
 }
 
-/** ES5-safe integer check. Use instead of Number.isInteger for IE/edge compatibility. */
+/** ES5-safe non-negative integer check (0, 1, 2, ...). Use isPositiveInteger when 0 is invalid. */
 function isNonNegativeInteger(x) {
   return typeof x === 'number' && isFinite(x) && x === Math.floor(x) && x >= 0;
+}
+
+/** ES5-safe positive integer check (n >= 1). Use for matrix dimensions where 0 is invalid. */
+function isPositiveInteger(x) {
+  return typeof x === 'number' && isFinite(x) && x === Math.floor(x) && x >= 1;
 }
 
 /** Inner dot product (no validation). Call only after inputs are validated. */
@@ -94,10 +99,13 @@ function addVec(a, b) {
   if (a.length !== b.length) {
     throw new Error('[MATH] addVec: vector length mismatch (' + a.length + ' vs ' + b.length + ')');
   }
-  for (var i = 0; i < a.length; i++) {
+  var i;
+  for (i = 0; i < a.length; i++) {
     if (typeof a[i] !== 'number' || !isFinite(a[i])) {
       throw new Error('[MATH] addVec: non-finite element at first vector index ' + i);
     }
+  }
+  for (i = 0; i < b.length; i++) {
     if (typeof b[i] !== 'number' || !isFinite(b[i])) {
       throw new Error('[MATH] addVec: non-finite element at second vector index ' + i);
     }
@@ -167,10 +175,10 @@ function addMat(A, B) {
   if (rows === 0) return [];
   var cols;
   for (var i = 0; i < rows; i++) {
-    if (!Array.isArray(A[i])) {
+    if (!A[i] || !Array.isArray(A[i])) {
       throw new Error('[MATH] addMat: row ' + i + ' of A must be array');
     }
-    if (!Array.isArray(B[i])) {
+    if (!B[i] || !Array.isArray(B[i])) {
       throw new Error('[MATH] addMat: row ' + i + ' of B must be array');
     }
     if (i === 0) {
@@ -207,6 +215,7 @@ function scaleMat(A, s) {
     throw new Error('[MATH] scaleMat: scalar must be finite number');
   }
   if (A.length > 0) {
+    /* Validate A[0] before A[0].length — otherwise null/non-array yields native TypeError. */
     if (!A[0] || !Array.isArray(A[0])) {
       throw new Error('[MATH] scaleMat: first row must be array');
     }
@@ -278,7 +287,7 @@ function matVec(A, x) {
  */
 function identity(n) {
   if (n == null) throw new Error('[MATH] identity: n is null or undefined');
-  if (!isNonNegativeInteger(n) || n < 1) {
+  if (!isPositiveInteger(n)) {
     throw new Error('[MATH] identity: n must be positive integer, got ' + n);
   }
   var I = new Array(n);
@@ -311,6 +320,9 @@ function cholesky(A) {
     }
     if (typeof A[i][i] !== 'number' || !isFinite(A[i][i])) {
       throw new Error('[MATH] cholesky: non-numeric diagonal at [' + i + ']');
+    }
+    if (A[i][i] <= 0) {
+      throw new Error('[MATH] cholesky: non-positive diagonal at [' + i + '][' + i + '] = ' + A[i][i] + ' (matrix is not SPD)');
     }
     /* Off-diagonal: j>i covers each pair once; aij and aji together validate upper and lower triangle */
     for (j = i + 1; j < n; j++) {
@@ -366,6 +378,11 @@ function forwardSub(L, b) {
     if (L[ri].length !== n) {
       throw new Error('[MATH] forwardSub: L must be square matrix (got row ' + ri + ' with length ' + L[ri].length + ')');
     }
+    for (var ci = 0; ci < n; ci++) {
+      if (typeof L[ri][ci] !== 'number' || !isFinite(L[ri][ci])) {
+        throw new Error('[MATH] forwardSub: non-finite element at L[' + ri + '][' + ci + ']');
+      }
+    }
   }
   if (b.length !== n) {
     throw new Error('[MATH] forwardSub: dimension mismatch (L is ' + n + 'x' + n + ', b.length=' + b.length + ')');
@@ -404,6 +421,11 @@ function backSub(L, y) {
     }
     if (L[ri].length !== n) {
       throw new Error('[MATH] backSub: L must be square matrix (got row ' + ri + ' with length ' + L[ri].length + ')');
+    }
+    for (var ci = 0; ci < n; ci++) {
+      if (typeof L[ri][ci] !== 'number' || !isFinite(L[ri][ci])) {
+        throw new Error('[MATH] backSub: non-finite element at L[' + ri + '][' + ci + ']');
+      }
     }
   }
   if (y.length !== n) {
@@ -446,9 +468,9 @@ function symmetrize(A) {
     if (A[i].length !== n) {
       throw new Error('[MATH] symmetrize: matrix must be square (got row ' + i + ' with length ' + A[i].length + ')');
     }
-    for (var j = 0; j < n; j++) {
-      if (typeof A[i][j] !== 'number' || !isFinite(A[i][j])) {
-        throw new Error('[MATH] symmetrize: non-finite element at [' + i + '][' + j + ']');
+    for (var c = 0; c < n; c++) {
+      if (typeof A[i][c] !== 'number' || !isFinite(A[i][c])) {
+        throw new Error('[MATH] symmetrize: non-finite element at [' + i + '][' + c + ']');
       }
     }
   }
@@ -463,6 +485,7 @@ function symmetrize(A) {
 
 /**
  * Invert a symmetric positive-definite matrix using Cholesky decomposition.
+ * inv is freshly allocated; symmetrize(inv) mutates our own array, not the caller's.
  * @param {number[][]} A
  * @returns {number[][]}
  */
@@ -500,10 +523,13 @@ function _randnClearCache() {
   _randnCache = null;
 }
 
+/** Minimum value for Box-Muller inputs. Rejects subnormals that would produce Infinity via log/sqrt. */
+var RANDN_MIN = 1e-300;
+
 /**
  * Gaussian random variable (Box–Muller). Caches second sample to avoid discarding entropy.
- * Assumes Math.random() ∈ [0,1) per spec. If PRNG returns 0 (pathological),
- * retries with new draws; returning 0 would corrupt Thompson sampling (deterministic draw).
+ * Assumes Math.random() ∈ [0,1) per spec. Rejects u or v below RANDN_MIN (subnormals produce
+ * log → Infinity → cached bad value).
  *
  * WARNING — Test pollution: randn uses module-level _randnCache. If one test calls randn()
  * and consumes the cos sample, the sin sample remains in the cache and will be returned as
@@ -528,9 +554,9 @@ function randn() {
   for (var retries = 0; retries < 8; retries++) {
     u = Math.random();
     v = Math.random();
-    if (u === 0 || v === 0) {
+    if (u < RANDN_MIN || v < RANDN_MIN) {
       if (typeof console !== 'undefined' && console.error) {
-        console.error('[MATH] randn: PRNG returned zero (broken runtime), retry ' + (retries + 1) + '/8');
+        console.error('[MATH] randn: PRNG returned near-zero (' + u + ', ' + v + '), retry ' + (retries + 1) + '/8');
       }
       continue;
     }
@@ -540,13 +566,17 @@ function randn() {
     return r * Math.cos(theta);
   }
   _randnCache = null; /* clear on throw path for consistent post-call state */
-  throw new Error('[MATH] randn: PRNG returned zero repeatedly — broken runtime');
+  throw new Error('[MATH] randn: PRNG returned near-zero repeatedly — broken runtime');
 }
 
 module.exports = {
   CHOLESKY_EPSILON: CHOLESKY_EPSILON,
   CHOLESKY_SYMMETRY_TOL: CHOLESKY_SYMMETRY_TOL,
+  RANDN_MIN: RANDN_MIN,
   _randnClearCache: _randnClearCache,
+  zeros: zeros,
+  isNonNegativeInteger: isNonNegativeInteger,
+  isPositiveInteger: isPositiveInteger,
   dot:       dot,
   addVec:    addVec,
   scaleVec:  scaleVec,
