@@ -28,7 +28,7 @@ flowchart TB
     subgraph Hub["Village Hub"]
         Compiler[Compiler / @ols/compiler]
         IR[IR + lesson-ir.json]
-        Theta[Theta (skill graph, MLC)]
+        Theta["Theta (skill graph, MLC)"]
         LMS[LMS Engine (Rasch, Thompson)]
         HT[hub-transform]
     end
@@ -52,7 +52,8 @@ flowchart TB
     IR --> Native
     IR --> Theta
     Theta --> LMS
-    HT --> HTML
+    YAML --> HT
+    HT -->|"on-demand: YAML to IR to HTML"| HTML
     HTML --> Player
     Theta --> PortalUI
     LMS --> PortalUI
@@ -155,8 +156,10 @@ a fully enriched IR rather than raw YAML. The IR contains:
 - `ontology` — skill requires/provides for the theta scheduling engine
 - Compiler stamps (`_compiledAt`, `_schemaVersion`, `_devMode`, `metadata_source`)
 
-The IR builder also writes a `lesson-ir.json` sidecar alongside each compiled lesson HTML.
-The theta engine reads this file for its lesson index (see Section 7).
+The IR builder writes a sidecar alongside each compiled lesson. **Sidecar naming convention:**
+- **HTML output:** Sidecar is `{htmlBasename}-ir.json` (e.g. `gravity.html` → `gravity-ir.json`; `index.html` → `index-ir.json`). See `packages/ols-compiler/builders/html.js`.
+- **serveDir layout (theta):** Lessons must be at `serveDir/lessons/{slug}/index.html`; the sidecar is then `serveDir/lessons/{slug}/index-ir.json`. Theta's `rebuildLessonIndex()` reads this path (see Section 7).
+- **Native/yaml-packet output:** Sidecar is `lesson-ir.json` in the format's output directory. See `packages/ols-compiler/services/compiler.js`.
 
 ### 3.2 Output Strategies
 
@@ -243,7 +246,7 @@ packet + IR sidecar) changes between lessons.
 **On-demand delivery (implemented):**
 
 1. Device requests `GET /lessons/:slug` (or hub-transform serves it when attached to theta).
-2. Hub runs `hub-transform.js`: loads YAML → runs inference → builds IR → wraps in PWA shell (uses shared `lessonAssembly` for the script block).
+2. Hub runs `hub-transform.js`: loads YAML → `buildLessonIR` (inference + IR) → HTML builder → PWA wrapper (uses shared `lessonAssembly` for the script block). Same pipeline as CLI; no parallel divergent path.
 3. Hub serves the PWA bundle with CSP and nonce.
 4. Edge device loads in Chrome → Service Worker caches shared assets.
 5. Subsequent lessons only need new HTML packet + IR sidecar (shared code already cached).
@@ -268,8 +271,8 @@ or unauthorized lessons via P2P file sharing.
 
 We move from a "Public Flyer" model to a "Personalized Ticket" model.
 
-1. **Request:** Student device sends its UUID (e.g., `A-123`) to the Hub.
-2. **Binding:** Hub compiles the lesson and calculates `Hash(Content + UUID)`.
+1. **Request:** Student device sends its UUID (e.g., `A-123`) to the Hub. *Trust model:* UUID is client-supplied; the binding prevents P2P cloning (a copied file fails the intended-owner check on another device).
+2. **Binding:** Hub compiles the lesson and calculates `Hash(Content + UUID)`. *Content* is the canonical JSON of the lesson IR (the HTML payload); see `utils/crypto.js` and `lessonAssembly`.
 3. **Signing:** Hub signs the hash with its Private Authority Key.
 4. **Injection:** The signature and intended UUID are hardcoded into the compiled artifact.
 
@@ -317,7 +320,7 @@ The engine has two layers with distinct responsibilities.
 - **MLC heuristic:** Among eligible lessons, sorts by Marginal Learning Cost: `θ = BaseCost − CohortDiscount`. Students with background in weaving see "Loops" first; students with farming background may see "Modulo Arithmetic" first.
 - **MLC bounds:** MLC is clamped to [0, ∞) (implementation floor 0.001) to avoid negative values. Negative MLC would break consumers that treat it as a probability or positive weight, and unbounded graph-weight updates could cause sudden wholesale curriculum reordering.
 - **MLC term ranges:** BaseCost ∈ [0, 1] (from base-costs.json or difficulty/5). CohortDiscount is implemented as `baseCost × (1 − residualFactor) + coherenceBonus`; residualFactor ∈ [MIN_RESIDUAL, 1] (default 0.15–1.0) from graph weights; coherenceBonus ∈ [0, 0.08]. Graph edge weights must stay in [0, 1] so residualFactor remains well-defined.
-- **Lesson index:** `rebuildLessonIndex()` builds lesson-index.json from catalog.json and IR sidecars (serveDir/lessons/{slug}/index-ir.json). Falls back to HTML scraping for lessons compiled before Phase 2.
+- **Lesson index:** `rebuildLessonIndex()` builds lesson-index.json from catalog.json and IR sidecars at `serveDir/lessons/{slug}/index-ir.json`. Falls back to HTML scraping for lessons compiled before Phase 2; fallback is logged as a warning and may produce incomplete entries if markup changes.
 
 ### 7.2 LMS Engine — Adaptive Selection (Implemented)
 
@@ -498,6 +501,23 @@ prescribing specific lesson content.
 - **Edge devices:** Android 6.0+ (Marshmallow), <2GB RAM, intermittent power. Runtime runs in Chrome/WebView — no Node. Hot paths use ES5-friendly patterns (e.g. no Map/Set in critical paths, Promise-based async) for broad device support.
 - **Village Hub:** Raspberry Pi running Node 14+ (see `package.json` engines). Hub and engine use standard Node APIs compatible with legacy Pi images.
 - **Network:** 100% Offline capability. Intermittent "Village Hub" updates via Satellite/LoRa/USB/SD.
+
+---
+
+## Appendix: Known Gaps & Mitigations
+
+| Gap | Severity | Mitigation |
+|-----|----------|------------|
+| **YAML schema versioning** | IR has `_schemaVersion`; YAML itself is unversioned. Offline hubs may receive YAML with new fields that old compilers reject. | Consider adding `yamlSchemaVersion` to YAML meta for forward-compat checks. |
+| **DAG validation** | Cycles make lessons permanently ineligible. Theta throws at startup when cycles are detected; `verify:skill-dag` is in `verify:all`. | Run `npm run verify:skill-dag` before deployment. Theta exits on cycle. |
+| **HTML scrape fallback** | Theta falls back to HTML scraping when no IR sidecar exists. Brittle; markup changes can break indexing. | Logged as warning. Prefer IR sidecars; avoid deploying lessons without sidecars. |
+| **Device UUID trust** | Hub binds content to client-supplied UUID. UUID is not authenticated or hardware-bound. | Documented: device sends UUID; hub signs Hash(Content + UUID). Trust boundary is hub–device; P2P cloning prevented by signature. |
+| **Signature scope** | `Content` in Hash(Content + UUID) is the canonical JSON of the lesson IR (HTML payload). | See `utils/crypto.js` and `lessonAssembly`; same scope for CLI and hub-transform. |
+| **Cached assets unsigned** | Service Worker caches `shared-runtime.js`, `svg-stage.js`. These are not per-lesson signed. | Shared assets are hub-served over TLS; integrity relies on first-fetch authenticity. |
+| **Federation merge** | No explicit version/timestamp in merge. Duplicate or out-of-order merges could affect posteriors. | `federation.js` merges by precision-weighting; idempotent for same inputs. |
+| **LMS migration** | State migrated on load. Power loss during migration could corrupt state. | Atomic write: write to `.tmp` then rename. See `packages/agni-engine/index.js` `saveState`. |
+| **Service Worker** | Android Marshmallow WebView has inconsistent SW support. | No fallback defined; may need cache polyfill or degraded mode. |
+| **Atomic compilation** | On-demand compile writes to response stream; no partial-file race for GET. Static build uses temp+rename. | hub-transform streams; no intermediate file. CLI uses atomic write. |
 - **Input:** Haptic/Sensor-first (Accelerometer, Vibration) + Touch.
 - **Trust:** Hub-and-Spoke Distribution for content (security), Mesh for signaling (interaction).
 - **Epistemic Pluralism:** The system adapts learning paths based on local "Generative Metaphors"

@@ -1,7 +1,7 @@
 'use strict';
 
 // packages/agni-hub/theta.js â€” AGNI Hub API entry point
-// Runs on: Village Hub (Raspberry Pi, Node 18+).
+// Runs on: Village Hub (Raspberry Pi, Node 14+).
 // Business logic for theta scheduling + router wiring to route modules.
 
 const path = require('path');
@@ -413,7 +413,7 @@ async function rebuildLessonIndex() {
     }
 
     fallbackCount++;
-    log.info('No sidecar â€” falling back to HTML scrape', { slug: entry.slug });
+    log.warn('No IR sidecar â€” falling back to brittle HTML scrape; index may be incomplete', { slug: entry.slug });
     let skillsProvided = [];
     let skillsRequired = [];
 
@@ -427,7 +427,9 @@ async function rebuildLessonIndex() {
           const data = JSON.parse(m[1]);
           skillsProvided = (data.ontology?.provides || []).map(p => ({ skill: p.skill, declaredLevel: p.level || 1 }));
           skillsRequired = (data.ontology?.requires || []).map(r => r.skill || r);
-        } catch (e) { log.warn('HTML scrape parse error', { slug: entry.slug, error: e.message }); }
+        } catch (e) {
+          log.error('HTML scrape failed — lesson index entry will be incomplete', { slug: entry.slug, error: e.message });
+        }
       }
     }
     index.push({
