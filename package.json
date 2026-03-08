@@ -121,7 +121,7 @@
     "verify:hub-no-scripts": "node scripts/check-hub-no-scripts.js",
     "verify:hub-test-targets": "node scripts/check-hub-test-targets.js",
     "verify:hub-lint": "eslint packages/agni-hub/",
-    "verify:config-injection": "mocha tests/unit/config-injection.test.js",
+    "verify:config-injection": "mocha --config .mocharc.verify.json tests/unit/config-injection.test.js",
     "verify:precache-regression": "node scripts/check-precache-regression.js",
     "verify:governance-canonical": "node scripts/check-governance-canonical.js",
     "verify:governance-docs": "node scripts/check-governance-docs.js",
@@ -133,7 +133,12 @@
     "verify:hub-config-bootstrap": "node scripts/check-hub-config-bootstrap.js",
     "verify:skill-dag": "node scripts/check-skill-dag.js",
     "verify:run-environments": "node scripts/check-run-environments.js",
-    "verify:governance": "node scripts/check-governance-canonical.js && node scripts/check-governance-docs.js && node scripts/check-governance-paths.js && mocha tests/unit/governance.test.js",
-    "verify:all": "node scripts/check-dead-files.js && node scripts/check-lesson-gen-test-target.js && node scripts/check-dts-arity.js && node scripts/check-innerhtml.js && node scripts/check-factory-order.js && node scripts/check-precache-regression.js && node scripts/check-svg-tools.js && node scripts/check-runtime-manifest.js && node scripts/check-runtime-headers.js && node scripts/check-runtime-docs.js && eslint packages/agni-runtime/ && node scripts/check-known-sensors.js && node scripts/sync-schema-enums.js --check && node scripts/verify-canonical-ownership.js && node scripts/check-node-version-docs.js && node scripts/check-engine-no-ts.js && node scripts/check-hub-config-pi.js && node scripts/check-hub-config-bootstrap.js && node scripts/check-skill-dag.js && node scripts/check-run-environments.js && node scripts/check-es5.js && node scripts/check-services-no-scripts.js && node scripts/check-services-test-targets.js && node scripts/check-services-docs.js && eslint packages/agni-services/ && node scripts/check-unauthed-routes.js && node scripts/check-version-sync.js && node scripts/check-api-contract-auth.js && node scripts/check-hub-imports.js && node scripts/check-hub-no-scripts.js && node scripts/check-hub-test-targets.js && node scripts/check-hub-docs.js && eslint packages/agni-hub/ && mocha tests/unit/config-injection.test.js tests/unit/theta-api.test.js && node scripts/check-governance-canonical.js && node scripts/check-governance-docs.js && node scripts/check-governance-paths.js && mocha tests/unit/governance.test.js"
+    "verify:governance": "node scripts/check-governance-canonical.js && node scripts/check-governance-docs.js && node scripts/check-governance-paths.js && mocha --config .mocharc.verify.json tests/unit/governance.test.js",
+    "verify:core": "npm run verify:dead-files --silent && npm run verify:lesson-gen-test-target --silent && npm run verify:dts --silent && npm run verify:innerhtml --silent && npm run verify:factory-order --silent && npm run verify:precache-regression --silent && npm run verify:schema-sync --silent && npm run verify:canonical --silent && npm run verify:node-version-docs --silent && npm run verify:engine-no-ts --silent && npm run verify:skill-dag --silent && npm run verify:run-environments --silent && npm run test:es5 --silent",
+    "verify:runtime": "npm run verify:svg-tools --silent && npm run verify:runtime-manifest --silent && npm run verify:runtime-headers --silent && npm run verify:runtime-docs --silent && npm run verify:runtime-lint --silent && npm run verify:sensors --silent",
+    "verify:hub": "npm run verify:hub-config-pi --silent && npm run verify:hub-config-bootstrap --silent && npm run verify:unauthed-routes --silent && npm run verify:version-sync --silent && npm run verify:api-contract-auth --silent && npm run verify:hub-imports --silent && npm run verify:hub-no-scripts --silent && npm run verify:hub-test-targets --silent && npm run verify:hub-docs --silent && npm run verify:hub-lint --silent && npm run verify:config-injection --silent && npm run verify:theta-api --silent",
+    "verify:services": "npm run verify:services-no-scripts --silent && npm run verify:services-test-targets --silent && npm run verify:services-docs --silent && npm run verify:services-lint --silent",
+    "verify:theta-api": "mocha --config .mocharc.verify.json tests/unit/theta-api.test.js",
+    "verify:all": "npm run verify:core --silent && npm run verify:runtime --silent && npm run verify:hub --silent && npm run verify:services --silent && npm run verify:governance --silent"
   }
 }

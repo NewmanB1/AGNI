@@ -63,32 +63,8 @@ jobs:
         run: npm run test:contract
       - name: Run graph verification tests
         run: npm run test:graph
-      - name: Check runtime files for ES5 compatibility
-        run: npm run test:es5
-      - name: Verify no orphaned source files
-        run: npm run verify:dead-files
-      - name: Verify .d.ts declarations match .js
-        run: npm run verify:dts
-      - name: Verify no unsafe innerHTML in runtime
-        run: npm run verify:innerhtml
-      - name: Verify factory load order (polyfills first)
-        run: npm run verify:factory-order
-      - name: Verify schema enums match plugin registry
-        run: npm run verify:schema-sync
-      - name: Verify canonical package ownership
-        run: npm run verify:canonical
-      - name: Verify Node version docs (hub Node 14+)
-        run: npm run verify:node-version-docs
-      - name: Verify engine uses JS only (no TypeScript)
-        run: npm run verify:engine-no-ts
-      - name: Verify unauthed routes (hub auth)
-        run: npm run verify:unauthed-routes
-      - name: Verify version sync
-        run: npm run verify:version-sync
-      - name: Verify api-contract auth
-        run: npm run verify:api-contract-auth
-      - name: Verify hub imports (no hub-tools/context or hub-tools/routes in tests)
-        run: npm run verify:hub-imports
+      - name: Run full verification suite (core, runtime, hub, services, governance)
+        run: npm run verify:all
       - name: Validate OLS lessons and data files
         run: node scripts/validate-schemas.js
       # Build all lessons, not just gravity.yaml [R10 P3.4]
