@@ -496,8 +496,12 @@ function _randnClearCache() {
  * and consumes the cos sample, the sin sample remains in the cache and will be returned as
  * the first randn() value in the next test, even if Math.random is mocked to a fresh sequence.
  * Call math._randnClearCache() before mocking Math.random or between tests that require
- * deterministic randn behavior. If randn throws (e.g. broken PRNG), call _randnClearCache()
- * before retrying — the cache survives the throw.
+ * deterministic randn behavior.
+ *
+ * If randn throws (e.g. broken PRNG, retry exhaustion), call _randnClearCache() before
+ * retrying. The cache is cleared on the throw path, but if the caller catches exceptions
+ * from elsewhere in the engine, a prior randn() may have left a cached value; clearing
+ * ensures deterministic behavior after recovery.
  *
  * @returns {number}
  */
@@ -522,6 +526,7 @@ function randn() {
     _randnCache = r * Math.sin(theta);
     return r * Math.cos(theta);
   }
+  _randnCache = null; /* clear on throw path for consistent post-call state */
   throw new Error('[MATH] randn: PRNG returned zero repeatedly — broken runtime');
 }
 
