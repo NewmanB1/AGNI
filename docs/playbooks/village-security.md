@@ -141,7 +141,7 @@ Optional: read-only root filesystem to prevent malware persistence.
 
 ## 5. Edge Device Security Model
 
-Edge devices (Android Marshmallow, Chrome 53 WebView) are semi-trusted. Students physically control them.
+Edge devices (Android 7.0 Nougat, Chrome 51 WebView) are semi-trusted. Students physically control them.
 
 ### 5.1 Device Owner Mode
 

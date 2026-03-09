@@ -17,7 +17,7 @@
 //   4. Offline fallback: queue requests, notify student
 //
 // Load order enforced by loadDependencies() three-phase strategy:
-//   Phase 1: polyfills.js (ES5 shims for Chrome 44 WebView)
+//   Phase 1: polyfills.js (ES5 shims for Chrome 51 WebView)
 //   Phase 2: shared-runtime.js + binary-utils.js (no cross-deps, safe in parallel)
 //   Phase 3: everything else (depends on AGNI_SHARED / AGNI_SVG being available)
 //
@@ -432,7 +432,7 @@
   /**
    * Load all factory dependencies declared in LESSON_DATA.requires.factories.
    *
-   * Load order (critical for Chrome 44 / Android 6.0):
+   * Load order (critical for Chrome 51 / Android 7.0):
    *   Phase 1 — polyfills.js      (ES5 shims must exist before anything runs)
    *   Phase 2 — shared-runtime.js (AGNI_SHARED must exist for svg-stage etc.)
    *   Phase 3 — everything else   (svg-stage, svg-factories, registry — parallel)

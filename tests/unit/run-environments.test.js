@@ -19,7 +19,7 @@ describe('Run environments', () => {
     assert.ok(fs.existsSync(docPath), 'RUN-ENVIRONMENTS.md must exist');
     const content = fs.readFileSync(docPath, 'utf8');
     assert.ok(content.includes('Raspberry Pi'), 'must document Pi for hub');
-    assert.ok(content.includes('Marshmallow') || content.includes('Android 6'), 'must document Marshmallow for edge');
+    assert.ok(content.includes('Nougat') || content.includes('Android 7'), 'must document Android 7.0 (Nougat) for edge');
     assert.ok(content.includes('ES5'), 'must document ES5 for edge');
   });
 

@@ -127,7 +127,9 @@ const ALLOWED_FACTORY_FILES = new Set([
   'svg-factories-geometry.js',
   'svg-registry.js',
   'table-renderer.js',
-  'factory-loader.js'
+  'factory-loader.js',
+  'navigator.js',
+  'edge-theta.js'
 ]);
 
 // ΓöÇΓöÇ Allowed KaTeX CSS files ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
@@ -643,6 +645,25 @@ function handleRequest(req, res, options) {
       _sendText(req, res, 500, 'text/html; charset=utf-8',
         '<h1>Shell error</h1><pre>' + _escapeHtml(err.message) + '</pre>');
     }
+    return true;
+  }
+
+  // GET /library ΓÇö Village Library: ordered precached lessons (edge-theta)
+  if (req.method === 'GET' && urlPath === '/library') {
+    try {
+      const libPath = path.join(__dirname, 'pwa', 'library.html');
+      _sendFile(req, res, libPath, MIME['.html'], 3600);
+    } catch (err) {
+      _sendText(req, res, 500, 'text/html; charset=utf-8', '<h1>Library error</h1>');
+    }
+    return true;
+  }
+
+  // GET /library.js ΓÇö shell library script
+  if (req.method === 'GET' && urlPath === '/library.js') {
+    const runtimeRoot = require('@agni/runtime').RUNTIME_ROOT;
+    const libJsPath = path.join(runtimeRoot, 'shell', 'library.js');
+    _sendFile(req, res, libJsPath, MIME['.js'], 3600);
     return true;
   }
 

@@ -1,5 +1,5 @@
 // shared.js - cached common code (factories, helpers)
-// ES5 compatible — loaded by PWA shell on Android 6.0 Chrome 44 WebView
+// ES5 compatible — loaded by PWA shell on Android 7.0 Nougat Chrome 51 WebView
 
 (function (root) {
   'use strict';

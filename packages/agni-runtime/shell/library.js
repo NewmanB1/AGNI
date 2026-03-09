@@ -1,57 +1,35 @@
 // packages/agni-runtime/shell/library.js
-// ES5 compatible — targets Android 6.0+ (Chrome 44 WebView).
+// ES5 compatible — targets Android 7.0+ (Nougat, API 24).
+// Uses edge-theta when available to order precached lessons offline.
 
-// 1. Mock Data (In production, this comes from fetch() or CacheStorage)
 var AVAILABLE_LESSONS = [
-    { 
-        identifier: "math:fractions", 
-        title: "Fractions w/ Rhythm", 
-        difficulty: 3, 
-        inferredFeatures: { sensors_used: ["accelerometer"], has_haptic_feedback: true } 
-    },
-    { 
-        identifier: "math:ratios", 
-        title: "Ratios (Textbook)", 
-        difficulty: 3, 
-        inferredFeatures: { sensors_used: [], interactive_elements_count: 0 } 
-    },
-    { 
-        identifier: "science:gravity", 
-        title: "Gravity Lab", 
-        difficulty: 2, 
-        inferredFeatures: { sensors_used: ["accelerometer"], has_graphs: true } 
-    }
+    { identifier: 'math:fractions', title: 'Fractions w/ Rhythm', difficulty: 3, inferredFeatures: { sensors_used: ['accelerometer'], has_haptic_feedback: true } },
+    { identifier: 'math:ratios', title: 'Ratios (Textbook)', difficulty: 3, inferredFeatures: { sensors_used: [], interactive_elements_count: 0 } },
+    { identifier: 'science:gravity', title: 'Gravity Lab', difficulty: 2, inferredFeatures: { sensors_used: ['accelerometer'], has_graphs: true } }
 ];
-
-// Mock User History (The "Kinetic Learner")
-var USER_LOG = [
-    { skillId: "intro:sensors", features: ["accelerometer"], score: 1.0, pace: 0.8 }
-];
-
-// Mock Village Graph
+var USER_LOG = [{ skillId: 'intro:sensors', features: ['accelerometer'], score: 1.0, pace: 0.8 }];
 var GRAPH_WEIGHTS = { edges: [] };
 
-function initLibrary() {
-    var listEl = document.getElementById('lesson-list');
-
-    // 1. Run the Adaptive Engine
-    var sorted = window.AGNI_NAVIGATOR.sortLessons(AVAILABLE_LESSONS, USER_LOG, GRAPH_WEIGHTS);
-
-    // 2. Render
+function renderLessons(sorted, listEl) {
     listEl.innerHTML = '';
+    if (sorted.length === 0) {
+        listEl.innerHTML = '<p style="color:#555;padding:1rem;">No lessons available. Connect to the hub and open a lesson to precache.</p>';
+        return;
+    }
     sorted.forEach(function (lesson, index) {
         var isRecommended = index === 0;
         var el = document.createElement('div');
         el.className = 'card' + (isRecommended ? ' recommended' : '');
         
-        var affinityLabel = lesson._score.components.styleBonus > 0 ? "Matches Your Style" : "";
+        var affinityLabel = (lesson._score && lesson._score.components && lesson._score.components.styleBonus > 0) ? 'Matches Your Style' : '';
+        var sensors = (lesson.inferredFeatures && lesson.inferredFeatures.sensors_used) ? lesson.inferredFeatures.sensors_used : [];
 
         var h3 = document.createElement('h3');
-        h3.textContent = lesson.title + (isRecommended ? ' ⭐' : '');
+        h3.textContent = (lesson.title || lesson.identifier || '') + (isRecommended ? ' ⭐' : '');
         var metaDiv = document.createElement('div');
         metaDiv.className = 'meta';
         var tagSpan = document.createElement('span');
-        lesson.inferredFeatures.sensors_used.forEach(function (s) {
+        sensors.forEach(function (s) {
             var tag = document.createElement('span');
             tag.className = 'tag';
             tag.textContent = s;
@@ -65,15 +43,46 @@ function initLibrary() {
         }
         var thetaSpan = document.createElement('span');
         thetaSpan.className = 'theta-score';
-        thetaSpan.textContent = 'θ ' + lesson._score.theta;
+        thetaSpan.textContent = 'θ ' + (lesson._score ? lesson._score.theta : '—');
         metaDiv.appendChild(tagSpan);
         metaDiv.appendChild(thetaSpan);
         el.appendChild(h3);
         el.appendChild(metaDiv);
         
-        el.onclick = function () { launchLesson(lesson.identifier); };
+        el.onclick = function () { launchLesson(lesson.identifier || lesson.slug || lesson.lessonId); };
         listEl.appendChild(el);
     });
+}
+
+function initLibrary() {
+    var listEl = document.getElementById('lesson-list');
+    if (!listEl) return;
+
+    var loadingEl = document.getElementById('loading');
+    if (loadingEl) loadingEl.textContent = 'Loading lessons...';
+
+    function done(sorted) {
+        if (loadingEl) loadingEl.style.display = 'none';
+        renderLessons(sorted, listEl);
+    }
+
+    var edgeTheta = window.AGNI_EDGE_THETA;
+    if (edgeTheta && typeof edgeTheta.getOrderedPrecachedLessons === 'function') {
+        edgeTheta.getOrderedPrecachedLessons().then(function (sorted) {
+            if (sorted && sorted.length > 0) return done(sorted);
+            if (window.AGNI_NAVIGATOR && typeof window.AGNI_NAVIGATOR.sortLessons === 'function') {
+                return done(window.AGNI_NAVIGATOR.sortLessons(AVAILABLE_LESSONS, USER_LOG, GRAPH_WEIGHTS));
+            }
+            done([]);
+        }).catch(function () { done([]); });
+        return;
+    }
+
+    if (window.AGNI_NAVIGATOR && typeof window.AGNI_NAVIGATOR.sortLessons === 'function') {
+        done(window.AGNI_NAVIGATOR.sortLessons(AVAILABLE_LESSONS, USER_LOG, GRAPH_WEIGHTS));
+    } else {
+        done([]);
+    }
 }
 
 function launchLesson(id) {

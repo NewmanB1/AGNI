@@ -62,15 +62,11 @@ Expands on `docs/ARCHITECTURE.md` Appendix: Known Gaps with actionable proposals
 
 ---
 
-## 6. Service Worker on Android Marshmallow
+## 6. Service Worker on Android (addressed by baseline change)
 
-**Gap:** Android Marshmallow WebView has inconsistent SW support.
+**Former gap:** Android 6.0 (Marshmallow) WebView had inconsistent SW support.
 
-**Proposed mitigation:**
-- Detect SW availability; if absent, fall back to no-cache mode (fetch lesson on each load).
-- Document degraded behaviour in `docs/RUN-ENVIRONMENTS.md`.
-
-**Effort:** Medium. Requires runtime feature detection and fallback path.
+**Resolution:** Edge hardware requirement updated to Android 7.0 (Nougat, API 24), which has reliable Service Worker support. We no longer target Marshmallow.
 
 ---
 
@@ -95,5 +91,5 @@ Expands on `docs/ARCHITECTURE.md` Appendix: Known Gaps with actionable proposals
 | HTML scrape | Done | Removed; Theta refuses to index without IR |
 | Device UUID | Low | Documentation only |
 | Federation | Low | Document contentHash behaviour |
-| Service Worker | Medium | Fallback for no-SW devices |
+| Service Worker | Resolved | Edge baseline now Android 7.0 (reliable SW) |
 | Root player.js | Low | Clarify or remove |

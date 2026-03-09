@@ -114,7 +114,7 @@ AGNI/
 
 **Sneakernet-ready.** Data travels with the human via QR codes (Base45/Gzip). No cloud accounts, no identities — just competency gates.
 
-**Compatibility.** The runtime targets **Android 6.0+** and **ES5** in the player and core runtime scripts. See `docs/ARCHITECTURE.md` §4.1 for the full baseline and checklist.
+**Compatibility.** The runtime targets **Android 7.0+ (Nougat, API 24)** and **ES5** in the player and core runtime scripts. See `docs/ARCHITECTURE.md` §4.1 for the full baseline and checklist.
 
 ---
 

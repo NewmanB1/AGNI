@@ -46,7 +46,7 @@ what standards must be met, what progression students follow. AGNI provides
 the tools; educators make the decisions.
 
 **5. Old devices are not broken devices.**
-If a phone can run a browser, it can run AGNI. We target Android 6 WebView,
+If a phone can run a browser, it can run AGNI. We target Android 7.0 (Nougat) WebView,
 ES5 JavaScript, and localStorage. No frameworks. No build steps in the
 runtime. Every byte earns its place.
 

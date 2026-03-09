@@ -18,7 +18,9 @@ Plan to enable proactive precaching of multiple lessons on edge devices when the
 - `GET /lessons/:slug` — full compiled HTML (~5–500 KB per lesson)
 - `GET /shell/:slug` + `GET /lesson-data.js?slug=X` — PWA shell + IR as script
 
-**Theta API:** `GET /api/theta?pseudoId=X` returns ordered lessons (`lessonId`, `slug`, `title`, …) based on skill graph, mastery, and MLC.
+**Theta API:** `GET /api/theta?pseudoId=X` returns ordered lessons (`lessonId`, `slug`, `title`, …), `graphWeights`, and `precacheSlugs` based on skill graph, mastery, and MLC.
+
+**Edge Theta (implemented):** `packages/agni-runtime/engine/edge-theta.js` runs on the device to order precached lessons when offline. Uses stored theta snapshot (from precache) + SW cache keys to discover precached lessons, then calls `AGNI_NAVIGATOR.sortLessons()`. Village Library at `/library` uses this.
 
 ---
 

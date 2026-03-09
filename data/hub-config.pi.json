@@ -1,5 +1,5 @@
 {
-  "_comment": "AGNI hub configuration optimized for Raspberry Pi village server (60 students, Android Marshmallow edge devices)",
+  "_comment": "AGNI hub configuration optimized for Raspberry Pi village server (60 students, Android 7.0 Nougat edge devices)",
 
   "nodeVersionRequired": ">=18",
   "nodeVersionNote": "Raspberry Pi OS Bullseye ships Node 12 by default. Upgrade to Node 18+ before deploying; Node 12 will cause silent failures.",

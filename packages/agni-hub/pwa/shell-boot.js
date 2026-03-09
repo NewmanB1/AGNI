@@ -1,6 +1,6 @@
 // shell-boot.js ΓÇö PWA shell bootstrap
 // Loaded as external script to satisfy CSP script-src 'self'.
-// ES5 compatible ΓÇö targets Android 6.0+ (Chrome 44 WebView).
+// ES5 compatible — targets Android 7.0+ (Nougat, API 24, Chrome 51 WebView).
 
 (function () {
   'use strict';

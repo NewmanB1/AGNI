@@ -3,7 +3,7 @@
 
 /**
  * Verifies that source files self-document their run environment.
- * Ensures hardware constraints (Edge = Marshmallow/ES5, Hub = Pi) are documented.
+ * Ensures hardware constraints (Edge = Android 7.0 Nougat/ES5, Hub = Pi) are documented.
  *
  * See docs/RUN-ENVIRONMENTS.md for the full mapping.
  * Exit 0 pass, 1 fail.
@@ -14,7 +14,7 @@ var path = require('path');
 
 var ROOT = path.resolve(__dirname, '..');
 
-// Files that must document edge-device target (Android Marshmallow, ES5)
+// Files that must document edge-device target (Android 7.0 Nougat, ES5)
 var EDGE_FILES = [
   'packages/agni-runtime/shared-runtime.js',
   'packages/agni-runtime/ui/player.js',
@@ -23,11 +23,12 @@ var EDGE_FILES = [
   'packages/agni-hub/sw.js',
   'packages/agni-hub/pwa/shell-boot.js',
   'packages/agni-hub/pwa/precache.js',
-  'packages/agni-hub/pwa/shared.js'
+  'packages/agni-hub/pwa/shared.js',
+  'packages/agni-runtime/engine/edge-theta.js'
 ];
 
 // Substrings that indicate edge-device documentation (any one suffices)
-var EDGE_MARKERS = ['ES5', 'Chrome 44', 'Android 6', 'Marshmallow', 'edge device', 'WebView'];
+var EDGE_MARKERS = ['ES5', 'Chrome 51', 'Android 7', 'Nougat', 'API 24', 'edge device', 'WebView'];
 
 // Files that must document Village Hub / Pi target
 var HUB_FILES = [

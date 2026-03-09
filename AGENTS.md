@@ -17,7 +17,7 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 | Package | Path | Role |
 |---------|------|------|
 | `@agni/utils` | `packages/agni-utils/` | Pure utilities: logging, config, crypto, I/O (leaf, no monorepo deps) |
-| `@agni/runtime` | `packages/agni-runtime/` | Browser runtime: player, sensors, SVG factories (ES5, Chrome 44+) |
+| `@agni/runtime` | `packages/agni-runtime/` | Browser runtime: player, sensors, SVG factories (ES5, Chrome 51+) |
 | `@ols/schema` | `packages/ols-schema/` | OLS JSON schema, validators, threshold grammar |
 | `@agni/engine` | `packages/agni-engine/` | LMS engine: Rasch, Thompson, embeddings, PageRank, federation |
 | `@ols/compiler` | `packages/ols-compiler/` | Lesson compiler: YAML → IR → HTML/native/YAML-packet |
@@ -44,7 +44,7 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 | Schemas | `schemas/*.json`, `@ols/schema` |
 | Shared types | `src/types/index.d.ts` |
 | API contract | `docs/api-contract.md` |
-| Run environments | `docs/RUN-ENVIRONMENTS.md` (Edge=Marshmallow/ES5, Hub=Pi) |
+| Run environments | `docs/RUN-ENVIRONMENTS.md` (Edge=Android 7.0 Nougat/ES5, Hub=Pi) |
 
 ---
 

@@ -34,7 +34,8 @@ const FACTORY_PATH_MAP = {
   'checkpoint.js':              'telemetry/checkpoint.js',
   'completion.js':              'telemetry/completion.js',
   'telemetry.js':               'telemetry/telemetry.js',
-  'navigator.js':               'engine/navigator.js'
+  'navigator.js':               'engine/navigator.js',
+  'edge-theta.js':              'engine/edge-theta.js'
 };
 
 /**

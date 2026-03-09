@@ -4,20 +4,20 @@
 /**
  * Validates that all edge-device browser code uses strict ES5 only.
  *
- * Target: Android 6.0 Marshmallow WebView (Chrome 44).
+ * Target: Android 7.0 (Nougat, API 24) WebView (Chrome 51).
  * Scope: packages/agni-runtime + packages/agni-hub/sw.js + packages/agni-hub/pwa/*.js
  *
  * Three categories:
  *   SYNTAX  — ES6 syntax that causes parse errors. Always an error.
- *   API     — ES6+ APIs not available in Chrome 44 without a polyfill.
+ *   API     — ES6+ APIs not available in Chrome 51 without a polyfill.
  *             Error UNLESS covered by packages/agni-runtime/polyfills.js.
- *   NATIVE  — APIs not in the ES5 spec but available natively in Chrome 44+.
+ *   NATIVE  — APIs not in the ES5 spec but available natively in Chrome 51+.
  *             (Promise, Map, Set, etc.) Informational only — not errors.
  *
  * polyfills.js is exempt from API checks because it necessarily references
  * the APIs it is polyfilling.
  * sw.js and pwa/*.js run in separate contexts (no polyfills) — must use only
- * Chrome 44–native or ES5 APIs.
+ * Chrome 51–native or ES5 APIs.
  */
 
 var fs = require('fs');
@@ -83,7 +83,7 @@ var SYNTAX_PATTERNS = [
   { re: /\bawait\s/,               name: 'await keyword' }
 ];
 
-// ── API patterns NOT in Chrome 44 — errors unless polyfilled ────────────────
+// ── API patterns NOT in Chrome 51 — errors unless polyfilled ────────────────
 // Polyfilled APIs (covered by src/runtime/polyfills.js) are flagged as warnings
 // in files other than polyfills.js itself, and skipped entirely in polyfills.js.
 var POLYFILLED_APIS = [
@@ -107,7 +107,7 @@ var UNPOLYFILLED_APIS = [
   { re: /\bNumber\.isInteger\b/,   name: 'Number.isInteger' }
 ];
 
-// ── APIs native to Chrome 44 but not ES5 — informational only ───────────────
+// ── APIs native to Chrome 51 but not ES5 — informational only ───────────────
 var NATIVE_44_APIS = [
   { re: /\.startsWith\s*\(/,       name: '.startsWith()' },
   { re: /\.endsWith\s*\(/,         name: '.endsWith()' },
@@ -198,11 +198,11 @@ files.forEach(function (entry) {
 
 console.log('');
 if (failed) {
-  console.error('ES5 check FAILED. Runtime files must be compatible with Chrome 44 WebViews.');
+  console.error('ES5 check FAILED. Runtime files must be compatible with Chrome 51 WebViews (Android 7.0).');
   console.error('  [SYNTAX] errors = ES6 syntax that causes parse errors — must be removed.');
-  console.error('  [API] errors = ES6+ APIs not in Chrome 44 and not polyfilled — must be fixed.');
+  console.error('  [API] errors = ES6+ APIs not in Chrome 51 and not polyfilled — must be fixed.');
   console.error('  [POLYFILLED] warnings = APIs covered by polyfills.js (loaded first) — OK.');
   process.exit(1);
 } else {
-  console.log('All runtime files pass ES5 check for Chrome 44.' + (warnCount > 0 ? ' (' + warnCount + ' polyfill-covered API usages noted)' : ''));
+  console.log('All runtime files pass ES5 check for Chrome 51 (Android 7.0).' + (warnCount > 0 ? ' (' + warnCount + ' polyfill-covered API usages noted)' : ''));
 }

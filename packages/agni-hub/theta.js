@@ -311,7 +311,7 @@ async function getLessonsSortedByTheta(pseudoId) {
     candidates = candidates.filter(l => approvedSet.has(l.lessonId));
   }
   const skillGraph = sharedCache.skillGraph || {};
-  const results = computeLessonOrder(candidates, skillGraph, baseCosts, graphWeights, masterySummary, pseudoId, scheduledSkills);
+  let results = computeLessonOrder(candidates, skillGraph, baseCosts, graphWeights, masterySummary, pseudoId, scheduledSkills);
 
   // Frustration-to-theta feedback loop: penalize lessons with historically frustrating steps
   // Indexed by pseudoId to avoid O(n) scan on every request [R10 P4.4]

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AGNI Village Library</title>
+  <style>
+    :root { --bg: #F4F1E8; --card: #FFFFFF; --accent: #0B5FFF; --text: #1A1A1A; --border: #2D2D2D; }
+    body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding: 1rem; }
+    h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+    .lesson-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+    .card { background: var(--card); border-radius: 2px; padding: 1.2rem; border-left: 4px solid var(--border); cursor: pointer; border: 2px solid var(--border); }
+    .card.recommended { border-left-color: var(--accent); background: #E3F2FD; }
+    .card h3 { margin: 0 0 0.5rem 0; font-size: 1.1rem; }
+    .meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #555; margin-top: 0.8rem; }
+    .tag { background: #E3F2FD; padding: 2px 6px; border-radius: 2px; font-size: 0.75rem; margin-right: 4px; }
+    .theta-score { font-family: monospace; font-weight: bold; color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header><h1>Village Library</h1></header>
+  <div id="loading">Loading lessons...</div>
+  <div id="lesson-list" class="lesson-grid"></div>
+  <script src="/factories/navigator.js"></script>
+  <script src="/factories/edge-theta.js"></script>
+  <script src="/library.js"></script>
+</body>
+</html>

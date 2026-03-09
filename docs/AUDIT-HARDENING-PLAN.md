@@ -96,24 +96,11 @@ Plan to address gaps identified in the architecture/audit review. Items are prio
 
 ---
 
-### B2. Service Worker Marshmallow fallback (P2)
+### B2. Service Worker fallback (P2) — *Deferred*
 
-**Gap:** Android 6 WebView has inconsistent SW support; no degraded cache fallback.
+**Former gap:** Android 6 (Marshmallow) WebView had inconsistent SW support.
 
-| Task | Scope | Deliverable |
-|------|-------|-------------|
-| B2.1 | Detect SW registration failure | In shell or factory-loader, after `navigator.serviceWorker.register()`: on failure, set flag `AGNI_SW_DEGRADED = true` |
-| B2.2 | Fallback: fetch shared assets without SW cache | When SW unavailable, fetch `/factories/shared-runtime.js` etc. via normal XHR/fetch; cache in memory or sessionStorage if needed |
-| B2.3 | Document in RUN-ENVIRONMENTS | "Marshmallow: SW may fail; fallback fetches assets on each lesson load" |
-| B2.4 | Optional: ES5 cache polyfill | If fetch fails offline, show "Connect to hub" message |
-
-**Proof:**
-- Regression: "AUDIT-B2: when SW register fails, lesson still loads (degraded mode)"
-- Manual: Test on Marshmallow emulator with SW disabled
-
-**Wiring:** factory-loader or shell-boot → navigator.serviceWorker.register → on fail → fallback fetch path.
-
-**Dependencies:** None.
+**Resolution:** Edge baseline changed to Android 7.0 (Nougat, API 24), which has reliable Service Worker support. B2 tasks are deferred; implement only if we resume support for pre-Nougat devices.
 
 ---
 

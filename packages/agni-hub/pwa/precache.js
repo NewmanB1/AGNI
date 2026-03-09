@@ -54,8 +54,19 @@
     fetch(thetaUrl, { headers: headers })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
-        if (!data || !Array.isArray(data.precacheSlugs) || data.precacheSlugs.length === 0) return;
+        if (!data) return;
         setThrottle();
+        if (Array.isArray(data.lessons) && (data.lessons.length > 0 || Array.isArray(data.precacheSlugs))) {
+          try {
+            var payload = {
+              lessons: data.lessons || [],
+              graphWeights: data.graphWeights || { edges: [] },
+              storedAt: Date.now()
+            };
+            localStorage.setItem('agni_theta_snapshot', JSON.stringify(payload));
+          } catch (_store) { void 0; }
+        }
+        if (!Array.isArray(data.precacheSlugs) || data.precacheSlugs.length === 0) return;
         var requested = 0;
         data.precacheSlugs.forEach(function (slug) {
           if (!slug) return;

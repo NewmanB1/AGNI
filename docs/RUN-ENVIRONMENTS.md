@@ -2,13 +2,13 @@
 
 **Hardware constraints (canonical):**
 - **Village Hub:** Raspberry Pi — Node.js 14+, ARM, limited RAM
-- **Edge devices (students):** Android 6.0 Marshmallow — Chrome 44 WebView, ES5 only, vanilla JS/HTML5/CSS3
+- **Edge devices (students):** Android 7.0 (Nougat, API 24) — Chrome 51 WebView, ES5 only, vanilla JS/HTML5/CSS3
 
 This document maps every piece of code to its run environment and enforced constraints.
 
 ---
 
-## 1. Edge device (browser) — Android Marshmallow
+## 1. Edge device (browser) — Android 7.0 (Nougat)
 
 Runs in the student's browser/WebView. Must be **ES5** and **vanilla JavaScript, HTML5, CSS3**. No frameworks.
 
@@ -62,7 +62,7 @@ Runs on developer machine or CI. Not edge, not necessarily Pi.
 
 ## 4. Portal (teacher UI — browser)
 
-Runs in teacher's browser. May use a modern desktop browser; not constrained to Marshmallow.
+Runs in teacher's browser. May use a modern desktop browser; not constrained to Nougat.
 
 | Path | Role |
 |------|------|

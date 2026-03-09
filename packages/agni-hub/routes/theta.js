@@ -18,13 +18,14 @@ function register(router, ctx) {
       .map(function (l) { return l.slug; })
       .filter(Boolean);
     return sendResponse(200, {
-      pseudoId:     qs.pseudoId,
-      lessons:      effectiveLessons,
+      pseudoId:      qs.pseudoId,
+      lessons:       effectiveLessons,
       precacheSlugs: precacheSlugs,
-      computedAt:   new Date().toISOString(),
-      cached:       thetaCache.has(qs.pseudoId),
-      graphSource:  graphWeights.level || 'village',
-      override:     overrideLessonId || undefined
+      graphWeights:  graphWeights,
+      computedAt:    new Date().toISOString(),
+      cached:        thetaCache.has(qs.pseudoId),
+      graphSource:   graphWeights.level || 'village',
+      override:      overrideLessonId || undefined
     });
   }));
 

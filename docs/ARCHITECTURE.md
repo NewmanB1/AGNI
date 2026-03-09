@@ -152,7 +152,7 @@ agni-core/
 ├── packages/
 │   ├── ols-compiler/             # Canonical: build-lesson-ir.js, markdown-pipeline, builders
 │   ├── agni-utils/               # feature-inference.js, runtimeManifest.js, crypto, io, etc.
-│   ├── agni-runtime/             # player, shared-runtime, sensor-bridge, svg-stage (ES5, Chrome 44)
+│   ├── agni-runtime/             # player, shared-runtime, sensor-bridge, svg-stage (ES5, Chrome 51)
 │   └── agni-hub/                 # theta, hub-transform, sw.js, pwa/, routes
 │
 ├── hub-tools/
@@ -568,7 +568,7 @@ prescribing specific lesson content.
 | — | Governance (policy, compliance, cohort coverage APIs on theta); services layer; lessonAssembly | Complete |
 | — | Refactor backlog: LMS migrations, IR/runtime types, runtimeManifest, binary utils, engine `.d.ts`, sneakernet script | Complete |
 
-- **Edge devices:** Android 6.0+ (Marshmallow), <2GB RAM, intermittent power. Runtime runs in Chrome/WebView — no Node. Hot paths use ES5-friendly patterns (e.g. no Map/Set in critical paths, Promise-based async) for broad device support.
+- **Edge devices:** Android 7.0+ (Nougat, API 24), <2GB RAM, intermittent power. Runtime runs in Chrome/WebView — no Node. Hot paths use ES5-friendly patterns (e.g. no Map/Set in critical paths, Promise-based async) for broad device support.
 - **Village Hub:** Raspberry Pi running Node 14+ (see `package.json` engines). Hub and engine use standard Node APIs compatible with legacy Pi images.
 - **Network:** 100% Offline capability. Intermittent "Village Hub" updates via Satellite/LoRa/USB/SD.
 
@@ -586,7 +586,7 @@ prescribing specific lesson content.
 | **Cached assets unsigned** | Service Worker caches `shared-runtime.js`, `svg-stage.js`. These are not per-lesson signed. | Shared assets are hub-served over TLS; integrity relies on first-fetch authenticity. |
 | **Federation merge** | No explicit version/timestamp in merge. Duplicate or out-of-order merges could affect posteriors. | `federation.js` uses contentHash (embeddingDim, mean, precision, sampleSize) for dedup; idempotent for same inputs. See `docs/GAP-ANALYSIS-AND-MITIGATIONS.md`. |
 | **LMS migration** | State migrated on load. Power loss during migration could corrupt state. | Atomic write: write to `.tmp` then rename. See `packages/agni-engine/index.js` `saveState`. |
-| **Service Worker** | Android Marshmallow WebView has inconsistent SW support. | No fallback defined; may need cache polyfill or degraded mode. |
+| **Service Worker** | *(Addressed by Android 7.0 baseline)* Nougat (API 24) has reliable SW support; we no longer target Marshmallow. | N/A — edge requirement is Android 7.0+. |
 | **Atomic compilation** | On-demand compile writes to response stream; no partial-file race for GET. Static build uses temp+rename. | hub-transform streams; no intermediate file. CLI uses atomic write. |
 - **Input:** Haptic/Sensor-first (Accelerometer, Vibration) + Touch.
 - **Trust:** Hub-and-Spoke Distribution for content (security), Mesh for signaling (interaction).
