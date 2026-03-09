@@ -533,7 +533,8 @@ function startApi(port) {
   const HUB_TRANSFORM_PATH = path.join(__dirname, 'hub-transform.js');
   try {
     const hubTransform = require(HUB_TRANSFORM_PATH);
-    hubTransform.attachRoutes(server, { dev: process.env.NODE_ENV !== 'production', deviceId: null, privateKey: null });
+    const privateKeyPath = envConfig.privateKeyPath || null;
+    hubTransform.attachRoutes(server, { dev: process.env.NODE_ENV !== 'production', deviceId: null, privateKey: privateKeyPath });
   } catch (err) {
     log.warn('hub-transform not available â€” /lessons/, /factories/, /katex/ routes disabled', { error: err.message });
   }

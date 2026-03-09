@@ -268,10 +268,11 @@ describe('verifyStudentPin', () => {
     studentId = r.student.pseudoId;
   });
 
-  it('returns verified for correct PIN', async () => {
+  it('returns verified and sessionToken for correct PIN', async () => {
     const r = await accounts.verifyStudentPin(studentId, '9999');
     assert.ok(r.ok);
     assert.ok(r.verified);
+    assert.ok(r.sessionToken && r.sessionToken.length > 0, 'sessionToken present');
   });
 
   it('returns not verified for wrong PIN', async () => {
@@ -288,5 +289,21 @@ describe('verifyStudentPin', () => {
   it('returns error for unknown student', async () => {
     const r = await accounts.verifyStudentPin('px-ghost', '1234');
     assert.ok(r.error);
+  });
+});
+
+describe('validateStudentSession', () => {
+  it('returns pseudoId for valid session token', async () => {
+    const s = await accounts.createStudent({ displayName: 'Session Test', pin: '1234' });
+    const r = await accounts.verifyStudentPin(s.student.pseudoId, '1234');
+    assert.ok(r.sessionToken);
+    const session = await accounts.validateStudentSession(r.sessionToken);
+    assert.ok(session);
+    assert.equal(session.pseudoId, s.student.pseudoId);
+  });
+
+  it('returns null for invalid token', async () => {
+    const session = await accounts.validateStudentSession('invalid-token');
+    assert.strictEqual(session, null);
   });
 });

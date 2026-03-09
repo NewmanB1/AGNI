@@ -38,8 +38,10 @@ export interface AccountsService {
   getStudent(pseudoId: string): Promise<{ student?: Record<string, unknown>; error?: string }>;
   updateStudent(pseudoId: string, updates: Record<string, unknown>): Promise<{ student?: Record<string, unknown>; error?: string }>;
   generateTransferToken(pseudoId: string, ttlMs?: number): Promise<{ token?: string; expiresAt?: string; error?: string }>;
-  claimTransferToken(token: string, targetPseudoId: string): Promise<{ ok?: boolean; error?: string }>;
-  verifyStudentPin(pseudoId: string, pin: string): Promise<{ valid?: boolean; error?: string }>;
+  claimTransferToken(token: string): Promise<{ ok?: boolean; pseudoId?: string; displayName?: string; sessionToken?: string; error?: string }>;
+  verifyStudentPin(pseudoId: string, pin: string): Promise<{ ok?: boolean; verified?: boolean; sessionToken?: string; error?: string }>;
+  createStudentSession(pseudoId: string): Promise<string>;
+  validateStudentSession(token: string): Promise<{ pseudoId: string } | null>;
   migrateLegacyPins(): Promise<{ migrated?: number; legacySha256?: number }>;
   generateCode(len: number): string;
 }

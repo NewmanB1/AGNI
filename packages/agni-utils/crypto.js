@@ -129,5 +129,23 @@ function signContent(contentString, deviceId, privateKeyPath) {
   }
 }
 
+/**
+ * Export public key as base64 SPKI DER from a PEM file (private or public).
+ * @param  {string} keyPath path to PEM file
+ * @returns {string|null} base64 SPKI or null
+ */
+function getPublicKeySpki(keyPath) {
+  if (!keyPath || typeof keyPath !== 'string') return null;
+  try {
+    const pemContent = fs.readFileSync(keyPath, 'utf8');
+    const keyObject = crypto.createPublicKey({ key: pemContent, format: 'pem' });
+    const derBuffer = keyObject.export({ type: 'spki', format: 'der' });
+    return derBuffer.toString('base64');
+  } catch (err) {
+    log.warn('Could not read public key: ' + (err && err.message));
+    return null;
+  }
+}
 
-module.exports = { signContent, canonicalJSON };
+
+module.exports = { signContent, canonicalJSON, getPublicKeySpki };

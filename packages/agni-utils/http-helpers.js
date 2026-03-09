@@ -119,6 +119,20 @@ function extractBearerToken(req, _qs) {
 }
 
 /**
+ * Extract student session token from Cookie or Authorization header.
+ * Used by lesson delivery to bind compiled content to authenticated identity.
+ * @param {import('http').IncomingMessage} req
+ * @returns {string|null}
+ */
+function extractStudentSessionToken(req) {
+  const authHeader = req.headers['authorization'] || '';
+  if (authHeader.startsWith('Bearer ')) return authHeader.slice(7);
+  const cookieHeader = req.headers['cookie'] || '';
+  const match = cookieHeader.match(/\bagni_student_session=([^\s;]+)/);
+  return match ? match[1] : null;
+}
+
+/**
  * Sanitize an error for external display (strip file paths and stack traces).
  * @param {Error|string} err
  * @returns {string}
@@ -162,6 +176,7 @@ module.exports = {
   handleJsonBody,
   createResponseSender,
   extractBearerToken,
+  extractStudentSessionToken,
   safeErrorMessage,
   checkAuthRateLimit,
   generateRequestId

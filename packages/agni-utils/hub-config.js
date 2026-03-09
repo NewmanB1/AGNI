@@ -30,7 +30,8 @@ const CONFIG_KEYS = [
   ['homeUrl', 'AGNI_HOME_URL'],
   ['usbPath', 'AGNI_USB_PATH'],
   ['sentryPort', 'AGNI_SENTRY_PORT'],
-  ['syncTransport', 'AGNI_SYNC_TRANSPORT']
+  ['syncTransport', 'AGNI_SYNC_TRANSPORT'],
+  ['privateKeyPath', 'AGNI_PRIVATE_KEY_PATH']
 ];
 
 let _loaded = false;

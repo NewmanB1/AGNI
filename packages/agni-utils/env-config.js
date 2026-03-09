@@ -135,6 +135,9 @@ const config = {
 
   yamlMaxBytes:       Math.max(65536, intVal('AGNI_YAML_MAX_BYTES', 2 * 1024 * 1024)),
 
+  /** Path to Ed25519 private key for signing lessons. Empty = no signing. */
+  privateKeyPath:     strVal('AGNI_PRIVATE_KEY_PATH', ''),
+
   logLevel:           strVal('AGNI_LOG_LEVEL', 'info'),
 };
 

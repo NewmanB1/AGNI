@@ -53,13 +53,15 @@ const buildLessonIR      = buildLessonIrModule.buildLessonIR;
 const buildLessonSidecar = buildLessonIrModule.buildLessonSidecar;
 const buildKatexCss      = require('@agni/utils/katex-css-builder');
 const lessonSchema       = require('@ols/schema/lesson-schema');
-const { signContent, canonicalJSON } = require('@agni/utils/crypto');
+const { signContent, canonicalJSON, getPublicKeySpki } = require('@agni/utils/crypto');
 const generateNonce      = require('@agni/utils/csp').generateNonce;
 const buildCspMeta       = require('@agni/utils/csp').buildCspMeta;
 const lessonAssembly     = require('@ols/compiler/services/lesson-assembly');
 const _escapeHtml        = require('@agni/utils/io').escapeHtml;
 const { resolveFactoryPath } = require('@agni/utils/runtimeManifest');
 const lessonChain        = require('@agni/services/lesson-chain');
+const { extractStudentSessionToken } = require('@agni/utils/http-helpers');
+const accountsService   = require('@agni/services/accounts');
 
 // ΓöÇΓöÇ Version (from package.json, used for SW stamping) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const PKG_VERSION   = require('../../package.json').version || '0.0.0';
@@ -72,7 +74,7 @@ const KATEX_DIR     = process.env.AGNI_KATEX_DIR   || path.join(__dirname, '../.
 const SERVE_PORT    = envConfig.servePort;
 
 // ΓöÇΓöÇ In-memory lesson cache ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-// { slug: { html: string, sidecar: object, mtime: number, lastAccessed: number } }
+// { slug: { ir, sidecar, mtime, lastAccessed } } — HTML assembled per-request for device binding
 //
 // MAX_CACHE_ENTRIES caps memory usage on long-running Pi processes.
 // LRU eviction: when the cache is full, the entry with the oldest
@@ -241,7 +243,8 @@ async function compileLesson(slug, options) {
   if (cached && cached.mtime === loaded.mtime) {
     cached.lastAccessed = Date.now();
     if (options.dev) log.debug('Cache hit', { slug });
-    return { html: cached.html, sidecar: cached.sidecar, lessonIR: cached.lessonIR };
+    const html = _assembleHtml(cached.ir, options);
+    return { html: html, sidecar: cached.sidecar, lessonIR: cached.ir };
   }
 
   // In-flight guard: return existing compilation Promise if one is running
@@ -263,7 +266,8 @@ async function compileLesson(slug, options) {
       const stale = _lessonCache[slug];
       if (stale) {
         log.warn('Compilation failed, serving last successful cached artifact', { slug, error: err.message });
-        return { html: stale.html, sidecar: stale.sidecar, lessonIR: stale.lessonIR };
+        const html = _assembleHtml(stale.ir, options);
+        return { html: html, sidecar: stale.sidecar, lessonIR: stale.ir };
       }
       throw err;
     })
@@ -303,29 +307,6 @@ async function _doCompile(slug, loaded, options) {
     buildKatexCss.buildKatexCss(ir.inferredFeatures.katexAssets, KATEX_DIR);
   }
 
-  // Read runtime files
-  const runtimeDir      = require('@agni/runtime').RUNTIME_ROOT;
-  const factoryLoaderJs = fs.readFileSync(resolveFactoryPath(runtimeDir, 'factory-loader.js'), 'utf8');
-  const playerJs        = fs.readFileSync(resolveFactoryPath(runtimeDir, 'player.js'),         'utf8');
-  const styles          = fs.readFileSync(path.join(runtimeDir, 'style.css'),          'utf8');
-
-  // Serialize and sign with canonical JSON for cross-platform consistency [R10 P1.5]
-  const canonicalData = canonicalJSON(ir);
-  const signature     = signContent(canonicalData, options.deviceId, options.privateKey);
-  // Generate a per-request nonce for the CSP <meta> tag.
-  // LESSON_DATA changes every compilation so a hash would have to be
-  // recomputed per request — a nonce is equivalent and simpler here.
-  const nonce = generateNonce();
-  const nonceBootstrap = 'window.AGNI_CSP_NONCE=' + JSON.stringify(nonce) + ';';
-  const lessonScript = nonceBootstrap + '\n' + lessonAssembly.buildLessonScript(ir, {
-    signature:       signature,
-    publicKeySpki:   options.publicKeySpki != null ? options.publicKeySpki : '',
-    deviceId:        options.deviceId || '',
-    factoryLoaderJs: factoryLoaderJs,
-    playerJs:        playerJs
-  });
-  const html = _buildPwaShell(ir, styles, lessonScript, nonce);
-
   const isUpdate = !!_lessonCache[slug];
 
   // LRU eviction: if cache is full and this is a new entry, evict oldest
@@ -346,15 +327,45 @@ async function _doCompile(slug, loaded, options) {
   }
 
   _lessonCache[slug] = {
-    html:         html,
-    sidecar:      sidecar,
-    lessonIR:     ir,
-    mtime:        loaded.mtime,
-    lastAccessed: Date.now()
+    ir:            ir,
+    sidecar:       sidecar,
+    mtime:         loaded.mtime,
+    lastAccessed:  Date.now()
   };
   if (!isUpdate) _cacheSize++;
 
+  const html = _assembleHtml(ir, options);
   return { html: html, sidecar: sidecar, lessonIR: ir };
+}
+
+/**
+ * Assemble HTML from cached IR with per-request signing (device binding).
+ * @param  {object} ir
+ * @param  {object} options { deviceId, privateKey, publicKeySpki, dev }
+ * @returns {string}
+ */
+function _assembleHtml(ir, options) {
+  const runtimeDir = require('@agni/runtime').RUNTIME_ROOT;
+  const factoryLoaderJs = fs.readFileSync(resolveFactoryPath(runtimeDir, 'factory-loader.js'), 'utf8');
+  const playerJs = fs.readFileSync(resolveFactoryPath(runtimeDir, 'player.js'), 'utf8');
+  const styles = fs.readFileSync(path.join(runtimeDir, 'style.css'), 'utf8');
+  const opts = options || {};
+  const deviceId = opts.deviceId || null;
+  const privateKeyPath = opts.privateKey || null;
+  let publicKeySpki = opts.publicKeySpki;
+  if (publicKeySpki == null && privateKeyPath) publicKeySpki = getPublicKeySpki(privateKeyPath) || '';
+  const canonicalData = canonicalJSON(ir);
+  const signature = signContent(canonicalData, deviceId, privateKeyPath);
+  const nonce = generateNonce();
+  const nonceBootstrap = 'window.AGNI_CSP_NONCE=' + JSON.stringify(nonce) + ';';
+  const lessonScript = nonceBootstrap + '\n' + lessonAssembly.buildLessonScript(ir, {
+    signature:       signature != null ? signature : '',
+    publicKeySpki:   publicKeySpki != null ? publicKeySpki : '',
+    deviceId:        deviceId || '',
+    factoryLoaderJs: factoryLoaderJs,
+    playerJs:        playerJs
+  });
+  return _buildPwaShell(ir, styles, lessonScript, nonce);
 }
 
 /**
@@ -493,6 +504,23 @@ function _sendFile(req, res, filePath, contentType, maxAge) {
 // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 
 /**
+ * Resolve per-request compile options: merge base options with authenticated
+ * deviceId from student session (cookie or Bearer token).
+ * @param  {http.IncomingMessage} req
+ * @param  {object} baseOptions { deviceId, privateKey, dev }
+ * @returns {Promise<object>}
+ */
+function _getRequestCompileOptions(req, baseOptions) {
+  const base = baseOptions || {};
+  const token = extractStudentSessionToken(req);
+  if (!token) return Promise.resolve(base);
+  return accountsService.validateStudentSession(token).then(function (session) {
+    if (!session || !session.pseudoId) return base;
+    return Object.assign({}, base, { deviceId: session.pseudoId });
+  }).catch(function () { return base; });
+}
+
+/**
  * Handle an incoming request for lesson delivery or factory assets.
  * Returns true if the request was handled, false to fall through to the
  * next handler (e.g. theta.js routes).
@@ -537,7 +565,9 @@ function handleRequest(req, res, options) {
   const sidecarMatch = urlPath.match(/^\/lessons\/([a-zA-Z0-9_\-/]+)\/sidecar$/);
   if (req.method === 'GET' && sidecarMatch) {
     const sidecarSlug = sidecarMatch[1];
-    compileLesson(sidecarSlug, options || {}).then(function (result) {
+    _getRequestCompileOptions(req, options || {}).then(function (opts) {
+      return compileLesson(sidecarSlug, opts);
+    }).then(function (result) {
       if (!result) return _sendJson(req, res, 404, { error: 'Lesson not found' });
       _sendJson(req, res, 200, result.sidecar);
     }).catch(function (err) {
@@ -550,7 +580,9 @@ function handleRequest(req, res, options) {
   const lessonMatch = urlPath.match(/^\/lessons\/([a-zA-Z0-9_\-/]+)$/);
   if (req.method === 'GET' && lessonMatch) {
     const slug = lessonMatch[1];
-    compileLesson(slug, options || {}).then(function (result) {
+    _getRequestCompileOptions(req, options || {}).then(function (opts) {
+      return compileLesson(slug, opts);
+    }).then(function (result) {
       if (!result) {
         _sendText(req, res, 404, 'text/html; charset=utf-8',
           '<h1>Lesson not found</h1><p>No YAML source found for: ' +
@@ -659,7 +691,9 @@ function handleRequest(req, res, options) {
         'var LESSON_DATA = null; /* no slug provided */');
       return true;
     }
-    compileLesson(slug, options || {}).then(function (result) {
+    _getRequestCompileOptions(req, options || {}).then(function (opts) {
+      return compileLesson(slug, opts);
+    }).then(function (result) {
       if (!result) {
         _sendText(req, res, 200, MIME['.js'],
           'var LESSON_DATA = null; /* lesson not found: ' + _escapeHtml(slug) + ' */');

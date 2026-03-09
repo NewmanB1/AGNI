@@ -297,17 +297,21 @@ Static build output (CLI `--output`) may write to `serveDir/lessons/<slug>/index
 
 ## 5. Security & Governance: "Device Binding"
 
-We enforce a "Digital Chain of Custody" to prevent the spread of corrupted, unverified,
-or unauthorized lessons via P2P file sharing.
+We enforce a "Digital Chain of Custody" to limit the spread of corrupted or unverified lessons. The binding provides integrity and an anti-copy watermark; it does **not** provide authentication (UUID is client-supplied).
 
 ### 5.1 The "Signed Lease" Model
 
 We move from a "Public Flyer" model to a "Personalized Ticket" model.
 
-1. **Request:** Student device sends its UUID (e.g., `A-123`) to the Hub. *Trust model:* UUID is client-supplied; the binding prevents P2P cloning (a copied file fails the intended-owner check on another device).
-2. **Binding:** Hub compiles the lesson and calculates `Hash(Content + UUID)`. *Content* is the canonical JSON of the lesson IR (the HTML payload); see `utils/crypto.js` and `lessonAssembly`.
+1. **Request:** When auth is enabled, the student device sends a session token (cookie or Bearer). The Hub validates it and extracts the pseudoId. When auth is disabled, UUID is client-supplied (legacy).
+2. **Binding:** Hub compiles the lesson and calculates `Hash(Content + pseudoId)`. *Content* is the canonical JSON of the lesson IR (the HTML payload); see `utils/crypto.js` and `lessonAssembly`.
 3. **Signing:** Hub signs the hash with its Private Authority Key.
-4. **Injection:** The signature and intended UUID are hardcoded into the compiled artifact.
+4. **Injection:** The signature and intended owner (pseudoId) are hardcoded into the compiled artifact.
+
+**What the system provides:**
+- **Integrity ✓** — Signature verifies content has not been tampered with.
+- **Anti-copy watermark ✓** — A copied file fails the intended-owner check when run on a *different* device (different UUID). Prevents casual P2P sharing.
+- **Ownership binding ✓ (when auth enabled)** — With student session auth and hub private key configured, the Hub binds lessons to *authenticated* pseudoId only. See §5.3.
 
 ### 5.2 Runtime Verification (Implemented)
 
@@ -315,12 +319,32 @@ We move from a "Public Flyer" model to a "Personalized Ticket" model.
 
 When the lesson runs:
 
-- **Check 1 (Identity):** Does the UUID embedded in the code match the device UUID?
-  Mismatch → "Unauthorized Copy." (Stops P2P file cloning.)
+- **Check 1 (Watermark):** Does the UUID embedded in the code match the device UUID?
+  Mismatch → "Unauthorized Copy." (Anti-copy: a file copied to another device fails.)
 - **Check 2 (Integrity):** Does the signature match the content?
   Mismatch → "Corrupted File." (Stops malicious editing.)
 
 **Village deployment hardening:** For hardened hub and edge device configurations (firewall, WiFi client isolation, kiosk, safe state writes), see **`docs/playbooks/village-security.md`**.
+
+### 5.3 Identity Spoofing Prevention (Implemented)
+
+To prevent students from claiming another student's identity (pseudoId), the Hub authenticates identity before signing lesson content.
+
+**Flow:**
+1. **Auth:** Student proves identity via PIN (`POST /api/accounts/student/verify-pin`) or transfer token claim (`POST /api/accounts/student/claim`). On success, the Hub creates a short-lived session and sets `agni_student_session` cookie (or returns `sessionToken` in the response body).
+2. **Lesson request:** Device requests `GET /lessons/:slug` or `GET /lesson-data.js?slug=...`. Cookie (or `Authorization: Bearer <token>`) is sent automatically.
+3. **Validate:** `validateStudentSession(token)` returns `{ pseudoId }` if the token is valid and the student is active.
+4. **Sign:** Hub compiles lesson IR (cached), signs with `deviceId = pseudoId`, assembles HTML, and serves. Content is bound to the *authenticated* identity.
+5. **Runtime:** `verifyIntegrity()` in the player checks `OLS_INTENDED_OWNER` against the device's stored pseudoId. Mismatch → "Unauthorized Copy."
+
+**Fallback (no auth):** When no valid session cookie/header is present, the Hub serves **unsigned** lessons (signature empty, `OLS_INTENDED_OWNER` empty). This preserves backward compatibility for deployments that do not configure PINs or a hub private key.
+
+**Configuration:**
+- `AGNI_PRIVATE_KEY_PATH` (or `privateKeyPath` in hub-config.json): Ed25519 private key for signing. Empty = no signing.
+- Students without a PIN cannot obtain a session; they receive unsigned lessons.
+- Session TTL: 24 hours (STUDENT_SESSION_TTL_MS). Cookie: `HttpOnly`, `SameSite=Lax`, `Path=/`.
+
+**Implementation:** `packages/agni-services/accounts.js` (createStudentSession, validateStudentSession), `packages/agni-hub/hub-transform.js` (_getRequestCompileOptions, _assembleHtml), `packages/agni-utils/http-helpers.js` (extractStudentSessionToken).
 
 ---
 
@@ -545,8 +569,8 @@ prescribing specific lesson content.
 |-----|----------|------------|
 | **YAML schema versioning** | IR has `_schemaVersion`; YAML itself is unversioned. Offline hubs may receive YAML with new fields that old compilers reject. | Consider adding `yamlSchemaVersion` to YAML meta for forward-compat checks. |
 | **DAG validation** | Cycles make lessons permanently ineligible. Theta throws at startup when cycles are detected; `verify:skill-dag` is in `verify:all`. | Run `npm run verify:skill-dag` before deployment. Theta exits on cycle. |
-| **HTML scrape fallback** | Theta falls back to HTML scraping when no IR sidecar exists. Brittle; markup changes can break indexing. | Logged as warning. Prefer IR sidecars; avoid deploying lessons without sidecars. |
-| **Device UUID trust** | Hub binds content to client-supplied UUID. UUID is not authenticated or hardware-bound. | Documented: device sends UUID; hub signs Hash(Content + UUID). Trust boundary is hub–device; P2P cloning prevented by signature. |
+| **HTML scrape fallback** | *(Resolved)* Theta previously fell back to HTML scraping when no IR sidecar existed. | Removed. Theta now refuses to index lessons without IR (single source of truth). |
+| **Device UUID trust** | When auth enabled: Hub binds content to *authenticated* pseudoId (PIN or transfer-token). Without auth: unsigned lessons served. | See §5.3. Provides integrity + anti-copy + ownership binding when PIN/session and `AGNI_PRIVATE_KEY_PATH` are configured. |
 | **Signature scope** | `Content` in Hash(Content + UUID) is the canonical JSON of the lesson IR (HTML payload). | See `utils/crypto.js` and `lessonAssembly`; same scope for CLI and hub-transform. |
 | **Cached assets unsigned** | Service Worker caches `shared-runtime.js`, `svg-stage.js`. These are not per-lesson signed. | Shared assets are hub-served over TLS; integrity relies on first-fetch authenticity. |
 | **Federation merge** | No explicit version/timestamp in merge. Duplicate or out-of-order merges could affect posteriors. | `federation.js` uses contentHash (embeddingDim, mean, precision, sampleSize) for dedup; idempotent for same inputs. See `docs/GAP-ANALYSIS-AND-MITIGATIONS.md`. |

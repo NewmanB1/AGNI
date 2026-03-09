@@ -17,6 +17,7 @@ const envConfig = require('@agni/utils/env-config');
 const SCRYPT_KEYLEN = 64;
 const TOKEN_BYTES = 32;
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+const STUDENT_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const TRANSFER_TTL_MS = 48 * 60 * 60 * 1000;
 
 const { loadJSONAsync: loadJson, saveJSONAsync: saveJson } = require('@agni/utils/json-store');
@@ -82,6 +83,7 @@ function createAccounts(config) {
   const creatorsPath = path.join(dataDir, 'creator-accounts.json');
   const studentsPath = path.join(dataDir, 'student-accounts.json');
   const sessionsPath = path.join(dataDir, 'sessions.json');
+  const studentSessionsPath = path.join(dataDir, 'student-sessions.json');
 
   async function loadCreators() {
     return loadJson(creatorsPath, { creators: [] });
@@ -108,6 +110,44 @@ function createAccounts(config) {
   function purgeExpiredSessions(sessions) {
     const now = Date.now();
     sessions.sessions = sessions.sessions.filter(function(s) { return new Date(s.expiresAt).getTime() > now; });
+  }
+
+  function purgeExpiredStudentSessions(data) {
+    const now = Date.now();
+    data.sessions = data.sessions.filter(function(s) { return new Date(s.expiresAt).getTime() > now; });
+  }
+
+  async function createStudentSession(pseudoId) {
+    const token = randomHex(TOKEN_BYTES);
+    await withLock(studentSessionsPath, async function() {
+      const data = await loadJson(studentSessionsPath, { sessions: [] });
+      purgeExpiredStudentSessions(data);
+      data.sessions.push({
+        tokenHash: hashToken(token),
+        pseudoId: pseudoId,
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + STUDENT_SESSION_TTL_MS).toISOString()
+      });
+      await saveJson(studentSessionsPath, data);
+    });
+    return token;
+  }
+
+  async function validateStudentSession(token) {
+    if (!token || typeof token !== 'string' || !token.trim()) return null;
+    const data = await loadJson(studentSessionsPath, { sessions: [] });
+    const now = Date.now();
+    const incoming = hashToken(token.trim());
+    const session = data.sessions.find(function(s) {
+      if (new Date(s.expiresAt).getTime() <= now) return false;
+      const stored = s.tokenHash || s.token;
+      if (incoming.length !== stored.length) return false;
+      return crypto.timingSafeEqual(Buffer.from(incoming), Buffer.from(stored));
+    });
+    if (!session) return null;
+    const r = await findStudentWithData(session.pseudoId);
+    if (!r.student || !r.student.active) return null;
+    return { pseudoId: session.pseudoId };
   }
 
   async function registerCreator(opts) {
@@ -430,7 +470,8 @@ async function claimTransferToken(token) {
     student.transferTokenHash = null;
     student.transferExpiresAt = null;
     await saveStudents(data);
-    return { ok: true, pseudoId: student.pseudoId, displayName: student.displayName };
+    const sessionToken = await createStudentSession(student.pseudoId);
+    return { ok: true, pseudoId: student.pseudoId, displayName: student.displayName, sessionToken: sessionToken };
   });
 }
 
@@ -459,7 +500,8 @@ async function verifyStudentPin(pseudoId, pin) {
       delete student.pin;
       await saveStudents(r.data);
     }
-    return { ok: true, verified: true };
+    const sessionToken = await createStudentSession(pseudoId);
+    return { ok: true, verified: true, sessionToken: sessionToken };
   });
 }
 
@@ -489,6 +531,8 @@ async function migrateLegacyPins() {
     validateSession,
     destroySession,
     cleanExpiredSessions,
+    createStudentSession,
+    validateStudentSession,
     listCreators,
     setCreatorApproval,
     setCreatorRole,

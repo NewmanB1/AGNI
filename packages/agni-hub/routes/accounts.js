@@ -101,6 +101,10 @@ function register(router, ctx) {
       if (!payload.token) return sendResponse(400, { error: 'token required' });
       const result = await accountsService.claimTransferToken(payload.token);
       if (result.error) return sendResponse(400, result);
+      if (result.sessionToken) {
+        const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
+        res.setHeader('Set-Cookie', 'agni_student_session=' + result.sessionToken + '; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax' + secure);
+      }
       return sendResponse(200, result);
     });
   }));
@@ -110,6 +114,10 @@ function register(router, ctx) {
       if (!payload.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
       const result = await accountsService.verifyStudentPin(payload.pseudoId, payload.pin);
       if (result.error) return sendResponse(404, result);
+      if (result.sessionToken) {
+        const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
+        res.setHeader('Set-Cookie', 'agni_student_session=' + result.sessionToken + '; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax' + secure);
+      }
       return sendResponse(200, result);
     });
   }));
