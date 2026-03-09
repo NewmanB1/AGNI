@@ -42,9 +42,17 @@
 //   Embed the base64 SPKI in html.js as OLS_PUBLIC_KEY.
 //   In the browser, import with format: 'spki' — do NOT strip the DER
 //   wrapper. SubtleCrypto requires SPKI; raw 32-byte import gives a wrong key.
+//
+// SIGNATURE SCOPE (v2.1)
+//   Content = full lesson script (IR + factories + player), NOT just IR.
+//   Placeholder replaces signature before hashing so signer and verifier agree.
+//   Integrity.js must use the same placeholder when reconstructing for verification.
 // ─────────────────────────────────────────────────────────────────────────────
 
 'use strict';
+
+/** Placeholder for signature value when computing the binding hash. Must match integrity.js. */
+const SIG_PLACEHOLDER = '__OLS_SIG_PLACEHOLDER__';
 
 const crypto = require('crypto');
 const fs     = require('fs');
@@ -148,4 +156,4 @@ function getPublicKeySpki(keyPath) {
 }
 
 
-module.exports = { signContent, canonicalJSON, getPublicKeySpki };
+module.exports = { signContent, canonicalJSON, getPublicKeySpki, SIG_PLACEHOLDER };

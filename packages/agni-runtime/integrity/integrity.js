@@ -16,11 +16,14 @@
 //   always fail verification.
 //
 // ES5 only — targets Android 6.0+ (Chrome 44 WebView).
-
+//
+// SCOPE: Content = full lesson script (IR + factories + player), not just IR.
+// Must match @agni/utils/crypto SIG_PLACEHOLDER.
 (function (global) {
   'use strict';
 
   var S = global.AGNI_SHARED;
+  var SIG_PLACEHOLDER = '__OLS_SIG_PLACEHOLDER__';
 
   function getBase64ToBytes() { return S.base64ToBytes; }
   function getConcatBytes()   { return S.concatBytes; }
@@ -38,9 +41,25 @@
     } catch (e) { return false; }
   }
 
-  // Canonical JSON: sorted keys, deterministic across platforms [P1.5]
-  function canonicalize(obj) {
-    return S.canonicalJSON ? S.canonicalJSON(obj) : JSON.stringify(obj);
+  // Find the lesson script (contains OLS_SIGNATURE and LESSON_DATA)
+  function findLessonScriptText() {
+    try {
+      var scripts = document.getElementsByTagName('script');
+      for (var i = 0; i < scripts.length; i++) {
+        var txt = scripts[i].textContent || scripts[i].innerText || '';
+        if (txt.indexOf('OLS_SIGNATURE') !== -1 && txt.indexOf('LESSON_DATA') !== -1) {
+          return txt;
+        }
+      }
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+
+  // Replace signature value with placeholder for binding hash reconstruction.
+  // Preserve whitespace so reconstructed string matches signer exactly.
+  function scriptWithPlaceholder(scriptText) {
+    if (!scriptText) return scriptText;
+    return scriptText.replace(/(OLS_SIGNATURE\s*=\s*)"[^"]*"/, '$1"' + SIG_PLACEHOLDER + '"');
   }
 
   function buildBindingHash(contentString, deviceId) {
@@ -56,7 +75,8 @@
     var sigBytes    = base64ToBytes(global.OLS_SIGNATURE);
     var pubKeyBytes = base64ToBytes(global.OLS_PUBLIC_KEY);
     var owner       = global.OLS_INTENDED_OWNER;
-    var content     = canonicalize(lesson);
+    var scriptText  = findLessonScriptText();
+    var content     = scriptText ? scriptWithPlaceholder(scriptText) : (S.canonicalJSON ? S.canonicalJSON(lesson) : JSON.stringify(lesson));
 
     return crypto.subtle.importKey(
       'spki',
@@ -130,7 +150,8 @@
       var spkiBytes = base64ToBytes(global.OLS_PUBLIC_KEY);
       var rawPubKey = spkiBytes.slice(spkiBytes.length - 32);
       var owner     = global.OLS_INTENDED_OWNER;
-      var content   = canonicalize(lesson);
+      var scriptText = findLessonScriptText();
+      var content    = scriptText ? scriptWithPlaceholder(scriptText) : (S.canonicalJSON ? S.canonicalJSON(lesson) : JSON.stringify(lesson));
 
       var contentBytes = utf8Encode(content);
       var sepBytes     = new Uint8Array([0x00]);

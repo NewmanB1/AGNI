@@ -6,7 +6,7 @@ const { createLogger } = require('@agni/utils/logger');
 
 const log = createLogger('html-builder');
 
-const { signContent, canonicalJSON } = require('@agni/utils/crypto');
+const { signContent, SIG_PLACEHOLDER } = require('@agni/utils/crypto');
 const { generateNonce, buildCspMeta } = require('@agni/utils/csp');
 const io                 = require('@agni/utils/io');
 const ensureDir          = io.ensureDir;
@@ -92,16 +92,6 @@ async function buildHtml(lessonData, options) {
 
   ir.requires = { factories: factoryDeps };
 
-  const canonicalData = canonicalJSON(ir);
-  let signature = null;
-  if (options.skipSigning) {
-    log.info('Signing skipped (--skip-signing)');
-  } else if (options.deviceId && options.privateKey) {
-    signature = signContent(canonicalData, options.deviceId, options.privateKey);
-  } else if (options.deviceId) {
-    throw new Error('Device binding requested but --private-key not provided. Use --skip-signing for unsigned builds.');
-  }
-
   const publicKeySpki = readPublicKeySpki(options.publicKey);
 
   if (options.deviceId && !publicKeySpki) {
@@ -116,6 +106,21 @@ async function buildHtml(lessonData, options) {
 
   const nonce = generateNonce();
   const nonceBootstrap = 'window.AGNI_CSP_NONCE=' + JSON.stringify(nonce) + ';';
+  let signature = null;
+  if (options.skipSigning) {
+    log.info('Signing skipped (--skip-signing)');
+  } else if (options.deviceId && options.privateKey) {
+    const scriptWithPlaceholder = nonceBootstrap + '\n' + lessonAssembly.buildLessonScript(ir, {
+      signature:       SIG_PLACEHOLDER,
+      publicKeySpki:   publicKeySpki || '',
+      deviceId:        options.deviceId || '',
+      factoryLoaderJs: factoryLoaderJs,
+      playerJs:        playerJs
+    });
+    signature = signContent(scriptWithPlaceholder, options.deviceId, options.privateKey);
+  } else if (options.deviceId) {
+    throw new Error('Device binding requested but --private-key not provided. Use --skip-signing for unsigned builds.');
+  }
   const lessonScript = nonceBootstrap + '\n' + lessonAssembly.buildLessonScript(ir, {
     signature:       signature,
     publicKeySpki:   publicKeySpki || '',

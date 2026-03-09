@@ -304,7 +304,7 @@ We enforce a "Digital Chain of Custody" to limit the spread of corrupted or unve
 We move from a "Public Flyer" model to a "Personalized Ticket" model.
 
 1. **Request:** When auth is enabled, the student device sends a session token (cookie or Bearer). The Hub validates it and extracts the pseudoId. When auth is disabled, UUID is client-supplied (legacy).
-2. **Binding:** Hub compiles the lesson and calculates `Hash(Content + pseudoId)`. *Content* is the canonical JSON of the lesson IR (the HTML payload); see `utils/crypto.js` and `lessonAssembly`.
+2. **Binding:** Hub compiles the lesson and calculates `Hash(Content + pseudoId)`. *Content* is the **full lesson script** (IR + factory-loader + player), with a placeholder replacing the signature value before hashing. This ensures integrity of the entire executable artifact, not just the IR. See `utils/crypto.js`, `lessonAssembly`, and `integrity/integrity.js`.
 3. **Signing:** Hub signs the hash with its Private Authority Key.
 4. **Injection:** The signature and intended owner (pseudoId) are hardcoded into the compiled artifact.
 
@@ -315,7 +315,7 @@ We move from a "Public Flyer" model to a "Personalized Ticket" model.
 
 ### 5.2 Runtime Verification (Implemented)
 
-`player.js` implements `verifyIntegrity()`: it reads `OLS_SIGNATURE`, `OLS_PUBLIC_KEY`, and `OLS_INTENDED_OWNER` from the page, rebuilds the binding hash (SHA-256 of content + NUL + deviceId), and verifies the Ed25519 signature. It uses Web Crypto `SubtleCrypto` when available, with a TweetNaCl fallback for runtimes (e.g. older iOS) that do not support Ed25519 in SubtleCrypto. Signing is implemented in `utils/crypto.js`; both CLI and hub-transform inject the same globals via the shared `lessonAssembly` service.
+`player.js` implements `verifyIntegrity()`: it reads `OLS_SIGNATURE`, `OLS_PUBLIC_KEY`, and `OLS_INTENDED_OWNER` from the page, finds the lesson script in the DOM, replaces the signature value with a placeholder, and rebuilds the binding hash (SHA-256 of full script + NUL + deviceId). The Ed25519 signature is verified against this hash. Signatures produced before v2.1 (IR-only scope) will fail verification; lessons must be re-signed. It uses Web Crypto `SubtleCrypto` when available, with a TweetNaCl fallback for runtimes (e.g. older iOS) that do not support Ed25519 in SubtleCrypto. Signing is implemented in `utils/crypto.js`; both CLI and hub-transform inject the same globals via the shared `lessonAssembly` service.
 
 When the lesson runs:
 
@@ -571,7 +571,7 @@ prescribing specific lesson content.
 | **DAG validation** | Cycles make lessons permanently ineligible. Theta throws at startup when cycles are detected; `verify:skill-dag` is in `verify:all`. | Run `npm run verify:skill-dag` before deployment. Theta exits on cycle. |
 | **HTML scrape fallback** | *(Resolved)* Theta previously fell back to HTML scraping when no IR sidecar existed. | Removed. Theta now refuses to index lessons without IR (single source of truth). |
 | **Device UUID trust** | When auth enabled: Hub binds content to *authenticated* pseudoId (PIN or transfer-token). Without auth: unsigned lessons served. | See §5.3. Provides integrity + anti-copy + ownership binding when PIN/session and `AGNI_PRIVATE_KEY_PATH` are configured. |
-| **Signature scope** | `Content` in Hash(Content + UUID) is the canonical JSON of the lesson IR (HTML payload). | See `utils/crypto.js` and `lessonAssembly`; same scope for CLI and hub-transform. |
+| **Signature scope** | *(Resolved v2.1)* Content = full lesson script (IR + factory-loader + player), with signature placeholder. Covers entire executable artifact. | See `utils/crypto.js`, `lessonAssembly`, `integrity/integrity.js`. Lessons signed with pre-v2.1 (IR-only) must be re-signed. |
 | **Cached assets unsigned** | Service Worker caches `shared-runtime.js`, `svg-stage.js`. These are not per-lesson signed. | Shared assets are hub-served over TLS; integrity relies on first-fetch authenticity. |
 | **Federation merge** | No explicit version/timestamp in merge. Duplicate or out-of-order merges could affect posteriors. | `federation.js` uses contentHash (embeddingDim, mean, precision, sampleSize) for dedup; idempotent for same inputs. See `docs/GAP-ANALYSIS-AND-MITIGATIONS.md`. |
 | **LMS migration** | State migrated on load. Power loss during migration could corrupt state. | Atomic write: write to `.tmp` then rename. See `packages/agni-engine/index.js` `saveState`. |

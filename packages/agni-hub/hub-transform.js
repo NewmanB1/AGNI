@@ -53,7 +53,7 @@ const buildLessonIR      = buildLessonIrModule.buildLessonIR;
 const buildLessonSidecar = buildLessonIrModule.buildLessonSidecar;
 const buildKatexCss      = require('@agni/utils/katex-css-builder');
 const lessonSchema       = require('@ols/schema/lesson-schema');
-const { signContent, canonicalJSON, getPublicKeySpki } = require('@agni/utils/crypto');
+const { signContent, canonicalJSON, getPublicKeySpki, SIG_PLACEHOLDER } = require('@agni/utils/crypto');
 const generateNonce      = require('@agni/utils/csp').generateNonce;
 const buildCspMeta       = require('@agni/utils/csp').buildCspMeta;
 const lessonAssembly     = require('@ols/compiler/services/lesson-assembly');
@@ -354,10 +354,19 @@ function _assembleHtml(ir, options) {
   const privateKeyPath = opts.privateKey || null;
   let publicKeySpki = opts.publicKeySpki;
   if (publicKeySpki == null && privateKeyPath) publicKeySpki = getPublicKeySpki(privateKeyPath) || '';
-  const canonicalData = canonicalJSON(ir);
-  const signature = signContent(canonicalData, deviceId, privateKeyPath);
   const nonce = generateNonce();
   const nonceBootstrap = 'window.AGNI_CSP_NONCE=' + JSON.stringify(nonce) + ';';
+  let signature = null;
+  if (deviceId && privateKeyPath) {
+    const scriptWithPlaceholder = nonceBootstrap + '\n' + lessonAssembly.buildLessonScript(ir, {
+      signature:       SIG_PLACEHOLDER,
+      publicKeySpki:   publicKeySpki != null ? publicKeySpki : '',
+      deviceId:        deviceId || '',
+      factoryLoaderJs: factoryLoaderJs,
+      playerJs:        playerJs
+    });
+    signature = signContent(scriptWithPlaceholder, deviceId, privateKeyPath);
+  }
   const lessonScript = nonceBootstrap + '\n' + lessonAssembly.buildLessonScript(ir, {
     signature:       signature != null ? signature : '',
     publicKeySpki:   publicKeySpki != null ? publicKeySpki : '',
