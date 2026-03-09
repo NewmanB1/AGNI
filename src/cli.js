@@ -101,18 +101,24 @@ async function run() {
 
   // ── Validate-only mode ────────────────────────────────────────────────
   if (params.validateOnly) {
-    const yaml = require('js-yaml');
+    const compilerService = require('@ols/compiler/services/compiler');
     const lessonSchema = require('./services/lesson-schema');
     const lessonValidator = require('./utils/lesson-validator');
+    const envConfig = require('@agni/utils/env-config');
 
-    const raw = fs.readFileSync(params.inputFile, 'utf8');
-    let lessonData;
-    try {
-      lessonData = yaml.load(raw);
-    } catch (e) {
-      console.error('YAML parse error:', e.message);
+    const stat = fs.statSync(params.inputFile);
+    const maxBytes = envConfig.yamlMaxBytes || 2 * 1024 * 1024;
+    if (stat.size > maxBytes) {
+      console.error('YAML file exceeds max size (' + stat.size + ' > ' + maxBytes + ')');
       process.exit(1);
     }
+    const raw = fs.readFileSync(params.inputFile, 'utf8');
+    const parsed = compilerService.parseLessonFromString(raw, { maxBytes: maxBytes });
+    if (parsed.error) {
+      console.error('YAML parse error:', parsed.error);
+      process.exit(1);
+    }
+    const lessonData = parsed.lessonData;
 
     let hasErrors = false;
     const seen = new Set();

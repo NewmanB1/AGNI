@@ -10,6 +10,9 @@
     "./lesson-validator": "./lesson-validator.js",
     "./lesson-schema": "./lesson-schema.js"
   },
+  "dependencies": {
+    "@agni/utils": "0.1.0"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/NewmanB1/AGNI.git",

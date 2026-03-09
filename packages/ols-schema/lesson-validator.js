@@ -408,8 +408,8 @@ if (require.main === module) {
 
   if (/\.ya?ml$/i.test(filePath)) {
     try {
-      var yaml = require('js-yaml');
-      data = yaml.load(raw, { schema: yaml.JSON_SCHEMA });
+      var safeYamlLoad = require('@agni/utils/yaml-safe').safeYamlLoad;
+      data = safeYamlLoad(raw);
     } catch (e) {
       log.error('YAML parse error: ' + e.message);
       process.exit(1);

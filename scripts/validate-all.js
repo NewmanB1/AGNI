@@ -3,7 +3,7 @@
 // and threshold syntax for hardware_trigger steps (e.g. freefall > 0.2s).
 const fs = require('fs');
 const path = require('path');
-const yaml = require('js-yaml');
+const { safeYamlLoad } = require('@ols/compiler/services/compiler');
 const { execSync } = require('child_process');
 const { validateThresholdSyntax } = require('../src/utils/threshold-syntax');
 
@@ -57,7 +57,7 @@ files.forEach(({ rel: file, full: fullPath }) => {
 
   try {
     const content = fs.readFileSync(fullPath, 'utf8');
-    const data = yaml.load(content);
+    const data = safeYamlLoad(content);
     fs.writeFileSync(tmpJson, JSON.stringify(data));
 
     execSync(`npx ajv validate -s "${schemaPath}" -d "${tmpJson}" -c ajv-formats`, {

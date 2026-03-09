@@ -10,7 +10,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const yaml = require('js-yaml');
+const { safeYamlLoad } = require('@ols/compiler/services/compiler');
 
 let Ajv, addFormats;
 try {
@@ -58,7 +58,7 @@ if (fs.existsSync(lessonsDir)) {
   for (const file of lessons) {
     const filePath = path.join(lessonsDir, file);
     try {
-      const data = yaml.load(fs.readFileSync(filePath, 'utf8'));
+      const data = safeYamlLoad(fs.readFileSync(filePath, 'utf8'));
       validate('ols.schema.json', data, file);
     } catch (err) {
       console.error('  FAIL ' + file + ' (parse error: ' + err.message + ')');

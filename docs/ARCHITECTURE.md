@@ -22,20 +22,20 @@ generated Just-in-Time (JIT) at the edge — the Village Hub.
 ```mermaid
 flowchart TB
     subgraph Sources
-        YAML[YAML Lesson]
+        YAML["YAML Lesson"]
     end
 
     subgraph Hub["Village Hub"]
-        Compiler[Compiler / @ols/compiler]
-        IR[IR + lesson-ir.json]
+        Compiler["Compiler / @ols/compiler"]
+        IR["IR + lesson-ir.json"]
         Theta["Theta (skill graph, MLC)"]
         LMS["LMS Engine (Rasch, Thompson)"]
         HT[hub-transform]
     end
 
     subgraph Outputs
-        HTML[HTML bundle]
-        Native[Native bundle]
+        HTML["HTML bundle"]
+        Native["Native bundle"]
     end
 
     subgraph Device
@@ -43,7 +43,7 @@ flowchart TB
     end
 
     subgraph Portal["Teacher Portal"]
-        PortalUI[Portal UI]
+        PortalUI["Portal UI"]
     end
 
     YAML --> Compiler
@@ -111,6 +111,25 @@ At render time, `svg-stage.js` (cached on the device) generates and animates the
 locally from the spec parameters.
 
 Result: After first lesson, new lessons are tiny (no duplicated code), and bandwidth is saved.
+
+### 2.3 YAML Security (Untrusted Lessons)
+
+YAML is not safe by default. A standard parser can be exploited via:
+
+- **Anchors/aliases** — exponential expansion (billion laughs), DoS on Pi hub
+- **Custom tags** — arbitrary object construction, prototype pollution
+- **Large input** — resource exhaustion
+
+**Mitigations (enforced by compiler):**
+
+| Mitigation         | Implementation                                              |
+|--------------------|-------------------------------------------------------------|
+| Max file size      | `AGNI_YAML_MAX_BYTES` (default 2MB), checked before read    |
+| No anchors/aliases | Pre-parse rejection; OLS lessons must not use `&` or `*`    |
+| No custom tags     | `js-yaml` with `JSON_SCHEMA` only                           |
+| Alias limit        | `maxAliasCount: 50` (defense in depth)                      |
+
+All YAML parsing goes through `@agni/utils/yaml-safe` or `@ols/compiler` `safeYamlLoad`. Do not use raw `yaml.load()` on lesson content. See `tests/unit/yaml-safe.test.js`.
 
 ---
 

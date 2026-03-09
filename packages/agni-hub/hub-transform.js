@@ -44,10 +44,10 @@ loadHubConfig(path.join(__dirname, '../../data'));
 
 const fs      = require('fs');
 const zlib    = require('zlib');
-const yaml    = require('js-yaml');
 
 const { createLogger }   = require('@agni/utils/logger');
 const log                = createLogger('hub-transform');
+const compilerService     = require('@ols/compiler/services/compiler');
 const buildLessonIrModule = require('@ols/compiler/compiler/build-lesson-ir');
 const buildLessonIR      = buildLessonIrModule.buildLessonIR;
 const buildLessonSidecar = buildLessonIrModule.buildLessonSidecar;
@@ -193,7 +193,7 @@ function loadYaml(slug) {
         return null;
       }
       const raw        = fs.readFileSync(yamlPath, 'utf8');
-      const lessonData = yaml.load(raw, { schema: yaml.JSON_SCHEMA });
+      const lessonData = compilerService.safeYamlLoad(raw, { maxBytes: maxBytes });
       const claimed = (lessonData.meta && lessonData.meta.content_hash) || '';
       if (claimed && process.env.AGNI_VERIFY_YAML_HASH === '1') {
         const v = lessonChain.verifyContentHash(lessonData);

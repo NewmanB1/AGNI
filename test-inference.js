@@ -2,7 +2,7 @@
 // Runs inference on all YAML lessons in ./lessons and prints results
 const fs = require('fs');
 const path = require('path');
-const yaml = require('js-yaml');
+const { safeYamlLoad } = require('@ols/compiler/services/compiler');
 const { inferFeatures } = require('./src/utils/feature-inference');
 const lessonsDir = './lessons';
 console.log('Scanning directory:', path.resolve(lessonsDir));
@@ -20,7 +20,7 @@ try {
     console.log(`Processing: ${file}`);
     try {
       const content = fs.readFileSync(fullPath, 'utf8');
-      const lesson = yaml.load(content);
+      const lesson = safeYamlLoad(content);
       // Safety: ensure lesson is a valid object
       if (!lesson || typeof lesson !== 'object') {
         throw new Error('YAML did not parse to a valid object (possibly empty or malformed)');

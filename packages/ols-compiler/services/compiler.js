@@ -2,8 +2,8 @@
 
 const fs   = require('fs');
 const path = require('path');
-const yaml = require('js-yaml');
 const { createLogger } = require('@agni/utils/logger');
+const { safeYamlLoad: safeYamlLoadUtil, DEFAULT_MAX_BYTES } = require('@agni/utils/yaml-safe');
 
 const log = createLogger('compiler');
 
@@ -15,8 +15,10 @@ const compiler = require('../compiler/build-lesson-ir');
 const buildLessonIR = compiler.buildLessonIR;
 const buildLessonSidecar = compiler.buildLessonSidecar;
 
-function safeYamlLoad(str) {
-  return yaml.load(str, { schema: yaml.JSON_SCHEMA });
+var DEFAULT_YAML_MAX_BYTES = DEFAULT_MAX_BYTES;
+
+function safeYamlLoad(str, opts) {
+  return safeYamlLoadUtil(str, opts);
 }
 
 async function buildIRWithSidecar(lessonData, options) {
@@ -25,12 +27,21 @@ async function buildIRWithSidecar(lessonData, options) {
   return { ir, sidecar };
 }
 
-function parseLessonFromString(rawYaml) {
+function parseLessonFromString(rawYaml, opts) {
+  opts = opts || {};
   if (rawYaml == null || typeof rawYaml !== 'string') {
     return { error: 'Raw YAML must be a string' };
   }
   try {
-    const lessonData = safeYamlLoad(rawYaml.trim());
+    var maxBytes = opts.maxBytes;
+    if (maxBytes == null) {
+      try {
+        maxBytes = require('@agni/utils/env-config').yamlMaxBytes;
+      } catch (_) {
+        maxBytes = DEFAULT_YAML_MAX_BYTES;
+      }
+    }
+    var lessonData = safeYamlLoad(rawYaml.trim(), { maxBytes: maxBytes });
     return { lessonData: lessonData };
   } catch (err) {
     return { error: (err && err.message) ? err.message : String(err) };
@@ -38,8 +49,18 @@ function parseLessonFromString(rawYaml) {
 }
 
 function parseLessonYaml(inputPath) {
-  const raw = fs.readFileSync(inputPath, 'utf8');
-  const lessonData = safeYamlLoad(raw);
+  var stat = fs.statSync(inputPath);
+  var maxBytes;
+  try {
+    maxBytes = require('@agni/utils/env-config').yamlMaxBytes;
+  } catch (_) {
+    maxBytes = DEFAULT_YAML_MAX_BYTES;
+  }
+  if (stat.size > maxBytes) {
+    throw new Error('YAML file exceeds max size (' + stat.size + ' > ' + maxBytes + ')');
+  }
+  var raw = fs.readFileSync(inputPath, 'utf8');
+  var lessonData = safeYamlLoad(raw, { maxBytes: maxBytes });
   return { lessonData: lessonData, raw: raw };
 }
 

@@ -1,6 +1,9 @@
 {
   "name": "@agni/utils",
   "version": "0.1.0",
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
   "description": "Shared utilities for the AGNI platform: logging, config, crypto, I/O, rate limiting, and more.",
   "license": "AGPL-3.0",
   "main": "index.js",
