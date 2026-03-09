@@ -168,7 +168,7 @@ Goal: USB = charging only. Disable MTP, USB debugging, ADB. USB should only be e
 
 AGNI already enforces content integrity. See `docs/ARCHITECTURE.md` §5.
 
-- **Signed bundles:** Lessons are signed with Ed25519. The hub binds content to device UUID: `Hash(Content + UUID)` signed with hub private key.
+- **Signed bundles:** Lessons are signed with Ed25519. The hub binds content to device UUID: `Hash(Content + NUL + UUID)` signed with hub private key. **Content** = full lesson script block (nonce bootstrap + factory-loader + `LESSON_DATA` IR + integrity globals + player.js), not just IR JSON. The HTML wrapper, `<style>` block, and external factory files (shared-runtime, integrity.js, etc.) are **not** signed — they must be served from trusted paths. See `packages/agni-utils/crypto.js` and `packages/agni-runtime/integrity/integrity.js`.
 - **Runtime verification:** `packages/agni-runtime/ui/player.js` implements `verifyIntegrity()` — checks identity (intended owner) and integrity (signature).
 - **Implementation:** `packages/agni-utils/crypto.js`, `lessonAssembly` (shared by CLI and hub-transform).
 

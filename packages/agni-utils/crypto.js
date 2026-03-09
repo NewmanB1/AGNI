@@ -44,7 +44,9 @@
 //   wrapper. SubtleCrypto requires SPKI; raw 32-byte import gives a wrong key.
 //
 // SIGNATURE SCOPE (v2.1)
-//   Content = full lesson script (IR + factories + player), NOT just IR.
+//   Content = full lesson script (nonce bootstrap + factory-loader + LESSON_DATA IR
+//   + integrity globals + player.js). HTML wrapper, <style>, and external factory
+//   files (shared-runtime, integrity.js) are NOT signed.
 //   Placeholder replaces signature before hashing so signer and verifier agree.
 //   Integrity.js must use the same placeholder when reconstructing for verification.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -98,7 +100,7 @@ function canonicalJSON(obj) {
  * pre-hash that eliminates concatenation ambiguity and keeps the Ed25519
  * payload fixed at 32 bytes regardless of lesson size.
  *
- * @param  {string}      contentString  serialised lesson IR (JSON)
+ * @param  {string}      contentString  full lesson script (nonce + factory-loader + LESSON_DATA + integrity globals + player), with OLS_SIGNATURE replaced by SIG_PLACEHOLDER
  * @param  {string}      deviceId       intended device UUID
  * @param  {string}      privateKeyPath path to PEM-encoded Ed25519 private key
  * @returns {string|null}               base64 Ed25519 signature, or null

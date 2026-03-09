@@ -73,7 +73,7 @@ Lessons declare **`ontology.requires`** and **`ontology.provides`** (skills, e.g
 
 ## Device binding & integrity
 
-Lessons are signed per device. The Hub compiles for a given device UUID, computes `Hash(Content + NUL + UUID)`, and signs with Ed25519. Compiled HTML contains `OLS_SIGNATURE`, `OLS_PUBLIC_KEY`, `OLS_INTENDED_OWNER`. At runtime, **`packages/agni-runtime/integrity/integrity.js`** verifies identity (prevents P2P cloning) and signature (detects corruption). Signing: **`packages/agni-utils/crypto.js`**; globals injection: **`packages/ols-compiler/services/lesson-assembly.js`**.
+Lessons are signed per device. The Hub compiles for a given device UUID, computes `Hash(Content + NUL + UUID)` (Content = full lesson script: nonce + factory-loader + LESSON_DATA + globals + player), and signs with Ed25519. The HTML wrapper and external factory files (shared-runtime, integrity.js) are not signed. Compiled HTML contains `OLS_SIGNATURE`, `OLS_PUBLIC_KEY`, `OLS_INTENDED_OWNER`. At runtime, **`packages/agni-runtime/integrity/integrity.js`** verifies identity (prevents P2P cloning) and signature (detects corruption). Signing: **`packages/agni-utils/crypto.js`**; globals injection: **`packages/ols-compiler/services/lesson-assembly.js`**.
 
 ---
 

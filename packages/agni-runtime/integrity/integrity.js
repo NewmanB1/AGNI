@@ -17,7 +17,8 @@
 //
 // ES5 only — targets Android 6.0+ (Chrome 44 WebView).
 //
-// SCOPE: Content = full lesson script (IR + factories + player), not just IR.
+// SCOPE: Content = full lesson script (nonce + factory-loader + LESSON_DATA +
+// integrity globals + player). HTML wrapper and external factories are not signed.
 // Must match @agni/utils/crypto SIG_PLACEHOLDER.
 (function (global) {
   'use strict';
