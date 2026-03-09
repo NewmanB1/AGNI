@@ -75,6 +75,7 @@ steps:     # Content: text, hardware instructions, SVG parameters
 ## Security
 
 - **Device binding:** `Hash(Content + NUL + UUID)` signed with Ed25519. Content = full lesson script (nonce + factory-loader + LESSON_DATA + globals + player), not IR only. HTML wrapper and external factory files are not signed.
+- **Lesson vs resource bundles:** Lesson bundle (HTML + inline script) is signed; resource bundle (factories, styles, media) is pre-cached, arrives independently, and relies on trusted paths. See `docs/ARCHITECTURE.md` §4 and `docs/playbooks/village-security.md` §6.
 - **Runtime checks:** Identity match → Unauthorized Copy; Signature match → Corrupted File
 - **Trust:** Hub-and-Spoke for content; Mesh for signaling (P2P interaction only)
 

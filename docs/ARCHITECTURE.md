@@ -293,6 +293,17 @@ On-demand hub-transform checks disk first; if `index.html` exists and its mtime 
 3. `shared-runtime.js` and other factory assets written to output dir; reused across all lessons.
 4. Files distributed to devices via USB/SD/sneakernet.
 
+**Lesson bundle vs resource bundle:**
+
+Resources (SVG factories, stylesheets, media libraries, shared scripts) are cached ahead of time on the edge device. They arrive independently of the lesson HTML and cannot be bundled with it. This creates two distinct bundles:
+
+| Bundle | Contents | Delivery | Integrity |
+|--------|----------|----------|-----------|
+| **Lesson bundle** | HTML document, inline lesson script (nonce + factory-loader + LESSON_DATA + globals + player), optional co-delivered assets | Per-lesson, on-demand or precached | Ed25519 signature over full lesson script block (see §5) |
+| **Resource bundle** | Factories (`shared-runtime.js`, `integrity.js`, etc.), styles (`style.css`), KaTeX CSS, SVG factories, media (JPEG library, etc.) | Pre-cached; fetched via factory-loader | SRI (sha384 per factory in manifest); factory-loader verifies before execution |
+
+The lesson bundle is the unit of lesson delivery. The resource bundle is shared across lessons and must be served from trusted paths. Because resources are delivered separately, they require their own integrity mechanism — not part of the lesson signature. See `docs/playbooks/village-security.md` §6 for integrity scope.
+
 ---
 
 ## 5. Security & Governance: "Device Binding"

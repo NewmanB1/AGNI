@@ -6,7 +6,7 @@ const { createLogger } = require('@agni/utils/logger');
 
 const log = createLogger('html-builder');
 
-const { signContent, SIG_PLACEHOLDER } = require('@agni/utils/crypto');
+const { signContent, computeSRI, SIG_PLACEHOLDER } = require('@agni/utils/crypto');
 const { generateNonce, buildCspMeta } = require('@agni/utils/csp');
 const io                 = require('@agni/utils/io');
 const ensureDir          = io.ensureDir;
@@ -87,7 +87,17 @@ async function buildHtml(lessonData, options) {
   var RUNTIME_VERSION = pkgVersion;
 
   const factoryDeps = factoryFilesToCopy.map(function (file) {
-    return { file: file, version: RUNTIME_VERSION };
+    const dep = { file: file, version: RUNTIME_VERSION };
+    try {
+      var srcPath = resolveFactoryPath(runtimeDir, file);
+      if (!fs.existsSync(srcPath)) srcPath = path.join(runtimeDir, file);
+      if (fs.existsSync(srcPath)) {
+        dep.integrity = computeSRI(fs.readFileSync(srcPath, 'utf8'));
+      }
+    } catch (e) {
+      log.warn('Could not compute SRI for ' + file + ': ' + (e && e.message));
+    }
+    return dep;
   });
 
   ir.requires = { factories: factoryDeps };

@@ -54,7 +54,7 @@ const buildLessonIR      = buildLessonIrModule.buildLessonIR;
 const buildLessonSidecar = buildLessonIrModule.buildLessonSidecar;
 const buildKatexCss      = require('@agni/utils/katex-css-builder');
 const lessonSchema       = require('@ols/schema/lesson-schema');
-const { signContent, canonicalJSON, getPublicKeySpki, SIG_PLACEHOLDER } = require('@agni/utils/crypto');
+const { signContent, canonicalJSON, getPublicKeySpki, computeSRI, SIG_PLACEHOLDER } = require('@agni/utils/crypto');
 const generateNonce      = require('@agni/utils/csp').generateNonce;
 const buildCspMeta       = require('@agni/utils/csp').buildCspMeta;
 const lessonAssembly     = require('@ols/compiler/services/lesson-assembly');
@@ -364,6 +364,17 @@ async function _doCompile(slug, loaded, options) {
   const manifest        = (ir.inferredFeatures && ir.inferredFeatures.factoryManifest) || [];
   manifest.forEach(function (filename) {
     factoryDeps.push({ file: filename, version: RUNTIME_VERSION });
+  });
+  // Add SRI integrity hashes for resource bundle verification
+  factoryDeps.forEach(function (dep) {
+    try {
+      const srcPath = resolveFactoryPath(FACTORY_DIR, dep.file);
+      if (fs.existsSync(srcPath)) {
+        dep.integrity = computeSRI(fs.readFileSync(srcPath, 'utf8'));
+      }
+    } catch (e) {
+      log.warn('Could not compute SRI for ' + dep.file + ': ' + (e && e.message));
+    }
   });
   ir.requires = { factories: factoryDeps };
 

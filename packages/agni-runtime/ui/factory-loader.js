@@ -201,6 +201,54 @@
     });
   }
 
+  // ── SRI verification (resource bundle integrity) ─────────────────────────────
+
+  /**
+   * UTF-8 encode string to Uint8Array. Uses TextEncoder when available (Chrome 38+).
+   */
+  function utf8Encode(str) {
+    if (typeof TextEncoder === 'function') {
+      return new TextEncoder().encode(str);
+    }
+    var bytes = [];
+    for (var i = 0; i < str.length; i++) {
+      var c = str.charCodeAt(i);
+      if (c < 0x80) bytes.push(c);
+      else if (c < 0x800) bytes.push(0xC0 | (c >> 6), 0x80 | (c & 0x3F));
+      else if (c >= 0xD800 && c <= 0xDBFF && i + 1 < str.length) {
+        var c2 = str.charCodeAt(++i);
+        var cp = ((c - 0xD800) << 10) + (c2 - 0xDC00) + 0x10000;
+        bytes.push(0xF0 | (cp >> 18), 0x80 | ((cp >> 12) & 0x3F), 0x80 | ((cp >> 6) & 0x3F), 0x80 | (cp & 0x3F));
+      } else {
+        bytes.push(0xE0 | (c >> 12), 0x80 | ((c >> 6) & 0x3F), 0x80 | (c & 0x3F));
+      }
+    }
+    return new Uint8Array(bytes);
+  }
+
+  /**
+   * Verify Subresource Integrity. Returns Promise<boolean>.
+   * Format: "sha384-<base64>". Uses crypto.subtle.digest.
+   */
+  function verifySRI(text, integrity) {
+    if (!integrity || typeof integrity !== 'string') return Promise.resolve(true);
+    var match = /^sha384-(.+)$/i.exec(integrity);
+    if (!match) return Promise.resolve(false);
+    var expectedB64 = match[1];
+    if (!global.crypto || !global.crypto.subtle || typeof global.crypto.subtle.digest !== 'function') {
+      console.warn('[LOADER] SRI verification skipped: crypto.subtle unavailable');
+      return Promise.resolve(true);
+    }
+    var data = utf8Encode(text);
+    return global.crypto.subtle.digest('SHA-384', data).then(function (hashBuffer) {
+      var bytes = new Uint8Array(hashBuffer);
+      var binary = '';
+      for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      var actualB64 = btoa(binary);
+      return actualB64 === expectedB64;
+    });
+  }
+
   // ── Script execution ────────────────────────────────────────────────────────
 
   /**
@@ -293,21 +341,31 @@
     var url = _hubUrl + '/factories/' + dep.file;
     if (global.DEV_MODE) console.log('[LOADER] Loading:', key, 'from', url);
 
+    function verifyAndExecute(text) {
+      if (dep.integrity) {
+        return verifySRI(text, dep.integrity).then(function (valid) {
+          if (!valid) throw new Error('SRI verification failed for ' + dep.file);
+          executeScript(text, url);
+        });
+      }
+      executeScript(text, url);
+      return Promise.resolve();
+    }
+
     var promise = readFromCache(url).then(function (cached) {
       if (cached) {
         if (global.DEV_MODE) console.log('[LOADER] Cache hit:', key);
-        executeScript(cached, url);
-        _loaded[key] = true;
-        return;
+        return verifyAndExecute(cached);
       }
 
       if (global.DEV_MODE) console.log('[LOADER] Hub fetch:', key);
       return fetchFromHub(url, timeoutMs).then(function (text) {
         writeToCache(url, text);   // fire-and-forget
-        executeScript(text, url);
-        _loaded[key] = true;
+        return verifyAndExecute(text);
       });
 
+    }).then(function () {
+      _loaded[key] = true;
     }).catch(function (err) {
       console.error('[LOADER] Failed to load', key, ':', err.message);
       _notifyMissing(dep);

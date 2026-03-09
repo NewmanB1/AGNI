@@ -140,6 +140,18 @@ function signContent(contentString, deviceId, privateKeyPath) {
 }
 
 /**
+ * Compute Subresource Integrity (SRI) hash for a resource. SHA-384, base64.
+ * Used for resource bundle integrity (factories, shared-runtime, etc.).
+ * @param  {string|Buffer} content  file content (string or Buffer)
+ * @returns {string}  "sha384-<base64>"
+ */
+function computeSRI(content) {
+  const buf = typeof content === 'string' ? Buffer.from(content, 'utf8') : content;
+  const hash = crypto.createHash('sha384').update(buf).digest('base64');
+  return 'sha384-' + hash;
+}
+
+/**
  * Export public key as base64 SPKI DER from a PEM file (private or public).
  * @param  {string} keyPath path to PEM file
  * @returns {string|null} base64 SPKI or null
@@ -158,4 +170,4 @@ function getPublicKeySpki(keyPath) {
 }
 
 
-module.exports = { signContent, canonicalJSON, getPublicKeySpki, SIG_PLACEHOLDER };
+module.exports = { signContent, canonicalJSON, getPublicKeySpki, computeSRI, SIG_PLACEHOLDER };
