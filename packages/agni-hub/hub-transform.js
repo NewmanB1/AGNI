@@ -27,8 +27,9 @@
 //   Slug ΓåÆ file: <YAML_DIR>/<slug>.yaml or <YAML_DIR>/<slug>/index.yaml
 //
 // Caching strategy:
-//   Compiled lesson HTML is cached in memory keyed to slug + YAML mtime.
-//   A changed YAML file invalidates only that lesson's cache entry.
+//   Disk: serveDir/lessons/<slug>/index.html + index-ir.json + index-ir-full.json.
+//   Recompile only when yaml mtime > compiled mtime (DoS mitigation).
+//   Memory: LRU cache keyed by slug + YAML mtime, populated from disk or compile.
 //   Factory files are static ΓÇö served with long Cache-Control headers.
 //   Lesson HTML is served with no-cache so devices always get the current
 //   compiled version (the device-side Cache API handles factory caching).
@@ -72,6 +73,7 @@ const YAML_DIR      = envConfig.yamlDir;
 const FACTORY_DIR   = process.env.AGNI_FACTORY_DIR || require('@agni/runtime').RUNTIME_ROOT;
 const KATEX_DIR     = process.env.AGNI_KATEX_DIR   || path.join(__dirname, '../../data/katex-css');
 const SERVE_PORT    = envConfig.servePort;
+const SERVE_DIR     = envConfig.serveDir;
 
 // ΓöÇΓöÇ In-memory lesson cache ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 // { slug: { ir, sidecar, mtime, lastAccessed } } — HTML assembled per-request for device binding
@@ -215,6 +217,45 @@ function loadYaml(slug) {
   return null;
 }
 
+// Disk cache: serveDir/lessons/<slug>/index.html + index-ir.json
+// Recompile only when yaml mtime > compiled mtime (DoS mitigation).
+function _getDiskCachePaths(slug) {
+  const lessonDir = path.join(SERVE_DIR, 'lessons', slug);
+  return {
+    htmlPath: path.join(lessonDir, 'index.html'),
+    irPath:   path.join(lessonDir, 'index-ir.json'),
+    fullIrPath: path.join(lessonDir, 'index-ir-full.json')
+  };
+}
+
+function _tryReadDiskCache(slug, yamlMtime) {
+  const paths = _getDiskCachePaths(slug);
+  try {
+    const htmlStat = fs.statSync(paths.htmlPath);
+    if (htmlStat.mtimeMs < yamlMtime) return null;
+    const html  = fs.readFileSync(paths.htmlPath, 'utf8');
+    const irRaw = fs.readFileSync(paths.fullIrPath, 'utf8');
+    const ir    = JSON.parse(irRaw);
+    const sidecar = buildLessonSidecar(ir);
+    return { html: html, sidecar: sidecar, ir: ir };
+  } catch (e) {
+    return null;
+  }
+}
+
+function _writeDiskCache(slug, html, ir) {
+  const paths = _getDiskCachePaths(slug);
+  const lessonDir = path.dirname(paths.htmlPath);
+  try {
+    fs.mkdirSync(lessonDir, { recursive: true });
+    fs.writeFileSync(paths.htmlPath, html, 'utf8');
+    fs.writeFileSync(paths.irPath, JSON.stringify(buildLessonSidecar(ir), null, 0), 'utf8');
+    fs.writeFileSync(paths.fullIrPath, JSON.stringify(ir, null, 0), 'utf8');
+  } catch (err) {
+    log.warn('Disk cache write failed', { slug, error: err.message });
+  }
+}
+
 
 // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 // Lesson compiler
@@ -238,6 +279,31 @@ function loadYaml(slug) {
 async function compileLesson(slug, options) {
   const loaded = loadYaml(slug);
   if (!loaded) return null;
+
+  // Disk cache: serve from serveDir/lessons/<slug>/index.html when compiled mtime >= yaml mtime
+  const disk = _tryReadDiskCache(slug, loaded.mtime);
+  if (disk) {
+    if (options.dev) log.debug('Disk cache hit', { slug });
+    const needsBinding = !!(options && options.deviceId);
+    const html = needsBinding ? _assembleHtml(disk.ir, options) : disk.html;
+    if (!_lessonCache[slug]) {
+      if (_cacheSize >= MAX_CACHE_ENTRIES) {
+        let oldestSlug = null, oldestTime = Infinity;
+        Object.keys(_lessonCache).forEach(function (s) {
+          if (_lessonCache[s].lastAccessed < oldestTime) {
+            oldestTime = _lessonCache[s].lastAccessed;
+            oldestSlug = s;
+          }
+        });
+        if (oldestSlug) { delete _lessonCache[oldestSlug]; _cacheSize--; }
+      }
+      _lessonCache[slug] = { ir: disk.ir, sidecar: disk.sidecar, mtime: loaded.mtime, lastAccessed: Date.now() };
+      _cacheSize++;
+    } else {
+      _lessonCache[slug].lastAccessed = Date.now();
+    }
+    return { html: html, sidecar: disk.sidecar, lessonIR: disk.ir };
+  }
 
   const cached = _lessonCache[slug];
   if (cached && cached.mtime === loaded.mtime) {
@@ -335,6 +401,7 @@ async function _doCompile(slug, loaded, options) {
   if (!isUpdate) _cacheSize++;
 
   const html = _assembleHtml(ir, options);
+  _writeDiskCache(slug, _assembleHtml(ir, {}), ir);
   return { html: html, sidecar: sidecar, lessonIR: ir };
 }
 

@@ -276,13 +276,13 @@ Compilation cost (Markdown + KaTeX + inference) is network-triggerable CPU load.
 
 | Guarantee | Implementation |
 |-----------|----------------|
-| Compiled artifacts cached | In-memory cache keyed by `slug + YAML mtime` (`packages/agni-hub/hub-transform.js`) |
-| Recompile only when YAML changed | `cached.mtime === loaded.mtime`; skip compile on hit |
+| Compiled artifacts cached | Disk: `serveDir/lessons/<slug>/index.html`, `index-ir.json`, `index-ir-full.json`; memory: LRU keyed by `slug + YAML mtime` (`packages/agni-hub/hub-transform.js`) |
+| Recompile only when YAML changed | `yaml mtime > compiled mtime` (disk); `cached.mtime === loaded.mtime` (memory) |
 | Concurrent-request deduplication | Per-slug in-flight guard: same slug awaits existing Promise |
 | Concurrency cap | `AGNI_COMPILE_CONCURRENCY` (default 3) limits parallel compilations |
 | LRU eviction | `AGNI_CACHE_MAX` (default 100 entries) caps memory |
 
-Static build output (CLI `--output`) may write to `serveDir/lessons/<slug>/index.html`; theta's `rebuildLessonIndex()` reads sidecars there. On-demand hub-transform serves from memory; disk layout is for index/catalog, not per-request serving.
+On-demand hub-transform checks disk first; if `index.html` exists and its mtime ≥ YAML mtime, serves from disk. Otherwise compiles, populates memory cache, and writes to disk. Theta's `rebuildLessonIndex()` reads `index-ir.json` sidecars. Static build output (CLI `--output`) may also write to `serveDir/lessons/<slug>/`.
 
 **Opportunistic precaching (planned):** Edge devices may proactively fetch and cache the next N lessons when online, using theta's ordered list as a hint. See `docs/OPPORTUNISTIC-PRECACHE-PLAN.md`.
 
