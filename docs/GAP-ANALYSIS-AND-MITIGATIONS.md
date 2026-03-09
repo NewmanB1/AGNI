@@ -28,15 +28,11 @@ Expands on `docs/ARCHITECTURE.md` Appendix: Known Gaps with actionable proposals
 
 ---
 
-## 3. HTML Scrape Fallback
+## 3. HTML Scrape Fallback *(Resolved)*
 
-**Gap:** Theta falls back to HTML scraping when no IR sidecar exists. Brittle; markup changes can break indexing.
+**Gap (was):** Theta fell back to HTML scraping when no IR sidecar existed. Brittle; markup changes could break indexing.
 
-**Proposed mitigation:**
-- Prefer IR sidecars for all lessons. Avoid deploying lessons without sidecars.
-- Long term: deprecate scrape fallback and fail hard when `index-ir.json` is missing.
-
-**Effort:** Low (policy); medium if deprecation path is added.
+**Current state:** **Resolved.** Theta refuses to index lessons without a valid IR sidecar. Lessons without `index-ir.json` are skipped (not indexed); a warning is logged. HTML scraping has been removed from runtime. Single source of truth: IR only. See `docs/ARCHITECTURE.md` Known Gaps table.
 
 ---
 
@@ -96,7 +92,7 @@ Expands on `docs/ARCHITECTURE.md` Appendix: Known Gaps with actionable proposals
 |-----|----------|--------|
 | YAML versioning | Medium | Add `yamlSchemaVersion` to meta |
 | DAG validation | Done | CI hook optional |
-| HTML scrape | Low | Policy + future deprecation |
+| HTML scrape | Done | Removed; Theta refuses to index without IR |
 | Device UUID | Low | Documentation only |
 | Federation | Low | Document contentHash behaviour |
 | Service Worker | Medium | Fallback for no-SW devices |

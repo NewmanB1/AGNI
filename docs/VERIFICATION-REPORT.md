@@ -68,7 +68,7 @@ Cross-check of key architectural claims against the codebase. Generated for trac
 |------|--------|----------|
 | HTML builder writes sidecar | ✅ Verified | `packages/ols-compiler/builders/html.js` |
 | Theta reads `serveDir/lessons/{slug}/index-ir.json` | ✅ Verified | `theta.js` — `rebuildLessonIndex()` |
-| HTML scrape fallback when no IR | ✅ Verified | Documented in ARCHITECTURE; brittle, logged as warning |
+| Lessons without IR | ✅ Verified | Theta refuses to index; no HTML scrape fallback. Single source of truth (IR only). See ARCHITECTURE Known Gaps. |
 
 ---
 

@@ -63,21 +63,11 @@ Plan to address gaps identified in the architecture/audit review. Items are prio
 
 ---
 
-### A3. HTML scrape fallback hardening (P3)
+### A3. HTML scrape fallback hardening (P3) *(Resolved)*
 
-**Gap:** Brittle; markup changes can break indexing. Lessons without IR may silently fail.
+**Gap (was):** Brittle; markup changes could break indexing. Lessons without IR could silently fail.
 
-| Task | Scope | Deliverable |
-|------|-------|-------------|
-| A3.1 | Log scrape failures with lesson slug in error body | Already done; ensure log level is error |
-| A3.2 | Optional: add `--require-ir-sidecar` theta flag | Reject lessons without IR in index rebuild; fail fast for deployment |
-| A3.3 | Document in deploy playbook | "Prefer IR sidecars; run compile for all lessons before deploy" |
-
-**Proof:**
-- If A3.2: Regression "AUDIT-A3: theta --require-ir-sidecar skips lessons without sidecar"
-- CI: optional `verify:lesson-sidecars` — ensure `serveDir/lessons/*/index-ir.json` exists for each `index.html`
-
-**Dependencies:** None.
+**Current state:** **Resolved.** Theta now refuses to index lessons without IR. No HTML scraping; lessons without `index-ir.json` are skipped and a warning is logged. Single source of truth enforced. See `theta.js` `rebuildLessonIndex()` and `docs/ARCHITECTURE.md`.
 
 ---
 
@@ -232,7 +222,7 @@ Plan to address gaps identified in the architecture/audit review. Items are prio
 
 ### E2. Optional: verify:lesson-sidecars CI gate (P3)
 
-**Gap:** Deploying lessons without IR sidecars causes HTML scrape fallback.
+**Gap:** Deploying lessons without IR sidecars causes them to be skipped (not indexed). Theta already refuses to index; this gate catches the condition earlier.
 
 | Task | Scope | Deliverable |
 |------|-------|-------------|
@@ -256,7 +246,7 @@ Plan to address gaps identified in the architecture/audit review. Items are prio
 | 3 | A1 (yamlSchemaVersion) | **Done** — schema, IR, sidecar, warn on unknown |
 | 4 | A2 compile-time (E1), D1 (inferredFeatures clamp) | **Done** — NUMERIC_PARAM_KEYS warn; seedLesson clamps |
 | 5 | C1 (SRI) — security improvement | Pending |
-| 6 | B2 (SW fallback), A3, C2, D2, E2 | As capacity |
+| 6 | B2 (SW fallback), C2, D2, E2 | As capacity (A3 resolved) |
 
 ---
 
