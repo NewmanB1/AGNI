@@ -297,13 +297,13 @@ On-demand hub-transform checks disk first; if `index.html` exists and its mtime 
 
 ## 5. Security & Governance: "Device Binding"
 
-We enforce a "Digital Chain of Custody" to limit the spread of corrupted or unverified lessons. The binding provides integrity and an anti-copy watermark; it does **not** provide authentication (UUID is client-supplied).
+We enforce a "Digital Chain of Custody" to limit the spread of corrupted or unverified lessons. The binding provides integrity, an anti-copy watermark, and ownership binding when auth is enabled. **Identity is enforced:** the Hub signs only for *authenticated* pseudoId (from session), never for client-supplied identifiers.
 
 ### 5.1 The "Signed Lease" Model
 
 We move from a "Public Flyer" model to a "Personalized Ticket" model.
 
-1. **Request:** When auth is enabled, the student device sends a session token (cookie or Bearer). The Hub validates it and extracts the pseudoId. When auth is disabled, UUID is client-supplied (legacy).
+1. **Request:** When auth is enabled, the student device sends a session token (cookie or Bearer). The Hub validates it and extracts the pseudoId. When auth is disabled, the Hub serves **unsigned** lessons (no signing, no device binding).
 2. **Binding:** Hub compiles the lesson and calculates `Hash(Content + pseudoId)`. *Content* is the **full lesson script** (IR + factory-loader + player), with a placeholder replacing the signature value before hashing. This ensures integrity of the entire executable artifact, not just the IR. See `utils/crypto.js`, `lessonAssembly`, and `integrity/integrity.js`.
 3. **Signing:** Hub signs the hash with its Private Authority Key.
 4. **Injection:** The signature and intended owner (pseudoId) are hardcoded into the compiled artifact.

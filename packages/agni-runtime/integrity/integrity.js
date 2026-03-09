@@ -28,6 +28,17 @@
   function getBase64ToBytes() { return S.base64ToBytes; }
   function getConcatBytes()   { return S.concatBytes; }
 
+  // Device pseudoId from URL (?pseudoId=...) — same source as portal/player.
+  // Used for watermark check: signed lessons must match intended owner.
+  function getDevicePseudoIdFromUrl() {
+    try {
+      var loc = (typeof window !== 'undefined' && window.location) || (global && global.location);
+      if (!loc || !loc.search) return '';
+      var p = new URLSearchParams(loc.search);
+      return p.get('pseudoId') || '';
+    } catch (e) { return ''; }
+  }
+
   // Dev mode from URL parameter (?dev=1) or localhost, NOT from lesson data [P1.1]
   // Localhost fallback supports unsigned lessons during local development.
   function isDevMode() {
@@ -210,6 +221,20 @@
         if (devMode) console.warn('[VERIFY] SubtleCrypto failed:', err.message);
         return false;
       });
+    }).then(function (signatureValid) {
+      if (!signatureValid) return false;
+      // Watermark check: OLS_INTENDED_OWNER must match device identity.
+      // Device identity from URL (portal launcher sets ?pseudoId=...).
+      // If no pseudoId in URL (e.g. local file, sneakernet), we cannot verify — pass.
+      var intendedOwner = global.OLS_INTENDED_OWNER;
+      if (!intendedOwner) return true;
+      var devicePseudoId = getDevicePseudoIdFromUrl();
+      if (!devicePseudoId) return true;
+      if (devicePseudoId !== intendedOwner) {
+        console.error('[VERIFY] Unauthorized Copy — OLS_INTENDED_OWNER does not match device pseudoId');
+        return false;
+      }
+      return true;
     });
   }
 

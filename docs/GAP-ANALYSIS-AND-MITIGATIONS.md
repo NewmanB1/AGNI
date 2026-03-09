@@ -38,7 +38,7 @@ Expands on `docs/ARCHITECTURE.md` Appendix: Known Gaps with actionable proposals
 
 ## 4. Device UUID Trust
 
-**Gap:** Hub binds content to client-supplied UUID. UUID is not authenticated or hardware-bound.
+**Gap (resolved):** The Hub signs only for *authenticated* pseudoId from session (PIN or transfer token). No client-supplied UUID path. When auth is disabled, unsigned lessons are served. See `docs/ARCHITECTURE.md` §5.
 
 **Proposed mitigation:**
 - Document clearly: trust boundary is hub–device. P2P cloning is prevented by signature.
