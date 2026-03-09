@@ -270,6 +270,20 @@ packet + IR sidecar) changes between lessons.
 4. Edge device loads in Chrome → Service Worker caches shared assets.
 5. Subsequent lessons only need new HTML packet + IR sidecar (shared code already cached).
 
+**Compiled lesson cache (required invariant — DoS mitigation):**
+
+Compilation cost (Markdown + KaTeX + inference) is network-triggerable CPU load. Without caching, repeated `GET /lessons/:slug` requests would trigger full recompilation each time, exhausting hub CPU on a Pi.
+
+| Guarantee | Implementation |
+|-----------|----------------|
+| Compiled artifacts cached | In-memory cache keyed by `slug + YAML mtime` (`packages/agni-hub/hub-transform.js`) |
+| Recompile only when YAML changed | `cached.mtime === loaded.mtime`; skip compile on hit |
+| Concurrent-request deduplication | Per-slug in-flight guard: same slug awaits existing Promise |
+| Concurrency cap | `AGNI_COMPILE_CONCURRENCY` (default 3) limits parallel compilations |
+| LRU eviction | `AGNI_CACHE_MAX` (default 100 entries) caps memory |
+
+Static build output (CLI `--output`) may write to `serveDir/lessons/<slug>/index.html`; theta's `rebuildLessonIndex()` reads sidecars there. On-demand hub-transform serves from memory; disk layout is for index/catalog, not per-request serving.
+
 **Opportunistic precaching (planned):** Edge devices may proactively fetch and cache the next N lessons when online, using theta's ordered list as a hint. See `docs/OPPORTUNISTIC-PRECACHE-PLAN.md`.
 
 **Static (CLI) delivery:**
