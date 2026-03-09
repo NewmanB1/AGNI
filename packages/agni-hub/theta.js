@@ -386,15 +386,14 @@ async function rebuildLessonIndex() {
   for (const entry of catalog.lessons) {
     const lessonDir   = path.join(SERVE_DIR, 'lessons', entry.slug);
     const sidecarPath = path.join(lessonDir, 'index-ir.json');
-    const htmlPath    = path.join(lessonDir, 'index.html');
 
     let hasSidecar = false;
     try { await fsp.access(sidecarPath); hasSidecar = true; } catch { /* no sidecar */ }
 
     if (hasSidecar) {
-      sidecarCount++;
       const sidecar = await loadJSONAsync(sidecarPath, null);
       if (sidecar) {
+        sidecarCount++;
         index.push({
           lessonId: sidecar.identifier || entry.identifier || entry.slug,
           slug: sidecar.slug || entry.slug,
@@ -418,35 +417,14 @@ async function rebuildLessonIndex() {
     }
 
     fallbackCount++;
-    log.warn('No IR sidecar â€” falling back to brittle HTML scrape; index may be incomplete', { slug: entry.slug });
-    let skillsProvided = [];
-    let skillsRequired = [];
-
-    let hasHtml = false;
-    try { await fsp.access(htmlPath); hasHtml = true; } catch { /* no html */ }
-    if (hasHtml) {
-      const html = await fsp.readFile(htmlPath, 'utf8');
-      const m = html.match(/window\.LESSON_DATA\s*=\s*(\{[\s\S]*?\});/);
-      if (m) {
-        try {
-          const data = JSON.parse(m[1]);
-          skillsProvided = (data.ontology?.provides || []).map(p => ({ skill: p.skill, declaredLevel: p.level || 1 }));
-          skillsRequired = (data.ontology?.requires || []).map(r => r.skill || r);
-        } catch (e) {
-          log.error('HTML scrape failed — lesson index entry will be incomplete', { slug: entry.slug, error: e.message });
-        }
-      }
-    }
-    index.push({
-      lessonId: entry.identifier || entry.slug, slug: entry.slug, title: entry.title || '',
-      difficulty: entry.difficulty || 2, language: entry.language || 'en', is_group: !!(entry.is_group),
-      compiledAt: null, metadata_source: 'unknown',
-      skillsProvided, skillsRequired, inferredFeatures: null, katexAssets: [], factoryManifest: []
-    });
+    log.warn('Skipping lesson — IR sidecar missing or invalid; lesson not indexed (single source of truth)', { slug: entry.slug });
   }
 
+
+
+
   await saveJSONAsync(LESSON_INDEX, index);
-  log.info('Lesson index rebuilt', { total: index.length, sidecar: sidecarCount, htmlFallback: fallbackCount });
+  log.info('Lesson index rebuilt', { total: index.length, sidecar: sidecarCount, skippedNoIR: fallbackCount });
   if (lmsEngine.isAvailable && lmsEngine.isAvailable()) {
     const seedEntries = index
       .filter(entry => entry.skillsProvided.length > 0)

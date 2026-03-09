@@ -355,7 +355,7 @@ The engine has two layers with distinct responsibilities.
 - **MLC heuristic:** Among eligible lessons, sorts by Marginal Learning Cost: `θ = BaseCost − CohortDiscount`. Students with background in weaving see "Loops" first; students with farming background may see "Modulo Arithmetic" first.
 - **MLC bounds:** MLC is clamped to [0, ∞) (implementation floor 0.001) to avoid negative values. Negative MLC would break consumers that treat it as a probability or positive weight, and unbounded graph-weight updates could cause sudden wholesale curriculum reordering.
 - **MLC term ranges:** BaseCost ∈ [0, 1] (from base-costs.json or difficulty/5). CohortDiscount is implemented as `baseCost × (1 − residualFactor) + coherenceBonus`; residualFactor ∈ [MIN_RESIDUAL, 1] (default 0.15–1.0) from graph weights; coherenceBonus ∈ [0, 0.08]. Graph edge weights must stay in [0, 1] so residualFactor remains well-defined.
-- **Lesson index:** `rebuildLessonIndex()` builds lesson-index.json from catalog.json and IR sidecars at `serveDir/lessons/{slug}/index-ir.json`. Falls back to HTML scraping for lessons compiled before Phase 2; fallback is logged as a warning and may produce incomplete entries if markup changes.
+- **Lesson index:** `rebuildLessonIndex()` builds lesson-index.json from catalog.json and IR sidecars at `serveDir/lessons/{slug}/index-ir.json`. **Single source of truth:** lessons without a valid IR sidecar are skipped (not indexed). HTML scraping has been removed from runtime — builder markup changes no longer silently break indexing. Migration tooling may use HTML parsing for one-off conversion of legacy builds.
 
 ### 7.2 LMS Engine — Adaptive Selection (Implemented)
 
