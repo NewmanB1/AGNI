@@ -29,7 +29,7 @@ flowchart TB
         Compiler[Compiler / @ols/compiler]
         IR[IR + lesson-ir.json]
         Theta["Theta (skill graph, MLC)"]
-        LMS[LMS Engine (Rasch, Thompson)]
+        LMS["LMS Engine (Rasch, Thompson)"]
         HT[hub-transform]
     end
 
@@ -39,7 +39,7 @@ flowchart TB
     end
 
     subgraph Device
-        Player[Player (browser)]
+        Player["Player (browser)"]
     end
 
     subgraph Portal["Teacher Portal"]
