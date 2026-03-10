@@ -95,7 +95,7 @@ Add a hardware-level flush before rename:
 1. Add a helper `atomicWriteWithFsync(path, data)` in `@agni/utils` or `@agni/utils/io`.
 2. Replace `saveState` / `saveStateSync` body with this helper.
 3. Add unit test: write, simulate crash (delete .tmp before rename in a fork), verify original file intact.
-4. Document the contract: “atomic write = write + fsync + rename.”
+4. Document the contract: “atomic write = write + fsync file + rename + fsync parent directory (directory fsync required on ext4/SD).”
 
 ### Verification
 

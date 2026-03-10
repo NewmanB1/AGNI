@@ -106,13 +106,15 @@ Plan to address gaps identified in the architecture/audit review. Items are prio
 
 ## Phase 3: Security & Runtime Verification
 
-### C1. Subresource Integrity (SRI) for shared assets (P2)
+### C1. Subresource Integrity (SRI) for shared assets (P2) — **Done**
 
-**Gap:** shared-runtime.js, svg-stage.js not signed; MITM could serve malicious JS.
+**Gap:** shared-runtime.js, svg-stage.js not per-lesson signed; MITM could serve malicious JS.
+
+**Implemented:** Hub computes SRI (sha384) at compile time; integrity hashes embedded in LESSON_DATA (signed lesson). Factory-loader verifies each fetch before execution. MitM on factory fetch fails SRI.
 
 | Task | Scope | Deliverable |
 |------|-------|-------------|
-| C1.1 | Compute SRI hash at hub build/serve time | When serving `/factories/shared-runtime.js`, compute SHA-384 hash of body |
+| C1.1 | Compute SRI hash at hub build/serve time | ✓ When serving factories, compute SHA-384; hub-transform and ols-compiler add to `dep.integrity` |
 | C1.2 | Inject integrity attribute in lesson HTML | `lessonAssembly` or html builder: `<script src="..." integrity="sha384-..."></script>` |
 | C1.3 | Ensure factory-loader uses same integrity | Factory loader fetches factories; add integrity to script tags it injects |
 | C1.4 | Cache-bust consideration | SRI changes when file changes; Cache-Control + ETag already handle invalidation |
@@ -232,7 +234,7 @@ Plan to address gaps identified in the architecture/audit review. Items are prio
 | 2 | B1 (hub-transform bootstrap) | **Done** — loadHubConfig added; check-hub-config-bootstrap extended |
 | 3 | A1 (yamlSchemaVersion) | **Done** — schema, IR, sidecar, warn on unknown |
 | 4 | A2 compile-time (E1), D1 (inferredFeatures clamp) | **Done** — NUMERIC_PARAM_KEYS warn; seedLesson clamps |
-| 5 | C1 (SRI) — security improvement | Pending |
+| 5 | C1 (SRI) — security improvement | **Done** — SRI in LESSON_DATA, factory-loader verifies |
 | 6 | B2 (SW fallback), C2, D2, E2 | As capacity (A3 resolved) |
 
 ---

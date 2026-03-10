@@ -115,10 +115,10 @@ Only lesson import tools should temporarily unlock them.
 
 Because Raspberry Pi uses SD cards, AGNI uses atomic write patterns with fsync:
 
-- **LMS state:** `packages/agni-engine/index.js` writes to `.tmp`, calls `fsync` before rename.
-- **JSON stores:** `packages/agni-utils/json-store.js` uses write → fsync → rename for `saveJSON` and `saveJSONAsync` (mastery_summary, graph_weights, sync state, etc.).
+- **LMS state:** `packages/agni-engine/index.js` writes to `.tmp`, fsyncs the file, renames, then fsyncs the parent directory.
+- **JSON stores:** `packages/agni-utils/json-store.js` uses write → fsync file → rename → fsync parent directory for `saveJSON` and `saveJSONAsync` (mastery_summary, graph_weights, sync state, etc.).
 
-Pattern: write to `.tmp` → fsync → close → rename to final path. Reduces corruption risk on power loss.
+Pattern: write to `.tmp` → fsync file → rename → fsync parent dir. Directory fsync is required on ext4 so the rename metadata is durable before power loss.
 
 ### 3.3 Automatic Backups
 

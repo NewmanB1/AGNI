@@ -21,7 +21,7 @@ This document extends the Phase 1 remediation (`ARCHITECTURAL-VULNERABILITIES-RE
 
 **Problem:** `_writeDiskCache` writes `index.html`, `index-ir.json`, `index-ir-full.json` directly into `lessons/<slug>/`. Concurrent compiles, hub restart, or power loss can leave `index.html` present but `index-ir.json` missing → lesson silently disappears from curriculum.
 
-**Fix:** Transactional compilation. Write to `lessons/<slug>.tmp/` (index.html, index-ir.json, index-ir-full.json), fsync, then `rename(slug.tmp, slug)`. Never write individual files into the final directory.
+**Fix:** Transactional compilation. Write to `lessons/<slug>.tmp/`, fsync each file, rename dir, then fsync parent directory. Never write individual files into the final directory.
 
 **Location:** `packages/agni-hub/hub-transform.js` — `_writeDiskCache`, `_getDiskCachePaths`, `_tryReadDiskCache`.
 
@@ -59,7 +59,7 @@ This document extends the Phase 1 remediation (`ARCHITECTURAL-VULNERABILITIES-RE
 
 ### 5. Factory Loader Supply-Chain Vulnerability
 
-**Problem:** Shared resources (shared-runtime.js, svg-stage.js) rely on "first-fetch authenticity." Compromised device cache = every lesson executes attacker code. SRI in HTML can be bypassed if SW/HTML is poisoned.
+**Problem:** Shared resources (shared-runtime.js, svg-stage.js) are not per-lesson signed. Mitigation: SRI (sha384) is injected into LESSON_DATA at compile time; factory-loader verifies each fetch before execution. MitM on factory fetch fails SRI. Integrity hashes are in the signed lesson. Remaining: hub-signed manifest not implemented (SRI + signed lesson is sufficient for MitM protection).
 
 **Fix:** Hub signs resource manifest; device verifies. Or bundle runtime into lesson signature. Higher effort.
 

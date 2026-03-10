@@ -63,9 +63,9 @@ Audit of three items from the Phase 2 plan: `spec.type` whitelist (SVG registry)
 
 ## 4. Factory Supply Chain (P0 #5) — Partial Mitigation
 
-**Problem:** Shared resources (shared-runtime.js, svg-factories.js) rely on "first-fetch authenticity." Compromised device cache could execute attacker code.
+**Problem:** Shared resources (shared-runtime.js, svg-factories.js) are not per-lesson signed; could be vulnerable if integrity were not verified.
 
-**Current mitigation:** Hub computes SRI (Subresource Integrity) for each factory file and embeds it in LESSON_DATA. Factory-loader verifies SRI before executing. Factory URLs include `?v=<version>` so cache entries are versioned; SW updates trigger fresh fetches. Device cannot verify hub signing of a resource manifest — SRI provides integrity of fetched content against corruption, not against a poisoned hub. Full fix would require hub-signed manifest and device verification; not implemented.
+**Current mitigation:** Hub computes SRI (sha384) for each factory file and embeds it in LESSON_DATA (part of the signed lesson script). Factory-loader verifies SRI before executing each fetch. MitM on factory fetch fails SRI. Factory URLs include `?v=<version>` for cache versioning. SRI protects against local-network MitM on factory fetches. Hub-signed resource manifest not implemented (SRI + signed lesson is sufficient for MitM protection).
 
 ---
 

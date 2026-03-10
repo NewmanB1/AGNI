@@ -146,7 +146,7 @@ interface LessonIR {
 | `bandit` | A (precision matrix), b, featureDim, forgetting, observationCount, seenSyncIds |
 | `markov` | transitions, bigrams, studentHistory, dropouts, cooldowns |
 
-Persisted to `AGNI_DATA_DIR/lms_state.json`. Atomic write: `.tmp` then rename.
+Persisted to `AGNI_DATA_DIR/lms_state.json`. Atomic write: `.tmp`, fsync file, rename, then fsync parent directory (ext4/SD durability).
 
 ---
 
@@ -409,7 +409,7 @@ Sync writes to USB. `AGNI_USB_PATH` must be under `USB_SAFE_ROOT` (`/mnt/usb`). 
 ### Bundle Separation
 
 - **Lesson bundle:** HTML + inline script. Signed. Integrity verified at runtime.
-- **Resource bundle:** shared-runtime.js, integrity.js, etc. Served from trusted paths. SRI per factory in manifest. Not part of lesson signature.
+- **Resource bundle:** shared-runtime.js, integrity.js, etc. Served from hub. SRI (sha384) per factory in LESSON_DATA; factory-loader verifies each fetch before execution. MitM on factory fetch fails SRI. Integrity hashes are in the signed lesson script. Not part of lesson signature themselves.
 
 ---
 
