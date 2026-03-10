@@ -43,12 +43,13 @@
 //   In the browser, import with format: 'spki' — do NOT strip the DER
 //   wrapper. SubtleCrypto requires SPKI; raw 32-byte import gives a wrong key.
 //
-// SIGNATURE SCOPE (v2.1)
-//   Content = full lesson script (nonce bootstrap + factory-loader + LESSON_DATA IR
-//   + integrity globals + player.js). HTML wrapper, <style>, and external factory
-//   files (shared-runtime, integrity.js) are NOT signed.
-//   Placeholder replaces signature before hashing so signer and verifier agree.
-//   Integrity.js must use the same placeholder when reconstructing for verification.
+// SIGNATURE SCOPE (v2.2 — narrow scope, remediation #5c)
+//   Content = canonicalJSON(LESSON_DATA) + NUL + OLS_INTENDED_OWNER.
+//   This narrow scope reduces verification time (especially with TweetNaCl on Chrome 51)
+//   and eliminates UI blocking. Protects lesson content integrity and device watermark.
+//   HTML wrapper, factories, and player code are NOT signed (unchanged).
+//   BREAKING: Signatures from v2.1 (full-script scope) will fail verification.
+//   Lessons must be re-signed with hub/CLI after upgrading.
 // ─────────────────────────────────────────────────────────────────────────────
 
 'use strict';
@@ -100,7 +101,7 @@ function canonicalJSON(obj) {
  * pre-hash that eliminates concatenation ambiguity and keeps the Ed25519
  * payload fixed at 32 bytes regardless of lesson size.
  *
- * @param  {string}      contentString  full lesson script (nonce + factory-loader + LESSON_DATA + integrity globals + player), with OLS_SIGNATURE replaced by SIG_PLACEHOLDER
+ * @param  {string}      contentString  canonical JSON of LESSON_DATA (lesson IR). Signer passes canonicalJSON(ir).
  * @param  {string}      deviceId       intended device UUID
  * @param  {string}      privateKeyPath path to PEM-encoded Ed25519 private key
  * @returns {string|null}               base64 Ed25519 signature, or null

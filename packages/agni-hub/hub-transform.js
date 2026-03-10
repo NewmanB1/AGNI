@@ -55,7 +55,7 @@ const buildLessonIR      = buildLessonIrModule.buildLessonIR;
 const buildLessonSidecar = buildLessonIrModule.buildLessonSidecar;
 const buildKatexCss      = require('@agni/utils/katex-css-builder');
 const lessonSchema       = require('@ols/schema/lesson-schema');
-const { signContent, canonicalJSON, getPublicKeySpki, computeSRI, SIG_PLACEHOLDER } = require('@agni/utils/crypto');
+const { signContent, canonicalJSON, getPublicKeySpki, computeSRI } = require('@agni/utils/crypto');
 const generateNonce      = require('@agni/utils/csp').generateNonce;
 const buildCspMeta       = require('@agni/utils/csp').buildCspMeta;
 const lessonAssembly     = require('@ols/compiler/services/lesson-assembly');
@@ -486,14 +486,8 @@ function _assembleHtml(ir, options) {
   const nonceBootstrap = 'window.AGNI_CSP_NONCE=' + JSON.stringify(nonce) + ';';
   let signature = null;
   if (deviceId && privateKeyPath) {
-    const scriptWithPlaceholder = nonceBootstrap + '\n' + lessonAssembly.buildLessonScript(ir, {
-      signature:       SIG_PLACEHOLDER,
-      publicKeySpki:   publicKeySpki != null ? publicKeySpki : '',
-      deviceId:        deviceId || '',
-      factoryLoaderJs: factoryLoaderJs,
-      playerJs:        playerJs
-    });
-    signature = signContent(scriptWithPlaceholder, deviceId, privateKeyPath);
+    // Narrow scope (v2.2): sign canonical LESSON_DATA + deviceId for faster verification
+    signature = signContent(canonicalJSON(ir), deviceId, privateKeyPath);
   }
   const lessonScript = nonceBootstrap + '\n' + lessonAssembly.buildLessonScript(ir, {
     signature:       signature != null ? signature : '',

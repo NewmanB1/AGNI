@@ -12,7 +12,7 @@ This document tracks implementation status of the seven architectural vulnerabil
 | 2 | False-atomic write (no fsync) | **Done** | packages/agni-engine, packages/agni-utils/json-store.js |
 | 3 | Cycle-triggered global DoS | **Done** | packages/agni-hub/theta.js |
 | 4 | Chrome 51 sensor event-loop exhaustion | **Done** | packages/agni-runtime/sensors/sensor-bridge.js |
-| 5 | Ed25519 / TweetNaCl UI blocking | **Done** | integrity.js (defer), player.js (Verifying spinner), i18n |
+| 5 | Ed25519 / TweetNaCl UI blocking | **Done** | integrity.js (defer, narrow scope), player.js, crypto.js |
 | 6 | Time-skew telemetry corruption | **Done** | sentry.js, sync.js, markov.js, RUN-ENVIRONMENTS.md |
 | 7 | KaTeX / Markdown memory spikes | **Done** | package.json, hub-config, RUN-ENVIRONMENTS.md |
 
@@ -41,25 +41,19 @@ This document tracks implementation status of the seven architectural vulnerabil
 
 ---
 
-## Partial Items — Remaining Plan
+## Completed Items (continued)
 
-### 5. Ed25519 / TweetNaCl UI Blocking — PARTIAL
+### 5. Ed25519 / TweetNaCl UI Blocking — DONE
 
 **Done:**
 - Async wrapper: `verify()` defers work with `setTimeout(0)` so main thread can paint before verification.
 - **5a** — "Verifying…" spinner in player. **5e** — `AGNI_INTEGRITY.lastVerifyMs` for QA measurement.
 
-**Remaining work:**
+- **5b** — Decision: narrow scope (LESSON_DATA + OLS_INTENDED_OWNER) accepted.
+- **5c** — Implemented narrow scope in crypto.js, html.js, hub-transform.js, integrity.js.
 
-| Step | Task | Effort | Owner |
-|------|------|--------|-------|
-| 5a | Add “Verifying…” spinner state in player before `verify()` | Low | Runtime |
-| 5b | Product/security decision: is `LESSON_DATA + OLS_INTENDED_OWNER` acceptable hash scope? | Decision | Product |
-| 5c | If yes: narrow signer (hub/CLI) and verifier to smaller payload | Medium | Compiler, hub, integrity |
-| 5d | If no: evaluate Web Worker path — create `integrity-worker.js`, post message, verify off main thread | High | Runtime |
-| ~~5e~~ | *(Done)* lastVerifyMs exposed for QA | — | — |
+**BREAKING:** Signatures from v2.1 (full-script scope) will fail. Re-sign lessons after upgrade.
 
-**Recommended order:** 5a → 5b → 5c or 5d → 5e.
 
 ---
 
@@ -84,13 +78,9 @@ This document tracks implementation status of the seven architectural vulnerabil
 4. **6f** — Document JWT/session clock dependency.
 5. **2 (follow-up)** — Done: directory fsync in json-store, atomic-write, engine, hub-transform.
 
-### Phase B — Product Decisions (Blocking)
-1. **5b** — Decide on integrity hash scope (full script vs LESSON_DATA + owner).
-2. Plan 5c (narrow scope) or 5d (Worker) based on outcome.
-
-### Phase C — Integrity Completion
-1. **5c** or **5d** — Implement chosen integrity path (blocked on 5b).
-2. **5e** — Done: `lastVerifyMs` exposed for QA measurement.
+### Phase B — Product Decisions — DONE
+1. **5b** — Done: Narrow scope (LESSON_DATA + OLS_INTENDED_OWNER) accepted.
+2. **5c** — Done: Implemented narrow scope in crypto.js, html.js, hub-transform.js, integrity.js.
 
 ### Phase D — Time Sync — DONE
 **6b** implemented; `AGNI_SYNC_SET_CLOCK=1` enables optional `date -s` in sync apply path.

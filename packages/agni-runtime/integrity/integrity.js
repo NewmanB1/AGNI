@@ -17,17 +17,21 @@
 //
 // ES5 only — targets Android 6.0+ (Chrome 44 WebView).
 //
-// SCOPE: Content = full lesson script (nonce + factory-loader + LESSON_DATA +
-// integrity globals + player). HTML wrapper and external factories are not signed.
-// Must match @agni/utils/crypto SIG_PLACEHOLDER.
+// SCOPE (v2.2): Content = canonicalJSON(LESSON_DATA) + NUL + OLS_INTENDED_OWNER.
+// Narrow scope reduces verification time and UI blocking (remediation #5c).
+// Must match @agni/utils/crypto signer; AGNI_SHARED.canonicalJSON must match Node canonicalJSON.
 (function (global) {
   'use strict';
 
   var S = global.AGNI_SHARED;
-  var SIG_PLACEHOLDER = '__OLS_SIG_PLACEHOLDER__';
 
   function getBase64ToBytes() { return S.base64ToBytes; }
   function getConcatBytes()   { return S.concatBytes; }
+
+  // Content for binding hash: canonical LESSON_DATA (matches signer)
+  function getContentForVerification(lesson) {
+    return (S && S.canonicalJSON) ? S.canonicalJSON(lesson) : JSON.stringify(lesson);
+  }
 
   // Device pseudoId from URL (?pseudoId=...) — same source as portal/player.
   // Used for watermark check: signed lessons must match intended owner.
@@ -53,27 +57,6 @@
     } catch (e) { return false; }
   }
 
-  // Find the lesson script (contains OLS_SIGNATURE and LESSON_DATA)
-  function findLessonScriptText() {
-    try {
-      var scripts = document.getElementsByTagName('script');
-      for (var i = 0; i < scripts.length; i++) {
-        var txt = scripts[i].textContent || scripts[i].innerText || '';
-        if (txt.indexOf('OLS_SIGNATURE') !== -1 && txt.indexOf('LESSON_DATA') !== -1) {
-          return txt;
-        }
-      }
-    } catch (e) { /* ignore */ }
-    return null;
-  }
-
-  // Replace signature value with placeholder for binding hash reconstruction.
-  // Preserve whitespace so reconstructed string matches signer exactly.
-  function scriptWithPlaceholder(scriptText) {
-    if (!scriptText) return scriptText;
-    return scriptText.replace(/(OLS_SIGNATURE\s*=\s*)"[^"]*"/, '$1"' + SIG_PLACEHOLDER + '"');
-  }
-
   function buildBindingHash(contentString, deviceId) {
     var contentBytes = utf8Encode(contentString);
     var sepBytes     = new Uint8Array([0x00]);
@@ -87,8 +70,7 @@
     var sigBytes    = base64ToBytes(global.OLS_SIGNATURE);
     var pubKeyBytes = base64ToBytes(global.OLS_PUBLIC_KEY);
     var owner       = global.OLS_INTENDED_OWNER;
-    var scriptText  = findLessonScriptText();
-    var content     = scriptText ? scriptWithPlaceholder(scriptText) : (S.canonicalJSON ? S.canonicalJSON(lesson) : JSON.stringify(lesson));
+    var content     = getContentForVerification(lesson);
 
     return crypto.subtle.importKey(
       'spki',
@@ -162,8 +144,7 @@
       var spkiBytes = base64ToBytes(global.OLS_PUBLIC_KEY);
       var rawPubKey = spkiBytes.slice(spkiBytes.length - 32);
       var owner     = global.OLS_INTENDED_OWNER;
-      var scriptText = findLessonScriptText();
-      var content    = scriptText ? scriptWithPlaceholder(scriptText) : (S.canonicalJSON ? S.canonicalJSON(lesson) : JSON.stringify(lesson));
+      var content   = getContentForVerification(lesson);
 
       var contentBytes = utf8Encode(content);
       var sepBytes     = new Uint8Array([0x00]);

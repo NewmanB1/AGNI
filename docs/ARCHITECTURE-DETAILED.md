@@ -214,7 +214,7 @@ rawYaml
 4. player.js
 5. Load handler (hide loading div)
 
-**Signing:** When auth is enabled, Hub computes `Hash(Content + NUL + pseudoId)`, signs with Ed25519, injects into globals. Content = full lesson script (nonce + factory-loader + LESSON_DATA + player) with signature placeholder.
+**Signing:** When auth is enabled, Hub computes `Hash(Content + NUL + pseudoId)`, signs with Ed25519, injects into globals. Content = canonicalJSON(LESSON_DATA) (narrow scope v2.2).
 
 ### Entry Points
 

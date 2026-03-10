@@ -356,7 +356,11 @@
   function canonicalJSON(obj) {
     if (obj === null || obj === undefined) return 'null';
     var type = typeof obj;
-    if (type === 'number' || type === 'boolean') return String(obj);
+    if (type === 'number') {
+      if (!isFinite(obj)) return 'null';
+      return String(obj);
+    }
+    if (type === 'boolean') return String(obj);
     if (type === 'string') return JSON.stringify(obj);
     if (Array.isArray(obj)) {
       var items = [];

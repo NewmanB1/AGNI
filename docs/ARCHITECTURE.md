@@ -335,7 +335,7 @@ We move from a "Public Flyer" model to a "Personalized Ticket" model.
 
 ### 5.2 Runtime Verification (Implemented)
 
-`player.js` implements `verifyIntegrity()`: it reads `OLS_SIGNATURE`, `OLS_PUBLIC_KEY`, and `OLS_INTENDED_OWNER` from the page, finds the lesson script in the DOM, replaces the signature value with a placeholder, and rebuilds the binding hash (SHA-256 of full script + NUL + deviceId). The Ed25519 signature is verified against this hash. Signatures produced before v2.1 (IR-only scope) will fail verification; lessons must be re-signed. It uses Web Crypto `SubtleCrypto` when available, with a TweetNaCl fallback for runtimes (e.g. older iOS) that do not support Ed25519 in SubtleCrypto. Signing is implemented in `utils/crypto.js`; both CLI and hub-transform inject the same globals via the shared `lessonAssembly` service.
+`player.js` implements `verifyIntegrity()`: it reads `OLS_SIGNATURE`, `OLS_PUBLIC_KEY`, and `OLS_INTENDED_OWNER` from the page, builds the binding hash from canonicalJSON(LESSON_DATA) + NUL + deviceId, and verifies the Ed25519 signature (narrow scope v2.2). Signatures from v2.1 (full-script scope) will fail; lessons must be re-signed. It uses Web Crypto `SubtleCrypto` when available, with a TweetNaCl fallback for runtimes (e.g. older iOS) that do not support Ed25519 in SubtleCrypto. Signing is implemented in `utils/crypto.js`; both CLI and hub-transform inject the same globals via the shared `lessonAssembly` service.
 
 When the lesson runs:
 

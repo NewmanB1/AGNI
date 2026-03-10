@@ -6,7 +6,7 @@ const { createLogger } = require('@agni/utils/logger');
 
 const log = createLogger('html-builder');
 
-const { signContent, computeSRI, SIG_PLACEHOLDER } = require('@agni/utils/crypto');
+const { signContent, canonicalJSON, computeSRI } = require('@agni/utils/crypto');
 const { generateNonce, buildCspMeta } = require('@agni/utils/csp');
 const io                 = require('@agni/utils/io');
 const ensureDir          = io.ensureDir;
@@ -120,14 +120,8 @@ async function buildHtml(lessonData, options) {
   if (options.skipSigning) {
     log.info('Signing skipped (--skip-signing)');
   } else if (options.deviceId && options.privateKey) {
-    const scriptWithPlaceholder = nonceBootstrap + '\n' + lessonAssembly.buildLessonScript(ir, {
-      signature:       SIG_PLACEHOLDER,
-      publicKeySpki:   publicKeySpki || '',
-      deviceId:        options.deviceId || '',
-      factoryLoaderJs: factoryLoaderJs,
-      playerJs:        playerJs
-    });
-    signature = signContent(scriptWithPlaceholder, options.deviceId, options.privateKey);
+    // Narrow scope (v2.2): sign canonical LESSON_DATA + deviceId for faster verification
+    signature = signContent(canonicalJSON(ir), options.deviceId, options.privateKey);
   } else if (options.deviceId) {
     throw new Error('Device binding requested but --private-key not provided. Use --skip-signing for unsigned builds.');
   }
