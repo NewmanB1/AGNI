@@ -32,6 +32,10 @@ Route-level cross-cutting concerns use middleware factories in `packages/agni-hu
 
 Wrap individual route handlers: `router.get('/path', adminOnly((req, res, ctx) => { ... }))`.
 
+## YAML/IR schema versioning
+
+When introducing a new schema version (e.g. in `schemas/ols.schema.json`), update `KNOWN_SCHEMA_VERSIONS` in `packages/ols-compiler/compiler/build-lesson-ir.js` so the compiler recognizes it. Offline hubs may receive YAML with new fields; unrecognized versions log a warning and continue with best-effort parse. Document version changes in release notes or `docs/CHANGELOG.md`.
+
 ## Schema-backed JSON persistence (governance)
 
 Use `createSchemaStore(schemaPath, defaults, logger)` from `packages/agni-governance/schema-store.js` for any JSON file that has an associated JSON Schema. Returns `{ validate, load, save }` — encapsulates Ajv setup, validation on load/save, atomic writes, and fallback defaults.

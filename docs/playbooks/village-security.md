@@ -4,6 +4,10 @@
 
 **Related:** `docs/DEPLOYMENT.md` (setup), `docs/ARCHITECTURE.md` §5 (security), `docs/playbooks/federation.md` (sync), `SECURITY.md` (vulnerability reporting).
 
+**Trust boundaries:**
+- **Device ID:** `OLS_INTENDED_OWNER` is compared to a device UUID (often in localStorage). A student can change the UUID to bypass anti-copy — document as a known limitation. Hub-issued device secret or hardware-backed identifier would strengthen; not implemented.
+- **Session replay:** 24h session tokens can be copied between devices. Binding sessions to deviceId or shorter TTL would reduce risk; document for deployers. See `docs/DEPLOYMENT.md` for auth configuration.
+
 ---
 
 ## 1. System Overview

@@ -233,18 +233,29 @@
    * Verify lesson integrity. Returns Promise<boolean>.
    * Deferred to next tick to avoid blocking main thread (TweetNaCl can freeze UI).
    * devMode is derived from URL parameter, never from lesson data.
+   * lastVerifyMs is set after verification for QA measurement (target <100ms on Android 7).
    * @param {object} lesson LESSON_DATA
    */
   function verify(lesson) {
     return new Promise(function (resolve) {
       global.setTimeout(function () {
-        _doVerify(lesson).then(resolve).catch(function () { resolve(false); });
+        var t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+        _doVerify(lesson).then(function (result) {
+          var t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+          global.AGNI_INTEGRITY.lastVerifyMs = Math.round(t1 - t0);
+          if (isDevMode()) console.log('[VERIFY] Duration:', global.AGNI_INTEGRITY.lastVerifyMs, 'ms');
+          resolve(result);
+        }).catch(function () {
+          global.AGNI_INTEGRITY.lastVerifyMs = -1;
+          resolve(false);
+        });
       }, 0);
     });
   }
 
   global.AGNI_INTEGRITY = {
-    verify: verify
+    verify: verify,
+    lastVerifyMs: null
   };
 
 })(typeof self !== 'undefined' ? self : this);

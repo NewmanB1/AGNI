@@ -147,6 +147,11 @@ async function saveState(state) {
       await fd.close();
     }
     await fsp.rename(STATE_TMP_PATH, STATE_PATH);
+    // Ensure rename is durable: fsync parent directory (ext4/SD cards).
+    try {
+      var parentFd = await fsp.open(DATA_DIR, 'r');
+      try { await parentFd.sync(); } finally { await parentFd.close(); }
+    } catch (e) { /* non-fatal */ }
   } catch (err) {
     var msg = err instanceof Error ? err.message : String(err);
     log.error('Failed to save state:', msg);
@@ -171,6 +176,10 @@ function saveStateSync(state) {
       fs.closeSync(fd);
     }
     fs.renameSync(STATE_TMP_PATH, STATE_PATH);
+    try {
+      var parentFd = fs.openSync(DATA_DIR, 'r');
+      try { fs.fsyncSync(parentFd); } finally { fs.closeSync(parentFd); }
+    } catch (e) { /* non-fatal */ }
   } catch (err) {
     var msg = err instanceof Error ? err.message : String(err);
     log.error('Failed to save state:', msg);

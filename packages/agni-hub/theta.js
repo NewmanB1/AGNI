@@ -23,7 +23,7 @@ const {
   loadMasterySummaryAsync, loadBaseCostsAsync, loadLessonIndexAsync, loadSchedulesAsync,
   loadCurriculumAsync, loadApprovedCatalogAsync,
   lmsService: lmsEngine, log,
-  GRAPH_WEIGHTS_LOCAL, GRAPH_WEIGHTS_REGIONAL,
+  GRAPH_WEIGHTS_LOCAL, GRAPH_WEIGHTS_REGIONAL, SKILL_GRAPH_CYCLES,
   MASTERY_SUMMARY, SCHEDULES, CURRICULUM_GRAPH, APPROVED_CATALOG,
   SERVE_DIR, LESSON_INDEX, PORT,
   MIN_RESIDUAL, MIN_MLC, MASTERY_THRESHOLD, MIN_CONFIDENCE,
@@ -144,7 +144,16 @@ async function updateSharedCacheIfNeeded() {
       cycle: cycle,
       message: 'Lessons that provide these skills are excluded until cycle is fixed.'
     });
+    saveJSONAsync(SKILL_GRAPH_CYCLES, {
+      cycle: cycle,
+      detectedAt: new Date().toISOString(),
+      message: 'Lessons that provide these skills are excluded until cycle is fixed.'
+    }).catch(function (e) {
+      log.warn('Could not write skill-graph-cycles.json', { error: e.message });
+    });
     for (let ci = 0; ci < cycle.length; ci++) delete skillGraph[cycle[ci]];
+  } else {
+    saveJSONAsync(SKILL_GRAPH_CYCLES, { cycle: null, lastChecked: new Date().toISOString() }).catch(function () {});
   }
 
   sharedCache.skillGraph = skillGraph;

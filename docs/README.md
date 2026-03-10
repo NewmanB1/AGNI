@@ -45,6 +45,8 @@ AGNI is an **npm workspaces monorepo**. Each package has its own README with det
 - [ARCHITECTURE.md](ARCHITECTURE.md) — System architecture for AGNI/OLS: phases, governance, and design decisions. **Canonical single source of truth.**
 - [ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md](ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md) — Plan to address seven architectural vulnerabilities (cache poisoning, fsync, cycles, sensors, integrity, time-skew, memory).
 - [ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md](ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md) — Implementation status and remaining work.
+- [ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN.md](ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN.md) — Phase 2: 28 additional issues (disk cache, YAML DoS, Markdown XSS, directory fsync, etc.).
+- [ARCHITECTURAL-AUDIT-FINDINGS.md](ARCHITECTURAL-AUDIT-FINDINGS.md) — Audit findings for spec.type whitelist, graph weight clamping, PWA/factory handshake, factory supply chain.
 - [OLS-QUICK-REFERENCE.md](OLS-QUICK-REFERENCE.md) — Condensed flow, components, and key paths.
 - [VERIFICATION-REPORT.md](VERIFICATION-REPORT.md) — Cross-check of architectural claims vs codebase.
 - [GAP-ANALYSIS-AND-MITIGATIONS.md](GAP-ANALYSIS-AND-MITIGATIONS.md) — Known gaps, severity, and proposed mitigations.

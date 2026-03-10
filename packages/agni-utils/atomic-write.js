@@ -27,6 +27,10 @@ function atomicWriteSync(filePath, data) {
     fs.closeSync(fd);
   }
   fs.renameSync(tmpPath, filePath);
+  try {
+    var parentFd = fs.openSync(dir, 'r');
+    try { fs.fsyncSync(parentFd); } finally { fs.closeSync(parentFd); }
+  } catch (e) { /* non-fatal */ }
 }
 
 /**
@@ -47,6 +51,10 @@ async function atomicWrite(filePath, data) {
     await fd.close();
   }
   await fsp.rename(tmpPath, filePath);
+  try {
+    var parentFd = await fsp.open(dir, 'r');
+    try { await parentFd.sync(); } finally { await parentFd.close(); }
+  } catch (e) { /* non-fatal */ }
 }
 
 module.exports = { atomicWriteSync, atomicWrite };

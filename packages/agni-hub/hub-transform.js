@@ -220,12 +220,17 @@ function loadYaml(slug) {
 }
 
 // Disk cache: serveDir/lessons/<slug>/index.html + index-ir.json
+// Transactional: write to <slug>.tmp/, fsync, rename — avoids partial state on power loss.
 // Recompile only when yaml mtime > compiled mtime (DoS mitigation).
 function _getDiskCachePaths(slug) {
-  const lessonDir = path.join(SERVE_DIR, 'lessons', slug);
+  const lessonsRoot = path.join(SERVE_DIR, 'lessons');
+  const lessonDir = path.join(lessonsRoot, slug);
+  const tmpDir = path.join(lessonsRoot, slug + '.tmp.' + process.pid + '.' + Date.now());
   return {
+    lessonDir: lessonDir,
+    tmpDir: tmpDir,
     htmlPath: path.join(lessonDir, 'index.html'),
-    irPath:   path.join(lessonDir, 'index-ir.json'),
+    irPath: path.join(lessonDir, 'index-ir.json'),
     fullIrPath: path.join(lessonDir, 'index-ir-full.json')
   };
 }
@@ -235,9 +240,10 @@ function _tryReadDiskCache(slug, yamlMtime) {
   try {
     const htmlStat = fs.statSync(paths.htmlPath);
     if (htmlStat.mtimeMs < yamlMtime) return null;
-    const html  = fs.readFileSync(paths.htmlPath, 'utf8');
+    const html = fs.readFileSync(paths.htmlPath, 'utf8');
     const irRaw = fs.readFileSync(paths.fullIrPath, 'utf8');
-    const ir    = JSON.parse(irRaw);
+    const ir = JSON.parse(irRaw);
+    if (!ir || typeof ir !== 'object' || !ir.steps) return null;
     const sidecar = buildLessonSidecar(ir);
     return { html: html, sidecar: sidecar, ir: ir };
   } catch (e) {
@@ -247,13 +253,37 @@ function _tryReadDiskCache(slug, yamlMtime) {
 
 function _writeDiskCache(slug, html, ir) {
   const paths = _getDiskCachePaths(slug);
-  const lessonDir = path.dirname(paths.htmlPath);
   try {
-    fs.mkdirSync(lessonDir, { recursive: true });
-    fs.writeFileSync(paths.htmlPath, html, 'utf8');
-    fs.writeFileSync(paths.irPath, JSON.stringify(buildLessonSidecar(ir), null, 0), 'utf8');
-    fs.writeFileSync(paths.fullIrPath, JSON.stringify(ir, null, 0), 'utf8');
+    fs.mkdirSync(paths.tmpDir, { recursive: true });
+    const tmpHtml = path.join(paths.tmpDir, 'index.html');
+    const tmpIr = path.join(paths.tmpDir, 'index-ir.json');
+    const tmpFullIr = path.join(paths.tmpDir, 'index-ir-full.json');
+    fs.writeFileSync(tmpHtml, html, 'utf8');
+    fs.writeFileSync(tmpIr, JSON.stringify(buildLessonSidecar(ir), null, 0), 'utf8');
+    fs.writeFileSync(tmpFullIr, JSON.stringify(ir, null, 0), 'utf8');
+    const fdHtml = fs.openSync(tmpHtml, 'r');
+    const fdIr = fs.openSync(tmpIr, 'r');
+    const fdFull = fs.openSync(tmpFullIr, 'r');
+    fs.fsyncSync(fdHtml);
+    fs.fsyncSync(fdIr);
+    fs.fsyncSync(fdFull);
+    fs.closeSync(fdHtml);
+    fs.closeSync(fdIr);
+    fs.closeSync(fdFull);
+    if (fs.existsSync(paths.lessonDir)) {
+      fs.rmSync(paths.lessonDir, { recursive: true });
+    }
+    fs.renameSync(paths.tmpDir, paths.lessonDir);
+    // Ensure rename is durable: fsync parent directory (ext4/SD cards).
+    const lessonsRoot = path.dirname(paths.lessonDir);
+    try {
+      const parentFd = fs.openSync(lessonsRoot, 'r');
+      try { fs.fsyncSync(parentFd); } finally { fs.closeSync(parentFd); }
+    } catch (err) { log.warn('Parent directory fsync failed', { lessonsRoot, error: err.message }); }
   } catch (err) {
+    try {
+      if (fs.existsSync(paths.tmpDir)) fs.rmSync(paths.tmpDir, { recursive: true });
+    } catch (e) { /* rm best-effort */ void e; }
     log.warn('Disk cache write failed', { slug, error: err.message });
   }
 }
@@ -377,6 +407,7 @@ async function _doCompile(slug, loaded) {
     }
   });
   ir.requires = { factories: factoryDeps };
+  ir._runtimeVersion = RUNTIME_VERSION;
 
   // Ensure KaTeX CSS files exist on disk for /katex/ serving
   if (ir.inferredFeatures.katexAssets.length > 0) {

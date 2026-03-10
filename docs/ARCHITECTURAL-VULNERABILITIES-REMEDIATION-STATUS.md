@@ -25,8 +25,7 @@ This document tracks implementation status of the seven architectural vulnerabil
 - **Verification:** Unit and E2E tests per plan (if not yet written, add as follow-up).
 
 ### 2. False-Atomic Write — DONE
-- **What was done:** `saveState` / `saveStateSync` use `fsync` / `fsyncSync` before `rename` in `packages/agni-engine/index.js`.
-- **Follow-up:** Audit other critical JSON writers (mastery_summary, graph_weights, sync) and apply same pattern.
+- **What was done:** `saveState` / `saveStateSync` use `fsync` / `fsyncSync` before `rename` in `packages/agni-engine/index.js`. Directory fsync added after rename in json-store, atomic-write, engine, and hub-transform (Phase 2 #8).
 
 ### 3. Cycle-Triggered Global DoS — DONE
 - **What was done:** Graceful degradation; prune cycle nodes; exclude affected lessons; `AGNI_STRICT_SKILL_GRAPH=1` for strict mode.
@@ -48,6 +47,7 @@ This document tracks implementation status of the seven architectural vulnerabil
 
 **Done:**
 - Async wrapper: `verify()` defers work with `setTimeout(0)` so main thread can paint before verification.
+- **5a** — "Verifying…" spinner in player. **5e** — `AGNI_INTEGRITY.lastVerifyMs` for QA measurement.
 
 **Remaining work:**
 
@@ -57,58 +57,46 @@ This document tracks implementation status of the seven architectural vulnerabil
 | 5b | Product/security decision: is `LESSON_DATA + OLS_INTENDED_OWNER` acceptable hash scope? | Decision | Product |
 | 5c | If yes: narrow signer (hub/CLI) and verifier to smaller payload | Medium | Compiler, hub, integrity |
 | 5d | If no: evaluate Web Worker path — create `integrity-worker.js`, post message, verify off main thread | High | Runtime |
-| 5e | Measure verification time on Android 7; target &lt; 100 ms perceived block | Low | QA |
+| ~~5e~~ | *(Done)* lastVerifyMs exposed for QA | — | — |
 
 **Recommended order:** 5a → 5b → 5c or 5d → 5e.
 
 ---
 
-### 6. Time-Skew Telemetry Corruption — PARTIAL
+### 6. Time-Skew Telemetry Corruption — DONE
 
 **Done:**
-- `AGNI_SENTRY_MIN_VALID_YEAR` (default 2020) in sentry.js.
-- Reject POST `/api/telemetry` when system year &lt; threshold (503).
-- Skip flush when clock invalid.
-
-**Remaining work:**
-
-| Step | Task | Effort | Owner |
-|------|------|--------|-------|
-| 6a | Add `syncTimestamp` to sync payload format; document in API | Low | Services |
-| 6b | In sync apply path: optionally run `date -s <syncTimestamp>` (with safeguards, permissions) | Medium | Hub / sync |
-| 6c | Markov cooldowns: design sequence-based schema (replace `Date.now()` with `observationCount`) | High | Engine |
-| 6d | Implement sequence-based cooldowns in markov.js | High | Engine |
-| 6e | Document hub time management in `docs/RUN-ENVIRONMENTS.md` | Low | Docs |
-| 6f | Session/JWT: document clock dependency; consider short TTL | Low | Docs |
-
-**Recommended order:** 6a, 6e, 6f (quick wins) → 6b (USB time sync) → 6c, 6d (Markov redesign).
+- `AGNI_SENTRY_MIN_VALID_YEAR` (default 2020) in sentry.js; reject POST when system year &lt; threshold.
+- **6a** — `syncTimestamp` in sync payload; documented in federation playbook and API.
+- **6b** — Optional `date -s` in sync apply path when `AGNI_SYNC_SET_CLOCK=1`.
+- **6c, 6d** — Markov uses sequence-based cooldowns (`observationIndex`); no `Date.now()` for cooldown eviction.
+- **6e** — Hub time management in `RUN-ENVIRONMENTS.md`.
+- **6f** — Session/JWT clock dependency documented in village-security, DEPLOYMENT, runtime playbook.
 
 ---
 
 ## Phased Execution Plan
 
-### Phase A — Quick Wins (1–2 days)
+### Phase A — Quick Wins — DONE
 1. **5a** — “Verifying…” spinner in player.
 2. **6a** — Add `syncTimestamp` to sync payload; document.
 3. **6e** — Document hub time management.
 4. **6f** — Document JWT/session clock dependency.
-5. **2 (follow-up)** — Audit and apply fsync to mastery_summary, graph_weights, sync if not yet done.
+5. **2 (follow-up)** — Done: directory fsync in json-store, atomic-write, engine, hub-transform.
 
 ### Phase B — Product Decisions (Blocking)
 1. **5b** — Decide on integrity hash scope (full script vs LESSON_DATA + owner).
 2. Plan 5c (narrow scope) or 5d (Worker) based on outcome.
 
 ### Phase C — Integrity Completion
-1. **5c** or **5d** — Implement chosen integrity path.
-2. **5e** — Measure and verify &lt; 100 ms perceived block on Android 7.
+1. **5c** or **5d** — Implement chosen integrity path (blocked on 5b).
+2. **5e** — Done: `lastVerifyMs` exposed for QA measurement.
 
-### Phase D — Time Sync
-1. **6b** — Implement optional `date -s` in sync apply path.
+### Phase D — Time Sync — DONE
+**6b** implemented; `AGNI_SYNC_SET_CLOCK=1` enables optional `date -s` in sync apply path.
 
-### Phase E — Markov Redesign (Higher Effort)
-1. **6c** — Design sequence-based cooldown schema.
-2. **6d** — Implement in markov.js.
-3. Migration path for existing cooldown data.
+### Phase E — Markov Redesign — DONE
+**6c, 6d** implemented; markov.js uses `observationIndex` for sequence-based cooldowns.
 
 ---
 
@@ -127,5 +115,7 @@ This document tracks implementation status of the seven architectural vulnerabil
 ## References
 
 - `docs/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md` — Full specification
+- `docs/ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN.md` — Phase 2 (28 items) and implementation status
+- `docs/ARCHITECTURAL-AUDIT-FINDINGS.md` — Audit findings (spec.type, graph clamp, PWA handshake, supply chain)
 - `docs/ARCHITECTURE-DETAILED.md` — Implementation details
 - `docs/RUN-ENVIRONMENTS.md` — Hardware and environment constraints

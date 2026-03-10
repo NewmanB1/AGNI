@@ -20,6 +20,7 @@
   "maxLessons": 200,
   "topKCandidates": 500,
   "compileConcurrency": 1,
+  "compileConcurrencyNote": "Formula: min(cores-2, 2) for multi-core; Pi 3 (1GB) use 1; Pi 4 (2GB) use 2. Higher values can freeze event loop during KaTeX.",
   "capacityNote": "Memory budget assumes maxStudents and maxLessons. Runtime enforced: engine and accounts reject when at cap. topKCandidates caps bandit selection to reduce CPU on Pi. compileConcurrency=1 for Pi 3 (1GB); use 2 for Pi 4 (2GB) to reduce compile queue wait.",
 
   "_path_notes": [

@@ -338,7 +338,9 @@
     // the existing Promise rather than issuing a second request.
     if (_pending[key]) return _pending[key];
 
-    var url = _hubUrl + '/factories/' + dep.file;
+    // Version in URL ensures cache entries are versioned; SW update + new runtime
+    // fetches fresh files rather than serving stale cached content.
+    var url = _hubUrl + '/factories/' + dep.file + (dep.version ? '?v=' + encodeURIComponent(dep.version) : '');
     if (global.DEV_MODE) console.log('[LOADER] Loading:', key, 'from', url);
 
     function verifyAndExecute(text) {

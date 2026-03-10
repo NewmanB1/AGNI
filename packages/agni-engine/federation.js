@@ -156,10 +156,12 @@ function getBanditSummary(state) {
   }
   var mean = math.backSub(L, math.forwardSub(L, state.bandit.b));
   return {
-    embeddingDim: state.embedding.dim,  // Contract: federating hubs must use same value
-    mean:         mean,
-    precision:    copyMat(state.bandit.A),  // A ≈ Σ⁻¹ (raw); copy to avoid aliasing
-    sampleSize:   n
+    embeddingDim:   state.embedding.dim,  // Contract: federating hubs must use same value
+    mean:           mean,
+    precision:      copyMat(state.bandit.A),  // A ≈ Σ⁻¹ (raw); copy to avoid aliasing
+    sampleSize:     n,
+    posteriorVersion: 1,  // Schema version for merge semantics; bump on format change
+    trainingWindow:    n  // Observations in this posterior; aids audit and merge ordering
   };
 }
 
@@ -167,11 +169,13 @@ function getBanditSummary(state) {
 function addSyncId(summary) {
   var syncId = contentHash(summary);
   return {
-    embeddingDim: summary.embeddingDim,
-    mean:         summary.mean.slice(),
-    precision:    copyMat(summary.precision),
-    sampleSize:   summary.sampleSize,
-    syncId:       syncId
+    embeddingDim:     summary.embeddingDim,
+    mean:             summary.mean.slice(),
+    precision:        copyMat(summary.precision),
+    sampleSize:       summary.sampleSize,
+    posteriorVersion: summary.posteriorVersion,
+    trainingWindow:   summary.trainingWindow,
+    syncId:           syncId
   };
 }
 
@@ -237,32 +241,40 @@ function mergeBanditSummaries(local, remote) {
 
   var totalN = local.sampleSize + remote.sampleSize;
 
+  var pv = Math.max(local.posteriorVersion || 1, remote.posteriorVersion || 1);
+
   // Guard: both zero — return neutral summary
   if (totalN === 0) {
     var featDim = local.embeddingDim * 2;
     return {
-      embeddingDim: local.embeddingDim,
-      mean:         math.zeros(featDim),
-      precision:    math.identity(featDim),
-      sampleSize:   0
+      embeddingDim:     local.embeddingDim,
+      mean:             math.zeros(featDim),
+      precision:        math.identity(featDim),
+      sampleSize:       0,
+      posteriorVersion: pv,
+      trainingWindow:   0
     };
   }
 
   // Bug 3: one side has zero — return copy of the non-zero side
   if (local.sampleSize === 0) {
     return {
-      embeddingDim: remote.embeddingDim,
-      mean:         remote.mean.slice(),
-      precision:    copyMat(remote.precision),
-      sampleSize:   remote.sampleSize
+      embeddingDim:     remote.embeddingDim,
+      mean:             remote.mean.slice(),
+      precision:        copyMat(remote.precision),
+      sampleSize:       remote.sampleSize,
+      posteriorVersion: pv,
+      trainingWindow:   remote.sampleSize
     };
   }
   if (remote.sampleSize === 0) {
     return {
-      embeddingDim: local.embeddingDim,
-      mean:         local.mean.slice(),
-      precision:    copyMat(local.precision),
-      sampleSize:   local.sampleSize
+      embeddingDim:     local.embeddingDim,
+      mean:             local.mean.slice(),
+      precision:        copyMat(local.precision),
+      sampleSize:       local.sampleSize,
+      posteriorVersion: pv,
+      trainingWindow:   local.sampleSize
     };
   }
 
@@ -291,10 +303,12 @@ function mergeBanditSummaries(local, remote) {
   });
 
   return {
-    embeddingDim: local.embeddingDim,
-    mean:         mergedMean,
-    precision:    copyMat(mergedPrec),  // total-unit scaled precision; copy to avoid aliasing
-    sampleSize:   totalN
+    embeddingDim:     local.embeddingDim,
+    mean:             mergedMean,
+    precision:        copyMat(mergedPrec),  // total-unit scaled precision; copy to avoid aliasing
+    sampleSize:       totalN,
+    posteriorVersion: pv,
+    trainingWindow:   totalN
   };
 }
 

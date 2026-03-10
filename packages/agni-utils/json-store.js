@@ -56,6 +56,13 @@ function saveJSON(filePath, data, opts) {
     fs.closeSync(fd);
   }
   fs.renameSync(tmpPath, filePath);
+  // Ensure rename is durable: fsync parent directory (ext4/SD cards).
+  try {
+    const parentFd = fs.openSync(dir, 'r');
+    try { fs.fsyncSync(parentFd); } finally { fs.closeSync(parentFd); }
+  } catch (e) {
+    log.warn('Parent directory fsync failed (non-fatal)', { dir, error: e.message });
+  }
 }
 
 /**
@@ -119,6 +126,13 @@ async function saveJSONAsync(filePath, data, opts) {
     await fd.close();
   }
   await fsp.rename(tmpPath, filePath);
+  // Ensure rename is durable: fsync parent directory (ext4/SD cards).
+  try {
+    const parentFd = await fsp.open(dir, 'r');
+    try { await parentFd.sync(); } finally { await parentFd.close(); }
+  } catch (e) {
+    log.warn('Parent directory fsync failed (non-fatal)', { dir, error: e.message });
+  }
 }
 
 /**

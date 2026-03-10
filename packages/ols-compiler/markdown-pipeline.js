@@ -13,6 +13,7 @@ async function _buildProcessor() {
   var remarkMath      = (await import('remark-math')).default;
   var remarkRehype    = (await import('remark-rehype')).default;
   var rehypeKatex     = (await import('rehype-katex')).default;
+  var rehypeSanitize  = (await import('rehype-sanitize')).default;
   var rehypeStringify = (await import('rehype-stringify')).default;
 
   var processor = unified()
@@ -24,9 +25,8 @@ async function _buildProcessor() {
       throwOnError: false,
       errorColor: '#ff6b35'
     })
-    .use(rehypeStringify, {
-      allowDangerousHtml: true
-    });
+    .use(rehypeSanitize)
+    .use(rehypeStringify);
 
   log.info('Markdown processor ready');
   return processor;

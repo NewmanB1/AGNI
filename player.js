@@ -1,5 +1,7 @@
-// src/runtime/player.js
-// AGNI / OLS Runtime – Android 6.0 Marshmallow compatible + emulator support
+// src/runtime/player.js (LEGACY)
+// AGNI / OLS Runtime – Android 6.0 Marshmallow compatible + emulator support.
+// Canonical player: packages/agni-runtime/ui/player.js. This stub bypasses integrity
+// verification for local dev / standalone testing. Do not use for production.
 
 window.DEV_MODE = (typeof __AGNI_DEV__ !== 'undefined') ? __AGNI_DEV__ : false;
 

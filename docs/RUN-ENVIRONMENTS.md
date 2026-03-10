@@ -56,6 +56,10 @@ Runs on the Raspberry Pi server. Node 14+.
 - `npm run start:hub` sets `NODE_OPTIONS=--max-old-space-size=512` to cap V8 heap and prevent OOM during KaTeX/Markdown compilation.
 - `compileConcurrency`: 1 for Pi 3 (1GB RAM), 2 for Pi 4 (2GB). Set in hub-config.pi.json.
 
+**Disk (Pi `serveDir/lessons`):** Many lesson YAML versions can fill disk. Policy: keep compiled lessons for YAML files present in `yaml/`; prune compiled output when YAML is removed. No automatic GC for old YAML backups — manage manually or via external cron. Consider `AGNI_YAML_MAX_BYTES` and version retention in authoring workflow.
+
+**Service Worker cache eviction:** Chrome may evict Cache API entries under storage pressure. Factory files use versioned URLs (`?v=<version>`), so cache misses trigger fresh fetches. Offline lesson load may fail if evicted — student sees "Connect to hub" banner. Mitigation: ensure hub connectivity for first load; document that eviction is expected on low-storage devices.
+
 ---
 
 ## 3. Node.js scripts and tools
