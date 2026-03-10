@@ -280,6 +280,7 @@ Compilation cost (Markdown + KaTeX + inference) is network-triggerable CPU load.
 | Recompile only when YAML changed | `yaml mtime > compiled mtime` (disk); `cached.mtime === loaded.mtime` (memory) |
 | Concurrent-request deduplication | Per-slug in-flight guard: same slug awaits existing Promise |
 | Concurrency cap | `AGNI_COMPILE_CONCURRENCY` (default 3) limits parallel compilations |
+| Queue overflow (thundering herd) | When no slot available, return 202 Accepted + Retry-After; client auto-refreshes. Config: `AGNI_COMPILE_RETRY_AFTER` (default 3s). |
 | LRU eviction | `AGNI_CACHE_MAX` (default 100 entries) caps memory |
 
 On-demand hub-transform checks disk first; if `index.html` exists and its mtime ≥ YAML mtime, serves from disk. Otherwise compiles, populates memory cache, and writes to disk. Theta's `rebuildLessonIndex()` reads `index-ir.json` sidecars. Static build output (CLI `--output`) may also write to `serveDir/lessons/<slug>/`.
@@ -354,6 +355,7 @@ To prevent students from claiming another student's identity (pseudoId), the Hub
 - `AGNI_PRIVATE_KEY_PATH` (or `privateKeyPath` in hub-config.json): Ed25519 private key for signing. Empty = no signing.
 - Students without a PIN cannot obtain a session; they receive unsigned lessons.
 - Session TTL: 24 hours (STUDENT_SESSION_TTL_MS). Cookie: `HttpOnly`, `SameSite=Lax`, `Path=/`.
+- **Session IP binding:** When a session is created (verify-pin or claim), the client IP is stored. On lesson delivery, the Hub rejects the session if the request IP differs, mitigating token theft between devices on the same network.
 
 **Implementation:** `packages/agni-services/accounts.js` (createStudentSession, validateStudentSession), `packages/agni-hub/hub-transform.js` (_getRequestCompileOptions, _assembleHtml), `packages/agni-utils/http-helpers.js` (extractStudentSessionToken).
 
@@ -584,7 +586,7 @@ prescribing specific lesson content.
 | **Device UUID trust** | When auth enabled: Hub binds content to *authenticated* pseudoId (PIN or transfer-token). Without auth: unsigned lessons served. | See §5.3. Provides integrity + anti-copy + ownership binding when PIN/session and `AGNI_PRIVATE_KEY_PATH` are configured. |
 | **Signature scope** | *(Resolved v2.1)* Content = full lesson script (IR + factory-loader + player), with signature placeholder. Covers entire executable artifact. | See `utils/crypto.js`, `lessonAssembly`, `integrity/integrity.js`. Lessons signed with pre-v2.1 (IR-only) must be re-signed. |
 | **Cached assets unsigned** | Service Worker caches `shared-runtime.js`, `svg-stage.js`. These are not per-lesson signed. | Shared assets are hub-served over TLS; integrity relies on first-fetch authenticity. |
-| **Federation merge** | No explicit version/timestamp in merge. Duplicate or out-of-order merges could affect posteriors. | `federation.js` uses contentHash (embeddingDim, mean, precision, sampleSize) for dedup; idempotent for same inputs. See `docs/GAP-ANALYSIS-AND-MITIGATIONS.md`. |
+| **Federation merge** | Sneakernet loop (A→B→C→A) could double-count observations and poison posteriors. | `federation.js` uses contentHash for exact-duplicate dedup; **hubId + exportSequence** with `hubHighWater` per hub prevents re-merging same hub's exports. Requires unique `AGNI_HUB_ID` per hub. |
 | **LMS migration** | State migrated on load. Power loss during migration could corrupt state. | Atomic write: write to `.tmp`, `fsync`, then rename. See `packages/agni-engine/index.js` `saveState` and `packages/agni-utils/json-store.js`. |
 | **Service Worker** | *(Addressed by Android 7.0 baseline)* Nougat (API 24) has reliable SW support; we no longer target Marshmallow. | N/A — edge requirement is Android 7.0+. |
 | **Atomic compilation** | On-demand compile writes to response stream; no partial-file race for GET. Static build uses temp+rename. | hub-transform streams; no intermediate file. CLI uses atomic write. |

@@ -6,7 +6,7 @@
 
 **Trust boundaries:**
 - **Device ID:** `OLS_INTENDED_OWNER` is compared to a device UUID (often in localStorage). A student can change the UUID to bypass anti-copy — document as a known limitation. Hub-issued device secret or hardware-backed identifier would strengthen; not implemented.
-- **Session replay:** 24h session tokens can be copied between devices. Binding sessions to deviceId or shorter TTL would reduce risk; document for deployers. See `docs/DEPLOYMENT.md` for auth configuration.
+- **Session replay:** Student sessions are bound to client IP at creation (verify-pin, claim). If a token is used from a different IP, the session is rejected. This mitigates token theft between devices on the same network. See `docs/DEPLOYMENT.md` for auth configuration.
 
 ---
 
@@ -262,6 +262,7 @@ If implementing only a few protections, prioritize:
 | WiFi client isolation | Operator (hostapd config) |
 | Safe state writes | ✓ Implemented (`packages/agni-engine`, `packages/agni-utils/json-store.js`) |
 | Signed lesson bundles | ✓ Implemented (Ed25519, player verifyIntegrity) |
+| Session IP binding | ✓ Implemented (accounts.js, hub-transform) — token theft mitigation |
 | usbPath safe root | ✓ Implemented (env-config, sync validation) |
 | Edge kiosk / Device Owner | Operator (Android MDM) |
 | Automated backups | Operator (cron, scripts) |

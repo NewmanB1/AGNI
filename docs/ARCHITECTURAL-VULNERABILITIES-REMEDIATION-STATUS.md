@@ -112,6 +112,40 @@ This document tracks implementation status of the seven architectural vulnerabil
 
 ---
 
+## Additional Hardening (Post-Original Plan)
+
+The following remediations address edge-case vulnerabilities identified during deployment hardening:
+
+| # | Vulnerability | Status | Location |
+|---|---------------|--------|----------|
+| **H1** | Thundering herd (compile queue timeout) | **Done** | hub-transform.js |
+| **H2** | SD card directory fsync | **Done** (was already implemented) | json-store.js, hub-transform.js |
+| **H3** | Sensor hardware failure blocking | **Done** | threshold-evaluator.js, player.js |
+| **H4** | Sneakernet Bayesian double-count | **Done** | federation.js, engine/index.js |
+| **H5** | Student-to-student token theft | **Done** | accounts.js, http-helpers.js, hub-transform.js |
+
+### H1. Thundering Herd
+- **Problem:** 30 students open devices at once; 15 unique lessons requested; concurrency cap 3. Queued requests hold HTTP connections. Nougat WebView times out (30–60s); students refresh; Pi spirals into OOM.
+- **Fix:** When compile slot unavailable, return **202 Accepted** with `Retry-After` header and lightweight HTML that auto-refreshes. Client releases connection; no manual refresh spam.
+- **Config:** `AGNI_COMPILE_RETRY_AFTER` (default 3 seconds).
+
+### H2. SD Card Directory Fsync
+- Already implemented: `json-store.js` and `hub-transform.js` fsync the parent directory after `rename()` to ensure rename durability on ext4/SD cards.
+
+### H3. Sensor Hardware Failure
+- **Problem:** Broken accelerometer; DeviceMotion never fires; student blocked on hardware_trigger step forever.
+- **Fix:** `threshold-evaluator.watch()` accepts `{ timeoutMs: 5000, onTimeout }`. If no sensor data within 5s, player shows emulator "Shake" button; student can simulate action. Hardware failures never cause academic blocking.
+
+### H4. Sneakernet Bayesian Double-Count
+- **Problem:** A→B→C→A loop; same observations merged multiple times; precision explodes; bandit becomes overconfident.
+- **Fix:** Bandit summaries include `hubId` and `exportSequence`. Engine tracks `hubHighWater[hubId]`. Skip merge if `remote.exportSequence <= hubHighWater[remote.hubId]`. Requires unique `AGNI_HUB_ID` per hub.
+
+### H5. Session Token Theft
+- **Problem:** Student A copies Student B's `agni_student_session` cookie to own device; requests lessons as B.
+- **Fix:** Sessions store `clientIp` at creation. `validateStudentSession(token, { clientIp })` rejects if IP mismatch. `verify-pin` and `claim` bind; hub-transform validates on lesson delivery.
+
+---
+
 ## References
 
 - `docs/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md` — Full specification
