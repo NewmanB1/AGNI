@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "bin": {
-    "agni": "./src/cli.js"
+    "agni": "./packages/agni-cli/cli.js"
   },
   "keywords": [
     "agni",
@@ -62,13 +62,13 @@
     "typescript": "^5.0.0"
   },
   "scripts": {
-    "compile": "node src/cli.js",
-    "build": "node src/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html",
-    "build:native": "node src/cli.js lessons/gravity.yaml --format=native --output-dir=dist/native-gravity",
+    "compile": "node packages/agni-cli/cli.js",
+    "build": "node packages/agni-cli/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html",
+    "build:native": "node packages/agni-cli/cli.js lessons/gravity.yaml --format=native --output-dir=dist/native-gravity",
     "build:all": "npm run build && npm run build:native",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "prebuild": "npm run clean",
-    "dev": "nodemon --exec \"node src/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html\" --watch src --watch lessons",
+    "dev": "nodemon --exec \"node packages/agni-cli/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html\" --watch packages --watch lessons",
     "lint": "eslint src/ hub-tools/ packages/agni-hub/ packages/agni-services/ tests/ --max-warnings=120",
     "lint:fix": "eslint src/ hub-tools/ packages/agni-hub/ packages/agni-services/ tests/ --fix",
     "format": "prettier --write \"src/**/*.{js,ts}\" \"hub-tools/**/*.js\" \"packages/**/*.js\" \"server/**/*.js\" \"tests/**/*.js\"",
@@ -90,7 +90,7 @@
     "test:integration": "mocha tests/integration/*.test.js",
     "test:all": "mocha tests/unit/*.test.js tests/integration/*.test.js && node tests/contract-hub-api.js && node tests/graph-verification-test.js",
     "generate:lesson": "node scripts/generate-lesson.js",
-    "validate:lesson": "node src/utils/lesson-validator.js",
+    "validate:lesson": "node packages/ols-schema/lesson-validator.js",
     "codegen:validate-schemas": "node scripts/codegen-validate-schemas.js",
     "dev:vite": "npx serve -l 5174 --no-port-switching dist",
     "portal": "cd portal && serve -l 3000",

@@ -4,9 +4,9 @@ Use this when changing how lessons are compiled from YAML to IR or to HTML/nativ
 
 ## Entry points
 
-- **CLI:** `src/cli.js` parses args and calls `@agni/services/compiler` (or `src/services/compiler.js` re-export) `compileLessonFromYamlFile()`.
+- **CLI:** `packages/agni-cli/cli.js` parses args and calls `@ols/compiler/services/compiler` `compileLessonFromYamlFile()`.
 - **Service:** `packages/agni-services/compiler.js` → `@ols/compiler/services/compiler`. Exposes `compileLessonFromYamlFile()`, `parseLessonYaml()`, `validateLessonStructure()`.
-- **Barrel:** `src/compiler/index.js` re-exports from `@ols/compiler`. Canonical IR: `packages/ols-compiler/compiler/build-lesson-ir.js`.
+- **IR:** Canonical IR: `packages/ols-compiler/compiler/build-lesson-ir.js`.
 
 ## Where to change what
 

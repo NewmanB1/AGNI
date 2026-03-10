@@ -1,0 +1,21 @@
+{
+  "name": "@agni/cli",
+  "version": "0.1.0",
+  "description": "AGNI CLI — lesson compilation, validation, and hub wizards.",
+  "license": "AGPL-3.0",
+  "main": "cli.js",
+  "bin": {
+    "agni": "./cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NewmanB1/AGNI.git",
+    "directory": "packages/agni-cli"
+  },
+  "dependencies": {
+    "@agni/engine": "0.1.0",
+    "@agni/utils": "0.1.0",
+    "@ols/compiler": "0.1.0",
+    "@ols/schema": "0.1.0"
+  }
+}

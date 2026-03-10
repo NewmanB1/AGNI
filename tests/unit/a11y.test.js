@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const browserGlobals = require('../helpers/browser-globals');
 const { setupGlobals, teardownGlobals, makeElement } = browserGlobals;
 
-const shimPath = require.resolve('../../src/runtime/ui/a11y');
+const shimPath = require.resolve('@agni/runtime/ui/a11y');
 const canonicalPath = require.resolve('@agni/runtime/ui/a11y');
 
 function storage() { return browserGlobals.storage; }

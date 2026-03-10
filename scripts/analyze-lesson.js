@@ -6,7 +6,7 @@
  * Outputs: prerequisite depth, skill coverage, UTU distribution, VARK balance.
  *
  * Usage: node scripts/analyze-lesson.js <lesson.yaml> [--curriculum <path>]
- * Or:    node src/cli.js analyze <lesson.yaml> [--curriculum <path>]
+ * Or:    agni analyze <lesson.yaml> [--curriculum <path>]
  */
 
 const fs = require('fs');

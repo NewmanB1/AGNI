@@ -505,7 +505,6 @@ describe('AUDIT-11: createStudent returns sanitized output', () => {
     process.env.AGNI_DATA_DIR = dir;
     try {
       delete require.cache[require.resolve('@agni/services/accounts')];
-      delete require.cache[require.resolve('../../src/utils/env-config')];
       delete require.cache[require.resolve('@agni/utils/env-config')];
       const accounts = require('@agni/services/accounts');
       const result = await accounts.createStudent({ displayName: 'Test', pin: '9999' });
@@ -518,7 +517,6 @@ describe('AUDIT-11: createStudent returns sanitized output', () => {
       process.env.AGNI_DATA_DIR = saved;
       fsMod.rmSync(dir, { recursive: true, force: true });
       delete require.cache[require.resolve('@agni/services/accounts')];
-      delete require.cache[require.resolve('../../src/utils/env-config')];
       delete require.cache[require.resolve('@agni/utils/env-config')];
     }
   });
@@ -962,7 +960,6 @@ describe('AUDIT-21: governance routes reject unauthenticated requests', () => {
     delete process.env.AGNI_DATA_DIR;
     delete process.env.AGNI_SERVE_DIR;
     delete process.env.AGNI_HUB_API_KEY;
-    delete require.cache[require.resolve('../../src/utils/env-config')];
     delete require.cache[require.resolve('@agni/utils/env-config')];
     delete require.cache[require.resolve('@agni/services/accounts')];
     delete require.cache[require.resolve('../../packages/agni-hub/context/auth')];
@@ -1349,7 +1346,6 @@ describe('AUDIT-9: student listing does not expose sensitive fields', () => {
     process.env.AGNI_DATA_DIR = dir;
     try {
       delete require.cache[require.resolve('@agni/services/accounts')];
-      delete require.cache[require.resolve('../../src/utils/env-config')];
       delete require.cache[require.resolve('@agni/utils/env-config')];
       const accountsService = require('@agni/services/accounts');
       await accountsService.createStudent({ displayName: 'Test', pin: '1234' });
@@ -1364,7 +1360,6 @@ describe('AUDIT-9: student listing does not expose sensitive fields', () => {
       process.env.AGNI_DATA_DIR = saved;
       fs.rmSync(dir, { recursive: true, force: true });
       delete require.cache[require.resolve('@agni/services/accounts')];
-      delete require.cache[require.resolve('../../src/utils/env-config')];
       delete require.cache[require.resolve('@agni/utils/env-config')];
     }
   });
@@ -1689,7 +1684,7 @@ describe('AUDIT-D1: seedLesson clamps difficulty to [1,5]', () => {
   });
 
   it('does not throw when difficulty is NaN; seedLessons completes and probe has finite difficulty', async () => {
-    delete require.cache[require.resolve('../../src/engine')];
+    delete require.cache[require.resolve('@agni/engine')];
     const lmsEngine = require('@agni/engine');
     await assert.doesNotReject(
       lmsEngine.seedLessons([
@@ -1701,7 +1696,7 @@ describe('AUDIT-D1: seedLesson clamps difficulty to [1,5]', () => {
   });
 
   it('does not throw when difficulty is 10; clamps to 5 and seedLessons completes', async () => {
-    delete require.cache[require.resolve('../../src/engine')];
+    delete require.cache[require.resolve('@agni/engine')];
     const lmsEngine = require('@agni/engine');
     await assert.doesNotReject(
       lmsEngine.seedLessons([

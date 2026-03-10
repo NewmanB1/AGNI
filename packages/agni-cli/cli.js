@@ -1,8 +1,15 @@
-// src/cli.js
-// AGNI CLI – Builds lesson bundles (HTML, native, etc.)
+#!/usr/bin/env node
+'use strict';
 
+// packages/agni-cli/cli.js
+// AGNI CLI – Builds lesson bundles (HTML, native, etc.)
+// Canonical entry point. Use: agni <input.yaml> [options] or node packages/agni-cli/cli.js
+
+const path = require('path');
 const fs = require('fs');
 const compilerService = require('@ols/compiler/services/compiler');
+
+const SCRIPTS_ROOT = path.join(__dirname, '../../scripts');
 
 async function run() {
   const args = process.argv.slice(2);
@@ -12,13 +19,13 @@ async function run() {
     console.log(`
   🔥 AGNI — Open Lesson Standard Compiler
   Usage:
-    node src/cli.js <input.yaml> [options]
-    node src/cli.js hub setup --wizard   # Hub config (paths, ports, cache)
-    node src/cli.js hub init --wizard    # First-run: minimal config
-    node src/cli.js deploy setup --wizard # Deployment: hub ID, home URL, ports, USB
-    node src/cli.js sync setup --wizard   # Sync: transport, home URL, USB path
-    node src/cli.js analyze <lesson.yaml> [--curriculum=<path>]  # Lesson static analysis
-    node src/cli.js lms-repair   # Migrate/repair LMS state file (data/lms-state.json)
+    agni <input.yaml> [options]
+    agni hub setup --wizard   # Hub config (paths, ports, cache)
+    agni hub init --wizard    # First-run: minimal config
+    agni deploy setup --wizard # Deployment: hub ID, home URL, ports, USB
+    agni sync setup --wizard   # Sync: transport, home URL, USB path
+    agni analyze <lesson.yaml> [--curriculum=<path>]  # Lesson static analysis
+    agni lms-repair   # Migrate/repair LMS state file (data/lms-state.json)
     npm run build   # if using package.json script
 
   Options:
@@ -31,12 +38,12 @@ async function run() {
     --dev                    Enable developer mode (sensor logging, emulator controls)
 
   Examples:
-    node src/cli.js lessons/gravity.yaml --validate
-    node src/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html
-    node src/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html --dev
-    node src/cli.js lessons/gravity.yaml --format=native --output-dir=dist/native-gravity
-    node src/cli.js lessons/gravity.yaml --format=yaml-packet --output-dir=dist/yaml-gravity
-    node src/cli.js lms-repair
+    agni lessons/gravity.yaml --validate
+    agni lessons/gravity.yaml --format=html --output=dist/gravity.html
+    agni lessons/gravity.yaml --format=html --output=dist/gravity.html --dev
+    agni lessons/gravity.yaml --format=native --output-dir=dist/native-gravity
+    agni lessons/gravity.yaml --format=yaml-packet --output-dir=dist/yaml-gravity
+    agni lms-repair
     `);
     process.exit(0);
   }
@@ -45,19 +52,19 @@ async function run() {
   const firstArg = args.find(a => !a.startsWith('-'));
   const secondArg = args.filter(a => !a.startsWith('-'))[1];
   if (firstArg === 'hub' && secondArg === 'setup' && args.includes('--wizard')) {
-    await require('../scripts/hub-setup-wizard.js').run();
+    await require(path.join(SCRIPTS_ROOT, 'hub-setup-wizard.js')).run();
     return;
   }
   if (firstArg === 'hub' && secondArg === 'init' && args.includes('--wizard')) {
-    await require('../scripts/hub-init-wizard.js').run();
+    await require(path.join(SCRIPTS_ROOT, 'hub-init-wizard.js')).run();
     return;
   }
   if (firstArg === 'deploy' && secondArg === 'setup' && args.includes('--wizard')) {
-    await require('../scripts/deploy-setup-wizard.js').run();
+    await require(path.join(SCRIPTS_ROOT, 'deploy-setup-wizard.js')).run();
     return;
   }
   if (firstArg === 'sync' && secondArg === 'setup' && args.includes('--wizard')) {
-    await require('../scripts/sync-setup-wizard.js').run();
+    await require(path.join(SCRIPTS_ROOT, 'sync-setup-wizard.js')).run();
     return;
   }
 
@@ -69,10 +76,10 @@ async function run() {
       if (a.startsWith('--curriculum=')) curriculumPath = a.split('=')[1];
     });
     if (!analyzeInput) {
-      console.error('Error: analyze requires a lesson file. Usage: node src/cli.js analyze <lesson.yaml> [--curriculum=<path>]');
+      console.error('Error: analyze requires a lesson file. Usage: agni analyze <lesson.yaml> [--curriculum=<path>]');
       process.exit(1);
     }
-    return require('../scripts/analyze-lesson.js').run(analyzeInput, { curriculum: curriculumPath });
+    return require(path.join(SCRIPTS_ROOT, 'analyze-lesson.js')).run(analyzeInput, { curriculum: curriculumPath });
   }
 
   // ── LMS repair (Backlog task 7) ──────────────────────────────────────────
@@ -110,13 +117,12 @@ async function run() {
 
   if (!params.inputFile) {
     console.error('Error: No input file specified.');
-    console.error('Usage: node src/cli.js <input.yaml> --format=<html|native|yaml-packet> [options]');
+    console.error('Usage: agni <input.yaml> --format=<html|native|yaml-packet> [options]');
     process.exit(1);
   }
 
   // ── Validate-only mode ────────────────────────────────────────────────
   if (params.validateOnly) {
-    const compilerService = require('@ols/compiler/services/compiler');
     const lessonSchema = require('@ols/schema/lesson-schema');
     const lessonValidator = require('@ols/schema/lesson-validator');
     const envConfig = require('@agni/utils/env-config');
@@ -158,11 +164,11 @@ async function run() {
       const msg = issue.message || '';
       if (seen.has(msg)) continue;
       seen.add(msg);
-      if (issue.level === 'error') {
-        console.error('ERROR [' + (issue.stepId || 'lesson') + ']', msg);
+      if (issue.severity === 'error') {
+        console.error('ERROR [' + (issue.step || 'lesson') + ']', msg);
         hasErrors = true;
       } else {
-        console.warn('WARN  [' + (issue.stepId || 'lesson') + ']', msg);
+        console.warn('WARN  [' + (issue.step || 'lesson') + ']', msg);
       }
     }
 

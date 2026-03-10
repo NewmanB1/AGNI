@@ -91,7 +91,7 @@ if (violations.length > 0) {
     console.error('  ' + v.file + ':' + v.line + ' [' + v.pattern + ']');
     console.error('    ' + v.code);
   });
-  console.error('\nUse textContent, createElement, or the escapeHtml() utility from src/utils/io.js instead.');
+  console.error('\nUse textContent, createElement, or the escapeHtml() utility from @agni/utils/io instead.');
   console.error('If the assignment is genuinely safe, add the pattern to SAFE_PATTERNS in this script.');
   process.exit(1);
 } else {

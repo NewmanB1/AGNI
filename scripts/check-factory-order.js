@@ -5,9 +5,9 @@
  * CI gate: verify factory loading pipeline wiring and cross-file consistency.
  *
  * Part A — Polyfills Wiring (original checks):
- *   1. src/runtime/polyfills.js exists
+ *   1. packages/agni-runtime/polyfills.js exists
  *   2. polyfills.js is in ALLOWED_FACTORY_FILES in packages/agni-hub/hub-transform.js
- *   3. polyfills.js is pushed to factoryDeps in src/builders/html.js
+ *   3. polyfills.js is pushed to factoryDeps in packages/ols-compiler/builders/html.js
  *   4. polyfills.js appears BEFORE shared-runtime.js in factoryDeps
  *
  * Part B — Cross-File Consistency:
@@ -51,9 +51,9 @@ function pass(msg) {
 // 1. polyfills.js exists
 var polyfillPath = require.resolve('@agni/runtime/polyfills');
 if (fs.existsSync(polyfillPath)) {
-  pass('src/runtime/polyfills.js exists');
+  pass('packages/agni-runtime/polyfills.js exists');
 } else {
-  fail('src/runtime/polyfills.js does not exist');
+  fail('packages/agni-runtime/polyfills.js does not exist');
 }
 
 // 2. polyfills.js in ALLOWED_FACTORY_FILES
@@ -73,17 +73,8 @@ if (!allowedMatch) {
 }
 
 // 3 & 4. polyfills.js is pushed to factoryDeps/factoryFilesToCopy in html.js, before shared-runtime.js
-var htmlBuilderPath = path.join(root, 'src', 'builders', 'html.js');
+var htmlBuilderPath = path.join(root, 'packages', 'ols-compiler', 'builders', 'html.js');
 var htmlSrc = fs.readFileSync(htmlBuilderPath, 'utf8');
-
-// Resolve canonical html builder if src re-exports from @ols/compiler
-var reExportMatch = htmlSrc.match(/module\.exports\s*=\s*require\s*\(\s*['"]@ols\/compiler\/builders\/html['"]\s*\)/);
-if (reExportMatch) {
-  var canonicalPath = path.join(root, 'packages', 'ols-compiler', 'builders', 'html.js');
-  if (fs.existsSync(canonicalPath)) {
-    htmlSrc = fs.readFileSync(canonicalPath, 'utf8');
-  }
-}
 
 var polyfillPushRe = /(?:factoryDeps|factoryFilesToCopy)\.push\(\s*(?:\{\s*file:\s*)?['"]polyfills\.js['"]/;
 var sharedPushRe = /(?:factoryDeps|factoryFilesToCopy)\.push\(\s*(?:\{\s*file:\s*)?['"]shared-runtime\.js['"]/;
@@ -92,9 +83,9 @@ var polyfillPushMatch = polyfillPushRe.exec(htmlSrc);
 var sharedPushMatch = sharedPushRe.exec(htmlSrc);
 
 if (!polyfillPushMatch) {
-  fail('polyfills.js is NOT pushed to factoryDeps in src/builders/html.js — the factory loader will never load it');
+  fail('polyfills.js is NOT pushed to factoryDeps in packages/ols-compiler/builders/html.js — the factory loader will never load it');
 } else {
-  pass('polyfills.js is pushed to factoryDeps (src/builders/html.js)');
+  pass('polyfills.js is pushed to factoryDeps (packages/ols-compiler/builders/html.js)');
 
   if (sharedPushMatch && polyfillPushMatch.index < sharedPushMatch.index) {
     pass('polyfills.js is ordered BEFORE shared-runtime.js in factoryDeps (html.js)');
@@ -279,7 +270,7 @@ if (fs.existsSync(sharedRuntimePath)) {
     }
   }
 } else {
-  fail('src/runtime/shared-runtime.js does not exist');
+  fail('packages/agni-runtime/shared-runtime.js does not exist');
 }
 
 // 15. Both sanitizers must strip the same core XSS vectors (functional parity test)
@@ -334,7 +325,7 @@ if (fs.existsSync(sharedRuntimePath)) {
     fail('shared-runtime.js missing _decodeNumericEntities — &#106;avascript: bypasses JS_URI_RE');
   }
 } else {
-  fail('src/runtime/shared-runtime.js does not exist');
+  fail('packages/agni-runtime/shared-runtime.js does not exist');
 }
 
 // 18. shared-runtime.js JS_URI_RE must be global (not attribute-specific)

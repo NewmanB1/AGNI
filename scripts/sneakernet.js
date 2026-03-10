@@ -17,7 +17,7 @@ var fs   = require('fs');
 var zlib = require('zlib');
 var path = require('path');
 
-var lms = require(path.join(__dirname, '../src/services/lms'));
+var lms = require('@agni/services/lms');
 if (!lms.isAvailable()) {
   console.error('LMS engine not available (required for export/import).');
   process.exit(1);

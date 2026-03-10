@@ -12,10 +12,11 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 
 ## Monorepo Layout (Canonical Ownership)
 
-**Canonical implementations live in `packages/`.** The `src/` tree re-exports from packages for backward compatibility.
+**Canonical implementations live in `packages/`.** The `src/` tree holds only shared types (`src/types/`, `src/engine/*.d.ts`) and `sensorTypes.ts`; all runtime/compiler/service code is in packages.
 
 | Package | Path | Role |
 |---------|------|------|
+| `@agni/cli` | `packages/agni-cli/` | CLI entry point: compile, validate, hub wizards |
 | `@agni/utils` | `packages/agni-utils/` | Pure utilities: logging, config, crypto, I/O (leaf, no monorepo deps) |
 | `@agni/runtime` | `packages/agni-runtime/` | Browser runtime: player, sensors, SVG factories (ES5, Chrome 51+) |
 | `@ols/schema` | `packages/ols-schema/` | OLS JSON schema, validators, threshold grammar |
@@ -25,7 +26,7 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 | `@agni/services` | `packages/agni-services/` | Top-down API: accounts, author, governance, LMS, lesson-chain |
 | `@agni/hub` | `packages/agni-hub/` | Hub server: theta, accounts, telemetry |
 
-**Re-exports:** Most `src/` re-exports have been removed. Tests and scripts use `@agni/*` and `@ols/*` directly. When inspecting or modifying behavior, work in the **package** (e.g. `packages/agni-engine/`, `packages/ols-compiler/`). `verify:canonical-imports` fails if tests/scripts require from `src/`.
+**No src/ re-exports.** Tests and scripts use `@agni/*` and `@ols/*` directly. When inspecting or modifying behavior, work in the **package** (e.g. `packages/agni-engine/`, `packages/ols-compiler/`). `verify:canonical-imports` fails if tests/scripts require from `src/`.
 
 ---
 
@@ -33,9 +34,9 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 
 | Task | Location |
 |------|----------|
-| Lesson compilation (YAML → HTML) | `packages/ols-compiler/`, `src/compiler/` (re-export) |
+| Lesson compilation (YAML → HTML) | `packages/ols-compiler/` |
 | HTML builder | `packages/ols-compiler/builders/html.js` |
-| CLI entry point | `src/cli.js` |
+| CLI entry point | `packages/agni-cli/cli.js` |
 | Browser player | `packages/agni-runtime/` (player.js, shared-runtime.js, sensor-bridge.js) |
 | LMS engine (Rasch, bandit) | `packages/agni-engine/` |
 | Hub server (on-demand PWA) | `packages/agni-hub/` (hub-transform.js, sw.js, pwa/) |
@@ -57,7 +58,7 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 5. **Playbooks** in `docs/playbooks/` describe how to change compiler, runtime, LMS, governance.
 6. **CI gates** in `scripts/`: `verify:all` runs core, runtime, hub, services, governance groups (see `docs/VERIFICATION-GUARDS.md`).
 
-When writing scripts that inspect implementations (e.g. `check-dts-arity.js`, `check-factory-order.js`), resolve re-exports: if `src/foo.js` is `require('@agni/engine/foo')`, inspect `packages/agni-engine/foo.js` instead.
+When writing scripts that inspect implementations (e.g. `check-dts-arity.js`, `check-factory-order.js`), inspect `packages/*` directly.
 
 ---
 

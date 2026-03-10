@@ -83,9 +83,9 @@ describe('Theta API integration tests', () => {
     delete process.env.AGNI_SERVE_DIR;
     delete process.env.AGNI_HUB_API_KEY;
     // Clear cached modules that captured env-config at require time
-    delete require.cache[require.resolve('../../src/utils/env-config')];
+    delete require.cache[require.resolve('@agni/utils/env-config')];
     delete require.cache[require.resolve('@agni/services/accounts')];
-    delete require.cache[require.resolve('../../src/utils/env-config')];
+    delete require.cache[require.resolve('@agni/utils/env-config')];
   });
 
   it('GET /api/theta requires pseudoId', async () => {

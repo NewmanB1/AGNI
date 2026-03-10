@@ -25,22 +25,12 @@ module.exports = [
     }
   },
   {
-    files: ['src/utils/logger.js'],
+    files: ['packages/agni-utils/logger.js'],
     rules: { 'no-console': 'off' }
   },
   {
-    files: ['src/runtime/**', 'src/cli.js', 'src/builders/**', 'src/compiler/**'],
+    files: ['packages/agni-cli/**/*.js'],
     rules: { 'no-console': 'off' }
-  },
-  {
-    files: ['src/runtime/**'],
-    languageOptions: {
-      globals: { ...globals.browser }
-    },
-    rules: {
-      'no-var': 'off',
-      'prefer-const': 'off'
-    }
   },
   {
     files: ['packages/agni-runtime/**/*.js'],

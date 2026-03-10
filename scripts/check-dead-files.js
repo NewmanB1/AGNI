@@ -2,8 +2,11 @@
 'use strict';
 
 /**
- * Detects orphaned source files — .js files in src/ that are never
+ * Detects orphaned source files — .js/.ts files in src/, hub-tools/, server/ that are never
  * require()'d or imported by any other source or test file.
+ *
+ * After src/ re-export elimination, src/ contains only shared types (index.d.ts, engine .d.ts)
+ * and sensorTypes.ts. Canonical implementation lives in packages/.
  *
  * Exits non-zero if orphans are found, so it can serve as a CI gate.
  */
@@ -17,73 +20,30 @@ const SOURCE_DIRS = ['src', 'hub-tools', 'server'];
 const CONSUMER_DIRS = ['src', 'hub-tools', 'server', 'packages', 'tests', 'scripts'];
 
 const ENTRY_POINTS = new Set([
-  normalize('src/cli.js'),
+  normalize('packages/agni-cli/cli.js'),
   normalize('hub-tools/theta.js'),
   normalize('hub-tools/sentry.js'),
   normalize('hub-tools/sync.js'),
   normalize('server/hub-transform.js'),
   normalize('packages/agni-hub/sw.js'),
   normalize('packages/agni-hub/pwa/shared.js'),
-  normalize('src/runtime/shell/index.html'),
+  normalize('packages/agni-runtime/shell/index.html'),
 ]);
 
 const KNOWN_STANDALONE = new Set([
-  normalize('src/runtime/shell/index.html'),
-  normalize('src/runtime/shell/library.js'),
-  normalize('src/runtime/style.css'),
-  normalize('src/runtime/README.md'),
+  normalize('packages/agni-runtime/shell/index.html'),
+  normalize('packages/agni-runtime/shell/library.js'),
+  normalize('packages/agni-runtime/style.css'),
+  normalize('packages/agni-runtime/README.md'),
   normalize('src/runtime/sensors/sensorTypes.ts'),
-  normalize('src/runtime/polyfills.js'),
   normalize('src/types/index.d.ts'),
   normalize('src/engine/math.d.ts'),
   normalize('src/engine/thompson.d.ts'),
   normalize('src/engine/rasch.d.ts'),
   normalize('src/engine/embeddings.d.ts'),
   normalize('src/engine/federation.d.ts'),
-  normalize('src/services/index.js'),
   normalize('packages/agni-hub/pwa/shell-boot.js'),
-  normalize('src/governance/catalog.js'),
-  normalize('src/governance/schema-store.js'),
-  normalize('src/governance/policy.js'),
-  normalize('src/governance/aggregateCohortCoverage.js'),
-  normalize('src/governance/evaluateLessonCompliance.js'),
-  // Phase 1: Re-exports from @ols/compiler (canonical ownership)
-  normalize('src/builders/html.js'),
-  normalize('src/builders/native.js'),
-  normalize('src/builders/yaml-packet.js'),
-  normalize('src/markdown-pipeline.js'),
-  // Required by packages/agni-hub/hub-transform.js (cross-dir require)
-  normalize('src/compiler/index.js'),
-  normalize('src/utils/crypto.js'),
-  normalize('src/utils/csp.js'),
-  normalize('src/utils/io.js'),
-  normalize('src/utils/katex-css-builder.js'),
-  // Re-exports from @agni/utils (canonical); kept for backward compat
-  normalize('src/utils/archetype-match.js'),
-  normalize('src/utils/runtimeManifest.js'),
-  normalize('src/utils/env-config.js'),
-  normalize('src/utils/env-validate.js'),
-  normalize('src/utils/file-lock.js'),
-  normalize('src/utils/hub-config.js'),
-  normalize('src/utils/router.js'),
-  normalize('src/governance/index.js'),
 ]);
-
-// Runtime browser files listed in runtimeManifest.js are inlined by the HTML
-// builder at build time, not require()'d. Load them as known-referenced.
-try {
-  const manifest = require('@agni/utils/runtimeManifest');
-  Object.keys(manifest.FACTORY_PATH_MAP || {}).forEach(function (bare) {
-    const rel = manifest.FACTORY_PATH_MAP[bare];
-    KNOWN_STANDALONE.add(normalize('src/runtime/' + rel));
-  });
-  // shared-runtime.js and other root-level runtime files are prepended by builders
-  ['shared-runtime.js', 'style.css'].forEach(function (f) {
-    KNOWN_STANDALONE.add(normalize('src/runtime/' + f));
-  });
-} catch (_e) {
-  // If runtimeManifest can't load, skip — the dead-file check will be stricter.
-}
 
 function normalize(p) {
   return p.replace(/\\/g, '/');
@@ -160,30 +120,8 @@ function resolveRelative(fromFile, target) {
   return null;
 }
 
-const runtimeFiles = sourceFiles.filter(function (f) {
-  return f.startsWith('src/runtime/');
-});
-runtimeFiles.forEach(function (file) {
-  const absPath = path.join(ROOT, file);
-  let content;
-  try { content = fs.readFileSync(absPath, 'utf8'); } catch (_e) { return; }
-
-  sourceFiles.forEach(function (candidate) {
-    if (!candidate.startsWith('src/runtime/')) return;
-    const basename = path.basename(candidate, '.js');
-    const patterns = [
-      new RegExp('src=[\'"].*' + escapeRegex(path.basename(candidate)) + '[\'"]'),
-      new RegExp('[\'"]' + escapeRegex(basename) + '(?:\\.js)?[\'"]'),
-    ];
-    patterns.forEach(function (re) {
-      if (re.test(content)) referenced.add(candidate);
-    });
-  });
-});
-
-function escapeRegex(s) {
-  return s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-}
+// Runtime browser files in packages/agni-runtime are inlined at build time, not require()'d.
+// No need to add them — they are not in SOURCE_DIRS.
 
 const orphans = sourceFiles.filter(function (file) {
   return !referenced.has(file) && !KNOWN_STANDALONE.has(file);

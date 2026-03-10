@@ -20,7 +20,7 @@ Runs in the student's browser/WebView. Must be **ES5** and **vanilla JavaScript,
 | `packages/agni-hub/pwa/precache.js` | Opportunistic precache | ✓ |
 | `packages/agni-hub/pwa/shared.js` | Shared helpers for PWA | ✓ |
 | `packages/agni-runtime/style.css` | Lesson UI styles | — |
-| `src/runtime/shell/index.html` | Village Library shell | ⚠ CSS Grid (Chrome 57+) — may need fallback |
+| `packages/agni-runtime/shell/index.html` | Village Library shell | ⚠ CSS Grid (Chrome 57+) — may need fallback |
 | `packages/agni-runtime/shell/library.js` | Library logic for shell | ✓ |
 
 **Excluded from edge:** `packages/agni-runtime/index.js`, `packages/agni-runtime/svg-catalog.js` — Node-only tooling.
