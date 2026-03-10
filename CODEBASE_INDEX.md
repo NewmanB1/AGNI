@@ -1,6 +1,6 @@
 # Codebase Index — Where to Find Things
 
-Quick reference for humans and AI tools. Canonical implementations live in `packages/`; `src/` re-exports for backward compatibility.
+Quick reference for humans and AI tools. Canonical implementations live in `packages/`. See `docs/SRC-DEPRECATION.md` for the completed migration from `src/`.
 
 ---
 
@@ -8,9 +8,9 @@ Quick reference for humans and AI tools. Canonical implementations live in `pack
 
 | What | Where |
 |------|-------|
-| Compiler (YAML → IR) | `packages/ols-compiler/`, `src/compiler/` (re-export) |
+| Compiler (YAML → IR) | `packages/ols-compiler/` |
 | HTML builder | `packages/ols-compiler/builders/html.js` |
-| Native builder | `packages/ols-compiler/builders/native.js` or `src/builders/native.js` |
+| Native builder | `packages/ols-compiler/builders/native.js` |
 | YAML-packet builder | `packages/ols-compiler/builders/yaml-packet.js` |
 | Markdown pipeline | `packages/ols-compiler/markdown-pipeline.js` |
 | Lesson assembly | `packages/ols-compiler/services/lesson-assembly.js` |
@@ -58,8 +58,8 @@ Quick reference for humans and AI tools. Canonical implementations live in `pack
 |------|-------|
 | OLS schema | `schemas/ols.schema.json` |
 | Archetypes, graph weights | `schemas/*.schema.json` |
-| TypeScript definitions | `src/types/index.d.ts` |
-| Engine .d.ts | `src/engine/*.d.ts` |
+| TypeScript definitions | `packages/types/index.d.ts` |
+| Engine .d.ts | `packages/agni-engine/*.d.ts` |
 
 ---
 
@@ -67,9 +67,9 @@ Quick reference for humans and AI tools. Canonical implementations live in `pack
 
 | What | Where |
 |------|-------|
-| Utils (logging, crypto, I/O, etc.) | `packages/agni-utils/`, `src/utils/` (re-export) |
-| Feature inference | `src/utils/featureInference.js` |
-| Runtime manifest | `src/utils/runtimeManifest.js` |
+| Utils (logging, crypto, I/O, etc.) | `packages/agni-utils/` |
+| Feature inference | `packages/agni-utils/feature-inference.js` |
+| Runtime manifest | `packages/agni-utils/runtimeManifest.js` |
 
 ---
 

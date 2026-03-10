@@ -27,7 +27,6 @@
   ],
   "project": [
     "portal/**/*.{js,html}",
-    "src/**/*.{js,ts}",
     "server/**/*.{js}",
     "hub-tools/**/*.{js}",
     "packages/**/*.{js,ts}",

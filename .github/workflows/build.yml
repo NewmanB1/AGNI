@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'lessons/**'
-      - 'src/**'
+      - 'packages/**'
       - 'package.json'
       - 'package-lock.json'
   pull_request:
@@ -38,11 +38,11 @@ jobs:
 
       - name: Build HTML format (browser/PWA)
         run: npm run build
-        # This runs: node src/compiler.js lessons/gravity.yaml --format=html --output=dist/gravity.html
+        # This runs: node packages/agni-cli/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html
 
       - name: Build Native format (Markdown + JSON)
         run: npm run build:native
-        # This runs: node src/compiler.js lessons/gravity.yaml --format=native --output-dir=dist/native-gravity
+        # This runs: node packages/agni-cli/cli.js lessons/gravity.yaml --format=native --output-dir=dist/native-gravity
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

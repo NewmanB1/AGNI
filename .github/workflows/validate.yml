@@ -6,7 +6,6 @@ on:
       - 'lessons/**'
       - 'schemas/**'
       - 'fixtures/**'
-      - 'src/**'
       - 'hub-tools/**'
       - 'packages/**'
       - 'server/**'
@@ -18,7 +17,6 @@ on:
       - 'lessons/**'
       - 'schemas/**'
       - 'fixtures/**'
-      - 'src/**'
       - 'hub-tools/**'
       - 'packages/**'
       - 'server/**'
@@ -50,7 +48,7 @@ jobs:
       - name: Lint
         run: npm run lint
       - name: Format check
-        run: npx prettier --check "src/**/*.{js,ts}" "hub-tools/**/*.js" "packages/**/*.js" "server/**/*.js" "tests/**/*.js"
+        run: npx prettier --check "hub-tools/**/*.js" "packages/**/*.js" "server/**/*.js" "tests/**/*.js"
       - name: Type check
         run: npm run typecheck
       - name: Validate JSON schemas load (Ajv)
