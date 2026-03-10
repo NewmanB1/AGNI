@@ -331,6 +331,7 @@
     }
     if (S.thresholdEvaluator && thresholdStr) {
       var _triggerCancel = null;
+      var SENSOR_TIMEOUT_MS = 5000;
 
       var unsub = S.subscribeToSensor(primarySensor, function (reading) {
         var val = reading.value;
@@ -340,8 +341,24 @@
         gaugeValue.textContent = val.toFixed(1);
       });
 
+      function showEmulatorFallback() {
+        statusEl.textContent = (t('sensor_unavailable') || 'Sensors unavailable.') + ' ' + (t('use_emulator') || 'Use the button below:');
+        statusEl.style.color = '#666';
+        var btn = document.createElement('button');
+        btn.className = 'btn btn-primary';
+        btn.textContent = t('emulator_shake') || 'Shake';
+        btn.style.marginTop = '0.5rem';
+        btn.onclick = function () {
+          if (S.sensorBridge && S.sensorBridge.startSimulation) {
+            S.sensorBridge.startSimulation({ pattern: 'shake', hz: 20 });
+          }
+        };
+        container.appendChild(btn);
+      }
+
       _triggerCancel = S.thresholdEvaluator.watch(thresholdStr, primarySensor, function () {
         unsub();
+        if (S.sensorBridge && S.sensorBridge.stopSimulation) S.sensorBridge.stopSimulation();
         statusEl.textContent = t('threshold_met');
         statusEl.style.color = '#1B5E20';
         gaugeFill.style.background = '#1B5E20';
@@ -360,7 +377,7 @@
             nextStep();
           }
         }, 1000);
-      });
+      }, { timeoutMs: SENSOR_TIMEOUT_MS, onTimeout: showEmulatorFallback });
 
       cancelWatch = function () {
         unsub();

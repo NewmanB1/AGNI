@@ -117,24 +117,30 @@ function createAccounts(config) {
     data.sessions = data.sessions.filter(function(s) { return new Date(s.expiresAt).getTime() > now; });
   }
 
-  async function createStudentSession(pseudoId) {
+  async function createStudentSession(pseudoId, opts) {
+    opts = opts || {};
+    const clientIp = typeof opts.clientIp === 'string' && opts.clientIp.trim() ? opts.clientIp.trim() : null;
     const token = randomHex(TOKEN_BYTES);
     await withLock(studentSessionsPath, async function() {
       const data = await loadJson(studentSessionsPath, { sessions: [] });
       purgeExpiredStudentSessions(data);
-      data.sessions.push({
+      const entry = {
         tokenHash: hashToken(token),
         pseudoId: pseudoId,
         createdAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + STUDENT_SESSION_TTL_MS).toISOString()
-      });
+      };
+      if (clientIp) entry.clientIp = clientIp;
+      data.sessions.push(entry);
       await saveJson(studentSessionsPath, data);
     });
     return token;
   }
 
-  async function validateStudentSession(token) {
+  async function validateStudentSession(token, opts) {
     if (!token || typeof token !== 'string' || !token.trim()) return null;
+    opts = opts || {};
+    const clientIp = typeof opts.clientIp === 'string' && opts.clientIp.trim() ? opts.clientIp.trim() : null;
     const data = await loadJson(studentSessionsPath, { sessions: [] });
     const now = Date.now();
     const incoming = hashToken(token.trim());
@@ -145,6 +151,7 @@ function createAccounts(config) {
       return crypto.timingSafeEqual(Buffer.from(incoming), Buffer.from(stored));
     });
     if (!session) return null;
+    if (session.clientIp && clientIp && session.clientIp !== clientIp) return null;
     const r = await findStudentWithData(session.pseudoId);
     if (!r.student || !r.student.active) return null;
     return { pseudoId: session.pseudoId };
@@ -452,8 +459,9 @@ async function generateTransferToken(pseudoId) {
   });
 }
 
-async function claimTransferToken(token) {
+async function claimTransferToken(token, opts) {
   if (!token || !token.trim()) return { error: 'Token is required' };
+  opts = opts || {};
   return withLock(studentsPath, async function() {
     const code = token.trim().toUpperCase();
     const codeHash = hashToken(code);
@@ -470,12 +478,13 @@ async function claimTransferToken(token) {
     student.transferTokenHash = null;
     student.transferExpiresAt = null;
     await saveStudents(data);
-    const sessionToken = await createStudentSession(student.pseudoId);
+    const sessionToken = await createStudentSession(student.pseudoId, { clientIp: opts.clientIp });
     return { ok: true, pseudoId: student.pseudoId, displayName: student.displayName, sessionToken: sessionToken };
   });
 }
 
-async function verifyStudentPin(pseudoId, pin) {
+async function verifyStudentPin(pseudoId, pin, opts) {
+  opts = opts || {};
   return withLock(studentsPath, async function() {
     const r = await findStudentWithData(pseudoId);
     if (!r.student) return { error: 'Student not found' };
@@ -500,7 +509,7 @@ async function verifyStudentPin(pseudoId, pin) {
       delete student.pin;
       await saveStudents(r.data);
     }
-    const sessionToken = await createStudentSession(pseudoId);
+    const sessionToken = await createStudentSession(pseudoId, { clientIp: opts.clientIp });
     return { ok: true, verified: true, sessionToken: sessionToken };
   });
 }

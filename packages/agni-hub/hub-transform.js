@@ -61,7 +61,7 @@ const lessonAssembly     = require('@ols/compiler/services/lesson-assembly');
 const _escapeHtml        = require('@agni/utils/io').escapeHtml;
 const { resolveFactoryPath } = require('@agni/utils/runtimeManifest');
 const lessonChain        = require('@agni/services/lesson-chain');
-const { extractStudentSessionToken } = require('@agni/utils/http-helpers');
+const { extractStudentSessionToken, getClientIp } = require('@agni/utils/http-helpers');
 const accountsService   = require('@agni/services/accounts');
 
 // ΓöÇΓöÇ Version (from package.json, used for SW stamping) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
@@ -154,10 +154,20 @@ const MIME = {
 
 // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 // Compile concurrency (Pi memory)
+// Thundering herd fix: when queue is full, return 202 instead of holding connection.
+const RETRY_AFTER_SECONDS = parseInt(process.env.AGNI_COMPILE_RETRY_AFTER || '3', 10);
+
 function _acquireCompileSlot() {
   if (_compileSlots > 0) { _compileSlots--; return Promise.resolve(); }
   return new Promise(function (r) { _compileQueue.push(r); });
 }
+
+/** Returns true if a new compile would be queued (no slot, not already compiling this slug). */
+function _wouldCompileBeQueued(slug) {
+  if (_compilingNow[slug]) return false;  // would await in-flight, not queue
+  return _compileSlots === 0;
+}
+
 function _releaseCompileSlot() {
   if (_compileQueue.length > 0) _compileQueue.shift()();
   else _compileSlots++;
@@ -319,7 +329,7 @@ async function compileLesson(slug, options) {
     if (options.dev) log.debug('Disk cache hit', { slug });
     if (!_lessonCache[slug]) {
       if (_cacheSize >= MAX_CACHE_ENTRIES) {
-        var oldestSlug = null, oldestTime = Infinity;
+        let oldestSlug = null; let oldestTime = Infinity;
         Object.keys(_lessonCache).forEach(function (s) {
           if (_lessonCache[s].lastAccessed < oldestTime) {
             oldestTime = _lessonCache[s].lastAccessed;
@@ -350,6 +360,14 @@ async function compileLesson(slug, options) {
     return _compilingNow[slug];
   }
 
+  // Thundering herd fix: if we would wait in queue, reject so caller can return 202.
+  if (_wouldCompileBeQueued(slug)) {
+    const err = new Error('Compile queue full');
+    err.code = 'QUEUED';
+    err.retryAfter = RETRY_AFTER_SECONDS;
+    return Promise.reject(err);
+  }
+
   function runCompile() {
     return _acquireCompileSlot().then(function () {
       return _doCompile(slug, loaded);
@@ -360,7 +378,7 @@ async function compileLesson(slug, options) {
   log.info('Compiling', { slug });
   _compilingNow[slug] = runCompile()
     .catch(function (err) {
-      var stale = _lessonCache[slug];
+      const stale = _lessonCache[slug];
       if (stale) {
         log.warn('Compilation failed, serving last successful cached artifact', { slug, error: err.message });
         return { ir: stale.ir, sidecar: stale.sidecar, lessonIR: stale.ir };
@@ -550,11 +568,15 @@ function _gzip(buf, cb) {
 
 /**
  * Send a text/HTML or text/plain response, gzipped if accepted.
+ * @param {object} [opts] Optional { retryAfter } for 202 responses
  */
-function _sendText(req, res, statusCode, contentType, body) {
+function _sendText(req, res, statusCode, contentType, body, opts) {
   const buf = Buffer.from(body, 'utf8');
   res.setHeader('Access-Control-Allow-Origin', envConfig.corsOrigin || 'null');
   res.setHeader('Content-Type', contentType);
+  if (opts && typeof opts.retryAfter === 'number') {
+    res.setHeader('Retry-After', String(opts.retryAfter));
+  }
   if (contentType.indexOf('html') !== -1) {
     res.setHeader('Content-Security-Policy', "frame-ancestors 'self'; worker-src 'self'");
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -631,7 +653,7 @@ function _getRequestCompileOptions(req, baseOptions) {
   const base = baseOptions || {};
   const token = extractStudentSessionToken(req);
   if (!token) return Promise.resolve(base);
-  return accountsService.validateStudentSession(token).then(function (session) {
+  return accountsService.validateStudentSession(token, { clientIp: getClientIp(req) }).then(function (session) {
     if (!session || !session.pseudoId) return base;
     return Object.assign({}, base, { deviceId: session.pseudoId });
   }).catch(function () { return base; });
@@ -707,6 +729,11 @@ function handleRequest(req, res, options) {
       if (!result) return _sendJson(req, res, 404, { error: 'Lesson not found' });
       _sendJson(req, res, 200, result.sidecar);
     }).catch(function (err) {
+      if (err && err.code === 'QUEUED' && typeof err.retryAfter === 'number') {
+        res.setHeader('Retry-After', String(err.retryAfter));
+        _sendJson(req, res, 202, { queued: true, retryAfter: err.retryAfter });
+        return;
+      }
       _sendJson(req, res, 500, { error: err.message });
     });
     return true;
@@ -729,6 +756,14 @@ function handleRequest(req, res, options) {
         _sendText(req, res, 200, 'text/html; charset=utf-8', html);
       });
     }).catch(function (err) {
+      if (err && err.code === 'QUEUED' && typeof err.retryAfter === 'number') {
+        const retrySec = err.retryAfter;
+        const lessonUrl = '/lessons/' + encodeURIComponent(slug);
+        const body202 = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="refresh" content="' + retrySec + ';url=' + _escapeHtml(lessonUrl) + '"><title>Please wait</title></head><body><p>Server busy. Retrying in ' + retrySec + ' seconds\u2026</p><p><a href="' + lessonUrl + '">Click here if not redirected</a></p></body></html>';
+        _sendText(req, res, 202, 'text/html; charset=utf-8', body202, { retryAfter: retrySec });
+        log.info('Compile queue full — 202 retry', { slug, retryAfter: retrySec });
+        return;
+      }
       log.error('Compile error', { slug, error: err.message });
       _sendText(req, res, 500, 'text/html; charset=utf-8',
         '<h1>Compilation error</h1><pre>' + _escapeHtml(err.message) + '</pre>');
@@ -839,6 +874,12 @@ function handleRequest(req, res, options) {
       _sendText(req, res, 200, MIME['.js'],
         'var LESSON_DATA = ' + JSON.stringify(result.lessonIR) + ';');
     }).catch(function (err) {
+      if (err && err.code === 'QUEUED' && typeof err.retryAfter === 'number') {
+        res.setHeader('Retry-After', String(err.retryAfter));
+        _sendText(req, res, 202, MIME['.js'],
+          'var LESSON_DATA = null; /* queued, retry after ' + err.retryAfter + 's */');
+        return;
+      }
       _sendText(req, res, 200, MIME['.js'],
         'var LESSON_DATA = null; /* error: ' + _escapeHtml(err.message) + ' */');
     });

@@ -41,12 +41,12 @@ function register(router, ctx) {
 
   router.get('/api/lms/explain', requireHubKey(requireLms(async (req, res, { qs, sendResponse }) => {
     if (!qs.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
-    var candidates = qs.candidates
+    let candidates = qs.candidates
       ? qs.candidates.split(',').map(function (s) { return s.trim(); }).filter(Boolean)
       : null;
     if (!candidates || candidates.length === 0) {
       try {
-        var lessons = await ctx.getLessonsSortedByTheta(qs.pseudoId);
+        const lessons = await ctx.getLessonsSortedByTheta(qs.pseudoId);
         candidates = (lessons || []).map(function (l) { return l.lessonId || l.slug; }).filter(Boolean);
       } catch (err) {
         return sendResponse(500, { error: err && err.message ? err.message : String(err) });
@@ -62,8 +62,8 @@ function register(router, ctx) {
         });
       }
     }
-    var result = lmsEngine.explainSelection(qs.pseudoId, candidates);
-    var out = {
+    const result = lmsEngine.explainSelection(qs.pseudoId, candidates);
+    const out = {
       pseudoId: qs.pseudoId,
       selected: result.selected,
       ability: result.ability,

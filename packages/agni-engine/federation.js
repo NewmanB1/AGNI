@@ -165,10 +165,15 @@ function getBanditSummary(state) {
   };
 }
 
-/** Add syncId (content hash) to summary for deduplication. Returns new object with deep-copied mean/precision; does not mutate input. */
-function addSyncId(summary) {
+/**
+ * Add syncId (content hash), hubId, and exportSequence for vector-clock–style dedup.
+ * Returns new object with deep-copied mean/precision; does not mutate input.
+ * @param {object} summary
+ * @param {{ hubId: string, exportSequence: number }} [opts]  for sneakernet loop prevention
+ */
+function addSyncId(summary, opts) {
   var syncId = contentHash(summary);
-  return {
+  var out = {
     embeddingDim:     summary.embeddingDim,
     mean:             summary.mean.slice(),
     precision:        copyMat(summary.precision),
@@ -177,6 +182,11 @@ function addSyncId(summary) {
     trainingWindow:   summary.trainingWindow,
     syncId:           syncId
   };
+  if (opts && typeof opts.hubId === 'string' && typeof opts.exportSequence === 'number') {
+    out.hubId = opts.hubId;
+    out.exportSequence = opts.exportSequence;
+  }
+  return out;
 }
 
 /**

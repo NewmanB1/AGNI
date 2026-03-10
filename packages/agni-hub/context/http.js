@@ -1,6 +1,6 @@
 'use strict';
 
-const { readBody, handleJsonBody, createResponseSender, extractBearerToken, safeErrorMessage, checkAuthRateLimit, generateRequestId } = require('@agni/utils/http-helpers');
+const { readBody, handleJsonBody, createResponseSender, extractBearerToken, extractStudentSessionToken, getClientIp, safeErrorMessage, checkAuthRateLimit, generateRequestId } = require('@agni/utils/http-helpers');
 const { computeStreaks, collectReviewDates } = require('@agni/utils/streak');
 
 function paginate(items, qs) {
@@ -11,7 +11,7 @@ function paginate(items, qs) {
 }
 
 module.exports = {
-  readBody, handleJsonBody, createResponseSender, extractBearerToken,
+  readBody, handleJsonBody, createResponseSender, extractBearerToken, extractStudentSessionToken, getClientIp,
   safeErrorMessage, checkAuthRateLimit, generateRequestId,
   computeStreaks, collectReviewDates,
   paginate

@@ -1,7 +1,7 @@
 'use strict';
 
 function register(router, ctx) {
-  const { accountsService, handleJsonBody, extractBearerToken,
+  const { accountsService, handleJsonBody, extractBearerToken, getClientIp,
           adminOnly, withRateLimit } = ctx;
 
   router.post('/api/auth/register', withRateLimit('register', (req, res, { sendResponse }) => {
@@ -99,7 +99,7 @@ function register(router, ctx) {
   router.post('/api/accounts/student/claim', withRateLimit('claim', (req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       if (!payload.token) return sendResponse(400, { error: 'token required' });
-      const result = await accountsService.claimTransferToken(payload.token);
+      const result = await accountsService.claimTransferToken(payload.token, { clientIp: getClientIp(req) });
       if (result.error) return sendResponse(400, result);
       if (result.sessionToken) {
         const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
@@ -112,7 +112,7 @@ function register(router, ctx) {
   router.post('/api/accounts/student/verify-pin', withRateLimit('pin', (req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       if (!payload.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
-      const result = await accountsService.verifyStudentPin(payload.pseudoId, payload.pin);
+      const result = await accountsService.verifyStudentPin(payload.pseudoId, payload.pin, { clientIp: getClientIp(req) });
       if (result.error) return sendResponse(404, result);
       if (result.sessionToken) {
         const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';

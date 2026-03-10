@@ -119,6 +119,25 @@ function extractBearerToken(req, _qs) {
 }
 
 /**
+ * Extract client IP from request (x-forwarded-for or socket).
+ * Used for session binding to mitigate token theft.
+ * @param {import('http').IncomingMessage} req
+ * @returns {string}
+ */
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded && typeof forwarded === 'string') {
+    const first = forwarded.split(',')[0];
+    if (first) return first.trim();
+  }
+  try {
+    return req.socket && req.socket.remoteAddress || '0.0.0.0';
+  } catch (e) {
+    return '0.0.0.0';
+  }
+}
+
+/**
  * Extract student session token from Cookie or Authorization header.
  * Used by lesson delivery to bind compiled content to authenticated identity.
  * @param {import('http').IncomingMessage} req
@@ -177,6 +196,7 @@ module.exports = {
   createResponseSender,
   extractBearerToken,
   extractStudentSessionToken,
+  getClientIp,
   safeErrorMessage,
   checkAuthRateLimit,
   generateRequestId

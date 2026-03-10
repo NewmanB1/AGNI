@@ -213,13 +213,24 @@ function migrateLMSState(raw, opts) {
     migrated = true;
   }
 
+  var exportSequence = ensureNumber(bandit.exportSequence, 0, { min: 0 });
+  var rawHubHighWater = ensureObject(bandit.hubHighWater);
+  var hubHighWater = {};
+  Object.keys(rawHubHighWater).forEach(function (k) {
+    var v = rawHubHighWater[k];
+    if (typeof v === 'number' && !isNaN(v) && v >= 0) hubHighWater[k] = v;
+    else migrated = true;
+  });
+
   var banditState = {
     A: A,
     b: b,
     featureDim: featureDim,
     forgetting: banditForgetting,
     observationCount: observationCount,
-    seenSyncIds: seenSyncIds
+    seenSyncIds: seenSyncIds,
+    exportSequence: exportSequence,
+    hubHighWater: hubHighWater
   };
 
   // ── Markov ────────────────────────────────────────────────────────────────

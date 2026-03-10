@@ -82,7 +82,9 @@ function buildDefaultState() {
       featureDim:       dim * 2,
       forgetting:       envConfig.forgetting,
       observationCount: 0,
-      seenSyncIds:      []
+      seenSyncIds:      [],
+      exportSequence:   0,
+      hubHighWater:     {}
     },
     markov: {
       transitions:    {},
@@ -610,14 +612,17 @@ function getStudentAbility(studentId) {
 
 /**
  * Export bandit summary for federation sync with a regional hub.
- * Adds syncId (content hash) for receiver-side deduplication of duplicate syncs.
+ * Adds syncId (content hash), hubId, and exportSequence for receiver-side dedup
+ * and sneakernet loop prevention.
  * @returns {import('../types').BanditSummary}
  * @throws {Error} Re-throws after logging if getBanditSummary fails (e.g. invalid state).
  */
 function exportBanditSummary() {
   try {
     var summary = federation.getBanditSummary(_state);
-    return federation.addSyncId(summary);
+    var seq = (_state.bandit.exportSequence = (_state.bandit.exportSequence || 0) + 1);
+    var hubId = envConfig.hubId || 'hub-local';
+    return federation.addSyncId(summary, { hubId: hubId, exportSequence: seq });
   } catch (err) {
     log.error('exportBanditSummary failed:', err.message);
     throw err;
@@ -654,6 +659,23 @@ async function mergeRemoteSummary(remote) {
     log.info('Remote summary already merged (syncId seen) — skipping duplicate');
     return;
   }
+
+  var hubHighWater = _state.bandit.hubHighWater;
+  if (!hubHighWater || typeof hubHighWater !== 'object') {
+    hubHighWater = {};
+    _state.bandit.hubHighWater = hubHighWater;
+  }
+  if (typeof remote.hubId === 'string' && typeof remote.exportSequence === 'number') {
+    var last = hubHighWater[remote.hubId];
+    if (typeof last === 'number' && remote.exportSequence <= last) {
+      log.info('Remote summary from hub already merged up to this sequence — skipping', {
+        hubId: remote.hubId,
+        remoteSeq: remote.exportSequence,
+        lastMerged: last
+      });
+      return;
+    }
+  }
   var local  = federation.getBanditSummary(_state);
   var merged = federation.mergeBanditSummaries(local, remote);
   _state.bandit.A                = merged.precision;
@@ -661,8 +683,13 @@ async function mergeRemoteSummary(remote) {
   _state.bandit.observationCount = merged.sampleSize;
   seenSyncIds.push(syncId);
   if (seenSyncIds.length > federation.MAX_SEEN_SYNC_IDS) {
-    // FIFO eviction: drop oldest entries, keep the 500 most recent
     _state.bandit.seenSyncIds = seenSyncIds.slice(-federation.MAX_SEEN_SYNC_IDS);
+  }
+  if (typeof remote.hubId === 'string' && typeof remote.exportSequence === 'number') {
+    var cur = hubHighWater[remote.hubId];
+    if (typeof cur !== 'number' || remote.exportSequence > cur) {
+      hubHighWater[remote.hubId] = remote.exportSequence;
+    }
   }
 
   await saveState(_state);

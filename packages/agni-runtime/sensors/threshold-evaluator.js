@@ -292,19 +292,38 @@
    * @param {string}   thresholdStr
    * @param {string}   primarySensor   sensor to subscribe to (drives evaluation cadence)
    * @param {function} onMet           called with the triggering reading when met
+   * @param {object}   [opts]          { timeoutMs: 5000, onTimeout: fn } — if no sensor
+   *                                  data within timeoutMs, call onTimeout (hardware failure).
    * @returns {function}               cancel — call to unsubscribe without firing onMet
    */
-  function watch(thresholdStr, primarySensor, onMet) {
+  function watch(thresholdStr, primarySensor, onMet, opts) {
     var evaluate = compile(thresholdStr);
     var fired    = false;
     var tick     = 0;
     var isLowEnd = S.device && S.device.isLowEnd;
+    var timeoutMs = (opts && typeof opts.timeoutMs === 'number') ? opts.timeoutMs : 0;
+    var onTimeout = opts && typeof opts.onTimeout === 'function' ? opts.onTimeout : null;
+    var hasReceivedReading = false;
+    var timeoutId = null;
+
+    if (timeoutMs > 0 && onTimeout) {
+      timeoutId = setTimeout(function () {
+        if (fired) return;
+        if (!hasReceivedReading) {
+          fired = true;
+          unsub();
+          onTimeout();
+        }
+      }, timeoutMs);
+    }
 
     var unsub = S.subscribeToSensor(primarySensor, function (reading) {
+      hasReceivedReading = true;
       if (fired) return;
       if (isLowEnd && (++tick % 2) !== 0) return;
       if (evaluate(S.lastSensorValues)) {
         fired = true;
+        if (timeoutId) clearTimeout(timeoutId);
         unsub();
         onMet(reading);
       }
@@ -312,6 +331,7 @@
 
     return function cancel() {
       fired = true;
+      if (timeoutId) clearTimeout(timeoutId);
       unsub();
     };
   }
