@@ -1,5 +1,21 @@
 # Documentation Index
 
+This is the **single entry point** for AGNI documentation. For code layout, see **`AGENTS.md`** (repo root) — canonical code lives in `packages/`.
+
+## Documentation Structure
+
+| Layer | Contents |
+|-------|----------|
+| **Guides** | Role-based: teachers, parents, lesson creators, developers, field tech |
+| **Architecture** | `ARCHITECTURE.md` (canonical), detailed analysis, remediation status |
+| **Planning** | `ROADMAP.md` (strategic), `SPRINT-PLAN.md` (tactical status) |
+| **Playbooks** | How to modify compiler, runtime, LMS, governance, etc. |
+| **Specs** | Threshold grammar, UTU architecture |
+| **Operations** | Deployment, API contract |
+| **Archive** | Completed sprints and superseded plans (`docs/archive/`) |
+
+---
+
 ## Start Here: Reading Guide by Role
 
 | You are a... | Start with | Then read |
@@ -55,11 +71,12 @@ AGNI is an **npm workspaces monorepo**. Each package has its own README with det
 
 ## Planning & Roadmap
 
-- [ROADMAP.md](ROADMAP.md) — Strategic plan for the first 100 days of OLS launch.
-- [CONSOLIDATED-ROADMAP.md](CONSOLIDATED-ROADMAP.md) — Single ordered list of remaining improvement work (merged from archived plans).
-- [SPRINT-PLAN.md](SPRINT-PLAN.md) — Master sprint plan tracking all numbered sprints, remediation tasks, and status. Start here for project status.
+- [ROADMAP.md](ROADMAP.md) — Strategic plan for OLS launch: phases, status, remaining work. **Single source of truth for roadmap.**
+- [SPRINT-PLAN.md](SPRINT-PLAN.md) — Master sprint plan tracking numbered sprints and status.
 - [YEAR2-PREP.md](YEAR2-PREP.md) — Year 2 preparation: WYSIWYG editor research and v1.0 spec finalization.
 - [LAUNCH-AND-COMMUNITY.md](LAUNCH-AND-COMMUNITY.md) — Launch checklist and community onboarding plan.
+
+*Historical improvement plans (CONSOLIDATED-ROADMAP, REMAINING-IMPROVEMENTS-PLAN) are in [archive/](archive/); their work is complete.*
 
 ## Operations
 
@@ -115,12 +132,13 @@ Completed sprint documents and superseded plans are preserved in [`archive/`](ar
 - `SPRINT-CONFIGURATION-WIZARDS.md` — Guided setup flows for each persona
 - `SPRINT-SENTRY-IMPROVEMENTS.md` — Sentry enhancements (completed 2026-03-05)
 
-**Improvement plans** (merged into CONSOLIDATED-ROADMAP)
+**Improvement plans** (all completed; work merged into ROADMAP)
 
 - `HUB-IMPROVEMENT-PLAN.md`, `HUB-CANONICAL-MIGRATION-PLAN.md`, `SERVICES-IMPROVEMENT-PLAN.md`
 - `PACKAGES-IMPROVEMENT-PLAN.md`, `RUNTIME-IMPROVEMENT-PLAN.md`, `BACKLOG-REMEDIATION-PLAN.md`
 - `SVG-TOOLS-IMPROVEMENT-PLAN.md`, `OPPORTUNISTIC-PRECACHE-PLAN.md`
 - `GOVERNANCE-IMPROVEMENT-PLAN.md`, `LESSON-CREATOR-IMPROVEMENT-PLAN.md`
+- `CONSOLIDATED-ROADMAP.md`, `REMAINING-IMPROVEMENTS-PLAN.md` — tactical task lists (all tiers complete)
 
 **Audits & reviews**
 

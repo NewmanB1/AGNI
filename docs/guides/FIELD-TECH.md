@@ -64,7 +64,7 @@ See **[docs/DEPLOYMENT.md](../DEPLOYMENT.md)** for the full reference table. The
 | `AGNI_LOG_LEVEL` | `info` | Verbosity: `debug`, `info`, `warn`, `error` |
 | `AGNI_SENTRY_RETENTION_DAYS` | `90` | Days to keep telemetry files |
 
-The canonical source of all defaults is `src/utils/env-config.js`.
+The canonical source of all defaults is `@agni/utils/env-config` (packages/agni-utils/env-config.js).
 
 ---
 

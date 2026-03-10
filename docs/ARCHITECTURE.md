@@ -133,33 +133,41 @@ All YAML parsing goes through `@agni/utils/yaml-safe` or `@ols/compiler` `safeYa
 
 ---
 
-## 3. The Compiler & Hub Architecture (agni-core + Village Hub)
+## 3. The Compiler & Hub Architecture
 
 The compiler is a modular Node.js application running on the Village Hub (Raspberry Pi).
 It transforms the YAML source into executable artifacts based on the requesting device's capabilities.
 
+**Canonical code lives in `packages/`.** See `AGENTS.md` for the authoritative layout. Tests and scripts use `@agni/*` and `@ols/*`; `verify:canonical-imports` fails if they require from deprecated paths.
+
 ### 3.1 Modular Structure
 
 ```
-agni-core/
-├── src/
-│   ├── cli.js                    # Orchestration & argument parsing
-│   ├── compiler/                 # Re-exports from @ols/compiler
-│   ├── utils/                    # Re-exports from @agni/utils
-│   ├── builders/                 # Re-exports from @ols/compiler
-│   └── runtime/                  # Re-exports from @agni/runtime
-│
-├── packages/
-│   ├── ols-compiler/             # Canonical: build-lesson-ir.js, markdown-pipeline, builders
-│   ├── agni-utils/               # feature-inference.js, runtimeManifest.js, crypto, io, etc.
+AGNI (root)
+├── packages/                     # Canonical implementations
+│   ├── ols-compiler/             # YAML → IR → HTML/native; build-lesson-ir.js, markdown-pipeline, builders
+│   ├── ols-schema/               # OLS JSON schema, validators, threshold grammar
+│   ├── agni-utils/               # feature-inference.js, runtimeManifest.js, crypto, io, yaml-safe, etc.
 │   ├── agni-runtime/             # player, shared-runtime, sensor-bridge, svg-stage (ES5, Chrome 51)
-│   └── agni-hub/                 # theta, hub-transform, sw.js, pwa/, routes
+│   ├── agni-engine/              # Rasch, Thompson, embeddings, PageRank, Markov
+│   ├── agni-governance/          # policy, compliance, catalog
+│   ├── agni-services/            # accounts, author, governance, LMS, lesson-chain, lessonAssembly
+│   ├── agni-hub/                 # theta.js, hub-transform.js, sentry.js, sync.js, routes/
+│   ├── agni-cli/                 # CLI entry point (cli.js)
+│   └── agni-lesson-gen/          # LLM lesson generator
 │
-├── hub-tools/
-│   └── theta.js                  # Wrapper: spawns packages/agni-hub/theta.js
+├── hub-tools/                    # Wrappers that delegate to packages
+│   ├── theta.js                  # Spawns packages/agni-hub/theta.js
+│   ├── sentry.js
+│   └── sync.js
 │
-└── server/
-    └── hub-transform.js          # Shim: re-exports from @agni/hub
+├── server/
+│   └── hub-transform.js          # Shim: re-exports from @agni/hub (backward compat)
+│
+├── portal/                       # Vanilla HTML/CSS/JS teacher and admin UI
+├── schemas/                      # JSON Schema definitions
+├── scripts/                      # CI verification, init, sneakernet
+└── tests/                        # Unit and integration tests
 ```
 
 The server runs hub-transform for on-demand lesson compilation; theta provides the API (scheduling, LMS, governance). Key packages: `packages/agni-services/` (accounts, lesson assembly), `packages/agni-governance/` (compliance evaluation), `packages/agni-engine/` (Rasch, Thompson, embeddings, PageRank).

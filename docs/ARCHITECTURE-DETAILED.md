@@ -51,7 +51,7 @@
 
 ### Package Layout
 
-Canonical implementations live in `packages/`. The `src/` tree re-exports from packages for backward compatibility. **Edit packages, not re-exports.**
+Canonical implementations live in `packages/`. **Edit packages directly.** Tests and scripts use `@agni/*` and `@ols/*`; see `AGENTS.md` for the full layout.
 
 | Package | Path | Role | Dependencies |
 |---------|------|------|--------------|

@@ -10,8 +10,8 @@ AGNI is a compiler and runtime for the **Open Lesson Standard (OLS)** — a file
 
 The system has three main parts:
 
-1. **Compiler** (`src/`) — YAML → IR → HTML/JSON pipeline
-2. **Village Hub** (`packages/agni-hub/`, `hub-tools/` wrappers, `server/`) — Node.js server that compiles and serves lessons, runs the adaptive ordering engine (theta), and collects telemetry. Canonical code in `@agni/hub` (packages/agni-hub/).
+1. **Compiler** (`packages/ols-compiler/`) — YAML → IR → HTML/JSON pipeline. Use `@ols/compiler`.
+2. **Village Hub** (`packages/agni-hub/`, `hub-tools/` wrappers, `server/`) — Node.js server that compiles and serves lessons, runs the adaptive ordering engine (theta), and collects telemetry. Canonical code in `@agni/hub`.
 3. **Portal** (`portal/`) — Vanilla HTML/CSS/JS web app for teachers, administrators, and governance
 
 ---
@@ -53,7 +53,7 @@ npx serve portal -l 3000
 Read **[docs/ARCHITECTURE.md](../ARCHITECTURE.md)** for the full picture. Here's the short version:
 
 ```
-YAML lesson ──► Compiler (src/builders/) ──► IR ──► HTML bundle
+YAML lesson ──► Compiler (@ols/compiler) ──► IR ──► HTML bundle
                                                         │
                                               served by hub-transform
                                                         │
@@ -66,26 +66,28 @@ Student phone ◄─── WiFi ◄─── Village Hub (Raspberry Pi)
 
 ### Key directories
 
+**Canonical code lives in `packages/`.** See `AGENTS.md` for the full layout.
+
 | Directory | What's in it |
 |-----------|-------------|
-| `src/builders/` | Output generators: `html.js`, `native.js`, `yaml-packet.js` |
-| `src/engine/` | LMS engine: `rasch.js`, `thompson.js`, `embeddings.js`, `pagerank.js`, `math.js`, `sm2.js` |
-| `src/runtime/` | Browser-side code: player, sensors, SVG factories, telemetry. **Must be ES5** (Android 6 WebView). |
-| `src/services/` | Accounts, lesson assembly, lesson schema validation |
-| `src/utils/` | Shared utilities: file lock, logger, env config, crypto, CSP, feature flags |
-| `packages/agni-hub/` | Canonical hub: `theta.js`, `sentry.js`, `routes/`, `context/`, hub-transform, PWA. Use `@agni/hub` in code. |
-| `hub-tools/` | CLI wrappers that delegate to packages/agni-hub (e.g. `node hub-tools/theta.js`) |
-| `server/` | Legacy `hub-transform.js`; hub transform is in packages/agni-hub/ |
+| `packages/ols-compiler/` | YAML → IR → HTML/native. Builders: `html.js`, `native.js`, `yaml-packet.js`. Use `@ols/compiler`. |
+| `packages/agni-engine/` | LMS engine: `rasch.js`, `thompson.js`, `embeddings.js`, `pagerank.js`, `math.js`, `sm2.js`. Use `@agni/engine`. |
+| `packages/agni-runtime/` | Browser-side: player, sensors, SVG factories, telemetry. **Must be ES5** (Chrome 51). Use `@agni/runtime`. |
+| `packages/agni-services/` | Accounts, lesson assembly, governance, LMS. Use `@agni/services`. |
+| `packages/agni-utils/` | Logger, env config, crypto, I/O, yaml-safe. Use `@agni/utils`. |
+| `packages/agni-hub/` | Hub: `theta.js`, `sentry.js`, `routes/`, `context/`, hub-transform, PWA. Use `@agni/hub`. |
+| `hub-tools/` | CLI wrappers that delegate to packages (e.g. `node hub-tools/theta.js`) |
+| `server/` | Shim: `hub-transform.js` re-exports from `@agni/hub` |
 | `portal/` | Vanilla HTML/CSS/JS teacher/admin portal |
-| `schemas/` | JSON Schema definitions for OLS, graph weights, governance policy |
-| `tests/` | Unit and integration tests (Node.js `test` runner) |
+| `schemas/` | JSON Schema definitions for OLS, graph weights, governance |
+| `tests/` | Unit and integration tests |
 | `scripts/` | CI verification scripts |
 
 ---
 
 ## Critical constraint: ES5 in the runtime
 
-Everything under `src/runtime/` runs in the browser on Android 6.0 WebView (Chrome 44). This means **strict ES5 only**:
+Everything under `packages/agni-runtime/` runs in the browser on Chrome 51 (Android 7.0+). This means **strict ES5 only**:
 
 - No `let`/`const` — use `var`
 - No arrow functions — use `function () {}`
@@ -98,7 +100,7 @@ The CI runs `scripts/check-es5.js` to enforce this. If you add or modify a runti
 node scripts/check-es5.js
 ```
 
-Server-side code (`hub-tools/`, `server/`, `src/services/`, `src/engine/`) runs in Node 18+ and can use modern syntax.
+Server-side code (`hub-tools/`, `packages/agni-hub/`, `packages/agni-services/`, `packages/agni-engine/`) runs in Node 14+ and can use modern syntax.
 
 ---
 
@@ -154,7 +156,7 @@ The regression test file (`tests/unit/regressions.test.js`) is particularly impo
 4. **Run tests and verification:**
    ```bash
    npm test
-   node scripts/check-es5.js      # if you touched runtime files
+   node scripts/check-es5.js      # if you touched packages/agni-runtime/
    node scripts/check-dead-files.js
    ```
 5. **Commit** with a descriptive message (see CONTRIBUTING.md for prefix conventions).
@@ -164,7 +166,7 @@ The regression test file (`tests/unit/regressions.test.js`) is particularly impo
 
 - Focused: one logical change per PR
 - Tested: new behavior has tests, regressions have regression tests
-- ES5-safe: if you touched `src/runtime/`, the ES5 check passes
+- ES5-safe: if you touched `packages/agni-runtime/`, the ES5 check passes
 - Documented: if you added an API endpoint or changed behavior, update `docs/api-contract.md`
 
 ---
@@ -173,10 +175,10 @@ The regression test file (`tests/unit/regressions.test.js`) is particularly impo
 
 See **[docs/CONVENTIONS.md](../CONVENTIONS.md)** for the full list. Highlights:
 
-- **File locking**: any code that does load → mutate → save on a JSON file in `data/` must use `withLock()` from `src/utils/file-lock.js`.
+- **File locking**: any code that does load → mutate → save on a JSON file in `data/` must use `withLock()` from `@agni/utils/file-lock`.
 - **Input validation**: all user-supplied values (URL params, query strings, JSON bodies) must be validated at the route handler level before passing to service functions.
-- **Logging**: use `createLogger('component-name')` from `src/utils/logger.js`. No raw `console.log` in production code.
-- **Config**: all environment variables go through `src/utils/env-config.js`. Don't parse `process.env` inline.
+- **Logging**: use `createLogger('component-name')` from `@agni/utils/logger`. No raw `console.log` in production code.
+- **Config**: all environment variables go through `@agni/utils/env-config`. Don't parse `process.env` inline.
 - **Auth**: mutating endpoints require `adminOnly` or `requireHubKey`. Read endpoints that expose student data require at least `requireHubKey`.
 
 ---

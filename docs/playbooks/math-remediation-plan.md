@@ -6,7 +6,7 @@ Fix bugs in `packages/agni-engine/math.js` with regression guards and unit tests
 
 **LEN:** [LEN-001: Math Engine Bug Remediation](../LEN-001-MATH-ENGINE-BUGS.md) — actionable prioritization and acceptance criteria.
 
-**Canonical source:** `packages/agni-engine/math.js` (per AGENTS.md). Tests use `require('../../src/engine/math')` which re-exports from `@agni/engine/math`.
+**Canonical source:** `packages/agni-engine/math.js` (per AGENTS.md). Tests use `require('@agni/engine/math')`.
 
 **Verification rule:** Per `.cursor/rules/sprint-verification.md`, each fix must have a regression test that **fails before** the fix and **passes after**. Run break-it checks before marking complete.
 

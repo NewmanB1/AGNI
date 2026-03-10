@@ -6,7 +6,7 @@ These rules keep the codebase navigable and safe to change with tooling and LLM 
 
 - **One clear role per module.** If a file grows beyond a single responsibility, split it (e.g. player → player/state, player/navigation).
 - **Public API via index.** Each logical module (`packages/ols-compiler/`, `packages/agni-engine/`, `packages/agni-governance/`, `@agni/services`) exposes a small surface via an `index.js`. New public functions should be exported from that index so they're discoverable; hide helpers inside the module.
-- **Top-down entry points.** Callers (CLI, hub, portal) use the **services layer** (`@agni/services` canonical; `src/services/` are shims) or documented HTTP API; they do not require compiler/engine/governance internals directly.
+- **Top-down entry points.** Callers (CLI, hub, portal) use the **services layer** (`@agni/services`) or documented HTTP API; they do not require compiler/engine/governance internals directly.
 
 ## Functions and state
 
@@ -80,8 +80,8 @@ Use these instead of ad-hoc mtime checks or inline escape functions.
 
 ## Lint and type checks
 
-- **ESLint + Prettier** apply to `src/**/*.js` (and optionally `server/`, `hub-tools/`). Run `npm run lint` and `npm run format:check` before committing.
-- **TypeScript:** `npm run typecheck` runs `tsc --noEmit` for `src/**/*.ts` (engine and any future TS modules). Fix type errors so that refactors don't silently break callers.
+- **ESLint + Prettier** apply to `packages/`, `hub-tools/`, `server/`, `tests/`. Run `npm run lint` and `npm run format:check` before committing.
+- **TypeScript:** `npm run typecheck` runs `tsc --noEmit` for packages. Fix type errors so that refactors don't silently break callers.
 - New code in `packages/agni-services/` or `packages/agni-engine/` should satisfy lint and, if it's TypeScript, typecheck. Adding `.ts` under `packages/` will include it in typecheck as configured.
 
 ## Summary for LLMs
@@ -93,7 +93,7 @@ Use these instead of ad-hoc mtime checks or inline escape functions.
 5. Use middleware wrappers (`adminOnly`, `requireLms`, `withRateLimit`) for route guards.
 6. Use `createSchemaStore` for schema-validated JSON persistence.
 7. Add shared browser utilities to `AGNI_SHARED` in `shared-runtime.js` (ES5 only).
-8. Use `src/utils/io.js` for file freshness checks and HTML escaping.
+8. Use `@agni/utils/io` (packages/agni-utils/io.js) for file freshness checks and HTML escaping.
 9. Update `packages/types/index.d.ts` and `docs/api-contract.md` when changing data or HTTP contracts.
 10. Use `docs/playbooks/*.md` to find where to change compiler, runtime, LMS, or governance.
 11. Run `npm run lint`, `npm run format:check`, and `npm run typecheck` after edits.

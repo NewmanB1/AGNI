@@ -1,4 +1,6 @@
-# Consolidated Roadmap
+# Consolidated Roadmap *(archived — all tiers complete)*
+
+> **Status:** Archived. All tactical improvement work is complete. See `docs/ROADMAP.md` for current strategic status.
 
 Single ordered list of remaining improvement work, merged from HUB-IMPROVEMENT-PLAN, HUB-CANONICAL-MIGRATION-PLAN, SERVICES-IMPROVEMENT-PLAN, PACKAGES-IMPROVEMENT-PLAN, RUNTIME-IMPROVEMENT-PLAN, BACKLOG-REMEDIATION-PLAN, and SVG-TOOLS-IMPROVEMENT-PLAN.
 
@@ -99,12 +101,12 @@ npm run verify:runtime-headers  # Check current state
 
 ## Execution Plan with Regression Guards
 
-See **`docs/REMAINING-IMPROVEMENTS-PLAN.md`** for a formal plan with regression guards per `.cursor/rules/sprint-verification.md`.
+See **`docs/archive/REMAINING-IMPROVEMENTS-PLAN.md`** for a formal plan with regression guards per `.cursor/rules/sprint-verification.md`.
 
 ---
 
 ## References
 
-- `docs/REMAINING-IMPROVEMENTS-PLAN.md` (formal plan + guards)
+- `docs/archive/REMAINING-IMPROVEMENTS-PLAN.md` (formal plan + guards)
 - `docs/archive/` — source plans (HUB-IMPROVEMENT, HUB-CANONICAL, SERVICES, PACKAGES, RUNTIME, BACKLOG, SVG-TOOLS)
 - `.cursor/rules/sprint-verification.md`

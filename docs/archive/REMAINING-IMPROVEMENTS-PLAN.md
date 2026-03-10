@@ -1,6 +1,8 @@
-# Remaining Improvements Plan
+# Remaining Improvements Plan *(archived — checklist complete)*
 
-Addresses items from `docs/CONSOLIDATED-ROADMAP.md` with **regression guards** and **proof of completion** per `.cursor/rules/sprint-verification.md`.
+> **Status:** Archived. All phases complete. See `docs/ROADMAP.md` for current status.
+
+Addresses items from `CONSOLIDATED-ROADMAP.md` (this archive) with **regression guards** and **proof of completion** per `.cursor/rules/sprint-verification.md`.
 
 **Execution order:** Phase 1 → Phase 2 → Phase 3 (parallel OK within phase).
 
@@ -178,7 +180,7 @@ Uses `tsconfig.services.json` (scoped, skipLibCheck). Full `typecheck` still has
 
 ## References
 
-- `docs/CONSOLIDATED-ROADMAP.md`
+- `docs/archive/CONSOLIDATED-ROADMAP.md`
 - `.cursor/rules/sprint-verification.md`
 - `docs/archive/SERVICES-IMPROVEMENT-PLAN.md`
 - `docs/archive/RUNTIME-IMPROVEMENT-PLAN.md`

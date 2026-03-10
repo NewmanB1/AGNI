@@ -233,7 +233,7 @@ du -sh /home/pi/AGNI/data/
 
 - **Architecture:** `docs/ARCHITECTURE.md`
 - **API contract:** `docs/api-contract.md`
-- **Environment variables:** `src/utils/env-config.js` (canonical source of all defaults)
+- **Environment variables:** `@agni/utils/env-config` (packages/agni-utils/env-config.js — canonical source of all defaults)
 - **Sentry playbook:** `docs/playbooks/sentry.md`
 - **Federation:** `docs/playbooks/federation.md`
 - **Village security:** `docs/playbooks/village-security.md` — hardening, WiFi client isolation, edge kiosk, safe state writes (fsync)
