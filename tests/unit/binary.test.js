@@ -2,7 +2,7 @@
 
 const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
-const { base64ToBytes, bytesToBase64, utf8ToBytes, bytesToUtf8 } = require('../../src/utils/binary');
+const { base64ToBytes, bytesToBase64, utf8ToBytes, bytesToUtf8 } = require('@agni/utils/binary');
 
 describe('bytesToBase64 / base64ToBytes', () => {
   it('round-trips a simple string', () => {

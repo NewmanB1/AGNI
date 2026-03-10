@@ -33,16 +33,19 @@ function resolveJsPath(dtsName) {
   const srcJsPath = path.join(ENGINE_DTS_DIR, jsName);
   const pkgJsPath = path.join(PACKAGE_ENGINE_DIR, jsName);
 
-  if (!fs.existsSync(srcJsPath)) {
-    return { path: null, content: null };
-  }
-
-  const srcContent = fs.readFileSync(srcJsPath, 'utf8');
-  const reExportMatch = srcContent.match(/module\.exports\s*=\s*require\s*\(\s*['"]@agni\/engine\/[^'"]+['"]\s*\)/);
-  if (reExportMatch && fs.existsSync(pkgJsPath)) {
+  // src/ re-exports removed; .d.ts in src/engine declare types for packages/agni-engine
+  if (fs.existsSync(pkgJsPath)) {
     return { path: pkgJsPath, content: fs.readFileSync(pkgJsPath, 'utf8') };
   }
-  return { path: srcJsPath, content: srcContent };
+  if (fs.existsSync(srcJsPath)) {
+    const srcContent = fs.readFileSync(srcJsPath, 'utf8');
+    const reExportMatch = srcContent.match(/module\.exports\s*=\s*require\s*\(\s*['"]@agni\/engine\/[^'"]+['"]\s*\)/);
+    if (reExportMatch && fs.existsSync(pkgJsPath)) {
+      return { path: pkgJsPath, content: fs.readFileSync(pkgJsPath, 'utf8') };
+    }
+    return { path: srcJsPath, content: srcContent };
+  }
+  return { path: null, content: null };
 }
 
 dtsFiles.forEach(function (dtsName) {

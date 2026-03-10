@@ -7,7 +7,7 @@ const { setupGlobals, teardownGlobals, makeElement } = require('../helpers/brows
 let frust;
 before(() => {
   setupGlobals();
-  require('../../src/runtime/ui/frustration');
+  require('@agni/runtime/ui/frustration');
   frust = globalThis.AGNI_FRUSTRATION;
 });
 after(() => teardownGlobals());

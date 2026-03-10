@@ -9,7 +9,7 @@ const path = require('path');
 const TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'agni-sbl-'));
 process.env.AGNI_DATA_DIR = TMP_DIR;
 
-const engine = require('../../src/engine');
+const engine = require('@agni/engine');
 
 describe('selectBestLesson integration', () => {
   after(() => {

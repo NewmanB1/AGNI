@@ -18,7 +18,7 @@ const path = require('path');
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('AUDIT-1: confidence scores reflect actual analysis, not hardcoded 0.5', () => {
-  const { inferFeatures } = require('../../src/utils/feature-inference');
+  const { inferFeatures } = require('@agni/utils/feature-inference');
 
   it('blooms confidence differs from 0.5 when many high-level verbs are present', () => {
     const lesson = {
@@ -78,7 +78,7 @@ describe('AUDIT-1: confidence scores reflect actual analysis, not hardcoded 0.5'
 
 describe('AUDIT-2: .d.ts parameter counts match .js implementations', () => {
   it('thompson.selectLesson has 2 or 3 params (opts optional)', () => {
-    const thompson = require('../../src/engine/thompson');
+    const thompson = require('@agni/engine/thompson');
     assert.ok(
       thompson.selectLesson.length >= 2 && thompson.selectLesson.length <= 3,
       'thompson.selectLesson takes (state, studentId) and optional (state, studentId, opts)'
@@ -86,7 +86,7 @@ describe('AUDIT-2: .d.ts parameter counts match .js implementations', () => {
   });
 
   it('rasch.updateAbility returns a number (ability delta), not void', () => {
-    const rasch = require('../../src/engine/rasch');
+    const rasch = require('@agni/engine/rasch');
     const { createState, seedProbes } = require('../helpers/engine-state');
 
     const state = createState();
@@ -97,7 +97,7 @@ describe('AUDIT-2: .d.ts parameter counts match .js implementations', () => {
   });
 
   it('embeddings.ensureStudentVector returns number[], not void', () => {
-    const embeddings = require('../../src/engine/embeddings');
+    const embeddings = require('@agni/engine/embeddings');
     const { createState } = require('../helpers/engine-state');
 
     const state = createState({ dim: 4 });
@@ -108,7 +108,7 @@ describe('AUDIT-2: .d.ts parameter counts match .js implementations', () => {
   });
 
   it('embeddings.ensureLessonVector returns number[], not void', () => {
-    const embeddings = require('../../src/engine/embeddings');
+    const embeddings = require('@agni/engine/embeddings');
     const { createState } = require('../helpers/engine-state');
 
     const state = createState({ dim: 4 });
@@ -124,9 +124,9 @@ describe('AUDIT-2: .d.ts parameter counts match .js implementations', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('AUDIT-3: engine functions reject or clamp NaN/Infinity inputs', () => {
-  const rasch = require('../../src/engine/rasch');
-  const embeddings = require('../../src/engine/embeddings');
-  const thompson = require('../../src/engine/thompson');
+  const rasch = require('@agni/engine/rasch');
+  const embeddings = require('@agni/engine/embeddings');
+  const thompson = require('@agni/engine/thompson');
   const { createState, seedProbes } = require('../helpers/engine-state');
 
   it('updateEmbedding with NaN gain does not produce NaN vectors', () => {
@@ -234,7 +234,7 @@ describe('AUDIT-4: evaluateLessonCompliance is pure (no hidden I/O dependency)',
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('AUDIT-5: declared_features overrides produce valid objects', () => {
-  const { inferFeatures } = require('../../src/utils/feature-inference');
+  const { inferFeatures } = require('@agni/utils/feature-inference');
 
   it('declared teaching_style does not produce character-indexed object', () => {
     const lesson = {
@@ -293,14 +293,14 @@ describe('AUDIT-6: requireHubKey fails closed when key is not configured', () =>
 
 describe('AUDIT-7: mastery and evidenced levels are clamped', () => {
   it('SM-2 quality clamped to 0-5 even when mastery > 1', () => {
-    const { updateSchedule } = require('../../src/engine/sm2');
+    const { updateSchedule } = require('@agni/engine/sm2');
     const result = updateSchedule({ interval: 1, easeFactor: 2.5, repetition: 0 }, 10);
     assert.ok(result.easeFactor >= 1.3, 'Ease factor should not go below 1.3');
     assert.ok(result.easeFactor <= 4.0, 'Ease factor should not exceed reasonable bounds');
   });
 
   it('SM-2 handles negative quality', () => {
-    const { updateSchedule } = require('../../src/engine/sm2');
+    const { updateSchedule } = require('@agni/engine/sm2');
     const result = updateSchedule({ interval: 1, easeFactor: 2.5, repetition: 0 }, -5);
     assert.ok(result.easeFactor >= 1.3, 'Ease factor should not go below 1.3');
   });
@@ -311,8 +311,8 @@ describe('AUDIT-7: mastery and evidenced levels are clamped', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('AUDIT-INVARIANT: embeddings Bug 1 — updateEmbedding uses pre-update snapshot', () => {
-  const embeddings = require('../../src/engine/embeddings');
-  const math = require('../../src/engine/math');
+  const embeddings = require('@agni/engine/embeddings');
+  const math = require('@agni/engine/math');
   const { createState } = require('../helpers/engine-state');
 
   it('update rule applies gamma, gradient, delta clamp, and value cap', () => {
@@ -347,8 +347,8 @@ describe('AUDIT-INVARIANT: embeddings Bug 1 — updateEmbedding uses pre-update 
 });
 
 describe('AUDIT-INVARIANT: embeddings Bug 2 — MAG_CAP and gradient clipping prevent saturation', () => {
-  const embeddings = require('../../src/engine/embeddings');
-  const math = require('../../src/engine/math');
+  const embeddings = require('@agni/engine/embeddings');
+  const math = require('@agni/engine/math');
   const { createState } = require('../helpers/engine-state');
 
   it('vectors stay within MAG_CAP=2 under large repeated gains', () => {
@@ -369,7 +369,7 @@ describe('AUDIT-INVARIANT: embeddings Bug 2 — MAG_CAP and gradient clipping pr
 });
 
 describe('AUDIT-INVARIANT: embeddings Bug 3 — reject corrupted vectors and overflow atomically', () => {
-  const embeddings = require('../../src/engine/embeddings');
+  const embeddings = require('@agni/engine/embeddings');
   const { createState } = require('../helpers/engine-state');
 
   it('updateEmbedding throws when student vector has NaN (corrupted state)', () => {
@@ -416,7 +416,7 @@ describe('AUDIT-INVARIANT: embeddings Bug 3 — reject corrupted vectors and ove
 });
 
 describe('AUDIT-8: engine rejects invalid hyperparameters', () => {
-  const embeddings = require('../../src/engine/embeddings');
+  const embeddings = require('@agni/engine/embeddings');
   const { createState } = require('../helpers/engine-state');
 
   it('updateEmbedding throws on invalid forgetting factor', () => {
@@ -529,7 +529,7 @@ describe('AUDIT-11: createStudent returns sanitized output', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('AUDIT-12: math.js rejects mismatched vector dimensions', () => {
-  const math = require('../../src/engine/math');
+  const math = require('@agni/engine/math');
 
   it('dot throws on length mismatch', () => {
     assert.throws(() => math.dot([1, 2], [1, 2, 3]), /length mismatch/);
@@ -549,7 +549,7 @@ describe('AUDIT-12: math.js rejects mismatched vector dimensions', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('AUDIT-13: embedding updates are magnitude-capped', () => {
-  const embeddings = require('../../src/engine/embeddings');
+  const embeddings = require('@agni/engine/embeddings');
   const { createState } = require('../helpers/engine-state');
 
   it('large gains do not produce vectors exceeding magnitude cap', () => {
@@ -570,8 +570,8 @@ describe('AUDIT-13: embedding updates are magnitude-capped', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('AUDIT-14: sampleTheta gracefully handles near-singular A', () => {
-  const thompson = require('../../src/engine/thompson');
-  const embeddings = require('../../src/engine/embeddings');
+  const thompson = require('@agni/engine/thompson');
+  const embeddings = require('@agni/engine/embeddings');
   const { createState } = require('../helpers/engine-state');
 
   it('returns mean vector instead of crashing on singular A', () => {
@@ -597,9 +597,9 @@ describe('AUDIT-14: sampleTheta gracefully handles near-singular A', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('AUDIT-INVARIANT: thompson Bug 3 — fallback returns zero vector, not b', () => {
-  const thompson = require('../../src/engine/thompson');
-  const embeddings = require('../../src/engine/embeddings');
-  const math = require('../../src/engine/math');
+  const thompson = require('@agni/engine/thompson');
+  const embeddings = require('@agni/engine/embeddings');
+  const math = require('@agni/engine/math');
   const { createState } = require('../helpers/engine-state');
 
   it('sampleTheta fallback returns zero vector when all Cholesky attempts fail', () => {
@@ -622,8 +622,8 @@ describe('AUDIT-INVARIANT: thompson Bug 3 — fallback returns zero vector, not 
 });
 
 describe('AUDIT-INVARIANT: thompson Bug 4 — selectLesson(readOnly) does not mutate state', () => {
-  const thompson = require('../../src/engine/thompson');
-  const embeddings = require('../../src/engine/embeddings');
+  const thompson = require('@agni/engine/thompson');
+  const embeddings = require('@agni/engine/embeddings');
   const { createState } = require('../helpers/engine-state');
 
   it('selectLesson with readOnly does not create new embedding vectors', () => {
@@ -650,8 +650,8 @@ describe('AUDIT-INVARIANT: thompson Bug 4 — selectLesson(readOnly) does not mu
 });
 
 describe('AUDIT-INVARIANT: thompson Bug 5 — selectLesson respects eligibleLessonIds', () => {
-  const thompson = require('../../src/engine/thompson');
-  const embeddings = require('../../src/engine/embeddings');
+  const thompson = require('@agni/engine/thompson');
+  const embeddings = require('@agni/engine/embeddings');
   const { createState } = require('../helpers/engine-state');
 
   it('selectLesson with eligibleLessonIds only considers those lessons', () => {
@@ -679,8 +679,8 @@ describe('AUDIT-INVARIANT: thompson Bug 5 — selectLesson respects eligibleLess
 });
 
 describe('AUDIT-INVARIANT: thompson Bug 11 — selectLesson cold-start warns and returns null without eligibleLessonIds', () => {
-  const thompson = require('../../src/engine/thompson');
-  const embeddings = require('../../src/engine/embeddings');
+  const thompson = require('@agni/engine/thompson');
+  const embeddings = require('@agni/engine/embeddings');
   const { createState } = require('../helpers/engine-state');
 
   it('returns null and logs warn when observationCount=0 and eligibleLessonIds omitted', () => {
@@ -696,8 +696,8 @@ describe('AUDIT-INVARIANT: thompson Bug 11 — selectLesson cold-start warns and
 });
 
 describe('AUDIT-INVARIANT: thompson Bug 6 — updateBandit rejects overflow atomically', () => {
-  const thompson = require('../../src/engine/thompson');
-  const embeddings = require('../../src/engine/embeddings');
+  const thompson = require('@agni/engine/thompson');
+  const embeddings = require('@agni/engine/embeddings');
   const { createState } = require('../helpers/engine-state');
 
   it('updateBandit throws and does not mutate A/b when gamma*A + outer overflows', () => {
@@ -750,8 +750,8 @@ describe('AUDIT-INVARIANT: thompson Bug 6 — updateBandit rejects overflow atom
 });
 
 describe('AUDIT-INVARIANT: thompson Bug 8 — ensureBanditInitialized rejects jagged A', () => {
-  const thompson = require('../../src/engine/thompson');
-  const embeddings = require('../../src/engine/embeddings');
+  const thompson = require('@agni/engine/thompson');
+  const embeddings = require('@agni/engine/embeddings');
   const { createState } = require('../helpers/engine-state');
 
   it('re-initializes A when row has wrong column count (jagged matrix)', () => {
@@ -771,9 +771,9 @@ describe('AUDIT-INVARIANT: thompson Bug 8 — ensureBanditInitialized rejects ja
 });
 
 describe('AUDIT-15: sampleTheta jitter does not mutate state.bandit.A', () => {
-  const thompson = require('../../src/engine/thompson');
-  const embeddings = require('../../src/engine/embeddings');
-  const math = require('../../src/engine/math');
+  const thompson = require('@agni/engine/thompson');
+  const embeddings = require('@agni/engine/embeddings');
+  const math = require('@agni/engine/math');
   const { createState } = require('../helpers/engine-state');
 
   it('state.bandit.A is unchanged after jitter retry path', () => {
@@ -812,7 +812,7 @@ describe('AUDIT-15: sampleTheta jitter does not mutate state.bandit.A', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('AUDIT-16: addMat rejects dimension mismatch', () => {
-  const math = require('../../src/engine/math');
+  const math = require('@agni/engine/math');
 
   it('throws on row count mismatch', () => {
     assert.throws(
@@ -839,7 +839,7 @@ describe('AUDIT-16: addMat rejects dimension mismatch', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('AUDIT-17: SM-2 ease factor is capped at 3.0', () => {
-  const { updateSchedule } = require('../../src/engine/sm2');
+  const { updateSchedule } = require('@agni/engine/sm2');
 
   it('ease factor never exceeds 3.0 even with perfect quality', () => {
     var schedule = { interval: 1, easeFactor: 2.9, repetition: 5 };
@@ -1167,7 +1167,7 @@ describe('C1-ENTITY: shared-runtime.js has entity decoding and global JS_URI_RE'
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('R16-C2.3: computeStreaks scans full history for longestStreak', () => {
-  const { computeStreaks } = require('../../src/utils/streak');
+  const { computeStreaks } = require('@agni/utils/streak');
 
   it('longestStreak finds historical max beyond current streak gap', () => {
     const dates = [];
@@ -1211,7 +1211,7 @@ describe('R16-C2.3: computeStreaks scans full history for longestStreak', () => 
 
 describe('R16-C3.3: PageRank invalidateCache clears _currGraph', () => {
   it('_currGraph is null after invalidation', () => {
-    const pagerank = require('../../src/engine/pagerank');
+    const pagerank = require('@agni/engine/pagerank');
     // Access internal cache via the module — invalidateCache is exported
     pagerank.invalidateCache();
     const fs = require('fs');
@@ -1690,7 +1690,7 @@ describe('AUDIT-D1: seedLesson clamps difficulty to [1,5]', () => {
 
   it('does not throw when difficulty is NaN; seedLessons completes and probe has finite difficulty', async () => {
     delete require.cache[require.resolve('../../src/engine')];
-    const lmsEngine = require('../../src/engine');
+    const lmsEngine = require('@agni/engine');
     await assert.doesNotReject(
       lmsEngine.seedLessons([
         { lessonId: 'test-d1-nan', difficulty: NaN, skill: 'ols:math:test' }
@@ -1702,7 +1702,7 @@ describe('AUDIT-D1: seedLesson clamps difficulty to [1,5]', () => {
 
   it('does not throw when difficulty is 10; clamps to 5 and seedLessons completes', async () => {
     delete require.cache[require.resolve('../../src/engine')];
-    const lmsEngine = require('../../src/engine');
+    const lmsEngine = require('@agni/engine');
     await assert.doesNotReject(
       lmsEngine.seedLessons([
         { lessonId: 'test-d1-high', difficulty: 10, skill: 'ols:math:test' }
@@ -1733,7 +1733,7 @@ describe('AUDIT-DOCS: Node version docs consistent (hub Node 14+)', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('MATH-1: cholesky rejects null, non-square, and non-symmetric input', () => {
-  const math = require('../../src/engine/math');
+  const math = require('@agni/engine/math');
 
   it('throws for null input', () => {
     assert.throws(() => math.cholesky(null), /cholesky.*null or undefined/);
@@ -1749,7 +1749,7 @@ describe('MATH-1: cholesky rejects null, non-square, and non-symmetric input', (
 });
 
 describe('MATH-2: randn produces valid N(0,1) samples', () => {
-  const math = require('../../src/engine/math');
+  const math = require('@agni/engine/math');
 
   it('produces statistically independent samples (cache alternates cos/sin from Box-Muller)', () => {
     // Call randn odd times (no cache anymore — was the bug). Verify samples are valid N(0,1).
@@ -1765,7 +1765,7 @@ describe('MATH-2: randn produces valid N(0,1) samples', () => {
 });
 
 describe('MATH-3: randn retries on PRNG zero (does not corrupt Thompson sampling)', () => {
-  const math = require('../../src/engine/math');
+  const math = require('@agni/engine/math');
 
   it('retries then throws when Math.random returns zero repeatedly', () => {
     math._randnClearCache();
@@ -1780,7 +1780,7 @@ describe('MATH-3: randn retries on PRNG zero (does not corrupt Thompson sampling
 });
 
 describe('MATH-4: forwardSub and backSub throw on RHS length mismatch', () => {
-  const math = require('../../src/engine/math');
+  const math = require('@agni/engine/math');
 
   it('forwardSub throws when b.length < L.length', () => {
     const L = [[1, 0], [1, 1]];
@@ -1804,7 +1804,7 @@ describe('MATH-4: forwardSub and backSub throw on RHS length mismatch', () => {
 });
 
 describe('MATH-5: identity rejects invalid n', () => {
-  const math = require('../../src/engine/math');
+  const math = require('@agni/engine/math');
 
   it('throws for null or undefined', () => {
     assert.throws(() => math.identity(null), /identity.*null or undefined/);
@@ -1821,7 +1821,7 @@ describe('MATH-5: identity rejects invalid n', () => {
 });
 
 describe('MATH-6: scaleVec and scaleMat reject invalid scalar', () => {
-  const math = require('../../src/engine/math');
+  const math = require('@agni/engine/math');
 
   it('scaleVec throws for undefined scalar', () => {
     assert.throws(() => math.scaleVec([1, 2, 3], undefined), /scaleVec.*finite number/);
@@ -1837,7 +1837,7 @@ describe('MATH-6: scaleVec and scaleMat reject invalid scalar', () => {
 });
 
 describe('MATH-7: invertSPD throws for null input', () => {
-  const math = require('../../src/engine/math');
+  const math = require('@agni/engine/math');
 
   it('throws for null', () => {
     assert.throws(() => math.invertSPD(null), /invertSPD.*null or undefined/);

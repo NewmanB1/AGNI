@@ -2,7 +2,7 @@
 // AGNI CLI – Builds lesson bundles (HTML, native, etc.)
 
 const fs = require('fs');
-const compilerService = require('./services/compiler');
+const compilerService = require('@ols/compiler/services/compiler');
 
 async function run() {
   const args = process.argv.slice(2);
@@ -77,7 +77,7 @@ async function run() {
 
   // ── LMS repair (Backlog task 7) ──────────────────────────────────────────
   if (firstArg === 'lms-repair') {
-    const engine = require('./engine');
+    const engine = require('@agni/engine');
     engine.reloadState();
     console.log('LMS state reloaded; migration applied if needed. State path: AGNI_DATA_DIR/data/lms-state.json');
     return;
@@ -117,8 +117,8 @@ async function run() {
   // ── Validate-only mode ────────────────────────────────────────────────
   if (params.validateOnly) {
     const compilerService = require('@ols/compiler/services/compiler');
-    const lessonSchema = require('./services/lesson-schema');
-    const lessonValidator = require('./utils/lesson-validator');
+    const lessonSchema = require('@ols/schema/lesson-schema');
+    const lessonValidator = require('@ols/schema/lesson-validator');
     const envConfig = require('@agni/utils/env-config');
 
     const stat = fs.statSync(params.inputFile);

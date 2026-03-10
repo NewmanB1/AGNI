@@ -2,7 +2,7 @@
 
 const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
-const { inferFeatures, buildKatexAssetList, collectSpecFactoryIds } = require('../../src/utils/feature-inference');
+const { inferFeatures, buildKatexAssetList, collectSpecFactoryIds } = require('@agni/utils/feature-inference');
 const { minimalLesson, mathLesson, sensorLesson, svgLesson } = require('../helpers/fixtures');
 
 // ── inferFeatures: basic structure ───────────────────────────────────────────

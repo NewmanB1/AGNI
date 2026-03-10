@@ -14,7 +14,7 @@ function loadA11y() {
   delete require.cache[shimPath];
   delete require.cache[canonicalPath];
   delete globalThis.AGNI_A11Y;
-  require('../../src/runtime/ui/a11y');
+  require('@agni/runtime/ui/a11y');
   return globalThis.AGNI_A11Y;
 }
 
@@ -48,7 +48,7 @@ describe('prefs – defaults', () => {
       delete require.cache[shimPath];
       delete require.cache[canonicalPath];
       delete globalThis.AGNI_A11Y;
-      require('../../src/runtime/ui/a11y');
+      require('@agni/runtime/ui/a11y');
       assert.equal(globalThis.AGNI_A11Y.prefs.hapticIntensity, 0);
     } finally {
       globalThis.matchMedia = origMatchMedia;

@@ -2,7 +2,7 @@
 
 const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
-const { updateAbility } = require('../../src/engine/rasch');
+const { updateAbility } = require('@agni/engine/rasch');
 const { createState, seedProbes } = require('../helpers/engine-state');
 
 describe('updateAbility', () => {

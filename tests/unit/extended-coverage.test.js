@@ -16,7 +16,7 @@ function tempDir() {
 // ═══════════════════════════════════════════════════════════════════════════
 // 1. Async json-store tests
 // ═══════════════════════════════════════════════════════════════════════════
-const { loadJSONAsync, saveJSONAsync, getFileMtimeAsync, loadJSON, saveJSON } = require('../../src/utils/json-store');
+const { loadJSONAsync, saveJSONAsync, getFileMtimeAsync, loadJSON, saveJSON } = require('@agni/utils/json-store');
 
 describe('loadJSONAsync', () => {
   it('returns fallback for missing file', async () => {
@@ -129,7 +129,7 @@ describe('json-store error paths', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 // 3. Logger tests
 // ═══════════════════════════════════════════════════════════════════════════
-const { createLogger } = require('../../src/utils/logger');
+const { createLogger } = require('@agni/utils/logger');
 
 describe('logger structured output', () => {
   it('logger.info outputs valid JSON to stdout', (t) => {
@@ -199,10 +199,10 @@ describe('logger structured output', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 // 4. Engine error / edge case tests
 // ═══════════════════════════════════════════════════════════════════════════
-const rasch = require('../../src/engine/rasch');
-const thompson = require('../../src/engine/thompson');
-const embeddings = require('../../src/engine/embeddings');
-const migrations = require('../../src/engine/migrations');
+const rasch = require('@agni/engine/rasch');
+const thompson = require('@agni/engine/thompson');
+const embeddings = require('@agni/engine/embeddings');
+const migrations = require('@agni/engine/migrations');
 const { createState, seedProbes } = require('../helpers/engine-state');
 
 describe('rasch edge cases', () => {

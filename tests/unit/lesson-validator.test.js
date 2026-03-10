@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const {
   validateLesson, validateStep, validateThreshold, validateSvgSpec, validateGate,
   VALID_FACTORIES, KNOWN_SENSORS
-} = require('../../src/utils/lesson-validator');
+} = require('@ols/schema/lesson-validator');
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 

@@ -2,7 +2,7 @@
 
 const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
-const { migrateLMSState, looksLikeLMSState } = require('../../src/engine/migrations');
+const { migrateLMSState, looksLikeLMSState } = require('@agni/engine/migrations');
 
 // ── looksLikeLMSState ────────────────────────────────────────────────────────
 

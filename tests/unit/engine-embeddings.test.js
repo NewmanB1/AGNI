@@ -2,7 +2,7 @@
 
 const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
-const { getStudentVector, getLessonVector, ensureStudentVector, ensureLessonVector, updateEmbedding } = require('../../src/engine/embeddings');
+const { getStudentVector, getLessonVector, ensureStudentVector, ensureLessonVector, updateEmbedding } = require('@agni/engine/embeddings');
 const { createState } = require('../helpers/engine-state');
 
 describe('ensureStudentVector', () => {
@@ -140,7 +140,7 @@ describe('updateEmbedding', () => {
 
   it('moves dot product toward the observed gain', () => {
     const state = createState({ dim: 4 });
-    const math = require('../../src/engine/math');
+    const math = require('@agni/engine/math');
     ensureStudentVector(state, 's1');
     ensureLessonVector(state, 'L1');
     const gain = 5.0;
@@ -177,7 +177,7 @@ describe('updateEmbedding', () => {
 
   it('handles negative gain (reducing similarity)', () => {
     const state = createState({ dim: 4 });
-    const math = require('../../src/engine/math');
+    const math = require('@agni/engine/math');
     ensureStudentVector(state, 's1');
     ensureLessonVector(state, 'L1');
     const z0 = ensureStudentVector(state, 's1');

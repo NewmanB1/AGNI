@@ -152,7 +152,7 @@ describe('Feature flags integration', () => {
   });
 
   it('isEnabled is deterministic for the same student', () => {
-    const { isEnabled } = require('../../src/utils/feature-flags');
+    const { isEnabled } = require('@agni/utils/feature-flags');
     const flag = { enabled: true, rollout: 50 };
     const result1 = isEnabled(flag, 'student_alpha');
     const result2 = isEnabled(flag, 'student_alpha');
@@ -160,7 +160,7 @@ describe('Feature flags integration', () => {
   });
 
   it('isEnabled produces different results for different students at partial rollout', () => {
-    const { isEnabled } = require('../../src/utils/feature-flags');
+    const { isEnabled } = require('@agni/utils/feature-flags');
     const flag = { enabled: true, rollout: 50 };
     const results = new Set();
     for (let i = 0; i < 100; i++) {
@@ -170,12 +170,12 @@ describe('Feature flags integration', () => {
   });
 
   it('isEnabled returns false when flag is disabled', () => {
-    const { isEnabled } = require('../../src/utils/feature-flags');
+    const { isEnabled } = require('@agni/utils/feature-flags');
     assert.equal(isEnabled({ enabled: false, rollout: 100 }, 'any_student'), false);
   });
 
   it('isEnabled returns true at 100% rollout for any student', () => {
-    const { isEnabled } = require('../../src/utils/feature-flags');
+    const { isEnabled } = require('@agni/utils/feature-flags');
     const flag = { enabled: true, rollout: 100 };
     for (let i = 0; i < 20; i++) {
       assert.equal(isEnabled(flag, `student_${i}`), true);
@@ -183,7 +183,7 @@ describe('Feature flags integration', () => {
   });
 
   it('getActiveFlagsForStudent returns correct map', async () => {
-    const { getActiveFlagsForStudent } = require('../../src/utils/feature-flags');
+    const { getActiveFlagsForStudent } = require('@agni/utils/feature-flags');
     const active = await getActiveFlagsForStudent('student_0');
     assert.ok(typeof active === 'object');
     assert.ok('dark_mode' in active, 'dark_mode should appear in active flags');

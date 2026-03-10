@@ -2,10 +2,10 @@
 
 const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
-const math = require('../../src/engine/math');
-const { ensureBanditInitialized, updateBandit } = require('../../src/engine/thompson');
-const { ensureLessonVector } = require('../../src/engine/embeddings');
-const { addSyncId, contentHash, getBanditSummary, mergeBanditSummaries } = require('../../src/engine/federation');
+const math = require('@agni/engine/math');
+const { ensureBanditInitialized, updateBandit } = require('@agni/engine/thompson');
+const { ensureLessonVector } = require('@agni/engine/embeddings');
+const { addSyncId, contentHash, getBanditSummary, mergeBanditSummaries } = require('@agni/engine/federation');
 const { createState } = require('../helpers/engine-state');
 
 const EPSILON = 1e-6;

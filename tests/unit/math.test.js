@@ -2,7 +2,7 @@
 
 const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
-const math = require('../../src/engine/math');
+const math = require('@agni/engine/math');
 
 const EPSILON = 1e-10;
 

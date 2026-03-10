@@ -2,7 +2,7 @@
 
 const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
-const { updateSchedule } = require('../../src/engine/sm2');
+const { updateSchedule } = require('@agni/engine/sm2');
 
 describe('SM-2 spaced repetition', () => {
   it('first correct answer (quality 5) → interval 1, rep 1', () => {

@@ -7,7 +7,7 @@ const { setupGlobals, teardownGlobals } = browserGlobals;
 
 before(() => setupGlobals());
 
-require('../../src/runtime/telemetry/checkpoint');
+require('@agni/runtime/telemetry/checkpoint');
 const ckpt = globalThis.AGNI_CHECKPOINT;
 
 after(() => teardownGlobals());

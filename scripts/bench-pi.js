@@ -41,12 +41,12 @@ console.log('Data dir:', BENCH_DIR);
 console.log('');
 
 // Require engine after env vars are set
-var rasch = require('../src/engine/rasch');
-var embeddings = require('../src/engine/embeddings');
-var thompson = require('../src/engine/thompson');
-var markov = require('../src/engine/markov');
-var pagerank = require('../src/engine/pagerank');
-var math = require('../src/engine/math');
+var rasch = require('@agni/engine/rasch');
+var embeddings = require('@agni/engine/embeddings');
+var thompson = require('@agni/engine/thompson');
+var markov = require('@agni/engine/markov');
+var pagerank = require('@agni/engine/pagerank');
+var math = require('@agni/engine/math');
 
 var dim = parseInt(process.env.AGNI_EMBEDDING_DIM, 10);
 

@@ -3,7 +3,7 @@
 const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 
-const markov = require('../../src/engine/markov');
+const markov = require('@agni/engine/markov');
 const { createState, seedProbes } = require('../helpers/engine-state');
 
 describe('markov — ensureMarkovState', function () {

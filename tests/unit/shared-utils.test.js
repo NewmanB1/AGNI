@@ -6,11 +6,11 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-const { loadJSON, saveJSON, getFileMtime } = require('../../src/utils/json-store');
-const { computeStreaks, collectReviewDates } = require('../../src/utils/streak');
-const { createRateLimiter } = require('../../src/utils/rate-limiter');
-const { createLogger } = require('../../src/utils/logger');
-const { safeErrorMessage } = require('../../src/utils/http-helpers');
+const { loadJSON, saveJSON, getFileMtime } = require('@agni/utils/json-store');
+const { computeStreaks, collectReviewDates } = require('@agni/utils/streak');
+const { createRateLimiter } = require('@agni/utils/rate-limiter');
+const { createLogger } = require('@agni/utils/logger');
+const { safeErrorMessage } = require('@agni/utils/http-helpers');
 
 function tempDir() {
   const dir = path.join(os.tmpdir(), 'agni-utils-test-' + Date.now());

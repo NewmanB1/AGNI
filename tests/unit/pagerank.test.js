@@ -3,8 +3,8 @@
 const { describe, it, beforeEach } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 
-const pagerank = require('../../src/engine/pagerank');
-const markov = require('../../src/engine/markov');
+const pagerank = require('@agni/engine/pagerank');
+const markov = require('@agni/engine/markov');
 const { createState, seedProbes } = require('../helpers/engine-state');
 
 beforeEach(function () {

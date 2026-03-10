@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { safeYamlLoad } = require('@ols/compiler/services/compiler');
-const { inferFeatures } = require('./src/utils/feature-inference');
+const { inferFeatures } = require('@agni/utils/feature-inference');
 const lessonsDir = './lessons';
 console.log('Scanning directory:', path.resolve(lessonsDir));
 try {

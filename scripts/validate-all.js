@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { safeYamlLoad } = require('@ols/compiler/services/compiler');
 const { execSync } = require('child_process');
-const { validateThresholdSyntax } = require('../src/utils/threshold-syntax');
+const { validateThresholdSyntax } = require('@agni/utils/threshold-syntax');
 
 const lessonsDir = path.resolve(__dirname, '..', 'lessons');
 const schemaPath = path.resolve(__dirname, '..', 'schemas', 'ols.schema.json');
