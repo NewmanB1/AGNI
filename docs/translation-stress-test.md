@@ -24,7 +24,7 @@ npm run validate
 To compile the Spanish lesson to HTML:
 
 ```bash
-node src/cli.js lessons/gravity-es.yaml --format=html --output=dist/gravity-es.html
+node packages/agni-cli/cli.js lessons/gravity-es.yaml --format=html --output=dist/gravity-es.html
 # or: npm run build then copy and rename for gravity-es, or add a script
 ```
 

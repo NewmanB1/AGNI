@@ -12,7 +12,7 @@ Use this when building or consuming lesson artifacts for **thin clients**: runti
 
 ## Native bundle (Strategy B)
 
-- **Build:** `node src/cli.js lessons/gravity.yaml --format=native --output-dir=dist/native-gravity`
+- **Build:** `node packages/agni-cli/cli.js lessons/gravity.yaml --format=native --output-dir=dist/native-gravity`
 - **Contents:**
   - `lesson.json` — manifest with `meta`, `ontology`, `gate`, `inferredFeatures`, `steps` (each step has `content_src` pointing to `content/step-NN.md`; no inline content).
   - `content/step-01.md`, `content/step-02.md`, … — raw Markdown per step.
@@ -21,7 +21,7 @@ Use this when building or consuming lesson artifacts for **thin clients**: runti
 
 ## YAML packet
 
-- **Build:** `node src/cli.js lessons/gravity.yaml --format=yaml-packet --output-dir=dist/yaml-gravity`
+- **Build:** `node packages/agni-cli/cli.js lessons/gravity.yaml --format=yaml-packet --output-dir=dist/yaml-gravity`
 - **Contents:**
   - `lesson.yaml` — the original OLS source YAML (unchanged).
   - `packet.json` — minimal manifest for discovery (identifier, title, language, schemaVersion, compiledAt, ontology, difficulty).

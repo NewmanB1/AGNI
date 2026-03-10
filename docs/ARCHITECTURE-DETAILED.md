@@ -88,7 +88,7 @@ Canonical implementations live in `packages/`. The `src/` tree re-exports from p
 
 | Entry | File | Purpose |
 |-------|------|---------|
-| CLI | `src/cli.js` | Compile lessons, hub setup, lms-repair |
+| CLI | `packages/agni-cli/cli.js` | Compile lessons, hub setup, lms-repair |
 | Theta (hub API) | `packages/agni-hub/theta.js` | HTTP server, lesson ordering, LMS, governance, accounts |
 | Hub-transform | `packages/agni-hub/hub-transform.js` | On-demand YAML → HTML compilation |
 | Sentry | `packages/agni-hub/sentry.js` | Telemetry analysis, graph_weights |
@@ -220,7 +220,7 @@ rawYaml
 
 | Caller | Path |
 |--------|------|
-| CLI | `src/cli.js` → `@agni/services/compiler` → `compileLessonFromYamlFile()` |
+| CLI | `packages/agni-cli/cli.js` → `@agni/services/compiler` → `compileLessonFromYamlFile()` |
 | Hub on-demand | `hub-transform.compileLesson(slug)` → same pipeline |
 | Author API | `POST /api/author/preview` → validate + build IR |
 

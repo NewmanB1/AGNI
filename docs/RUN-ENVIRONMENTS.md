@@ -68,7 +68,7 @@ Runs on developer machine or CI. Not edge, not necessarily Pi.
 
 | Path | Role |
 |------|------|
-| `src/cli.js` | CLI (compile, hub setup, lms-repair) |
+| `packages/agni-cli/cli.js` | CLI (compile, hub setup, lms-repair) |
 | `scripts/*.js` | Verification, init, wizards |
 | `tools/curriculum-gen/*.js` | LLM lesson generator |
 | `tests/*` | Unit, integration, contract tests |

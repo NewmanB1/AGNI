@@ -45,12 +45,12 @@ This works automatically for any `.yaml` file inside `lessons/`.
 
 3. Validate your lesson:
    ```bash
-   node src/cli.js lessons/my-lesson.yaml --validate
+   node packages/agni-cli/cli.js lessons/my-lesson.yaml --validate
    ```
 
 4. Compile it to HTML:
    ```bash
-   node src/cli.js lessons/my-lesson.yaml --format=html --output=dist/my-lesson.html
+   node packages/agni-cli/cli.js lessons/my-lesson.yaml --format=html --output=dist/my-lesson.html
    ```
 
 5. Open `dist/my-lesson.html` in a browser to test it.
@@ -164,7 +164,7 @@ Always validate before sharing:
 
 ```bash
 # Validate a specific file (runs both schema and runtime checks)
-node src/cli.js lessons/my-lesson.yaml --validate
+node packages/agni-cli/cli.js lessons/my-lesson.yaml --validate
 
 # Validate all lessons at once
 npm run validate

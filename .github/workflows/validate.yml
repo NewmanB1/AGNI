@@ -72,7 +72,7 @@ jobs:
         run: |
           for f in lessons/*.yaml; do
             slug=$(basename "$f" .yaml)
-            node src/cli.js "$f" --format=html --output="dist/${slug}.html"
+            node packages/agni-cli/cli.js "$f" --format=html --output="dist/${slug}.html"
           done
       # Verify data files unchanged after tests [R10 P5.7]
       - name: Check data directory cleanliness

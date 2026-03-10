@@ -77,7 +77,7 @@ steps:
 **2. Compile it:**
 
 ```bash
-node src/cli.js lessons/ShakeRhythm.yaml --format=html --output=dist/shake.html
+node packages/agni-cli/cli.js lessons/ShakeRhythm.yaml --format=html --output=dist/shake.html
 ```
 
 **3. Run it on any device.** The output is a single HTML file with zero dependencies. Copy it via USB, Bluetooth, SD card, or QR code.

@@ -57,7 +57,7 @@ The codebase is JavaScript (Node.js). Canonical implementations live in `package
 
 | Area | Canonical location | Purpose |
 |------|-------------------|---------|
-| CLI | `src/cli.js` | CLI entry point — parses args, calls builders |
+| CLI | `packages/agni-cli/cli.js` | CLI entry point — parses args, calls builders |
 | Compiler | `packages/ols-compiler/` | YAML → IR → HTML/native/YAML-packet |
 | HTML builder | `packages/ols-compiler/builders/html.js` | Compiles YAML → single-file HTML bundle |
 | Native builder | `packages/ols-compiler/builders/native.js` | IR → lesson.json + content/*.md |

@@ -111,7 +111,7 @@ If validation fails, fix the reported errors (often a typo in a key or an invali
 Compile the translated lesson to HTML:
 
 ```bash
-node src/cli.js lessons/gravity-es.yaml --format=html --output=dist/gravity-es.html
+node packages/agni-cli/cli.js lessons/gravity-es.yaml --format=html --output=dist/gravity-es.html
 ```
 
 Open `dist/gravity-es.html` in a browser. Confirm that:

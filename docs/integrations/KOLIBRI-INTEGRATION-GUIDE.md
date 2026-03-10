@@ -31,12 +31,12 @@ OLS lessons are written in YAML. Compile them to single-file HTML:
 
 ```bash
 # Compile a single lesson
-node src/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html
+node packages/agni-cli/cli.js lessons/gravity.yaml --format=html --output=dist/gravity.html
 
 # Or compile all lessons in lessons/
 for f in lessons/*.yaml; do
   slug=$(basename "$f" .yaml)
-  node src/cli.js "$f" --format=html --output="dist/${slug}.html"
+  node packages/agni-cli/cli.js "$f" --format=html --output="dist/${slug}.html"
 done
 ```
 

@@ -289,7 +289,7 @@ On-demand hub-transform checks disk first; if `index.html` exists and its mtime 
 
 **Static (CLI) delivery:**
 
-1. Hub operator runs `agni` (or `node src/cli.js`) with `--input` and `--output`.
+1. Hub operator runs `agni` (or `node packages/agni-cli/cli.js`) with `--input` and `--output`.
 2. Compiler builds `gravity.html` + `lesson-ir.json` sidecar via `src/services/compiler`.
 3. `shared-runtime.js` and other factory assets written to output dir; reused across all lessons.
 4. Files distributed to devices via USB/SD/sneakernet.

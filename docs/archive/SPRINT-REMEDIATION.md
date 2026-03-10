@@ -100,13 +100,13 @@ The target runtime is Android 6.0+ (Marshmallow) which only runs ES5 JavaScript.
 
 **Duration:** 2 days. Medium priority — invisible failures erode trust in the adaptive engine.
 
-**Context:** `selectBestLesson` silently swallows PageRank errors with an empty catch. There are ~124 `console.log/warn/error` calls across `src/`. Runtime files (`src/runtime/`) are ES5 browser code that legitimately can't use the Node logger — those are fine. The concern is server-side Node.js code: `src/builders/html.js` (11), `src/utils/lesson-validator.js` (8), `src/cli.js` (10), `src/services/compiler.js` (5), `src/utils/katex-css-builder.js` (3), `src/utils/crypto.js` (1).
+**Context:** `selectBestLesson` silently swallows PageRank errors with an empty catch. There are ~124 `console.log/warn/error` calls across `src/`. Runtime files (`src/runtime/`) are ES5 browser code that legitimately can't use the Node logger — those are fine. The concern is server-side Node.js code: `src/builders/html.js` (11), `src/utils/lesson-validator.js` (8), `packages/agni-cli/cli.js` (10), `src/services/compiler.js` (5), `src/utils/katex-css-builder.js` (3), `src/utils/crypto.js` (1).
 
 | # | Task | Deliverable | Success |
 |---|------|-------------|---------|
 | **R4.1** | **Log PageRank failures in `selectBestLesson`** | Replace the empty `catch(_)` (engine/index.ts ~line 303) with `catch(err) { log.warn('PageRank scoring failed, falling back', { error: err.message }); }`. | PageRank failures appear in structured logs. |
 | **R4.2** | **Audit all empty catch blocks** | Search for `catch\s*\(` and `catch\s*\{` across `src/` and `hub-tools/`. For each: (a) if truly best-effort (file existence checks, backup copies), add a one-line comment; (b) if swallowing real errors, add logging. | Every empty catch has either a log statement or a comment explaining why silence is intentional. |
-| **R4.3** | **Migrate server-side `console.*` to logger** | In `src/builders/`, `src/utils/` (non-runtime), `src/services/`, and `src/cli.js`: replace `console.log/warn/error` with `log.info/warn/error` from `createLogger`. Skip `src/runtime/` (browser code). | Zero `console.*` calls in server-side Node modules (outside `src/runtime/` and `src/cli.js` top-level). |
+| **R4.3** | **Migrate server-side `console.*` to logger** | In `src/builders/`, `src/utils/` (non-runtime), `src/services/`, and `packages/agni-cli/cli.js`: replace `console.log/warn/error` with `log.info/warn/error` from `createLogger`. Skip `src/runtime/` (browser code). | Zero `console.*` calls in server-side Node modules (outside `src/runtime/` and `packages/agni-cli/cli.js` top-level). |
 | **R4.4** | **Add degradation telemetry** | When `selectBestLesson` falls back due to a caught error (PageRank, Markov), emit a lightweight event (e.g., increment a counter in the engine state or emit to the log) so operators can monitor degradation frequency. | Operators can detect if the engine is consistently running in degraded mode. |
 
 **Verification:** All tests pass. `grep -rn "console\." src/builders/ src/utils/ src/services/` returns only `src/runtime/` files (excluded) or zero results.

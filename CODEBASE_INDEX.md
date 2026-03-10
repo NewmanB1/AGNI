@@ -85,6 +85,6 @@ Quick reference for humans and AI tools. Canonical implementations live in `pack
 
 | Entry | Path |
 |-------|------|
-| CLI | `src/cli.js` |
+| CLI | `packages/agni-cli/cli.js` |
 | Hub API | `packages/agni-hub/theta.js` or `node hub-tools/theta.js` → `theta.startApi()` |
 | Portal | `portal/` (vanilla HTML/CSS/JS) |
