@@ -1,7 +1,6 @@
 // packages/agni-utils/feature-inference.js
 // AGNI Feature Inference  v1.9.0
 // Analyses a parsed OLS lesson object and produces inferredFeatures.
-// See src/utils/feature-inference.js for full documentation.
 // ─────────────────────────────────────────────────────────────────────────────
 
 'use strict';

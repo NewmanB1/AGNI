@@ -1,4 +1,4 @@
-// src/engine/markov.js
+// packages/agni-engine/markov.js
 // AGNI LMS Engine — Markov chain transition model
 //
 // Learns which lesson sequences produce good outcomes by tracking

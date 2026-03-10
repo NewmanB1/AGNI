@@ -1,4 +1,4 @@
-// src/engine/pagerank.js
+// packages/agni-engine/pagerank.js
 // AGNI LMS Engine — PageRank for lesson authority scoring
 //
 // Computes lesson "importance" via the PageRank algorithm on two graphs:

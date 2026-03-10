@@ -1,4 +1,4 @@
-// packages/agni-utils/katex-css-builder.js - See src/utils/katex-css-builder.js for full docs.
+// packages/agni-utils/katex-css-builder.js
 'use strict';
 
 const fs   = require('fs');

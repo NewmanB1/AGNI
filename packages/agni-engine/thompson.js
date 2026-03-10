@@ -1,4 +1,4 @@
-// src/engine/thompson.js
+// packages/agni-engine/thompson.js
 // AGNI LMS Engine — linear Thompson Sampling bandit
 //
 // Maintains a Bayesian linear regression posterior over lesson reward

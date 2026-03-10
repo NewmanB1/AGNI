@@ -1,4 +1,4 @@
-// src/engine/embeddings.js
+// packages/agni-engine/embeddings.js
 // AGNI LMS Engine — student and lesson embedding vectors
 //
 // Online matrix factorization with forgetting and L2 regularization.

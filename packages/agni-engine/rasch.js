@@ -1,4 +1,4 @@
-// src/engine/rasch.js
+// packages/agni-engine/rasch.js
 // AGNI LMS Engine — Rasch model ability estimation
 //
 // Updates student ability using approximate Newton-Raphson (MAP estimate).

@@ -1,4 +1,4 @@
-// src/engine/federation.js
+// packages/agni-engine/federation.js
 // AGNI LMS Engine — federated bandit summary export and merging
 //
 // Handles precision-weighted combination of bandit posteriors from two hubs.
