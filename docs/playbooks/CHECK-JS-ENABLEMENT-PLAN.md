@@ -11,7 +11,7 @@ This document outlines the plan to fix type mismatches so `checkJs: true` can be
 ## Implementation Status (Partial)
 
 **Completed:**
-- **Phase 0:** `src/types/index.d.ts` — BanditSummary (hubId, exportSequence, posteriorVersion, trainingWindow), BanditState (exportSequence, hubHighWater), MarkovState (optional bigrams, dropouts, cooldowns), LMSSelectResult, HubCompileResult, LessonRequires.integrity
+- **Phase 0:** `packages/types/index.d.ts` — BanditSummary (hubId, exportSequence, posteriorVersion, trainingWindow), BanditState (exportSequence, hubHighWater), MarkovState (optional bigrams, dropouts, cooldowns), LMSSelectResult, HubCompileResult, LessonRequires.integrity
 - **Phase 1:** `packages/agni-runtime/index.d.ts` — AgniShared, AgniSvgHelpers, Window globals, AgniStage.export Promise, AgniA11y.injectSettingsButton
 - **Phase 2 (partial):** hub-transform JSDoc (compile return type, Error extension, http imports), validateSession/validateStudentSession types, slug array handling
 - **@ts-nocheck:** pwa/shared.js, pwa/shell-boot.js, polyfills.js, svg-factories*.js
@@ -29,7 +29,7 @@ This document outlines the plan to fix type mismatches so `checkJs: true` can be
 
 ## Phase 0: Shared Type Declaration Fixes (Foundation)
 
-**Location:** `src/types/index.d.ts`  
+**Location:** `packages/types/index.d.ts`  
 **Effort:** Low | **Blocking:** All later phases
 
 ### 0.1 LMS / Engine types out of sync
@@ -41,7 +41,7 @@ This document outlines the plan to fix type mismatches so `checkJs: true` can be
 | `MarkovState` | `buildDefaultState` creates partial object | index.js |
 | `select` return | `candidates` | index.js |
 
-**Fix:** Add missing optional fields to types in `src/types/index.d.ts` to match runtime usage. Mark new fields optional where they're added incrementally.
+**Fix:** Add missing optional fields to types in `packages/types/index.d.ts` to match runtime usage. Mark new fields optional where they're added incrementally.
 
 ### 0.2 Compile result shape (hub-transform)
 
@@ -62,7 +62,7 @@ Runtime and PWA code use globals not declared on `Window`:
 
 - `LESSON_DATA`, `AGNI_SHARED`, `AGNI_LOADER`, `AGNI_INTEGRITY`, `AGNI_NAVIGATOR`, `AGNI_HUB`, `AGNI_CSP_NONCE`, `AGNI_EDGE_THETA`, `AGNI_FRUSTRATION`, `AGNI_CHECKPOINT`, `AGNI_TELEMETRY`, `AGNI_I18N`, `AGNI_NARRATION`, `AGNI_COMPLETION`, `AGNI_HUB_KEY`, `AGNI_LOAD_TIMEOUT`, `AGNI_RETRY_TIMEOUT`, `OLS_NEXT`, `OLS_ROUTE`, `OLS_BINARY`, `DEV_MODE`, `initPlayer`, `AGNI_SHARED_LOADED`
 
-**Fix:** Add `packages/agni-runtime/global.d.ts` (or extend `src/types/`) with:
+**Fix:** Add `packages/agni-runtime/global.d.ts` (or extend `packages/types/`) with:
 
 ```ts
 interface Window {
@@ -273,6 +273,6 @@ After each phase:
 
 - **`docs/playbooks/CHECK-JS-FINISH-PLAN.md`** — detailed per-file plan for engine, hub, runtime, utils, ols-compiler, ols-schema
 - `docs/playbooks/typing-and-languages.md` — current typing conventions
-- `src/types/index.d.ts` — central type definitions
+- `packages/types/index.d.ts` — central type definitions
 - `packages/agni-runtime/index.d.ts` — runtime types
 - Typecheck errors captured via: `npx tsc -p tsconfig.packages.json --noEmit` with `checkJs: true`

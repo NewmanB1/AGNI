@@ -219,5 +219,5 @@ Recommendation: Prefer targeted fixes (global augmentation + key JSDoc) over noc
 ## References
 
 - `docs/playbooks/CHECK-JS-ENABLEMENT-PLAN.md` — original plan, Phase 0–6
-- `src/types/index.d.ts` — shared types
+- `packages/types/index.d.ts` — shared types
 - `packages/agni-runtime/index.d.ts` — runtime/Window globals

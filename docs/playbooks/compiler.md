@@ -12,8 +12,8 @@ Use this when changing how lessons are compiled from YAML to IR or to HTML/nativ
 
 | Goal | Files to touch |
 |------|-----------------|
-| Change IR shape or sidecar fields | `packages/ols-compiler/compiler/build-lesson-ir.js` — keep `buildLessonSidecar()` in sync with `src/types/index.d.ts` and `docs/api-contract.md` (sidecar). |
-| Add a new YAML meta field (e.g. author, UTU) | 1) `schemas/ols.schema.json` (meta.properties). 2) `src/types/index.d.ts` (LessonMeta, LessonSidecar). 3) `buildLessonSidecar()` to pass the field through. 4) Optionally `packages/agni-hub/theta.js` when building the lesson index from sidecar. |
+| Change IR shape or sidecar fields | `packages/ols-compiler/compiler/build-lesson-ir.js` — keep `buildLessonSidecar()` in sync with `packages/types/index.d.ts` and `docs/api-contract.md` (sidecar). |
+| Add a new YAML meta field (e.g. author, UTU) | 1) `schemas/ols.schema.json` (meta.properties). 2) `packages/types/index.d.ts` (LessonMeta, LessonSidecar). 3) `buildLessonSidecar()` to pass the field through. 4) Optionally `packages/agni-hub/theta.js` when building the lesson index from sidecar. |
 | Change Markdown or math pipeline | `packages/ols-compiler/markdown-pipeline.js` — `processMarkdown()`. Used by `buildLessonIR` only. |
 | Change what gets inferred (features, factories) | `packages/agni-utils/feature-inference.js` — `inferFeatures()`. Factory list and order: `packages/agni-utils/runtimeManifest.js` (FACTORY_LOAD_ORDER, FACTORY_FILE_MAP). Keep in sync with `packages/agni-runtime/` filenames. |
 | Change HTML output or signing | `packages/ols-compiler/builders/html.js` — shared runtime path, integrity globals, and `packages/agni-hub/hub-transform.js` (PWA shell) should stay in sync; `packages/ols-compiler/services/lesson-assembly.js` is shared. |
@@ -27,4 +27,4 @@ Use this when changing how lessons are compiled from YAML to IR or to HTML/nativ
 
 ## Types
 
-- `src/types/index.d.ts`: `LessonIR`, `LessonSidecar`, `LessonMeta`, `InferredFeatures`. Keep these aligned with `buildLessonIR` / `buildLessonSidecar` output.
+- `packages/types/index.d.ts`: `LessonIR`, `LessonSidecar`, `LessonMeta`, `InferredFeatures`. Keep these aligned with `buildLessonIR` / `buildLessonSidecar` output.

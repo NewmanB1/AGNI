@@ -20,7 +20,7 @@ The engine uses ES5-only JavaScript to avoid a compile step and prevent stale-bu
 
 ## Typecheck scope
 
-- **`npm run typecheck`** — Runs both `tsconfig.json` (src/) and `tsconfig.packages.json` (packages/).
+- **`npm run typecheck`** — Runs both `tsconfig.json` and `tsconfig.packages.json` (packages/).
 - **`npm run typecheck:packages`** — Validates all packages: module resolution, `.d.ts` coherence. Uses relaxed settings (`checkJs: false`) so JS implementation is not type-checked; tighten over time by enabling `checkJs` and fixing type errors.
 - **`npm run typecheck:services`** — Stricter check for `packages/agni-services/` only (full JSDoc validation).
 

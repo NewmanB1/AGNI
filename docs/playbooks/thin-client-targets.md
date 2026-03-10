@@ -6,9 +6,9 @@ Use this when building or consuming lesson artifacts for **thin clients**: runti
 
 | Format | Builder | Output layout | Consumer |
 |--------|---------|----------------|----------|
-| **HTML** | `src/builders/html.js` | Single HTML + `lesson-ir.json` + shared assets | Browser, WebView, PWA |
-| **Native** | `src/builders/native.js` | `lesson.json` + `content/*.md` + `lesson-ir.json` | Native app that parses JSON and renders Markdown |
-| **YAML packet** | `src/builders/yaml-packet.js` | `lesson.yaml` + `packet.json` + `lesson-ir.json` | Client that parses OLS YAML and renders (e.g. custom runtime) |
+| **HTML** | `packages/ols-compiler/builders/html.js` | Single HTML + `lesson-ir.json` + shared assets | Browser, WebView, PWA |
+| **Native** | `packages/ols-compiler/builders/native.js` | `lesson.json` + `content/*.md` + `lesson-ir.json` | Native app that parses JSON and renders Markdown |
+| **YAML packet** | `packages/ols-compiler/builders/yaml-packet.js` | `lesson.yaml` + `packet.json` + `lesson-ir.json` | Client that parses OLS YAML and renders (e.g. custom runtime) |
 
 ## Native bundle (Strategy B)
 
