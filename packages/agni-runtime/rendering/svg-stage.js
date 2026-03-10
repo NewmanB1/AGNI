@@ -50,7 +50,7 @@
     var H = opts.h || 300;
 
     // ── SVG root ──────────────────────────────────────────────────────────────
-    container.innerHTML = '';
+    while (container.firstChild) container.removeChild(container.firstChild);
     var svg = el('svg', {
       xmlns: NS,
       viewBox: '0 0 ' + W + ' ' + H,
@@ -125,7 +125,8 @@
        */
       layer: function (name) {
         if (!_layers[name]) {
-          var g = el('g', { id: 'layer-' + name });
+          var safeName = String(name).replace(/[^\w-]/g, '_');
+          var g = el('g', { id: 'layer-' + safeName });
           svg.appendChild(g);
           _layers[name] = g;
         }
@@ -181,7 +182,7 @@
         }
         // Store the unsubscribe closure directly (pattern A)
         var unsub = shared.subscribeToSensor(sensorId, fn);
-        _sensorUnsubs.push(unsub);
+        if (unsub && typeof unsub === 'function') _sensorUnsubs.push(unsub);
       },
 
       /**
@@ -191,7 +192,7 @@
        */
       sensorValue: function (sensorId) {
         var shared = global.AGNI_SHARED;
-        if (!shared || !shared.lastSensorValues) return null;
+        if (!shared || !shared.lastSensorValues || typeof shared.lastSensorValues.get !== 'function') return null;
         var v = shared.lastSensorValues.get(sensorId);
         return v !== undefined ? v : null;
       },
@@ -241,18 +242,19 @@
        * or via AGNI_SHARED.destroyStepVisual() which wraps this call.
        */
       destroy: function () {
+        if (_destroyed) return;
         _destroyed = true;
         _stopLoop();
         _tickHandlers = [];
 
         // Unsubscribe all sensor bindings using stored closures (pattern A)
         _sensorUnsubs.forEach(function (unsub) {
-          try { unsub(); } catch (e) { /* ignore — sensor may already be gone */ }
+          if (typeof unsub === 'function') { try { unsub(); } catch (e) { /* ignore */ } }
         });
         _sensorUnsubs = [];
 
-        // Clear SVG DOM
-        container.innerHTML = '';
+        // Clear SVG DOM (removeChild preserves any external listeners)
+        while (container.firstChild) container.removeChild(container.firstChild);
 
         if (global.DEV_MODE) console.log('[STAGE] destroyed');
       }

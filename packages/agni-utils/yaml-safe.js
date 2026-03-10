@@ -19,6 +19,19 @@ var DEFAULT_MAX_DEPTH = 50;
 var DEFAULT_MAX_KEYS = 10000;
 var DEFAULT_MAX_STEPS = 500;
 
+var UNSAFE_KEYS = { '__proto__': 1, constructor: 1, prototype: 1 };
+
+function hasUnsafeKeys(obj, depth, maxDepth) {
+  if (depth > maxDepth) return false;
+  if (obj === null || typeof obj !== 'object') return false;
+  var keys = Object.keys(obj);
+  for (var i = 0; i < keys.length; i++) {
+    if (UNSAFE_KEYS[keys[i]]) return true;
+    if (hasUnsafeKeys(obj[keys[i]], depth + 1, maxDepth)) return true;
+  }
+  return false;
+}
+
 function depthOf(obj, depth, maxDepth, maxKeys) {
   if (depth > maxDepth) return true;
   if (obj === null || typeof obj !== 'object') return false;
@@ -44,16 +57,25 @@ function safeYamlLoad(str, opts) {
   var maxDepth = (opts.maxDepth != null) ? opts.maxDepth : DEFAULT_MAX_DEPTH;
   var maxKeys = (opts.maxKeys != null) ? opts.maxKeys : DEFAULT_MAX_KEYS;
   var maxSteps = (opts.maxSteps != null) ? opts.maxSteps : DEFAULT_MAX_STEPS;
-  if (str.length > maxBytes) {
-    throw new Error('YAML exceeds max size (' + str.length + ' > ' + maxBytes + ')');
+  var byteLen = (typeof Buffer !== 'undefined') ? Buffer.byteLength(str, 'utf8') : str.length;
+  if (byteLen > maxBytes) {
+    throw new Error('YAML exceeds max size (' + byteLen + ' > ' + maxBytes + ')');
   }
-  var anchorHit = UNSAFE_ANCHOR.test(str);
-  var aliasHit = UNSAFE_ALIAS.test(str);
+  var anchorHit = (str.indexOf('&') !== -1) ? UNSAFE_ANCHOR.test(str) : false;
+  var aliasHit = (str.indexOf('*') !== -1) ? UNSAFE_ALIAS.test(str) : false;
   if (anchorHit || aliasHit) {
     throw new Error('YAML anchors/aliases are not allowed (DoS risk)');
   }
   var loadOpts = { schema: yaml.JSON_SCHEMA, maxAliasCount: 50 };
-  var parsed = yaml.load(str, loadOpts);
+  var parsed;
+  try {
+    parsed = yaml.load(str, loadOpts);
+  } catch (e) {
+    throw new Error('YAML parse failed: ' + (e.message || String(e)));
+  }
+  if (parsed && hasUnsafeKeys(parsed, 0, maxDepth)) {
+    throw new Error('YAML contains disallowed keys (__proto__, constructor, prototype)');
+  }
   if (depthOf(parsed, 0, maxDepth, maxKeys)) {
     throw new Error('YAML nesting or key count exceeds safe limits (DoS risk)');
   }
