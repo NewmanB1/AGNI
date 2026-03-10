@@ -19,7 +19,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const ENGINE_DTS_DIR = path.join(ROOT, 'src', 'engine');
+const ENGINE_DTS_DIR = path.join(ROOT, 'packages', 'agni-engine');
 const PACKAGE_ENGINE_DIR = path.join(ROOT, 'packages', 'agni-engine');
 
 const errors = [];
@@ -30,20 +30,10 @@ const dtsFiles = fs.readdirSync(ENGINE_DTS_DIR).filter(function (f) {
 
 function resolveJsPath(dtsName) {
   const jsName = dtsName.replace(/\.d\.ts$/, '.js');
-  const srcJsPath = path.join(ENGINE_DTS_DIR, jsName);
   const pkgJsPath = path.join(PACKAGE_ENGINE_DIR, jsName);
 
-  // src/ re-exports removed; .d.ts in src/engine declare types for packages/agni-engine
   if (fs.existsSync(pkgJsPath)) {
     return { path: pkgJsPath, content: fs.readFileSync(pkgJsPath, 'utf8') };
-  }
-  if (fs.existsSync(srcJsPath)) {
-    const srcContent = fs.readFileSync(srcJsPath, 'utf8');
-    const reExportMatch = srcContent.match(/module\.exports\s*=\s*require\s*\(\s*['"]@agni\/engine\/[^'"]+['"]\s*\)/);
-    if (reExportMatch && fs.existsSync(pkgJsPath)) {
-      return { path: pkgJsPath, content: fs.readFileSync(pkgJsPath, 'utf8') };
-    }
-    return { path: srcJsPath, content: srcContent };
   }
   return { path: null, content: null };
 }

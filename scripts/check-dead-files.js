@@ -2,11 +2,10 @@
 'use strict';
 
 /**
- * Detects orphaned source files — .js/.ts files in src/, hub-tools/, server/ that are never
+ * Detects orphaned source files — .js/.ts files in hub-tools/, server/ that are never
  * require()'d or imported by any other source or test file.
  *
- * After src/ re-export elimination, src/ contains only shared types (index.d.ts, engine .d.ts)
- * and sensorTypes.ts. Canonical implementation lives in packages/.
+ * Canonical implementation lives in packages/. Types in packages/types and packages/agni-engine.
  *
  * Exits non-zero if orphans are found, so it can serve as a CI gate.
  */
@@ -16,8 +15,8 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 
-const SOURCE_DIRS = ['src', 'hub-tools', 'server'];
-const CONSUMER_DIRS = ['src', 'hub-tools', 'server', 'packages', 'tests', 'scripts'];
+const SOURCE_DIRS = ['hub-tools', 'server'];
+const CONSUMER_DIRS = ['hub-tools', 'server', 'packages', 'tests', 'scripts'];
 
 const ENTRY_POINTS = new Set([
   normalize('packages/agni-cli/cli.js'),
@@ -35,13 +34,13 @@ const KNOWN_STANDALONE = new Set([
   normalize('packages/agni-runtime/shell/library.js'),
   normalize('packages/agni-runtime/style.css'),
   normalize('packages/agni-runtime/README.md'),
-  normalize('src/runtime/sensors/sensorTypes.ts'),
-  normalize('src/types/index.d.ts'),
-  normalize('src/engine/math.d.ts'),
-  normalize('src/engine/thompson.d.ts'),
-  normalize('src/engine/rasch.d.ts'),
-  normalize('src/engine/embeddings.d.ts'),
-  normalize('src/engine/federation.d.ts'),
+  normalize('packages/agni-runtime/sensors/sensorTypes.ts'),
+  normalize('packages/types/index.d.ts'),
+  normalize('packages/agni-engine/math.d.ts'),
+  normalize('packages/agni-engine/thompson.d.ts'),
+  normalize('packages/agni-engine/rasch.d.ts'),
+  normalize('packages/agni-engine/embeddings.d.ts'),
+  normalize('packages/agni-engine/federation.d.ts'),
   normalize('packages/agni-hub/pwa/shell-boot.js'),
 ]);
 

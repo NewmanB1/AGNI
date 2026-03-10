@@ -6,7 +6,7 @@ Use this when changing `packages/agni-engine/math.js` — pure linear algebra he
 
 - **File:** `packages/agni-engine/math.js`
 - **Tests:** `tests/unit/math.test.js`
-- **Re-export:** `src/engine/math.js` → `require('@agni/engine/math')`
+- **Canonical:** `packages/agni-engine/math.js` → `require('@agni/engine/math')`
 
 ## Design conventions
 

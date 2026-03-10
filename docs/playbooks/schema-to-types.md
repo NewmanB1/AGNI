@@ -7,7 +7,7 @@ This playbook describes how to keep TypeScript types and runtime validators alig
 ## 1. Current State
 
 - **Schemas:** `schemas/ols.schema.json`, `schemas/graph_weights.schema.json`, `schemas/governance-policy.schema.json`
-- **Types:** `src/types/index.d.ts` — hand-written types for IR, sidecar, LMS state, governance. Not generated from schemas.
+- **Types:** `packages/types/index.d.ts` — hand-written types for IR, sidecar, LMS state, governance. Not generated from schemas.
 - **Validation:** Compiler and author API use Ajv with the OLS schema; governance policy is validated on load. No generated validators.
 
 ---
@@ -36,9 +36,9 @@ When you want **generated** TypeScript types so the implementation cannot drift 
 2. **Add a script** (e.g. `scripts/codegen-types.js`) that:
    - Reads `schemas/ols.schema.json` (and optionally graph_weights, governance-policy)
    - Calls the codegen library to produce TypeScript interfaces
-   - Writes to `src/types/generated/ols.d.ts` (or similar)
+   - Writes to `packages/types/generated/ols.d.ts` (or similar)
 
-3. **Wire into build:** e.g. `"codegen:types": "node scripts/codegen-types.js"` and run before `typecheck`. Then gradually replace hand-written types in `src/types/index.d.ts` with re-exports from generated files.
+3. **Wire into build:** e.g. `"codegen:types": "node scripts/codegen-types.js"` and run before `typecheck`. Then gradually replace hand-written types in `packages/types/index.d.ts` with re-exports from generated files.
 
 4. **Caveats:**
    - Complex schemas (oneOf, conditional, refs) may need hand-tuning or schema simplification.
@@ -58,4 +58,4 @@ Ajv already compiles schemas at runtime in `lessonSchema.js` and `policy.js`. To
 
 - **Reference implementation vision:** `docs/REFERENCE-IMPLEMENTATION-VISION.md` (§2.1, §2.2)
 - **Current schemas:** `schemas/*.schema.json`
-- **Manual types:** `src/types/index.d.ts`
+- **Manual types:** `packages/types/index.d.ts`

@@ -1,4 +1,4 @@
-// src/runtime/sensorTypes.ts
+// packages/agni-runtime/sensors/sensorTypes.ts
 
 /**
  * Common units and categories (based on Phyphox + typical phone sensors)

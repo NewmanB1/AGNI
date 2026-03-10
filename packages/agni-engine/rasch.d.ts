@@ -1,6 +1,6 @@
-// src/engine/rasch.d.ts — type declarations for rasch.js (Backlog task 14)
+// packages/agni-engine/rasch.d.ts — type declarations for rasch.js
 
-import type { LMSState } from '../types';
+import type { LMSState } from '@agni/types';
 
 export function updateAbility(
   state: LMSState,

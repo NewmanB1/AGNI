@@ -1,6 +1,6 @@
-// src/engine/thompson.d.ts — type declarations for thompson.js (Backlog task 14)
+// packages/agni-engine/thompson.d.ts — type declarations for thompson.js
 
-import type { LMSState } from '../types';
+import type { LMSState } from '@agni/types';
 
 export function banditFeature(studentVec: number[], lessonVec: number[]): number[];
 export function ensureBanditInitialized(state: LMSState): void;

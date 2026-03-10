@@ -10,8 +10,7 @@
     "strict": false
   },
   "include": [
-    "src/types/**/*.d.ts",
-    "src/engine/**/*.d.ts",
+    "packages/types/**/*.d.ts",
     "packages/agni-cli/**/*.js",
     "packages/agni-engine/**/*.js",
     "packages/agni-governance/**/*.js",

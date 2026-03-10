@@ -1,4 +1,4 @@
-// src/engine/math.d.ts — type declarations for math.js (Backlog task 14)
+// packages/agni-engine/math.d.ts — type declarations for math.js
 
 export const CHOLESKY_EPSILON: number;
 export const CHOLESKY_SYMMETRY_TOL: number;

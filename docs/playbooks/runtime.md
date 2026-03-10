@@ -35,4 +35,4 @@ Use this when changing the browser-side lesson player, sensors, or SVG/visual sy
 
 ## Types
 
-- Runtime is JS only; types for IR/sidecar are in `src/types/index.d.ts`. For new globals or event payloads, add JSDoc or a small `.d.ts` in `packages/agni-runtime/` if needed.
+- Runtime is JS only; types for IR/sidecar are in `packages/types/index.d.ts`. For new globals or event payloads, add JSDoc or a small `.d.ts` in `packages/agni-runtime/` if needed.

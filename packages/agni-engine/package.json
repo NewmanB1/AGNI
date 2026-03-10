@@ -10,6 +10,7 @@
     "directory": "packages/agni-engine"
   },
   "dependencies": {
+    "@agni/types": "0.1.0",
     "@agni/utils": "0.1.0"
   }
 }

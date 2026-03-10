@@ -112,7 +112,7 @@ An OLS file is a YAML document with strictly defined blocks:
 
 ### Intermediate Representation (IR)
 
-`LessonIR` (`src/types/index.d.ts`) is the canonical in-memory format produced by `buildLessonIR`:
+`LessonIR` (`packages/types/index.d.ts`) is the canonical in-memory format produced by `buildLessonIR`:
 
 ```typescript
 interface LessonIR {
@@ -137,7 +137,7 @@ interface LessonIR {
 
 ### LMS State
 
-`LMSState` (`packages/agni-engine/`, `src/types/index.d.ts`):
+`LMSState` (`packages/agni-engine/`, `packages/types/index.d.ts`):
 
 | Sub-state | Role |
 |-----------|------|
@@ -518,5 +518,5 @@ Hub processes (theta, sentry, sync) must call `loadHubConfig()` **before** `requ
 | LMS engine | `packages/agni-engine/index.js`, rasch.js, thompson.js, embeddings.js |
 | Player | `packages/agni-runtime/ui/player.js` |
 | Sensor / threshold | `packages/agni-runtime/sensors/sensor-bridge.js`, threshold-evaluator.js |
-| Types | `src/types/index.d.ts` |
+| Types | `packages/types/index.d.ts` |
 | Schemas | `schemas/ols.schema.json`, `schemas/graph_weights.schema.json` |

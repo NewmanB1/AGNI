@@ -1,6 +1,6 @@
-// src/engine/federation.d.ts — type declarations for federation.js (Backlog task 14)
+// packages/agni-engine/federation.d.ts — type declarations for federation.js
 
-import type { LMSState, BanditSummary } from '../types';
+import type { LMSState, BanditSummary } from '@agni/types';
 
 export const MAX_SEEN_SYNC_IDS: number;
 export function addSyncId(summary: BanditSummary, opts?: { hubId: string; exportSequence: number }): BanditSummary;

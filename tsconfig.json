@@ -21,6 +21,6 @@
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*.ts", "src/**/*.js"],
-  "exclude": ["node_modules", "src/runtime"]
+  "include": ["packages/types/**/*.d.ts", "packages/agni-runtime/sensors/**/*.ts"],
+  "exclude": ["node_modules"]
 }

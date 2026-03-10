@@ -5,8 +5,7 @@ These rules keep the codebase navigable and safe to change with tooling and LLM 
 ## Module layout
 
 - **One clear role per module.** If a file grows beyond a single responsibility, split it (e.g. player → player/state, player/navigation).
-- **Re-exports in `src/`:** When adding or editing a thin re-export file, use the standard format: `'use strict';` + `// Phase 1: Re-export from <package> (canonical ownership)` + `module.exports = require('...');`. See `.cursor/rules/canonical-ownership.md`.
-- **Public API via index.** Each logical module (`src/compiler`, `src/engine`, `src/governance`, `@agni/services`) exposes a small surface via an `index.js`. New public functions should be exported from that index so they're discoverable; hide helpers inside the module.
+- **Public API via index.** Each logical module (`packages/ols-compiler/`, `packages/agni-engine/`, `packages/agni-governance/`, `@agni/services`) exposes a small surface via an `index.js`. New public functions should be exported from that index so they're discoverable; hide helpers inside the module.
 - **Top-down entry points.** Callers (CLI, hub, portal) use the **services layer** (`@agni/services` canonical; `src/services/` are shims) or documented HTTP API; they do not require compiler/engine/governance internals directly.
 
 ## Functions and state
@@ -68,11 +67,11 @@ Use these instead of ad-hoc mtime checks or inline escape functions.
 ## Documentation
 
 - **Header comment on every module.** At the top of each file, add a short block: what the file does, who uses it, and any cross-cutting contract (e.g. "Binding hash must match crypto.js and player.js").
-- **JSDoc for public functions.** Parameters, return type, and one-line description. Use `@param` and `@returns`; for types from `src/types`, use `import('../types').TypeName` in JSDoc.
+- **JSDoc for public functions.** Parameters, return type, and one-line description. Use `@param` and `@returns`; for types from `@agni/types`, use `import('@agni/types').TypeName` in JSDoc.
 
 ## Types and contracts
 
-- **Shared types in `src/types/index.d.ts`.** IR, sidecar, LMS state, governance, and API payloads. When you add a new field to the IR or sidecar, update the type and the compiler/governance code together.
+- **Shared types in `packages/types/index.d.ts`.** IR, sidecar, LMS state, governance, and API payloads. When you add a new field to the IR or sidecar, update the type and the compiler/governance code together.
 - **API contract in `docs/api-contract.md`.** Any new or changed hub HTTP endpoint must be documented there and reflected in `portal/js/api.js` if the portal uses it.
 
 ## Playbooks
@@ -83,7 +82,7 @@ Use these instead of ad-hoc mtime checks or inline escape functions.
 
 - **ESLint + Prettier** apply to `src/**/*.js` (and optionally `server/`, `hub-tools/`). Run `npm run lint` and `npm run format:check` before committing.
 - **TypeScript:** `npm run typecheck` runs `tsc --noEmit` for `src/**/*.ts` (engine and any future TS modules). Fix type errors so that refactors don't silently break callers.
-- New code in `src/services/` or `src/engine/` should satisfy lint and, if it's TypeScript, typecheck. Adding `.ts` under `src/` will include it in typecheck automatically.
+- New code in `packages/agni-services/` or `packages/agni-engine/` should satisfy lint and, if it's TypeScript, typecheck. Adding `.ts` under `packages/` will include it in typecheck as configured.
 
 ## Summary for LLMs
 
@@ -95,6 +94,6 @@ Use these instead of ad-hoc mtime checks or inline escape functions.
 6. Use `createSchemaStore` for schema-validated JSON persistence.
 7. Add shared browser utilities to `AGNI_SHARED` in `shared-runtime.js` (ES5 only).
 8. Use `src/utils/io.js` for file freshness checks and HTML escaping.
-9. Update `src/types/index.d.ts` and `docs/api-contract.md` when changing data or HTTP contracts.
+9. Update `packages/types/index.d.ts` and `docs/api-contract.md` when changing data or HTTP contracts.
 10. Use `docs/playbooks/*.md` to find where to change compiler, runtime, LMS, or governance.
 11. Run `npm run lint`, `npm run format:check`, and `npm run typecheck` after edits.

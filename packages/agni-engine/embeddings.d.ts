@@ -1,6 +1,6 @@
-// src/engine/embeddings.d.ts — type declarations for embeddings.js (Backlog task 14)
+// packages/agni-engine/embeddings.d.ts — type declarations for embeddings.js
 
-import type { LMSState } from '../types';
+import type { LMSState } from '@agni/types';
 
 export function ensureStudentVector(state: LMSState, studentId: string): number[];
 export function ensureLessonVector(state: LMSState, lessonId: string): number[];

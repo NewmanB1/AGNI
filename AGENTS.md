@@ -12,7 +12,7 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 
 ## Monorepo Layout (Canonical Ownership)
 
-**Canonical implementations live in `packages/`.** The `src/` tree holds only shared types (`src/types/`, `src/engine/*.d.ts`) and `sensorTypes.ts`; all runtime/compiler/service code is in packages.
+**Canonical implementations live in `packages/`.** Shared types in `packages/types/` and `packages/agni-engine/*.d.ts`; sensor types in `packages/agni-runtime/sensors/sensorTypes.ts`.
 
 | Package | Path | Role |
 |---------|------|------|
@@ -43,7 +43,7 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 | Theta (lesson ordering) | `packages/agni-hub/theta.js` |
 | Portal (teacher/admin UI) | `portal/` (vanilla HTML/CSS/JS, no build) |
 | Schemas | `schemas/*.json`, `@ols/schema` |
-| Shared types | `src/types/index.d.ts` |
+| Shared types | `packages/types/index.d.ts` |
 | API contract | `docs/api-contract.md` |
 | Run environments | `docs/RUN-ENVIRONMENTS.md` (Edge=Android 7.0 Nougat/ES5, Hub=Pi) |
 
