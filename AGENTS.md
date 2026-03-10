@@ -45,6 +45,7 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 | Schemas | `schemas/*.json`, `@ols/schema` |
 | Shared types | `packages/types/index.d.ts` |
 | API contract | `docs/api-contract.md` |
+| Hub configuration (env, bootstrap) | `docs/CONFIGURATION.md` |
 | Run environments | `docs/RUN-ENVIRONMENTS.md` (Edge=Android 7.0 Nougat/ES5, Hub=Pi) |
 
 ---
@@ -65,6 +66,7 @@ When writing scripts that inspect implementations (e.g. `check-dts-arity.js`, `c
 ## Key Docs
 
 - **Architecture:** `docs/ARCHITECTURE.md`
+- **Configuration:** `docs/CONFIGURATION.md` (env vars, bootstrap order, hub-config)
 - **Architectural remediation:** `docs/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`, `docs/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md`
 - **Concepts:** `docs/ONBOARDING-CONCEPTS.md`
 - **Conventions:** `docs/CONVENTIONS.md`
