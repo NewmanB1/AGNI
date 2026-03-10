@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * CI gate: verify SVG tools improvements from docs/SVG-TOOLS-IMPROVEMENT-PLAN.md.
+ * CI gate: verify SVG tools improvements from docs/archive/SVG-TOOLS-IMPROVEMENT-PLAN.md.
  * Proof of completion for regression guards.
  *
  * Checks:
@@ -148,7 +148,7 @@ if (fileForGauge === 'svg-factories-dynamic.js') {
 // ── Exit ───────────────────────────────────────────────────────────────────
 
 if (failed) {
-  console.error('\nSVG tools verification failed. See docs/SVG-TOOLS-IMPROVEMENT-PLAN.md');
+  console.error('\nSVG tools verification failed. See docs/archive/SVG-TOOLS-IMPROVEMENT-PLAN.md');
   process.exit(1);
 }
 console.log('\nSVG tools verification passed.');

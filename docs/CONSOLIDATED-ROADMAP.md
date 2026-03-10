@@ -106,11 +106,5 @@ See **`docs/REMAINING-IMPROVEMENTS-PLAN.md`** for a formal plan with regression 
 ## References
 
 - `docs/REMAINING-IMPROVEMENTS-PLAN.md` (formal plan + guards)
-- `docs/HUB-IMPROVEMENT-PLAN.md`
-- `docs/HUB-CANONICAL-MIGRATION-PLAN.md`
-- `docs/SERVICES-IMPROVEMENT-PLAN.md`
-- `docs/PACKAGES-IMPROVEMENT-PLAN.md`
-- `docs/RUNTIME-IMPROVEMENT-PLAN.md`
-- `docs/BACKLOG-REMEDIATION-PLAN.md`
-- `docs/SVG-TOOLS-IMPROVEMENT-PLAN.md`
+- `docs/archive/` — source plans (HUB-IMPROVEMENT, HUB-CANONICAL, SERVICES, PACKAGES, RUNTIME, BACKLOG, SVG-TOOLS)
 - `.cursor/rules/sprint-verification.md`

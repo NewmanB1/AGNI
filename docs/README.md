@@ -56,6 +56,7 @@ AGNI is an **npm workspaces monorepo**. Each package has its own README with det
 ## Planning & Roadmap
 
 - [ROADMAP.md](ROADMAP.md) — Strategic plan for the first 100 days of OLS launch.
+- [CONSOLIDATED-ROADMAP.md](CONSOLIDATED-ROADMAP.md) — Single ordered list of remaining improvement work (merged from archived plans).
 - [SPRINT-PLAN.md](SPRINT-PLAN.md) — Master sprint plan tracking all numbered sprints, remediation tasks, and status. Start here for project status.
 - [YEAR2-PREP.md](YEAR2-PREP.md) — Year 2 preparation: WYSIWYG editor research and v1.0 spec finalization.
 - [LAUNCH-AND-COMMUNITY.md](LAUNCH-AND-COMMUNITY.md) — Launch checklist and community onboarding plan.
@@ -99,7 +100,9 @@ AGNI is an **npm workspaces monorepo**. Each package has its own README with det
 
 ## Archive
 
-Completed sprint documents are preserved in [`archive/`](archive/) for historical reference:
+Completed sprint documents and superseded plans are preserved in [`archive/`](archive/) for historical reference:
+
+**Sprints**
 
 - `SPRINT-TECH-DEBT.md` — 6 sprints: structural debt, security, runtime testability
 - `SPRINT-DRY-REFACTOR.md` — 6 sprints: DRY violations, God Functions, patterns
@@ -110,3 +113,16 @@ Completed sprint documents are preserved in [`archive/`](archive/) for historica
 - `SPRINT-R15-REMEDIATION.md` — Load order, PWA shell, lock timing
 - `SPRINT-R16-OPEN-BUGS.md` — Final 12 verified open bugs (all resolved)
 - `SPRINT-CONFIGURATION-WIZARDS.md` — Guided setup flows for each persona
+- `SPRINT-SENTRY-IMPROVEMENTS.md` — Sentry enhancements (completed 2026-03-05)
+
+**Improvement plans** (merged into CONSOLIDATED-ROADMAP)
+
+- `HUB-IMPROVEMENT-PLAN.md`, `HUB-CANONICAL-MIGRATION-PLAN.md`, `SERVICES-IMPROVEMENT-PLAN.md`
+- `PACKAGES-IMPROVEMENT-PLAN.md`, `RUNTIME-IMPROVEMENT-PLAN.md`, `BACKLOG-REMEDIATION-PLAN.md`
+- `SVG-TOOLS-IMPROVEMENT-PLAN.md`, `OPPORTUNISTIC-PRECACHE-PLAN.md`
+- `GOVERNANCE-IMPROVEMENT-PLAN.md`, `LESSON-CREATOR-IMPROVEMENT-PLAN.md`
+
+**Audits & reviews**
+
+- `DOCUMENT-REVIEW-2025-03.md` — March 2025 doc accuracy audit (fixes applied)
+- `check-hub-config-pi-audit.md` — check-hub-config-pi.js bug audit (patches applied)

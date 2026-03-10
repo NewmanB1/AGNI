@@ -3,7 +3,7 @@
 
 /**
  * CI gate: governance README must document correct API (sidecar, policy) and result shape { status, issues }.
- * See docs/GOVERNANCE-IMPROVEMENT-PLAN.md Phase 2.
+ * See docs/archive/GOVERNANCE-IMPROVEMENT-PLAN.md Phase 2.
  *
  * Exit 0 if pass, 1 if violation.
  */

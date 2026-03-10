@@ -2,7 +2,7 @@
 
 /**
  * Regression tests for SVG tools improvements (2026-03-04).
- * Proof of completion for docs/SVG-TOOLS-IMPROVEMENT-PLAN.md.
+ * Proof of completion for docs/archive/SVG-TOOLS-IMPROVEMENT-PLAN.md.
  *
  * Each test validates a specific improvement. If a test fails, the corresponding
  * feature has regressed.

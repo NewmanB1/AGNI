@@ -180,5 +180,5 @@ Uses `tsconfig.services.json` (scoped, skipLibCheck). Full `typecheck` still has
 
 - `docs/CONSOLIDATED-ROADMAP.md`
 - `.cursor/rules/sprint-verification.md`
-- `docs/SERVICES-IMPROVEMENT-PLAN.md`
-- `docs/RUNTIME-IMPROVEMENT-PLAN.md`
+- `docs/archive/SERVICES-IMPROVEMENT-PLAN.md`
+- `docs/archive/RUNTIME-IMPROVEMENT-PLAN.md`

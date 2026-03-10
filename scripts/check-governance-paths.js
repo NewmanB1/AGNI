@@ -3,7 +3,7 @@
 
 /**
  * CI gate: governance must use configurable paths (env-config), not repo-root hardcoding.
- * See docs/GOVERNANCE-IMPROVEMENT-PLAN.md Phase 5.
+ * See docs/archive/GOVERNANCE-IMPROVEMENT-PLAN.md Phase 5.
  *
  * Exit 0 if pass, 1 if violation.
  */

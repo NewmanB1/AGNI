@@ -3,7 +3,7 @@
 
 /**
  * CI gate: regression guards for the Opportunistic Precache Plan.
- * See docs/OPPORTUNISTIC-PRECACHE-PLAN.md.
+ * See docs/archive/OPPORTUNISTIC-PRECACHE-PLAN.md.
  *
  * Phase 3: SW bounded lesson cache + eviction
  *   - sw.js defines MAX_LESSON_CACHE_ENTRIES

@@ -3,7 +3,7 @@
 
 /**
  * CI gate: governance tests must require @agni/governance, not src/governance.
- * See docs/GOVERNANCE-IMPROVEMENT-PLAN.md Phase 1.
+ * See docs/archive/GOVERNANCE-IMPROVEMENT-PLAN.md Phase 1.
  *
  * Exit 0 if pass, 1 if violation.
  */
