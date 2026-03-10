@@ -59,7 +59,7 @@ steps:     # Content: text, hardware instructions, SVG parameters
 
 | Layer | Responsibility |
 |-------|----------------|
-| **Theta** | Prerequisite enforcement (BFS, DAG), MLC ordering |
+| **Theta** | Prerequisite enforcement (BFS, DAG with graceful cycle degradation), MLC ordering |
 | **LMS** | Rasch + Thompson + embeddings for next-lesson selection |
 | **Skill Collapse** | Affects sort only, never eligibility |
 

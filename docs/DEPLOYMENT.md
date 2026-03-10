@@ -84,6 +84,13 @@ Create a `.env` file or set environment variables. All variables are optional �
 | `AGNI_SYNC_TRANSPORT` | *(empty)* | Sync transport: `starlink`, `usb`, or empty for manual |
 | `AGNI_HOME_URL` | *(empty)* | Home server URL for Starlink sync |
 | `AGNI_USB_PATH` | *(empty)* | Mount point for USB sneakernet sync |
+| `AGNI_SYNC_SET_CLOCK` | `0` | Set to `1` to allow sync import to set system clock from `syncTimestamp` (Linux only; requires permissions). See `docs/RUN-ENVIRONMENTS.md`. |
+
+### Time & Telemetry
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AGNI_SENTRY_MIN_VALID_YEAR` | `2020` | Reject telemetry writes when system year < this (Pi without RTC may boot at 1970). See `docs/RUN-ENVIRONMENTS.md`. |
 
 ---
 
@@ -196,6 +203,7 @@ curl http://localhost:8081/health   # Sentry health
 
 The Pi's SD card is the single point of failure. Mitigate:
 
+- **Hub time:** Pi has no RTC. On boot without network, the clock may be 1970; Sentry rejects writes when year < `AGNI_SENTRY_MIN_VALID_YEAR` (default 2020). Set time via USB sync (`AGNI_SYNC_SET_CLOCK=1`) or manually: `sudo date -s "2024-01-15 12:00:00"`. See `docs/RUN-ENVIRONMENTS.md`.
 - **Sentry retention:** Set `AGNI_SENTRY_RETENTION_DAYS` to limit telemetry file accumulation (default: 90 days).
 - **Backups:** Periodically copy `$AGNI_DATA_DIR` to USB.
 - **Read-only root:** Consider mounting `/` as read-only with a writable overlay for `data/`.
@@ -226,4 +234,5 @@ du -sh /home/pi/AGNI/data/
 - **Environment variables:** `src/utils/env-config.js` (canonical source of all defaults)
 - **Sentry playbook:** `docs/playbooks/sentry.md`
 - **Federation:** `docs/playbooks/federation.md`
-- **Village security:** `docs/playbooks/village-security.md` — hardening, WiFi client isolation, edge kiosk, safe state writes
+- **Village security:** `docs/playbooks/village-security.md` — hardening, WiFi client isolation, edge kiosk, safe state writes (fsync)
+- **Architectural remediation:** `docs/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md` — implementation status

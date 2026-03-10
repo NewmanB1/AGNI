@@ -88,6 +88,7 @@ The importer expects a JSON object with optional top-level keys:
 | **graph_weights** | `object` with `level`, `edges` | If `level` is not `'village'` and `edges` is a non-empty array, written to `data/graph_weights_<level>.json` (e.g. regional → `graph_weights_regional.json`). Theta will use it when local graph has insufficient data (see sentry.md §3.1). |
 | **curriculum** | `object` with `graph` | Written to `data/curriculum.json`. `graph` is skill → array of prerequisite skill ids. |
 | **schedules** | `object` with `students` | Written to `data/schedules.json`. `students` is pseudoId → array of skill ids (scheduled for that student). |
+| **syncTimestamp** | `number` (ms since epoch) | When `AGNI_SYNC_SET_CLOCK=1` on Linux, hub runs `date -s` to set system clock from this value. Used for Pi without RTC. See `docs/RUN-ENVIRONMENTS.md`. |
 
 **Constraints:** File size cap ~10 MB. Invalid JSON or missing keys are skipped (no partial wipe).
 

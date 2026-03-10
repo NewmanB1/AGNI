@@ -64,6 +64,7 @@ When writing scripts that inspect implementations (e.g. `check-dts-arity.js`, `c
 ## Key Docs
 
 - **Architecture:** `docs/ARCHITECTURE.md`
+- **Architectural remediation:** `docs/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`, `docs/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md`
 - **Concepts:** `docs/ONBOARDING-CONCEPTS.md`
 - **Conventions:** `docs/CONVENTIONS.md`
 - **Playbooks:** `docs/playbooks/` (compiler, runtime, lms, governance, etc.)

@@ -14,17 +14,11 @@ Expands on `docs/ARCHITECTURE.md` Appendix: Known Gaps with actionable proposals
 
 ---
 
-## 2. DAG Validation
+## 2. DAG Validation *(Resolved)*
 
-**Gap:** Cycles make lessons permanently ineligible. Theta throws at startup.
+**Gap (was):** Cycles made lessons ineligible; theta threw at startup, bricking the hub.
 
-**Current state:** `verify:skill-dag` in `verify:all`; `scripts/check-skill-dag.js` uses `@agni/utils/skill-dag-validate`.
-
-**Proposed mitigation (already in place):**
-- Run `npm run verify:skill-dag` before deployment.
-- Consider adding a pre-commit hook or CI gate that runs when `curriculum.json` or `lesson-index.json` changes.
-
-**Effort:** None for core; optional CI hook is low effort.
+**Current state:** **Resolved.** Theta gracefully degrades: prunes cycle nodes, excludes affected lessons, logs error. Hub stays up. Set `AGNI_STRICT_SKILL_GRAPH=1` for strict mode (throw). `verify:skill-dag` in `verify:all`; `scripts/check-skill-dag.js` validates. See `docs/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`.
 
 ---
 
@@ -87,7 +81,7 @@ Expands on `docs/ARCHITECTURE.md` Appendix: Known Gaps with actionable proposals
 | Gap | Priority | Action |
 |-----|----------|--------|
 | YAML versioning | Medium | Add `yamlSchemaVersion` to meta |
-| DAG validation | Done | CI hook optional |
+| DAG validation | Done | Graceful degradation; AGNI_STRICT_SKILL_GRAPH for strict |
 | HTML scrape | Done | Removed; Theta refuses to index without IR |
 | Device UUID | Low | Documentation only |
 | Federation | Low | Document contentHash behaviour |

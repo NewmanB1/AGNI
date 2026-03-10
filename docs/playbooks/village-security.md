@@ -109,12 +109,12 @@ Only lesson import tools should temporarily unlock them.
 
 ### 3.2 Safe State Writes (Implemented)
 
-Because Raspberry Pi uses SD cards, AGNI uses atomic write patterns:
+Because Raspberry Pi uses SD cards, AGNI uses atomic write patterns with fsync:
 
-- **LMS state:** `packages/agni-engine/index.js` writes to `lms_state.json.tmp` then renames over `lms_state.json`. A process crash mid-write cannot corrupt the state file.
-- **JSON stores:** `packages/agni-utils/json-store.js` uses `.tmp + rename` for atomic writes.
+- **LMS state:** `packages/agni-engine/index.js` writes to `.tmp`, calls `fsync` before rename.
+- **JSON stores:** `packages/agni-utils/json-store.js` uses write → fsync → rename for `saveJSON` and `saveJSONAsync` (mastery_summary, graph_weights, sync state, etc.).
 
-Pattern: write to `.tmp` → fsync (where applicable) → rename to final path.
+Pattern: write to `.tmp` → fsync → close → rename to final path. Reduces corruption risk on power loss.
 
 ### 3.3 Automatic Backups
 

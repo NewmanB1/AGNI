@@ -45,7 +45,7 @@ This playbook describes the **Sentry → graph_weights → theta** flow: how tel
   - `skillsProvided`, `skillsRequired` (arrays; provided entries may have `{ skill, evidencedLevel }`)
   - `pseudoId` (optional), `eventId` (optional)
 
-Events are validated, buffered in memory, and appended to **`data/events/YYYY-MM-DD.ndjson`** every 30 seconds. On flush failure (e.g. SD card full), Sentry retries up to 3 times with 1s delay; if all retries fail, events are written to **`data/events/failed-YYYYMMDD.ndjson`** as a last resort so data is not lost. Only if that fallback also fails are events discarded.
+Events are validated, buffered in memory, and appended to **`data/events/YYYY-MM-DD.ndjson`** every 30 seconds. **Time-skew protection:** If the system clock year is before `AGNI_SENTRY_MIN_VALID_YEAR` (default 2020), Sentry rejects POST `/api/telemetry` with 503 and skips flush — avoids writing to `1970-01-01.ndjson` when Pi boots without RTC. See `docs/RUN-ENVIRONMENTS.md` for hub time management. On flush failure (e.g. SD card full), Sentry retries up to 3 times; if all fail, events go to **`data/events/failed-YYYYMMDD.ndjson`**.
 
 ### 2.2 When Analysis Runs
 
