@@ -1285,9 +1285,10 @@ describe('R16-C3.1: service worker version uses placeholder, not hardcoded', () 
 
   it('hub-transform stamps __SW_VERSION__ with package version', () => {
     const fs = require('fs');
-    const src = fs.readFileSync(require('path').join(__dirname, '../../packages/agni-hub/hub-transform.js'), 'utf8');
-    assert.ok(src.indexOf("'__SW_VERSION__'") !== -1 || src.indexOf('"__SW_VERSION__"') !== -1,
-      'hub-transform does not replace __SW_VERSION__ — service worker gets raw placeholder');
+    const path = require('path');
+    const src = fs.readFileSync(path.join(__dirname, '../../packages/agni-hub/hub-transform/route-handlers.js'), 'utf8');
+    assert.ok(src.indexOf('.replace(\'__SW_VERSION__\'') !== -1 || src.indexOf('.replace("__SW_VERSION__"') !== -1,
+      'hub-transform route-handlers does not replace __SW_VERSION__ — service worker gets raw placeholder');
   });
 });
 

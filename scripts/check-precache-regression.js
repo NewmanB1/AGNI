@@ -61,13 +61,13 @@ if (!/precache\.js/.test(shellSrc)) {
   pass('shell.html loads precache.js');
 }
 
-const hubTransformPath = path.join(ROOT, 'packages', 'agni-hub', 'hub-transform.js');
-const hubSrc = fs.readFileSync(hubTransformPath, 'utf8');
+const routeHandlersPath = path.join(ROOT, 'packages', 'agni-hub', 'hub-transform', 'route-handlers.js');
+const routeHandlersSrc = fs.readFileSync(routeHandlersPath, 'utf8');
 
-if (!/\/precache\.js/.test(hubSrc) || !/urlPath\s*===\s*['"]\/precache\.js['"]/.test(hubSrc)) {
-  fail('hub-transform.js must serve GET /precache.js');
+if (!/\/precache\.js/.test(routeHandlersSrc) || !/urlPath\s*===\s*['"]\/precache\.js['"]/.test(routeHandlersSrc)) {
+  fail('hub-transform route-handlers must serve GET /precache.js');
 } else {
-  pass('hub-transform.js has /precache.js route');
+  pass('hub-transform has /precache.js route');
 }
 
 if (failed) {

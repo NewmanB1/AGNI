@@ -17,7 +17,9 @@ const PKG_VERSION = PKG.version || '0.0.0';
 
 const FILES = [
   'packages/agni-hub/sw.js',
-  'packages/agni-hub/hub-transform.js'
+  'packages/agni-hub/hub-transform.js',
+  'packages/agni-hub/hub-transform/constants.js',
+  'packages/agni-hub/hub-transform/route-handlers.js'
 ];
 
 // Patterns that indicate hardcoded version (fail)
