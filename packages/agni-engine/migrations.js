@@ -18,7 +18,7 @@ var math = require('./math');
  * @returns {Record<string, unknown>}
  */
 function ensureObject(o) {
-  if (o != null && typeof o === 'object' && !Array.isArray(o)) return o;
+  if (o != null && typeof o === 'object' && !Array.isArray(o)) return /** @type {Record<string, unknown>} */ (o);
   return {};
 }
 
@@ -242,12 +242,13 @@ function migrateLMSState(raw, opts) {
   var markovCooldowns = ensureObject(markov.cooldowns);
 
   Object.keys(markovHistory).forEach(function (sid) {
+    var arr = Array.isArray(markovHistory[sid]) ? /** @type {Array} */ (markovHistory[sid]) : [];
     if (!Array.isArray(markovHistory[sid])) {
-      markovHistory[sid] = [];
+      markovHistory[sid] = arr;
       migrated = true;
     }
-    if (markovHistory[sid].length > 10) {
-      markovHistory[sid] = markovHistory[sid].slice(-10);
+    if (arr.length > 10) {
+      markovHistory[sid] = arr.slice(-10);
       migrated = true;
     }
   });
@@ -257,7 +258,7 @@ function migrateLMSState(raw, opts) {
   var transKeys = Object.keys(markovTransitions);
   if (transKeys.length > MAX_TRANSITION_SOURCES) {
     var transTotals = transKeys.map(function (k) {
-      var es = markovTransitions[k];
+      var es = /** @type {Record<string, { count?: number }>} */ (markovTransitions[k]);
       var t = 0;
       for (var tk in es) if (Object.prototype.hasOwnProperty.call(es, tk)) t += (es[tk].count || 0);
       return { key: k, total: t };
@@ -271,7 +272,7 @@ function migrateLMSState(raw, opts) {
   var bigramKeys = Object.keys(markovBigrams);
   if (bigramKeys.length > MAX_BIGRAM_SOURCES) {
     var bigramTotals = bigramKeys.map(function (k) {
-      var es = markovBigrams[k];
+      var es = /** @type {Record<string, { count?: number }>} */ (markovBigrams[k]);
       var t = 0;
       for (var bk in es) if (Object.prototype.hasOwnProperty.call(es, bk)) t += (es[bk].count || 0);
       return { key: k, total: t };
@@ -312,7 +313,7 @@ function migrateLMSState(raw, opts) {
       ' but embedding.dim*2=' + (state.embedding.dim * 2)
     );
   }
-  return { state: state, migrated: migrated };
+  return { state: /** @type {import('../types').LMSState} */ (state), migrated: migrated };
 }
 
 /**

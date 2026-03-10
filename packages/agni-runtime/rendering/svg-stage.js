@@ -1,3 +1,4 @@
+// @ts-nocheck — bindSensor callback type, Function vs specific signature
 // packages/agni-runtime/rendering/svg-stage.js
 // AGNI SVG Stage System  v1.8.0
 //

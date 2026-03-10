@@ -20,7 +20,9 @@ function base64ToBytes(b64) {
  * @returns {string}
  */
 function bytesToBase64(bytes) {
-  const buf = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
+  const buf = Buffer.isBuffer(bytes)
+    ? bytes
+    : (bytes instanceof ArrayBuffer ? Buffer.from(new Uint8Array(bytes)) : Buffer.from(/** @type {Uint8Array} */ (bytes)));
   return buf.toString('base64');
 }
 

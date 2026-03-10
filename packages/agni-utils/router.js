@@ -44,6 +44,7 @@ function matchPath(pattern, urlPath) {
   const urlParts = urlPath.split('/');
   if (patternParts.length !== urlParts.length) return null;
 
+  /** @type {Record<string, string>} */
   const params = {};
   for (let i = 0; i < patternParts.length; i++) {
     if (patternParts[i].startsWith(':')) {

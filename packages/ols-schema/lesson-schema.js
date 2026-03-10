@@ -36,7 +36,9 @@ let validateSchema = null;
 if (Ajv && fs.existsSync(schemaPath)) {
   try {
     const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+    // @ts-expect-error — Ajv CJS default export type does not match constructor usage
     const ajv = new Ajv({ allErrors: true });
+    // @ts-expect-error — ajv-formats CJS export may be default or named
     if (typeof ajvFormats === 'function') ajvFormats(ajv);
     validateSchema = ajv.compile(schema);
   } catch (err) {

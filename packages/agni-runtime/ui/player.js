@@ -1,3 +1,4 @@
+// @ts-nocheck — runtime globals (LESSON_DATA, AGNI_*), DOM, sensors; types in index.d.ts
 // packages/agni-runtime/ui/player.js
 // AGNI Lesson Player  v4.0.0
 //

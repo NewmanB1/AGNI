@@ -1,3 +1,4 @@
+// @ts-nocheck — ES5 SVG factories; number/string coercion in attr binding
 // packages/agni-runtime/rendering/svg-factories.js
 // AGNI SVG Factory Library
 // Each factory takes a DOM container element and an options object.

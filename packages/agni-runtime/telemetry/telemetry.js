@@ -1,3 +1,4 @@
+// @ts-nocheck — LESSON_DATA, log union, AGNI_* globals
 // packages/agni-runtime/telemetry/telemetry.js
 // AGNI Telemetry  v1.8.0
 //

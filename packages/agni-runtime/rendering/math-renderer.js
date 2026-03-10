@@ -1,3 +1,4 @@
+// @ts-nocheck — LESSON_DATA._devMode, log.debug/warn union, global typing
 // packages/agni-runtime/rendering/math-renderer.js
 // AGNI Math Renderer  v1.7.0
 //

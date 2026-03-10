@@ -1,3 +1,4 @@
+// @ts-nocheck — AGNI_LOADER, LESSON_DATA globals
 // packages/agni-runtime/ui/factory-loader.js
 // AGNI Factory Loader  v1.1.0
 //

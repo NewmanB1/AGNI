@@ -20,7 +20,7 @@ export interface ValidationResult {
 export interface AccountsService {
   registerCreator(opts: { name: string; email: string; password: string }): Promise<{ id?: string; error?: string }>;
   loginCreator(opts: { email: string; password: string }): Promise<{ token?: string; creatorId?: string; error?: string }>;
-  validateSession(token: string): Promise<{ creatorId?: string; error?: string }>;
+  validateSession(token: string): Promise<{ creatorId?: string; id?: string; role?: string; [key: string]: unknown } | null>;
   destroySession(token: string): Promise<{ ok?: boolean; error?: string }>;
   cleanExpiredSessions(): Promise<void>;
   listCreators(): Promise<{ creators?: Array<Record<string, unknown>>; error?: string }>;
@@ -41,7 +41,7 @@ export interface AccountsService {
   claimTransferToken(token: string): Promise<{ ok?: boolean; pseudoId?: string; displayName?: string; sessionToken?: string; error?: string }>;
   verifyStudentPin(pseudoId: string, pin: string): Promise<{ ok?: boolean; verified?: boolean; sessionToken?: string; error?: string }>;
   createStudentSession(pseudoId: string): Promise<string>;
-  validateStudentSession(token: string): Promise<{ pseudoId: string } | null>;
+  validateStudentSession(token: string, opts?: { clientIp?: string }): Promise<{ pseudoId: string } | null>;
   migrateLegacyPins(): Promise<{ migrated?: number; legacySha256?: number }>;
   generateCode(len: number): string;
 }

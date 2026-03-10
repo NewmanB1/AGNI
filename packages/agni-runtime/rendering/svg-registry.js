@@ -1,3 +1,4 @@
+// @ts-nocheck — global.AGNI_SVG, global.AGNI_SHARED, global.DEV_MODE
 // packages/agni-runtime/rendering/svg-registry.js
 // AGNI SVG Registry
 //

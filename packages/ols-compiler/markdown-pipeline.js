@@ -20,6 +20,7 @@ async function _buildProcessor() {
     .use(remarkParse)
     .use(remarkMath)
     .use(remarkRehype)
+    // @ts-expect-error — rehype-katex options type does not match runtime API
     .use(rehypeKatex, {
       output: 'html',
       throwOnError: false,

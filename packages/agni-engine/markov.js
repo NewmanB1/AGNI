@@ -240,8 +240,9 @@ function getTransitionProbabilities(state, fromLessonId) {
   for (var i = 0; i < keys.length; i++) {
     totalCount += edges[keys[i]].count;
   }
-  if (totalCount === 0) return {};
+  if (totalCount === 0) return /** @type {Record<string, number>} */ ({});
 
+  /** @type {Record<string, number>} */
   var probs = {};
   for (var j = 0; j < keys.length; j++) {
     probs[keys[j]] = edges[keys[j]].count / totalCount;
@@ -451,6 +452,7 @@ function findBottlenecks(state, minSample) {
  */
 function exportTransitionTable(state) {
   ensureMarkovState(state);
+  /** @type {Record<string, Record<string, { prob: number; avgGain: number }>>} */
   var table = {};
   var fromIds = Object.keys(state.markov.transitions);
 

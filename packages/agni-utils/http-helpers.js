@@ -46,16 +46,17 @@ function readBody(req, opts) {
  * @param {Function} handler  (payload) => void
  */
 function handleJsonBody(req, sendResponse, handler) {
-  readBody(req).then(body => {
+  return readBody(req).then(body => {
     let payload;
     try {
       payload = JSON.parse(body || '{}');
     } catch (err) {
       sendResponse(400, { error: 'Invalid JSON' });
-      return;
+      return Promise.resolve();
     }
     return Promise.resolve(handler(payload)).catch(err => {
       sendResponse(500, { error: 'Internal server error' });
+      return undefined;
     });
   }).catch(err => {
     if (err.message === 'Request body too large') {
@@ -63,6 +64,7 @@ function handleJsonBody(req, sendResponse, handler) {
     } else {
       sendResponse(500, { error: 'Internal server error' });
     }
+    return undefined;
   });
 }
 
@@ -103,13 +105,14 @@ function createResponseSender(req, res, opts) {
       res.writeHead(statusCode);
       res.end(jsonStr);
     }
+    return undefined;
   };
 }
 
 /**
  * Extract Bearer token from Authorization header or query param.
  * @param {import('http').IncomingMessage} req
- * @param {Record<string, string>} qs
+ * @param {Record<string, string>} _qs  unused; reserved for future query-param token lookup
  * @returns {string|null}
  */
 function extractBearerToken(req, _qs) {

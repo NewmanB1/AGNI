@@ -284,7 +284,9 @@ function getGraphWeightsValidator() {
     const addFormats = require('ajv-formats');
     const schemaPath = path.join(__dirname, '../../schemas/graph-weights.schema.json');
     const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+    // @ts-expect-error — Ajv CJS default export type does not match constructor usage
     const ajv = new Ajv({ allErrors: true });
+    // @ts-expect-error — ajv-formats CJS export type does not match callable usage
     addFormats(ajv);
     _graphWeightsValidator = ajv.compile(schema);
     return _graphWeightsValidator;

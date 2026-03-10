@@ -1,3 +1,4 @@
+// @ts-nocheck — DeviceMotionEvent.requestPermission, LESSON_DATA, AGNI_* globals
 // packages/agni-runtime/sensors/sensor-bridge.js
 // AGNI Sensor Bridge  v1.7.1
 //

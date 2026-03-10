@@ -1,3 +1,4 @@
+// @ts-nocheck — Polyfills for DOM; type signatures conflict with lib.dom.d.ts
 // packages/agni-runtime/polyfills.js
 // ES5 polyfills for Chrome 44 WebView (Android 6.0 Marshmallow)
 //

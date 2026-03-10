@@ -1,3 +1,4 @@
+// @ts-nocheck — empty object to Record/interface assignment
 // packages/agni-runtime/engine/navigator.js
 
 /**

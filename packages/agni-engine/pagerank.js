@@ -85,7 +85,7 @@ function isCacheStale(state) {
  */
 function buildCurriculumGraph(probes, ontologyMap) {
   var nodes = Object.keys(probes);
-  var edges = {};
+  var edges = /** @type {Record<string, string[]>} */ ({});
   for (var i = 0; i < nodes.length; i++) edges[nodes[i]] = [];
 
   if (ontologyMap) {
@@ -99,14 +99,16 @@ function buildCurriculumGraph(probes, ontologyMap) {
 
       var provides = ont.provides || [];
       for (var p = 0; p < provides.length; p++) {
-        var sk = typeof provides[p] === 'string' ? provides[p] : provides[p].skill || provides[p];
+        var prov = provides[p];
+        var sk = typeof prov === 'string' ? prov : (/** @type {{ skill?: string }} */ (prov).skill || String(prov));
         if (!providersBySkill[sk]) providersBySkill[sk] = [];
         providersBySkill[sk].push(nid);
       }
 
       var requires = ont.requires || [];
       for (var r = 0; r < requires.length; r++) {
-        var rsk = typeof requires[r] === 'string' ? requires[r] : requires[r].skill || requires[r];
+        var req = requires[r];
+        var rsk = typeof req === 'string' ? req : (/** @type {{ skill?: string }} */ (req).skill || String(req));
         if (!requirersBySkill[rsk]) requirersBySkill[rsk] = [];
         requirersBySkill[rsk].push(nid);
       }
@@ -167,9 +169,9 @@ function buildTransitionGraph(transitions, opts) {
   opts = opts || {};
   var qualityWeighted = opts.qualityWeighted || false;
 
-  var nodeSet = {};
-  var edges = {};
-  var weights = {};
+  var nodeSet = /** @type {Record<string, boolean>} */ ({});
+  var edges = /** @type {Record<string, string[]>} */ ({});
+  var weights = /** @type {Record<string, Record<string, number>>} */ ({});
 
   var fromIds = Object.keys(transitions);
   for (var i = 0; i < fromIds.length; i++) {
@@ -268,7 +270,7 @@ function computePageRank(nodes, edges, weights, opts) {
     if (diff < tol) break;
   }
 
-  var result = {};
+  var result = /** @type {Record<string, number>} */ ({});
   for (var f = 0; f < N; f++) result[nodes[f]] = rank[f];
   return result;
 }
@@ -358,7 +360,7 @@ function personalizedPageRank(nodes, edges, targetNodes, weights, opts) {
     if (diff < tol) break;
   }
 
-  var result = {};
+  var result = /** @type {Record<string, number>} */ ({});
   for (var f = 0; f < N; f++) result[nodes[f]] = rank[f];
   return result;
 }
@@ -411,7 +413,7 @@ function scoreCandidates(state, studentId, candidates, ontologyMap) {
     persRanks = personalizedPageRank(currGraph2.nodes, currGraph2.edges, gapLessons);
   }
 
-  var scores = {};
+  var scores = /** @type {Record<string, { curriculumRank: number, transitionRank: number, personalizedRank: number, combinedScore: number }>} */ ({});
   for (var i = 0; i < candidates.length; i++) {
     var cid = candidates[i];
     var cr = currRanks[cid] || 0;

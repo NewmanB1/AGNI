@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck — PWA browser bootstrap; uses LESSON_DATA, AGNI_LOADER globals
 // shell-boot.js ΓÇö PWA shell bootstrap
 // Loaded as external script to satisfy CSP script-src 'self'.
 // ES5 compatible — targets Android 7.0+ (Nougat, API 24, Chrome 51 WebView).

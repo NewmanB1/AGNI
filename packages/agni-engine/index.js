@@ -84,7 +84,10 @@ function buildDefaultState() {
       observationCount: 0,
       seenSyncIds:      [],
       exportSequence:   0,
-      hubHighWater:     {}
+      hubHighWater:     {},
+      count:            0,
+      totalGain:        0,
+      avgGain:          0
     },
     markov: {
       transitions:    {},
@@ -406,7 +409,7 @@ function selectBestLesson(studentId, candidates, ontologyMap) {
  * @param {string}   studentId
  * @param {string[]} candidates  lessonIds (from theta)
  * @param {Object.<string, { requires?: string[], provides?: string[] }>} [ontologyMap]
- * @returns {{ selected: string|null, ability: object|null, breakdown: object }}
+ * @returns {import('../types').LMSSelectResult}
  */
 function explainSelection(studentId, candidates, ontologyMap) {
   if (!candidates || candidates.length === 0) {
@@ -470,7 +473,7 @@ function explainSelection(studentId, candidates, ontologyMap) {
   var DROPOUT_PENALTY_WEIGHT = 0.20;
   var COOLDOWN_PENALTY_WEIGHT = 0.30;
 
-  var breakdown = {};
+  var breakdown = /** @type {Record<string, unknown>} */ ({});
   var bestId = null;
   var bestScore = -Infinity;
 

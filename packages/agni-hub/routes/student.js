@@ -99,7 +99,7 @@ function register(router, ctx) {
     if (!pseudoId) return;
     const telData = await loadTelemetryEventsAsync();
     const events = (telData.events || []).filter(e => e.pseudoId === pseudoId)
-      .sort((a, b) => new Date(a.completedAt) - new Date(b.completedAt));
+      .sort((a, b) => +new Date(a.completedAt) - +new Date(b.completedAt));
     const snapshots = [];
     let runningMastery = 0;
     let lessonCount = 0;

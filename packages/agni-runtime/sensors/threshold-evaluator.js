@@ -1,3 +1,4 @@
+// @ts-nocheck — log union, compile return, threshold grammar
 // packages/agni-runtime/sensors/threshold-evaluator.js
 // AGNI Threshold Evaluator  v1.7.0
 //

@@ -1,3 +1,4 @@
+// @ts-nocheck — global typing, LESSON_DATA
 // packages/agni-runtime/telemetry/checkpoint.js
 // AGNI Checkpoint Persistence Module
 //

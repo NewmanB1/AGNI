@@ -18,6 +18,18 @@ The engine uses ES5-only JavaScript to avoid a compile step and prevent stale-bu
 - When changing **IR or sidecar** shapes, update `src/types/index.d.ts` (LessonIR, LessonSidecar, etc.) and the compiler/sidecar code. See `docs/playbooks/compiler.md`.
 - Run `npm run typecheck` to validate JSDoc types across the repo.
 
+## Typecheck scope
+
+- **`npm run typecheck`** — Runs both `tsconfig.json` (src/) and `tsconfig.packages.json` (packages/).
+- **`npm run typecheck:packages`** — Validates all packages: module resolution, `.d.ts` coherence. Uses relaxed settings (`checkJs: false`) so JS implementation is not type-checked; tighten over time by enabling `checkJs` and fixing type errors.
+- **`npm run typecheck:services`** — Stricter check for `packages/agni-services/` only (full JSDoc validation).
+
 ## Single place for shared types
 
 **`src/types/index.d.ts`** — Lesson meta, IR, sidecar, LMS state, governance, etc. Keep this aligned with schemas (`schemas/ols.schema.json`, etc.) and with actual usage in compiler, engine, and hub.
+
+**`packages/types/`** — Re-exports `src/types` for packages that reference `../types` (e.g. `@agni/engine`). Do not add runtime code here.
+
+## Enabling checkJs for packages
+
+Packages are currently type-checked with `checkJs: false` (module resolution and `.d.ts` only). Partial implementation completed: shared types, runtime globals, hub-transform fixes, and `@ts-nocheck` on PWA/polyfills/svg-factories. Remaining work and full plan: **`docs/playbooks/CHECK-JS-ENABLEMENT-PLAN.md`**.

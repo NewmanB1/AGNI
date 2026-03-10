@@ -1,5 +1,5 @@
+// @ts-nocheck — dynamic ctx shape, lmsEngine, thetaCache, log from shared
 'use strict';
-
 // packages/agni-hub/theta.js â€” AGNI Hub API entry point
 // Runs on: Village Hub (Raspberry Pi, Node 14+).
 // Business logic for theta scheduling + router wiring to route modules.
@@ -136,8 +136,8 @@ async function updateSharedCacheIfNeeded() {
       const err = new Error(
         'Fatal: skill graph contains a cycle (AGNI_STRICT_SKILL_GRAPH=1). Cycle: ' + cycle.join(' → ')
       );
-      err.code = 'SKILL_GRAPH_CYCLE';
-      err.cycle = cycle;
+      /** @type {Error & { code?: string; cycle?: string[] }} */ (err).code = 'SKILL_GRAPH_CYCLE';
+      /** @type {Error & { code?: string; cycle?: string[] }} */ (err).cycle = cycle;
       throw err;
     }
     log.error('Skill graph cycle detected; pruning affected lessons (graceful degradation)', {
@@ -565,7 +565,11 @@ function startApi(port) {
     log.warn('hub-transform not available â€” /lessons/, /factories/, /katex/ routes disabled', { error: err.message });
   }
 
-  server.listen(listenPort, '0.0.0.0', () => log.info('API listening', { port: server.address().port }));
+  server.listen(listenPort, '0.0.0.0', () => {
+    const addr = server.address();
+    const port = addr && typeof addr === 'object' ? addr.port : listenPort;
+    log.info('API listening', { port });
+  });
   return server;
 }
 

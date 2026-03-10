@@ -1,3 +1,4 @@
+// @ts-nocheck — LESSON_DATA, log union, global typing
 // packages/agni-runtime/shared-runtime.js
 // AGNI Shared Runtime  v1.8.1
 //

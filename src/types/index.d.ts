@@ -132,7 +132,7 @@ export interface InferredFeatures {
 
 /** Runtime dependency list (factories) embedded in LESSON_DATA by compiler. */
 export interface LessonRequires {
-  factories?: Array<{ file: string; version: string }>;
+  factories?: Array<{ file: string; version: string; integrity?: string }>;
 }
 
 export interface LessonIR {
@@ -241,6 +241,10 @@ export interface BanditState {
   observationCount: number;
   /** Sync IDs already merged — prevents duplicate sync double-counting. Runtime cap: 500 (FIFO). */
   seenSyncIds?: string[];
+  /** Export sequence for federation deduplication (hubHighWater). */
+  exportSequence?: number;
+  /** Per-hub high-water mark for federation merge. */
+  hubHighWater?: Record<string, number>;
   count: number;
   totalGain: number;
   avgGain: number;
@@ -256,15 +260,22 @@ export interface MarkovCooldownEntry {
   gain: number;
 }
 
+/** Edge in Markov transitions/bigrams: count and gain tracking. */
+export interface MarkovTransitionEdge {
+  count: number;
+  totalGain?: number;
+  avgGain?: number;
+}
+
 export interface MarkovState {
   /** First-order transitions. Runtime evicts oldest sources when over MAX_TRANSITION_SOURCES (300). */
   transitions: Record<string, Record<string, MarkovTransitionEdge>>;
   /** Second-order bigrams. Runtime evicts when over MAX_BIGRAM_SOURCES (200). */
-  bigrams: Record<string, Record<string, MarkovTransitionEdge>>;
+  bigrams?: Record<string, Record<string, MarkovTransitionEdge>>;
   /** Per-student recent lesson IDs. Runtime cap: MAX_HISTORY (10) per student. */
   studentHistory: Record<string, string[]>;
-  dropouts: Record<string, MarkovDropoutEntry>;
-  cooldowns: Record<string, Record<string, MarkovCooldownEntry>>;
+  dropouts?: Record<string, MarkovDropoutEntry>;
+  cooldowns?: Record<string, Record<string, MarkovCooldownEntry>>;
 }
 
 export interface LMSState {
@@ -282,6 +293,14 @@ export interface BanditSummary {
   sampleSize: number;
   /** Content hash for deduplication — added by exporter, checked by importer. */
   syncId?: string;
+  /** Hub ID for federation merge deduplication. */
+  hubId?: string;
+  /** Export sequence for federation merge (hubHighWater check). */
+  exportSequence?: number;
+  /** Posterior version for merge ordering. */
+  posteriorVersion?: number;
+  /** Training window for merge. */
+  trainingWindow?: number;
 }
 
 /** Input to applyObservation: one completed lesson attempt. Reference implementation: pure (state, observation) → newState. */
@@ -289,6 +308,21 @@ export interface LMSObservation {
   studentId: string;
   lessonId: string;
   probeResults: Array<{ probeId: string; correct: boolean }>;
+}
+
+/** Result of LMS selectBestLesson / explainSelection. */
+export interface LMSSelectResult {
+  selected: string | null;
+  ability: RaschStudentState | null;
+  breakdown: Record<string, unknown>;
+  candidates?: string[];
+}
+
+/** Result of hub-transform compileLesson (IR + sidecar; HTML assembled at response time). */
+export interface HubCompileResult {
+  ir: LessonIR;
+  sidecar: LessonSidecar;
+  lessonIR: LessonIR;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

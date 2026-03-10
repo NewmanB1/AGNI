@@ -47,6 +47,7 @@
     "unified": "^11.0.5"
   },
   "devDependencies": {
+    "@types/node": "^18.0.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.58.2",
     "ajv-cli": "^5.0.0",
@@ -73,8 +74,9 @@
     "lint:fix": "eslint src/ hub-tools/ packages/agni-hub/ packages/agni-services/ tests/ --fix",
     "format": "prettier --write \"src/**/*.{js,ts}\" \"hub-tools/**/*.js\" \"packages/**/*.js\" \"server/**/*.js\" \"tests/**/*.js\"",
     "format:check": "prettier --check \"src/**/*.{js,ts}\" \"hub-tools/**/*.js\" \"packages/**/*.js\" \"server/**/*.js\" \"tests/**/*.js\"",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.packages.json --noEmit",
     "typecheck:services": "tsc -p tsconfig.services.json --noEmit",
+    "typecheck:packages": "tsc -p tsconfig.packages.json --noEmit",
     "init:data": "node scripts/init-data.js",
     "promote:admin": "node scripts/promote-admin.js",
     "validate": "node scripts/validate-all.js",

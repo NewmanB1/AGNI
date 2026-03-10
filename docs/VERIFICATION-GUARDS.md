@@ -29,7 +29,7 @@ This document describes the structure of automated guards against regression. Ru
 
 `.github/workflows/validate.yml` runs, in order:
 
-1. lint, format:check, typecheck
+1. lint, format:check, typecheck (src/ + packages/)
 2. codegen:validate-schemas
 3. test:coverage
 4. test:integration

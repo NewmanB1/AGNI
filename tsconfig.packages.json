@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node"],
+    "checkJs": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strict": false
+  },
+  "include": [
+    "src/types/**/*.d.ts",
+    "src/engine/**/*.d.ts",
+    "packages/agni-cli/**/*.js",
+    "packages/agni-engine/**/*.js",
+    "packages/agni-governance/**/*.js",
+    "packages/agni-hub/**/*.js",
+    "packages/agni-runtime/**/*.js",
+    "packages/agni-services/**/*.js",
+    "packages/agni-utils/**/*.js",
+    "packages/ols-compiler/**/*.js",
+    "packages/ols-schema/**/*.js",
+    "packages/agni-plugins/**/*.js",
+    "packages/agni-lesson-gen/**/*.js",
+    "packages/**/*.d.ts"
+  ],
+  "exclude": ["node_modules", "**/*.test.js"]
+}

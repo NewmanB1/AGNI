@@ -38,6 +38,7 @@
 // ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 'use strict';
+/// <reference types="node" />
 
 const path = require('path');
 const { loadHubConfig } = require('@agni/utils/hub-config');
@@ -316,7 +317,7 @@ function _writeDiskCache(slug, html, ir) {
  *
  * @param  {string} slug
  * @param  {object} options   { deviceId, privateKey, dev }
- * @returns {Promise<{ html: string, sidecar: object } | null>}
+ * @returns {Promise<{ ir: object, sidecar: object, lessonIR: object } | null>}
  */
 async function compileLesson(slug, options) {
   const loaded = loadYaml(slug);
@@ -362,6 +363,7 @@ async function compileLesson(slug, options) {
 
   // Thundering herd fix: if we would wait in queue, reject so caller can return 202.
   if (_wouldCompileBeQueued(slug)) {
+    /** @type {Error & { code?: string; retryAfter?: number }} */
     const err = new Error('Compile queue full');
     err.code = 'QUEUED';
     err.retryAfter = RETRY_AFTER_SECONDS;
@@ -645,7 +647,7 @@ function _sendFile(req, res, filePath, contentType, maxAge) {
 /**
  * Resolve per-request compile options: merge base options with authenticated
  * deviceId from student session (cookie or Bearer token).
- * @param  {http.IncomingMessage} req
+ * @param  {import('http').IncomingMessage} req
  * @param  {object} baseOptions { deviceId, privateKey, dev }
  * @returns {Promise<object>}
  */
@@ -664,8 +666,8 @@ function _getRequestCompileOptions(req, baseOptions) {
  * Returns true if the request was handled, false to fall through to the
  * next handler (e.g. theta.js routes).
  *
- * @param  {http.IncomingMessage} req
- * @param  {http.ServerResponse}  res
+ * @param  {import('http').IncomingMessage} req
+ * @param  {import('http').ServerResponse}  res
  * @param  {object}               options   { deviceId, privateKey, dev }
  * @returns {boolean}
  */
@@ -857,7 +859,7 @@ function handleRequest(req, res, options) {
   if (lessonDataMatch) {
     const qs = require('querystring');
     const query = qs.parse((req.url.split('?')[1]) || '');
-    const slug = query.slug;
+    const slug = Array.isArray(query.slug) ? query.slug[0] : query.slug;
     if (!slug) {
       _sendText(req, res, 200, MIME['.js'],
         'var LESSON_DATA = null; /* no slug provided */');
@@ -896,7 +898,7 @@ function handleRequest(req, res, options) {
  * The existing theta.js request handler is wrapped: hub-transform routes
  * are checked first; unhandled requests fall through to theta's handler.
  *
- * @param {http.Server} server   existing theta.js server
+ * @param {import('http').Server} server   existing theta.js server
  * @param {object}      options  { deviceId, privateKey, dev }
  */
 function attachRoutes(server, options) {
