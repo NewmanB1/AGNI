@@ -41,15 +41,37 @@ export interface LessonSkillRef {
   level?: number;
 }
 
+/** Raw YAML ontology input: allows string shorthand or full LessonSkillRef. */
 export interface LessonOntology {
   requires?: Array<string | LessonSkillRef>;
   provides?: Array<string | LessonSkillRef>;
   [key: string]: unknown;
 }
 
-export interface LessonGate {
-  [key: string]: unknown;
+/** Normalized ontology: compiler produces this. Consumers use LessonSkillRef[] only. */
+export interface LessonOntologyNormalized {
+  requires: LessonSkillRef[];
+  provides: LessonSkillRef[];
 }
+
+/** Gate logic for Zero-Trust prerequisite check. Matches schemas/ols.schema.json gateLogic.
+ *  Must be schema-validated; do not allow arbitrary unknown payloads in executable logic.
+ *  Runtime may add: max_attempts, answer (alias for expected_answer), on_pass. */
+export interface GateLogic {
+  type: 'quiz' | 'manual_verification';
+  skill_target?: string;
+  question?: string;
+  expected_answer?: string;
+  answer?: string;
+  on_fail?: string;
+  on_pass?: string;
+  passing_score?: number;
+  retry_delay?: string;
+  max_attempts?: number;
+}
+
+/** Gate in lesson IR. When schema-validated, must be GateLogic. Legacy paths may pass unknown. */
+export type LessonGate = GateLogic;
 
 export interface LessonStep {
   id?: string;
@@ -115,7 +137,8 @@ export interface LessonRequires {
 
 export interface LessonIR {
   meta?: LessonMeta;
-  ontology?: LessonOntology;
+  /** Normalized at compile time; consumers use LessonSkillRef[] only. */
+  ontology?: LessonOntologyNormalized;
   gate?: LessonGate | null;
   steps: LessonStep[];
   inferredFeatures: InferredFeatures;
@@ -209,17 +232,15 @@ export interface EmbeddingState {
 }
 
 export interface BanditState {
-  // Recursive least-squares matrices/vectors.
+  /** Recursive least-squares matrices/vectors. */
   A: number[][];
   b: number[];
+  /** Must equal embedding.dim * 2 (BanditSummary.embeddingDim). Enforced at runtime. */
   featureDim: number;
   forgetting: number;
   observationCount: number;
-  /** Sync IDs already merged — prevents duplicate sync double-counting. */
+  /** Sync IDs already merged — prevents duplicate sync double-counting. Runtime cap: 500 (FIFO). */
   seenSyncIds?: string[];
-}
-
-export interface MarkovTransitionEdge {
   count: number;
   totalGain: number;
   avgGain: number;
@@ -236,8 +257,11 @@ export interface MarkovCooldownEntry {
 }
 
 export interface MarkovState {
+  /** First-order transitions. Runtime evicts oldest sources when over MAX_TRANSITION_SOURCES (300). */
   transitions: Record<string, Record<string, MarkovTransitionEdge>>;
+  /** Second-order bigrams. Runtime evicts when over MAX_BIGRAM_SOURCES (200). */
   bigrams: Record<string, Record<string, MarkovTransitionEdge>>;
+  /** Per-student recent lesson IDs. Runtime cap: MAX_HISTORY (10) per student. */
   studentHistory: Record<string, string[]>;
   dropouts: Record<string, MarkovDropoutEntry>;
   cooldowns: Record<string, Record<string, MarkovCooldownEntry>>;

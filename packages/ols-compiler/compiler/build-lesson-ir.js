@@ -78,9 +78,20 @@ async function buildLessonIR(lessonData, options) {
     );
   }
 
+  var ontology = lessonData.ontology || {};
+  var normalizedOntology = {
+    requires: (ontology.requires || []).map(function (r) {
+      return typeof r === 'string' ? { skill: r } : r;
+    }),
+    provides: (ontology.provides || []).map(function (p) {
+      return typeof p === 'string' ? { skill: p, level: 1 } : p;
+    })
+  };
+
   const ir = Object.assign({}, lessonData, {
     steps:            steps,
     inferredFeatures: inferredFeatures,
+    ontology:         normalizedOntology,
     metadata_source:  metadataSource,
     _devMode:         options.dev === true,
     _compiledAt:      new Date().toISOString(),
@@ -129,7 +140,7 @@ function computeLessonIRHash(ir) {
 
 function buildLessonSidecar(ir) {
   const meta     = ir.meta     || {};
-  const ontology = ir.ontology || {};
+  const ontology = ir.ontology || { requires: [], provides: [] };
 
   return {
     identifier:     ir.identifier || meta.identifier || '',

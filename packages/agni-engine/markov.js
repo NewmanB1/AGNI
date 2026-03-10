@@ -32,6 +32,8 @@
 // }
 
 var MAX_HISTORY = 10;
+var MAX_TRANSITION_SOURCES = 300;
+var MAX_BIGRAM_SOURCES = 200;
 var FORGETTING = 0.995;
 var COOLDOWN_WINDOW = 5;
 var DROPOUT_THRESHOLD_RATIO = 0.3;
@@ -55,6 +57,45 @@ function ensureMarkovState(state) {
   if (!state.markov.dropouts) state.markov.dropouts = {};
   if (!state.markov.cooldowns) state.markov.cooldowns = {};
   if (!state.markov._obsIndex) state.markov._obsIndex = {};
+}
+
+/**
+ * Compute total count across all edges in a from-node.
+ * @param {object} edges
+ * @returns {number}
+ */
+function totalEdgeCount(edges) {
+  var keys = Object.keys(edges);
+  var sum = 0;
+  for (var i = 0; i < keys.length; i++) {
+    sum += (edges[keys[i]].count || 0);
+  }
+  return sum;
+}
+
+/**
+ * Evict the source with smallest total count when over limit. FIFO tie-break.
+ * @param {object} container  transitions or bigrams
+ * @param {number} maxSources
+ */
+function evictLeastSource(container, maxSources) {
+  var keys = Object.keys(container);
+  if (keys.length <= maxSources) return;
+
+  var candidates = [];
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    candidates.push({ key: k, total: totalEdgeCount(container[k]) });
+  }
+  candidates.sort(function (a, b) {
+    if (a.total !== b.total) return a.total - b.total;
+    return keys.indexOf(a.key) - keys.indexOf(b.key);
+  });
+
+  var toRemove = keys.length - maxSources;
+  for (var j = 0; j < toRemove; j++) {
+    delete container[candidates[j].key];
+  }
 }
 
 /**
@@ -107,6 +148,7 @@ function recordTransition(state, studentId, lessonId, gain) {
       state.markov.transitions[prev] = {};
     }
     updateEdge(state.markov.transitions[prev], lessonId, gain);
+    evictLeastSource(state.markov.transitions, MAX_TRANSITION_SOURCES);
 
     // Record that prev was NOT a dropout (student continued past prev)
     if (!state.markov.dropouts[prev]) {
@@ -124,6 +166,7 @@ function recordTransition(state, studentId, lessonId, gain) {
       state.markov.bigrams[bk] = {};
     }
     updateEdge(state.markov.bigrams[bk], lessonId, gain);
+    evictLeastSource(state.markov.bigrams, MAX_BIGRAM_SOURCES);
   }
 
   // ── Cooldown tracking (sequence-based for time-skew resilience) ───────
@@ -470,6 +513,8 @@ module.exports = {
   findBottlenecks:   findBottlenecks,
   exportTransitionTable: exportTransitionTable,
   checkCooldown:     checkCooldown,
-  MAX_HISTORY:       MAX_HISTORY,
-  COOLDOWN_WINDOW:   COOLDOWN_WINDOW
+  MAX_HISTORY:            MAX_HISTORY,
+  MAX_TRANSITION_SOURCES: MAX_TRANSITION_SOURCES,
+  MAX_BIGRAM_SOURCES:     MAX_BIGRAM_SOURCES,
+  COOLDOWN_WINDOW:        COOLDOWN_WINDOW
 };

@@ -246,7 +246,42 @@ function migrateLMSState(raw, opts) {
       markovHistory[sid] = [];
       migrated = true;
     }
+    if (markovHistory[sid].length > 10) {
+      markovHistory[sid] = markovHistory[sid].slice(-10);
+      migrated = true;
+    }
   });
+
+  var MAX_TRANSITION_SOURCES = 300;
+  var MAX_BIGRAM_SOURCES = 200;
+  var transKeys = Object.keys(markovTransitions);
+  if (transKeys.length > MAX_TRANSITION_SOURCES) {
+    var transTotals = transKeys.map(function (k) {
+      var es = markovTransitions[k];
+      var t = 0;
+      for (var tk in es) if (Object.prototype.hasOwnProperty.call(es, tk)) t += (es[tk].count || 0);
+      return { key: k, total: t };
+    });
+    transTotals.sort(function (a, b) { return a.total - b.total; });
+    for (var ti = 0; ti < transKeys.length - MAX_TRANSITION_SOURCES; ti++) {
+      delete markovTransitions[transTotals[ti].key];
+      migrated = true;
+    }
+  }
+  var bigramKeys = Object.keys(markovBigrams);
+  if (bigramKeys.length > MAX_BIGRAM_SOURCES) {
+    var bigramTotals = bigramKeys.map(function (k) {
+      var es = markovBigrams[k];
+      var t = 0;
+      for (var bk in es) if (Object.prototype.hasOwnProperty.call(es, bk)) t += (es[bk].count || 0);
+      return { key: k, total: t };
+    });
+    bigramTotals.sort(function (a, b) { return a.total - b.total; });
+    for (var bi = 0; bi < bigramKeys.length - MAX_BIGRAM_SOURCES; bi++) {
+      delete markovBigrams[bigramTotals[bi].key];
+      migrated = true;
+    }
+  }
 
   var markovState = {
     transitions: markovTransitions,
