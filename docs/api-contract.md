@@ -107,6 +107,7 @@ Paginated endpoints: `GET /api/lessons`, `GET /api/theta/all`, `GET /api/account
 | GET | `/api/lms/select?pseudoId=` | HubKey | Bandit lesson selection |
 | POST | `/api/lms/observation` | HubKey | Record an observation |
 | GET | `/api/lms/status` | HubKey | Engine status |
+| GET | `/api/lms/explain?pseudoId=&lessonId=&candidates=` | HubKey | Selection breakdown (candidates optional; from theta if omitted) |
 | POST | `/api/lms/federation/merge` | Admin | Merge remote bandit summary |
 | GET | `/api/lms/transitions` | HubKey | Markov transition table |
 | GET | `/api/lms/bottlenecks` | HubKey | Flow bottleneck analysis |

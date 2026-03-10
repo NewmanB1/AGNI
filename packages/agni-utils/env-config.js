@@ -125,6 +125,7 @@ const config = {
   sentryForward:         process.env.AGNI_SENTRY_FORWARD !== 'false',
   sentryWeightMaxDelta:  validRange(floatVal('AGNI_SENTRY_WEIGHT_MAX_DELTA', 0.2), 0.01, 1, 'AGNI_SENTRY_WEIGHT_MAX_DELTA'),
   sentryWeightReviewThreshold: validRange(floatVal('AGNI_SENTRY_WEIGHT_REVIEW_THRESHOLD', 0.3), 0.1, 1, 'AGNI_SENTRY_WEIGHT_REVIEW_THRESHOLD'),
+  sentryMinValidYear:   intVal('AGNI_SENTRY_MIN_VALID_YEAR', 2020),
 
   markovWeight:       floatVal('AGNI_MARKOV_WEIGHT', 0.15),
   pagerankWeight:     floatVal('AGNI_PAGERANK_WEIGHT', 0.10),

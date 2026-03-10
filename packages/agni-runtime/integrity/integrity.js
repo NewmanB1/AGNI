@@ -182,18 +182,10 @@
     }
   }
 
-  /**
-   * Verify lesson integrity. Returns Promise<boolean>.
-   * devMode is derived from URL parameter, never from lesson data.
-   * In dev mode without signatures, verification is skipped (lesson loads).
-   * In production, missing signatures always fail verification.
-   * @param {object} lesson LESSON_DATA
-   */
-  function verify(lesson) {
+  function _doVerify(lesson) {
     var devMode = isDevMode();
 
     // Unsigned lessons (no signature/key) always pass — common for local dev.
-    // Production hubs sign lessons before distribution.
     if (!global.OLS_SIGNATURE || !global.OLS_PUBLIC_KEY) {
       return Promise.resolve(true);
     }
@@ -203,8 +195,6 @@
       return Promise.resolve(false);
     }
 
-    // Ed25519 SubtleCrypto requires Chrome 113+; target is Chrome 44 WebView.
-    // Always prefer TweetNaCl on Android Marshmallow devices.
     return verifyWithTweetNaCl(lesson).then(function (result) {
       if (result !== false) {
         if (devMode) console.log('[VERIFY] TweetNaCl result:', result);
@@ -236,6 +226,20 @@
         return false;
       }
       return true;
+    });
+  }
+
+  /**
+   * Verify lesson integrity. Returns Promise<boolean>.
+   * Deferred to next tick to avoid blocking main thread (TweetNaCl can freeze UI).
+   * devMode is derived from URL parameter, never from lesson data.
+   * @param {object} lesson LESSON_DATA
+   */
+  function verify(lesson) {
+    return new Promise(function (resolve) {
+      global.setTimeout(function () {
+        _doVerify(lesson).then(resolve).catch(function () { resolve(false); });
+      }, 0);
     });
   }
 

@@ -94,7 +94,7 @@
     "codegen:validate-schemas": "node scripts/codegen-validate-schemas.js",
     "dev:vite": "npx serve -l 5174 --no-port-switching dist",
     "portal": "cd portal && serve -l 3000",
-    "start:hub": "node hub-tools/theta.js",
+    "start:hub": "cross-env NODE_OPTIONS=--max-old-space-size=512 node hub-tools/theta.js",
     "start:hub:test": "cross-env AGNI_HUB_API_KEY=e2e-test-hub-key node hub-tools/theta.js",
     "test:es5": "node scripts/check-es5.js",
     "verify:dead-files": "node scripts/check-dead-files.js",

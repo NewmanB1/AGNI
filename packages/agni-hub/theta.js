@@ -129,21 +129,38 @@ async function updateSharedCacheIfNeeded() {
   ]);
   const skillGraph = buildSkillGraph(lessonIndex, curriculum);
   const cycle = detectSkillGraphCycles(skillGraph);
-  if (cycle && cycle.length > 0) {
-    const err = new Error(
-      'Fatal: skill graph contains a cycle. All lessons in the cycle are permanently ineligible. ' +
-      'Cycle: ' + cycle.join(' → ') + '. Fix the curriculum graph or lesson prerequisites.'
-    );
-    err.code = 'SKILL_GRAPH_CYCLE';
-    err.cycle = cycle;
-    throw err;
+  const cycleSet = cycle && cycle.length > 0 ? new Set(cycle) : null;
+
+  if (cycleSet && cycleSet.size > 0) {
+    if (process.env.AGNI_STRICT_SKILL_GRAPH === '1') {
+      const err = new Error(
+        'Fatal: skill graph contains a cycle (AGNI_STRICT_SKILL_GRAPH=1). Cycle: ' + cycle.join(' → ')
+      );
+      err.code = 'SKILL_GRAPH_CYCLE';
+      err.cycle = cycle;
+      throw err;
+    }
+    log.error('Skill graph cycle detected; pruning affected lessons (graceful degradation)', {
+      cycle: cycle,
+      message: 'Lessons that provide these skills are excluded until cycle is fixed.'
+    });
+    for (let ci = 0; ci < cycle.length; ci++) delete skillGraph[cycle[ci]];
   }
+
   sharedCache.skillGraph = skillGraph;
   const allScheduled = new Set();
   Object.values(schedules.students || {}).flat().forEach(s => allScheduled.add(s));
-  sharedCache.eligibleLessons = lessonIndex.filter(lesson => {
+  sharedCache.eligibleLessons = lessonIndex.filter(function (lesson) {
+    if (cycleSet && cycleSet.size > 0) {
+      const providesCycleSkill = (lesson.skillsProvided || []).some(function (p) {
+        return cycleSet.has(typeof p === 'string' ? p : p.skill);
+      });
+      if (providesCycleSkill) return false;
+    }
     if (allScheduled.size > 0) {
-      const providesAnyScheduled = lesson.skillsProvided.some(p => allScheduled.has(p.skill));
+      const providesAnyScheduled = (lesson.skillsProvided || []).some(function (p) {
+        return allScheduled.has(typeof p === 'string' ? p : p.skill);
+      });
       if (!providesAnyScheduled) return false;
     }
     return true;

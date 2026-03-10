@@ -17,6 +17,7 @@ async function run() {
     node src/cli.js hub init --wizard    # First-run: minimal config
     node src/cli.js deploy setup --wizard # Deployment: hub ID, home URL, ports, USB
     node src/cli.js sync setup --wizard   # Sync: transport, home URL, USB path
+    node src/cli.js analyze <lesson.yaml> [--curriculum=<path>]  # Lesson static analysis
     node src/cli.js lms-repair   # Migrate/repair LMS state file (data/lms-state.json)
     npm run build   # if using package.json script
 
@@ -58,6 +59,20 @@ async function run() {
   if (firstArg === 'sync' && secondArg === 'setup' && args.includes('--wizard')) {
     await require('../scripts/sync-setup-wizard.js').run();
     return;
+  }
+
+  // ── Analyze lesson (static analysis) ─────────────────────────────────────
+  if (firstArg === 'analyze') {
+    var analyzeInput = args.filter(function (a) { return !a.startsWith('-'); })[1];
+    var curriculumPath = null;
+    args.forEach(function (a) {
+      if (a.startsWith('--curriculum=')) curriculumPath = a.split('=')[1];
+    });
+    if (!analyzeInput) {
+      console.error('Error: analyze requires a lesson file. Usage: node src/cli.js analyze <lesson.yaml> [--curriculum=<path>]');
+      process.exit(1);
+    }
+    return require('../scripts/analyze-lesson.js').run(analyzeInput, { curriculum: curriculumPath });
   }
 
   // ── LMS repair (Backlog task 7) ──────────────────────────────────────────

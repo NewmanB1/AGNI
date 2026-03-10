@@ -63,6 +63,12 @@
   var RING_SIZE = 5;
   var SHAKE_THRESHOLD = 2.5 * 9.81;  // m/s² (~2.5g)
 
+  // DeviceMotion throttling (Chrome 51 event-loop exhaustion fix). Buffer readings,
+  // publish at ~100 ms intervals instead of on every native event.
+  var MOTION_THROTTLE_MS = 100;
+  var _motionBuffer = {};
+  var _motionThrottleTimer = null;
+
   // Detect passive event listener support (Chrome 49+; false on Chrome 44)
   var _supportsPassive = false;
   try {
@@ -139,10 +145,10 @@
       var ly = (lin.y || 0) * (IS_OLD_ANDROID ? -1 : 1);
       var lz = lin.z || 0;
       var lmag = Math.sqrt(lx*lx + ly*ly + lz*lz);
-      _pub('accel.x',         lx,   now);
-      _pub('accel.y',         ly,   now);
-      _pub('accel.z',         lz,   now);
-      _pub('accel.magnitude', lmag, now);
+      _bufferMotion('accel.x',         lx,   now);
+      _bufferMotion('accel.y',         ly,   now);
+      _bufferMotion('accel.z',         lz,   now);
+      _bufferMotion('accel.magnitude', lmag, now);
     }
 
     // Acceleration including gravity (raw) — smooth accel.total only (primary for thresholds)
@@ -158,10 +164,10 @@
       } else {
         _accelTotalPrev = null;
       }
-      _pub('accel.total.x', gx,   now);
-      _pub('accel.total.y', gy,   now);
-      _pub('accel.total.z', gz,   now);
-      _pub('accel.total',   gmag, now);
+      _bufferMotion('accel.total.x', gx,   now);
+      _bufferMotion('accel.total.y', gy,   now);
+      _bufferMotion('accel.total.z', gz,   now);
+      _bufferMotion('accel.total',   gmag, now);
       _accelRing.push(gmag);
       if (_accelRing.length > RING_SIZE) _accelRing.shift();
       var shakeVal = 0;
@@ -173,7 +179,7 @@
         }
         if (mx - mn >= SHAKE_THRESHOLD) shakeVal = 1;
       }
-      _pub('shake', shakeVal, now);
+      _bufferMotion('shake', shakeVal, now);
     }
 
     // Rotation rate (gyroscope)
@@ -183,10 +189,10 @@
       var ry = rot.beta  || 0;
       var rz = rot.gamma || 0;
       var rmag = Math.sqrt(rx*rx + ry*ry + rz*rz);
-      _pub('gyro.x',         rx,   now);
-      _pub('gyro.y',         ry,   now);
-      _pub('gyro.z',         rz,   now);
-      _pub('gyro.magnitude', rmag, now);
+      _bufferMotion('gyro.x',         rx,   now);
+      _bufferMotion('gyro.y',         ry,   now);
+      _bufferMotion('gyro.z',         rz,   now);
+      _bufferMotion('gyro.magnitude', rmag, now);
     }
 
     if (DEV_MODE && S.device.isLowEnd) {
@@ -202,17 +208,31 @@
     var alpha = e.alpha || 0;
     var beta  = e.beta  || 0;
     var gamma = e.gamma || 0;
-    _pub('rotation.alpha', alpha, now);
-    _pub('rotation.beta',  beta,  now);
-    _pub('rotation.gamma', gamma, now);
+    _bufferMotion('rotation.alpha', alpha, now);
+    _bufferMotion('rotation.beta',  beta,  now);
+    _bufferMotion('rotation.gamma', gamma, now);
     var ab = Math.abs(beta);
     var ag = Math.abs(gamma);
     var orient = (ab <= 25 && ag <= 25) ? 'flat' : (ag >= 60 ? 'landscape' : 'portrait');
-    _pub('orientation', orient, now);
+    _bufferMotion('orientation', orient, now);
   }
 
   function _pub(sensorId, value, timestamp) {
     S.publishSensorReading({ sensorId: sensorId, value: value, timestamp: timestamp });
+  }
+
+  function _bufferMotion(sensorId, value, timestamp) {
+    _motionBuffer[sensorId] = { value: value, timestamp: timestamp };
+  }
+
+  function _flushMotionBuffer() {
+    for (var id in _motionBuffer) {
+      if (_motionBuffer.hasOwnProperty(id)) {
+        var r = _motionBuffer[id];
+        _pub(id, r.value, r.timestamp);
+      }
+    }
+    _motionBuffer = {};
   }
 
 
@@ -272,7 +292,8 @@
       _motionHandler = _onMotion;
       global.addEventListener('devicemotion', _motionHandler, _supportsPassive ? { passive: true } : false);
       _motionActive = true;
-      log.debug('DeviceMotion listener started' + (IS_OLD_ANDROID ? ' [old-android mode]' : ''));
+      _motionThrottleTimer = setInterval(_flushMotionBuffer, MOTION_THROTTLE_MS);
+      log.debug('DeviceMotion listener started (throttled ' + MOTION_THROTTLE_MS + ' ms)' + (IS_OLD_ANDROID ? ' [old-android mode]' : ''));
 
       // Orientation is best-effort — not all devices support it
       if (S.device.hasOrientationEvents) {
@@ -290,6 +311,11 @@
    * The published sensor data in lastSensorValues is preserved.
    */
   function stop() {
+    if (_motionThrottleTimer) {
+      clearInterval(_motionThrottleTimer);
+      _motionThrottleTimer = null;
+      _motionBuffer = {};
+    }
     if (_motionHandler) {
       global.removeEventListener('devicemotion', _motionHandler);
       _motionHandler = null;

@@ -32,6 +32,7 @@ Sync builds a single JSON package:
   "hubId": "string",
   "packageId": "pkg-<timestamp>-<hex>",
   "createdAt": "ISO8601",
+  "syncTimestamp": "number (ms since epoch, for hub clock sync)",
   "eventCount": "number",
   "cohortSize": "number",
   "discovered_cohort": "string | null",

@@ -26,6 +26,7 @@ const CONFIG_KEYS = [
   ['katexDir', 'AGNI_KATEX_DIR'],
   ['servePort', 'AGNI_SERVE_PORT'],
   ['cacheMax', 'AGNI_CACHE_MAX'],
+  ['compileConcurrency', 'AGNI_COMPILE_CONCURRENCY'],
   ['hubId', 'AGNI_HUB_ID'],
   ['homeUrl', 'AGNI_HOME_URL'],
   ['usbPath', 'AGNI_USB_PATH'],

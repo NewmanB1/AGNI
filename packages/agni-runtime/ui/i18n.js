@@ -45,7 +45,8 @@
       next_lesson:         'Next recommended lesson',
       back_dashboard:      'Back to dashboard',
       integrity_error:     'This lesson file could not be verified for your device. Please re-download from your learning hub.',
-      loading_failed:      'Failed to load lesson. Please try again.'
+      loading_failed:      'Failed to load lesson. Please try again.',
+      verifying:           'Verifying\u2026'
     },
     es: {
       lesson_complete:     '\u00a1Lecci\u00f3n completa!',
@@ -73,7 +74,8 @@
       next_lesson:         'Siguiente lecci\u00f3n recomendada',
       back_dashboard:      'Volver al panel',
       integrity_error:     'No se pudo verificar este archivo de lecci\u00f3n para tu dispositivo. Vuelve a descargarlo desde tu hub.',
-      loading_failed:      'Error al cargar la lecci\u00f3n. Int\u00e9ntalo de nuevo.'
+      loading_failed:      'Error al cargar la lecci\u00f3n. Int\u00e9ntalo de nuevo.',
+      verifying:           'Verificando\u2026'
     },
     sw: {
       lesson_complete:     'Somo limekamilika!',
@@ -101,7 +103,8 @@
       next_lesson:         'Somo linalofuata lililopendekezwa',
       back_dashboard:      'Rudi kwenye dashibodi',
       integrity_error:     'Faili hii ya somo haiwezi kuthibitishwa kwa kifaa chako. Tafadhali ipakue tena.',
-      loading_failed:      'Imeshindwa kupakia somo. Tafadhali jaribu tena.'
+      loading_failed:      'Imeshindwa kupakia somo. Tafadhali jaribu tena.',
+      verifying:           'Inathibitisha\u2026'
     },
     fr: {
       lesson_complete:     'Le\u00e7on termin\u00e9e !',
@@ -129,7 +132,8 @@
       next_lesson:         'Prochaine le\u00e7on recommand\u00e9e',
       back_dashboard:      'Retour au tableau de bord',
       integrity_error:     'Ce fichier de le\u00e7on n\'a pas pu \u00eatre v\u00e9rifi\u00e9 pour votre appareil.',
-      loading_failed:      '\u00c9chec du chargement de la le\u00e7on. Veuillez r\u00e9essayer.'
+      loading_failed:      '\u00c9chec du chargement de la le\u00e7on. Veuillez r\u00e9essayer.',
+      verifying:           'V\u00e9rification\u2026'
     }
   };
 

@@ -153,6 +153,11 @@ if (!notes.includes('featureDim') && !notes.includes('embeddingDim×2') && !note
   errors.push('_engine_notes must note featureDim=embeddingDim×2 invariant for Bandit A.');
 }
 
+// Bug 9: compileConcurrency for Pi memory (remediation plan #7)
+if (typeof cfg.compileConcurrency !== 'number' || !Number.isInteger(cfg.compileConcurrency) || cfg.compileConcurrency < 1 || cfg.compileConcurrency > 3) {
+  errors.push('compileConcurrency must be present and integer 1–3 (1 for Pi 3/1GB, 2 for Pi 4/2GB). Prevents OOM during concurrent lesson compiles.');
+}
+
 // Bug 8: Path assumptions — existence, fallback, permissions, failure mode
 const pathNotes = toNotes(cfg._path_notes, '_path_notes');
 if (!pathNotes.includes('ENOENT') && !pathNotes.includes('no such file')) {

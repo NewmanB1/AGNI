@@ -130,14 +130,22 @@ var fsp = fs.promises;
 
 /**
  * Persist LMSState to disk atomically (async, Pi-friendly).
- * Writes to a .tmp file first, then renames over the real file.
- * Async I/O avoids blocking the event loop on the Pi's slow SD card.
+ * Writes to .tmp, fsync to force SD card flush, then renames.
+ * Prevents corruption on power loss (POSIX rename is namespace-atomic but
+ * page cache may not be flushed before rename without fsync).
  * @param {import('../types').LMSState} state
  */
 async function saveState(state) {
   try {
     await fsp.mkdir(DATA_DIR, { recursive: true });
-    await fsp.writeFile(STATE_TMP_PATH, JSON.stringify(state, null, 2));
+    var data = JSON.stringify(state, null, 2);
+    var fd = await fsp.open(STATE_TMP_PATH, 'w');
+    try {
+      await fd.writeFile(data);
+      await fd.sync();
+    } finally {
+      await fd.close();
+    }
     await fsp.rename(STATE_TMP_PATH, STATE_PATH);
   } catch (err) {
     var msg = err instanceof Error ? err.message : String(err);
@@ -148,12 +156,20 @@ async function saveState(state) {
 
 /**
  * Synchronous save — used only during initial load/migration.
+ * Same fsync-before-rename contract as saveState.
  * @param {import('../types').LMSState} state
  */
 function saveStateSync(state) {
   try {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(STATE_TMP_PATH, JSON.stringify(state, null, 2));
+    var data = JSON.stringify(state, null, 2);
+    var fd = fs.openSync(STATE_TMP_PATH, 'w');
+    try {
+      fs.writeSync(fd, data);
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
     fs.renameSync(STATE_TMP_PATH, STATE_PATH);
   } catch (err) {
     var msg = err instanceof Error ? err.message : String(err);
@@ -371,6 +387,121 @@ function selectBestLesson(studentId, candidates, ontologyMap) {
   }
 
   return bestId;
+}
+
+/**
+ * Explain LMS selection for a student and candidates. Returns full breakdown for teachers.
+ *
+ * @param {string}   studentId
+ * @param {string[]} candidates  lessonIds (from theta)
+ * @param {Object.<string, { requires?: string[], provides?: string[] }>} [ontologyMap]
+ * @returns {{ selected: string|null, ability: object|null, breakdown: object }}
+ */
+function explainSelection(studentId, candidates, ontologyMap) {
+  if (!candidates || candidates.length === 0) {
+    return { selected: null, ability: getStudentAbility(studentId), breakdown: {} };
+  }
+
+  var topK = envConfig.topKCandidates;
+  var capped = candidates.length > topK ? candidates.slice(0, topK) : candidates;
+  var fullLessons = _state.embedding.lessons;
+  var filteredLessons = {};
+  var maxLes = envConfig.maxLessons;
+
+  for (var i = 0; i < capped.length; i++) {
+    var id = capped[i];
+    if (fullLessons[id]) {
+      filteredLessons[id] = fullLessons[id];
+    } else if (maxLes > 0 && Object.keys(fullLessons).length >= maxLes) {
+      // skip
+    } else {
+      embeddings.ensureLessonVector(_state, id);
+      filteredLessons[id] = _state.embedding.lessons[id];
+    }
+  }
+
+  var scoringEmbedding = Object.assign({}, _state.embedding, {
+    lessons:  filteredLessons,
+    students: Object.assign({}, _state.embedding.students)
+  });
+  var scoringState = Object.assign({}, _state, { embedding: scoringEmbedding });
+
+  var thetaSample = sampleThetaForScoring(scoringState);
+  var maxStu = envConfig.maxStudents;
+  var studentVec;
+  if (maxStu > 0 && !scoringState.embedding.students[studentId]) {
+    var nStu = Object.keys(_state.embedding.students).length;
+    studentVec = nStu >= maxStu ? math.zeros(scoringState.embedding.dim) : embeddings.ensureStudentVector(scoringState, studentId);
+  } else {
+    studentVec = embeddings.ensureStudentVector(scoringState, studentId);
+  }
+
+  var thompsonScores = {};
+  for (var ti = 0; ti < capped.length; ti++) {
+    var cid = capped[ti];
+    var lessonVec = embeddings.ensureLessonVector(scoringState, cid);
+    thompsonScores[cid] = math.dot(thetaSample, studentVec.concat(lessonVec));
+  }
+
+  var markovScores = {};
+  for (var mi = 0; mi < capped.length; mi++) {
+    markovScores[capped[mi]] = markov.scoreCandidate(_state, studentId, capped[mi]);
+  }
+
+  var pagerankScores = {};
+  try {
+    pagerankScores = pagerank.scoreCandidates(_state, studentId, capped, ontologyMap);
+  } catch (err) {
+    log.warn('PageRank scoring failed in explain', { error: err.message || String(err) });
+  }
+
+  var BIGRAM_WEIGHT = 0.10;
+  var DROPOUT_PENALTY_WEIGHT = 0.20;
+  var COOLDOWN_PENALTY_WEIGHT = 0.30;
+
+  var breakdown = {};
+  var bestId = null;
+  var bestScore = -Infinity;
+
+  for (var ci = 0; ci < capped.length; ci++) {
+    var lid = capped[ci];
+    var ts = thompsonScores[lid] || 0;
+    var ms = markovScores[lid] || {
+      transitionProb: 0, transitionQuality: 0,
+      bigramProb: 0, bigramQuality: 0,
+      dropoutPenalty: 0, cooldownPenalty: 0
+    };
+    var ps = pagerankScores[lid] || { combinedScore: 0 };
+
+    var firstOrderSignal = ms.transitionProb + ms.transitionQuality;
+    var bigramSignal = ms.bigramProb + ms.bigramQuality;
+
+    var composite = ts
+      + MARKOV_TRANSITION_WEIGHT * firstOrderSignal
+      + BIGRAM_WEIGHT * bigramSignal
+      + PAGERANK_WEIGHT * (ps.combinedScore || 0)
+      - DROPOUT_PENALTY_WEIGHT * (ms.dropoutPenalty || 0)
+      - COOLDOWN_PENALTY_WEIGHT * (ms.cooldownPenalty || 0);
+
+    breakdown[lid] = {
+      thompsonScore:     Math.round(ts * 1000) / 1000,
+      markov:            ms,
+      pagerank:          { combinedScore: ps.combinedScore != null ? Math.round(ps.combinedScore * 1000) / 1000 : 0 },
+      composite:         Math.round(composite * 1000) / 1000
+    };
+
+    if (composite > bestScore) {
+      bestScore = composite;
+      bestId = lid;
+    }
+  }
+
+  return {
+    selected:  bestId,
+    ability:   getStudentAbility(studentId),
+    breakdown: breakdown,
+    candidates: capped
+  };
 }
 
 /**
@@ -601,6 +732,7 @@ function getDropoutBottlenecks(minSample) {
 module.exports = {
   seedLessons:              seedLessons,
   selectBestLesson:         selectBestLesson,
+  explainSelection:         explainSelection,
   recordObservation:        recordObservation,
   applyObservation:         applyObservation,
   getStudentAbility:        getStudentAbility,

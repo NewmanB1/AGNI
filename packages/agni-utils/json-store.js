@@ -34,8 +34,9 @@ function loadJSON(filePath, fallback) {
 }
 
 /**
- * Atomically write a JSON file (write to .tmp then rename).
- * Creates parent directories as needed.
+ * Atomically write a JSON file (write to .tmp, fsync, then rename).
+ * Creates parent directories as needed. Uses fsync before rename to reduce
+ * corruption risk on SD cards and power-loss (e.g. Raspberry Pi).
  * @param {string} filePath
  * @param {*} data
  * @param {{ minified?: boolean }} [opts]
@@ -47,7 +48,13 @@ function saveJSON(filePath, data, opts) {
     ? JSON.stringify(data)
     : JSON.stringify(data, null, 2);
   const tmpPath = filePath + '.tmp.' + process.pid + '.' + Date.now();
-  fs.writeFileSync(tmpPath, json, 'utf8');
+  const fd = fs.openSync(tmpPath, 'w');
+  try {
+    fs.writeSync(fd, json, 0, 'utf8');
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
   fs.renameSync(tmpPath, filePath);
 }
 
@@ -91,7 +98,7 @@ async function loadJSONAsync(filePath, fallback) {
 }
 
 /**
- * Async version of saveJSON. Atomic write via .tmp + rename.
+ * Async version of saveJSON. Atomic write via .tmp + fsync + rename.
  * @param {string} filePath
  * @param {*} data
  * @param {{ minified?: boolean }} [opts]
@@ -104,7 +111,13 @@ async function saveJSONAsync(filePath, data, opts) {
     ? JSON.stringify(data)
     : JSON.stringify(data, null, 2);
   const tmpPath = filePath + '.tmp.' + process.pid + '.' + Date.now();
-  await fsp.writeFile(tmpPath, json, 'utf8');
+  const fd = await fsp.open(tmpPath, 'w');
+  try {
+    await fd.writeFile(json, { encoding: 'utf8' });
+    await fd.sync();
+  } finally {
+    await fd.close();
+  }
   await fsp.rename(tmpPath, filePath);
 }
 

@@ -1587,6 +1587,27 @@ describe('AUDIT-A1: yamlSchemaVersion passed through to IR', () => {
     process.env.AGNI_DATA_DIR = savedDataDir;
   });
 
+  it('computeLessonIRHash returns deterministic sha256 and sidecar includes lessonHash', () => {
+    const { buildLessonSidecar, computeLessonIRHash } = require('@ols/compiler/compiler/build-lesson-ir');
+    const ir = {
+      meta: { identifier: 'test', title: 'Test', language: 'en' },
+      ontology: { requires: [], provides: [{ skill: 'x', level: 1 }] },
+      steps: [{ id: 's1', content: 'Hello', htmlContent: '<p>Hello</p>' }],
+      inferredFeatures: { difficulty: 2, katexAssets: [], factoryManifest: [] },
+      metadata_source: 'inferred',
+      _devMode: false,
+      _compiledAt: '2026-01-01T00:00:00.000Z',
+      _schemaVersion: '1.8.0'
+    };
+    const hash1 = computeLessonIRHash(ir);
+    const hash2 = computeLessonIRHash(ir);
+    assert.equal(hash1, hash2, 'Hash must be deterministic');
+    assert.ok(hash1.startsWith('sha256:'), 'Hash must be sha256 prefixed');
+    assert.equal(hash1.length, 7 + 64, 'Hash must be sha256: + 64 hex chars');
+    const sidecar = buildLessonSidecar(ir);
+    assert.equal(sidecar.lessonHash, hash1, 'Sidecar must include lessonHash');
+  });
+
   it('meta.yamlSchemaVersion flows to _schemaVersion and sidecar', async () => {
     const { buildLessonIR, buildLessonSidecar } = require('@ols/compiler/compiler/build-lesson-ir');
     const { minimalLesson } = require('../helpers/fixtures');

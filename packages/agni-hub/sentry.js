@@ -48,6 +48,12 @@ const FLUSH_RETRY_ATTEMPTS = 3;
 const FLUSH_RETRY_DELAY_MS = 1000;
 const SHUTDOWN_TIMEOUT_MS = 10000;
 
+// Time-skew protection: Pi without RTC may boot at epoch (1970). Reject writes when year is invalid.
+const MIN_VALID_YEAR = parseInt(process.env.AGNI_SENTRY_MIN_VALID_YEAR || '2020', 10);
+function isSystemClockValid() {
+  return new Date().getFullYear() >= MIN_VALID_YEAR;
+}
+
 let _httpServer = null;
 let _shuttingDown = false;
 
@@ -85,6 +91,10 @@ function failedEventsFile() {
 
 function doFlushOnce(callback) {
   if (eventBuffer.length === 0) return callback(null);
+  if (!isSystemClockValid()) {
+    log.warn('System clock skewed (year < ' + MIN_VALID_YEAR + '), skipping event flush');
+    return callback(null);
+  }
   const toWrite = eventBuffer.join('\n') + '\n';
   eventBuffer = [];
   let attempts = 0;
@@ -212,6 +222,13 @@ function startReceiver() {
           const valid = raw.map(validateEvent).filter(Boolean);
 
           if (!valid.length) { res.writeHead(400); res.end(); return; }
+
+          if (!isSystemClockValid()) {
+            log.warn('System clock skewed (year < ' + MIN_VALID_YEAR + '), rejecting telemetry');
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'System clock invalid', minValidYear: MIN_VALID_YEAR }));
+            return;
+          }
 
           appendEvents(valid);
           _eventsSinceLastAnalysis += valid.length;

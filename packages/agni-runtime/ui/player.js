@@ -1520,6 +1520,8 @@
     depPromise
       .then(function () {
         S = global.AGNI_SHARED;
+        var loading = document.getElementById('loading');
+        if (loading) loading.textContent = (t('verifying') || 'Verifying\u2026');
         return verifyIntegrity();
       })
       .then(function (valid) {

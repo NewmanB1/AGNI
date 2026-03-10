@@ -19,7 +19,8 @@
   "maxStudents": 60,
   "maxLessons": 200,
   "topKCandidates": 500,
-  "capacityNote": "Memory budget assumes maxStudents and maxLessons. Runtime enforced: engine and accounts reject when at cap. topKCandidates caps bandit selection to reduce CPU on Pi.",
+  "compileConcurrency": 1,
+  "capacityNote": "Memory budget assumes maxStudents and maxLessons. Runtime enforced: engine and accounts reject when at cap. topKCandidates caps bandit selection to reduce CPU on Pi. compileConcurrency=1 for Pi 3 (1GB); use 2 for Pi 4 (2GB) to reduce compile queue wait.",
 
   "_path_notes": [
     "Paths above are absolute for dedicated Pi deployment. No fallback: if dataDir/serveDir/yamlDir do not exist, hub startup fails with ENOENT at first file access.",

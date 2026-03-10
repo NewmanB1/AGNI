@@ -45,6 +45,17 @@ Runs on the Raspberry Pi server. Node 14+.
 
 **Config:** `data/hub-config.pi.json` — Pi-optimized settings (see `scripts/check-hub-config-pi.js`).
 
+**Hub time (Pi without RTC):** Raspberry Pi has no hardware clock. On boot without network, the system clock may be epoch (1970). To avoid telemetry corruption (`AGNI_SENTRY_MIN_VALID_YEAR` rejects writes when year < 2020), set the clock via:
+- USB sync: include `syncTimestamp` in the inbound payload; run sync with `AGNI_SYNC_SET_CLOCK=1` to set `date` from the payload (Linux only; requires appropriate permissions).
+- Manual: `sudo date -s "2024-01-15 12:00:00"` after boot.
+- See `docs/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md` for time-skew details.
+
+**Sessions / JWT:** Auth tokens use `exp` timestamps. If the hub clock is wrong (e.g. epoch), tokens may be rejected or behave unexpectedly. Ensure the Pi clock is set before relying on session auth.
+
+**Memory (Pi):**
+- `npm run start:hub` sets `NODE_OPTIONS=--max-old-space-size=512` to cap V8 heap and prevent OOM during KaTeX/Markdown compilation.
+- `compileConcurrency`: 1 for Pi 3 (1GB RAM), 2 for Pi 4 (2GB). Set in hub-config.pi.json.
+
 ---
 
 ## 3. Node.js scripts and tools

@@ -158,6 +158,9 @@ export interface LessonSidecar {
   inferredFeatures: InferredFeatures;
   katexAssets: string[];
   factoryManifest: string[];
+
+  /** Deterministic SHA-256 hash of IR for caching, deduplication, federation. */
+  lessonHash?: string;
 }
 
 // Factory manifest entries are currently just filenames, but aliased here

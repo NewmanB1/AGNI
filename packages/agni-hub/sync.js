@@ -132,6 +132,7 @@ function buildPackage(events) {
     hubId: HUB_ID,
     packageId: 'pkg-' + Date.now() + '-' + crypto.randomBytes(3).toString('hex'),
     createdAt: new Date().toISOString(),
+    syncTimestamp: Date.now(),
     eventCount: events.length,
     cohortSize: pseudoIds.length,
     discovered_cohort: discoveredCohort,
@@ -269,6 +270,21 @@ function importInbound(filePath) {
     const dest = path.join(DATA_DIR, 'schedules.json');
     saveJSON(dest, incoming.schedules);
     log.info('Student schedules imported', { students: Object.keys(incoming.schedules.students).length });
+  }
+
+  // 5. Optional: set system clock from sync payload (Pi without RTC)
+  if (process.env.AGNI_SYNC_SET_CLOCK === '1' &&
+      typeof incoming.syncTimestamp === 'number' &&
+      process.platform === 'linux') {
+    try {
+      const dt = new Date(incoming.syncTimestamp);
+      const iso = dt.toISOString().replace('T', ' ').slice(0, 19);
+      const { execSync } = require('child_process');
+      execSync('date -s "' + iso + '"', { stdio: 'pipe' });
+      log.info('System clock set from sync payload', { syncTimestamp: incoming.syncTimestamp });
+    } catch (err) {
+      log.warn('Could not set system clock (AGNI_SYNC_SET_CLOCK=1)', { error: err.message });
+    }
   }
 
   return true;

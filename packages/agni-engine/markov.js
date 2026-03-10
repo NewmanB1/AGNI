@@ -28,7 +28,7 @@
 //   bigrams:     { "<json>[from1,from2]": { "<to>": { count, totalGain, avgGain } } }  (JSON key = unambiguous)
 //   studentHistory: { "<studentId>": [ lessonId, ... ] }
 //   dropouts:    { "<lessonId>": { count, totalContinuations } }  (totalReached = totalContinuations + count)
-//   cooldowns:   { "<studentId>": { "<lessonId>": { timestamp, gain } } }
+//   cooldowns:   { "<studentId>": { "<lessonId>": { observationIndex, gain } } }
 // }
 
 var MAX_HISTORY = 10;
@@ -54,6 +54,7 @@ function ensureMarkovState(state) {
   if (!state.markov.bigrams) state.markov.bigrams = {};
   if (!state.markov.dropouts) state.markov.dropouts = {};
   if (!state.markov.cooldowns) state.markov.cooldowns = {};
+  if (!state.markov._obsIndex) state.markov._obsIndex = {};
 }
 
 /**
@@ -125,25 +126,26 @@ function recordTransition(state, studentId, lessonId, gain) {
     updateEdge(state.markov.bigrams[bk], lessonId, gain);
   }
 
-  // ── Cooldown tracking ────────────────────────────────────────────────
+  // ── Cooldown tracking (sequence-based for time-skew resilience) ───────
+  var obsIndex = (state.markov._obsIndex[studentId] || 0) + 1;
+  state.markov._obsIndex[studentId] = obsIndex;
+
   if (!state.markov.cooldowns[studentId]) {
     state.markov.cooldowns[studentId] = {};
   }
   state.markov.cooldowns[studentId][lessonId] = {
-    timestamp: Date.now(),  // non-deterministic; tests using applyObservation will see varying timestamps
+    observationIndex: obsIndex,
     gain: gain
   };
 
-  // Evict old cooldowns (keep only the last COOLDOWN_WINDOW * 2 entries)
-  var cdKeys = Object.keys(state.markov.cooldowns[studentId]);
-  if (cdKeys.length > COOLDOWN_WINDOW * 2) {
-    var sorted = cdKeys.sort(function (a, b) {
-      return (state.markov.cooldowns[studentId][a].timestamp || 0) -
-             (state.markov.cooldowns[studentId][b].timestamp || 0);
-    });
-    for (var ci = 0; ci < sorted.length - COOLDOWN_WINDOW * 2; ci++) {
-      delete state.markov.cooldowns[studentId][sorted[ci]];
-    }
+  // Evict old cooldowns by sequence (keep entries within COOLDOWN_WINDOW * 2 observations)
+  var cd = state.markov.cooldowns[studentId];
+  var cdKeys = Object.keys(cd);
+  var cutoff = obsIndex - COOLDOWN_WINDOW * 2;
+  for (var ci = 0; ci < cdKeys.length; ci++) {
+    var ent = cd[cdKeys[ci]];
+    var idx = ent && typeof ent.observationIndex === 'number' ? ent.observationIndex : 0;
+    if (idx < cutoff) delete cd[cdKeys[ci]];
   }
 
   history.push(lessonId);

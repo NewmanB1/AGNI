@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const { createLogger } = require('@agni/utils/logger');
 const log = createLogger('compiler');
 
@@ -91,6 +92,41 @@ async function buildLessonIR(lessonData, options) {
   return ir;
 }
 
+/** Fields excluded from IR hash to keep it deterministic across builds. */
+var IR_HASH_EXCLUDE = ['_compiledAt', '_devMode', 'content_hash', 'parent_hash', 'uri', 'chain'];
+
+/**
+ * Canonicalize an object for hashing. Sorts keys, excludes volatile fields.
+ * @param {object} obj
+ * @param {string[]} excludeKeys
+ * @returns {string}
+ */
+function canonicalizeForHash(obj, excludeKeys) {
+  if (obj === null || obj === undefined) return 'null';
+  if (typeof obj !== 'object') return JSON.stringify(obj);
+  if (Array.isArray(obj)) {
+    return '[' + obj.map(function (v) { return canonicalizeForHash(v, excludeKeys); }).join(',') + ']';
+  }
+  var keys = Object.keys(obj)
+    .filter(function (k) { return excludeKeys.indexOf(k) < 0; })
+    .sort();
+  return '{' + keys.map(function (k) {
+    return JSON.stringify(k) + ':' + canonicalizeForHash(obj[k], excludeKeys);
+  }).join(',') + '}';
+}
+
+/**
+ * Compute a deterministic SHA-256 hash of the lesson IR for caching, deduplication,
+ * federation, and tamper detection. Excludes _compiledAt and other volatile fields.
+ * @param {object} ir
+ * @returns {string} sha256:hex (64 chars after prefix)
+ */
+function computeLessonIRHash(ir) {
+  var canonical = canonicalizeForHash(ir, IR_HASH_EXCLUDE);
+  var hash = crypto.createHash('sha256').update(canonical, 'utf8').digest('hex');
+  return 'sha256:' + hash;
+}
+
 function buildLessonSidecar(ir) {
   const meta     = ir.meta     || {};
   const ontology = ir.ontology || {};
@@ -127,11 +163,14 @@ function buildLessonSidecar(ir) {
 
     inferredFeatures: ir.inferredFeatures,
     katexAssets:      ir.inferredFeatures.katexAssets     || [],
-    factoryManifest:  ir.inferredFeatures.factoryManifest || []
+    factoryManifest:  ir.inferredFeatures.factoryManifest || [],
+
+    lessonHash:       computeLessonIRHash(ir)
   };
 }
 
 module.exports = {
   buildLessonIR,
-  buildLessonSidecar
+  buildLessonSidecar,
+  computeLessonIRHash
 };

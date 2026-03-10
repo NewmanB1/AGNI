@@ -39,6 +39,41 @@ function register(router, ctx) {
     return sendResponse(200, lmsEngine.getStatus());
   })));
 
+  router.get('/api/lms/explain', requireHubKey(requireLms(async (req, res, { qs, sendResponse }) => {
+    if (!qs.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
+    var candidates = qs.candidates
+      ? qs.candidates.split(',').map(function (s) { return s.trim(); }).filter(Boolean)
+      : null;
+    if (!candidates || candidates.length === 0) {
+      try {
+        var lessons = await ctx.getLessonsSortedByTheta(qs.pseudoId);
+        candidates = (lessons || []).map(function (l) { return l.lessonId || l.slug; }).filter(Boolean);
+      } catch (err) {
+        return sendResponse(500, { error: err && err.message ? err.message : String(err) });
+      }
+      if (candidates.length === 0) {
+        return sendResponse(200, {
+          pseudoId: qs.pseudoId,
+          selected: null,
+          ability: lmsEngine.getStudentAbility(qs.pseudoId),
+          breakdown: {},
+          candidates: [],
+          message: 'No eligible lessons for this student'
+        });
+      }
+    }
+    var result = lmsEngine.explainSelection(qs.pseudoId, candidates);
+    var out = {
+      pseudoId: qs.pseudoId,
+      selected: result.selected,
+      ability: result.ability,
+      breakdown: result.breakdown,
+      candidates: result.candidates
+    };
+    if (qs.lessonId) out.highlightLessonId = qs.lessonId;
+    return sendResponse(200, out);
+  })));
+
   router.post('/api/lms/federation/merge', adminOnly(requireLms((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, (remote) => {
       if (typeof remote.embeddingDim !== 'number' || !remote.mean || !remote.precision || typeof remote.sampleSize !== 'number') {

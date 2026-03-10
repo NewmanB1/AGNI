@@ -282,15 +282,14 @@ async function compileLesson(slug, options) {
   const loaded = loadYaml(slug);
   if (!loaded) return null;
 
-  // Disk cache: serve from serveDir/lessons/<slug>/index.html when compiled mtime >= yaml mtime
+  // Disk cache: serve from serveDir/lessons/<slug>/index.html when compiled mtime >= yaml mtime.
+  // Returns { ir, sidecar } only. Caller must _assembleHtml(ir, requestOpts) for device-specific signing.
   const disk = _tryReadDiskCache(slug, loaded.mtime);
   if (disk) {
     if (options.dev) log.debug('Disk cache hit', { slug });
-    const needsBinding = !!(options && options.deviceId);
-    const html = needsBinding ? _assembleHtml(disk.ir, options) : disk.html;
     if (!_lessonCache[slug]) {
       if (_cacheSize >= MAX_CACHE_ENTRIES) {
-        let oldestSlug = null, oldestTime = Infinity;
+        var oldestSlug = null, oldestTime = Infinity;
         Object.keys(_lessonCache).forEach(function (s) {
           if (_lessonCache[s].lastAccessed < oldestTime) {
             oldestTime = _lessonCache[s].lastAccessed;
@@ -304,18 +303,18 @@ async function compileLesson(slug, options) {
     } else {
       _lessonCache[slug].lastAccessed = Date.now();
     }
-    return { html: html, sidecar: disk.sidecar, lessonIR: disk.ir };
+    return { ir: disk.ir, sidecar: disk.sidecar, lessonIR: disk.ir };
   }
 
   const cached = _lessonCache[slug];
   if (cached && cached.mtime === loaded.mtime) {
     cached.lastAccessed = Date.now();
     if (options.dev) log.debug('Cache hit', { slug });
-    const html = _assembleHtml(cached.ir, options);
-    return { html: html, sidecar: cached.sidecar, lessonIR: cached.ir };
+    return { ir: cached.ir, sidecar: cached.sidecar, lessonIR: cached.ir };
   }
 
-  // In-flight guard: return existing compilation Promise if one is running
+  // In-flight guard: return existing compilation Promise. Result is { ir, sidecar }.
+  // Each waiter assembles HTML with its own request opts (JIT signing) — no device-binding race.
   if (_compilingNow[slug]) {
     if (options.dev) log.debug('Awaiting in-flight compile', { slug });
     return _compilingNow[slug];
@@ -323,7 +322,7 @@ async function compileLesson(slug, options) {
 
   function runCompile() {
     return _acquireCompileSlot().then(function () {
-      return _doCompile(slug, loaded, options);
+      return _doCompile(slug, loaded);
     }).finally(function () {
       _releaseCompileSlot();
     });
@@ -331,11 +330,10 @@ async function compileLesson(slug, options) {
   log.info('Compiling', { slug });
   _compilingNow[slug] = runCompile()
     .catch(function (err) {
-      const stale = _lessonCache[slug];
+      var stale = _lessonCache[slug];
       if (stale) {
         log.warn('Compilation failed, serving last successful cached artifact', { slug, error: err.message });
-        const html = _assembleHtml(stale.ir, options);
-        return { html: html, sidecar: stale.sidecar, lessonIR: stale.ir };
+        return { ir: stale.ir, sidecar: stale.sidecar, lessonIR: stale.ir };
       }
       throw err;
     })
@@ -347,17 +345,17 @@ async function compileLesson(slug, options) {
 
 /**
  * Internal: perform the actual compilation. Called only by compileLesson()
- * after the in-flight and mtime checks pass.
- * Validates with same OLS schema as CLI and author API before buildIR.
+ * after the in-flight and mtime checks pass. Returns { ir, sidecar } only.
+ * HTML assembly (with per-request signing) happens at response time.
  */
-async function _doCompile(slug, loaded, options) {
+async function _doCompile(slug, loaded) {
 
   const validation = lessonSchema.validateLessonData(loaded.lessonData);
   if (!validation.valid) {
     throw new Error('Lesson validation failed: ' + validation.errors.join('; '));
   }
 
-  const ir      = await buildLessonIR(loaded.lessonData, options);
+  const ir      = await buildLessonIR(loaded.lessonData, { dev: false });
   const sidecar = buildLessonSidecar(ir);
 
   // Build factory dependency list (same logic as html.js Step 6)
@@ -413,9 +411,8 @@ async function _doCompile(slug, loaded, options) {
   };
   if (!isUpdate) _cacheSize++;
 
-  const html = _assembleHtml(ir, options);
   _writeDiskCache(slug, _assembleHtml(ir, {}), ir);
-  return { html: html, sidecar: sidecar, lessonIR: ir };
+  return { ir: ir, sidecar: sidecar, lessonIR: ir };
 }
 
 /**
@@ -684,21 +681,22 @@ function handleRequest(req, res, options) {
     return true;
   }
 
-  // GET /lessons/:slug ΓÇö compile YAML on demand and stream lesson HTML
+  // GET /lessons/:slug — compile YAML on demand, JIT-assemble HTML with per-request signing
   const lessonMatch = urlPath.match(/^\/lessons\/([a-zA-Z0-9_\-/]+)$/);
   if (req.method === 'GET' && lessonMatch) {
     const slug = lessonMatch[1];
     _getRequestCompileOptions(req, options || {}).then(function (opts) {
-      return compileLesson(slug, opts);
-    }).then(function (result) {
-      if (!result) {
-        _sendText(req, res, 404, 'text/html; charset=utf-8',
-          '<h1>Lesson not found</h1><p>No YAML source found for: ' +
-          _escapeHtml(slug) + '</p>');
-        return;
-      }
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      _sendText(req, res, 200, 'text/html; charset=utf-8', result.html);
+      return compileLesson(slug, opts).then(function (result) {
+        if (!result) {
+          _sendText(req, res, 404, 'text/html; charset=utf-8',
+            '<h1>Lesson not found</h1><p>No YAML source found for: ' +
+            _escapeHtml(slug) + '</p>');
+          return;
+        }
+        const html = _assembleHtml(result.ir, opts);
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        _sendText(req, res, 200, 'text/html; charset=utf-8', html);
+      });
     }).catch(function (err) {
       log.error('Compile error', { slug, error: err.message });
       _sendText(req, res, 500, 'text/html; charset=utf-8',
