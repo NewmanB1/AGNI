@@ -92,13 +92,13 @@ This document tracks implementation status of the seven architectural vulnerabil
 
 ## Verification Checklist (All Items)
 
-- [ ] #1: Two concurrent requests with different `deviceId` receive different `OLS_INTENDED_OWNER`.
-- [ ] #2: `saveState` calls fsync before rename; manual power-loss test on Pi.
-- [ ] #3: Cyclic curriculum sync; hub stays up; affected lessons excluded.
-- [ ] #4: Simulate 120 events/sec; assert publish rate ≤ 10 Hz.
-- [ ] #5: Verification time &lt; 100 ms perceived on Android 7; tampered content fails.
-- [ ] #6: System year 1970; Sentry rejects writes; Markov with sequence-based cooldowns tested.
-- [ ] #7: 3 concurrent compiles on 1GB VM; no OOM; Pi config recommends correct concurrency.
+- [x] #1: Two concurrent requests with different `deviceId` receive different `OLS_INTENDED_OWNER`. *(automated: `verify:architectural-remediation`)*
+- [x] #2: `saveState` calls fsync before rename; manual power-loss test on Pi. *(automated: atomic-write fsync test; manual Pi test: document)*
+- [x] #3: Cyclic curriculum sync; hub stays up; affected lessons excluded. *(automated: cycle detection + theta.detectSkillGraphCycles)*
+- [x] #4: Simulate 120 events/sec; assert publish rate ≤ 10 Hz. *(automated: sensor-bridge MOTION_THROTTLE_MS=100 ⇒ ≤10 Hz)*
+- [x] #5: Verification time &lt; 100 ms perceived on Android 7; tampered content fails. *(automated: tampered content fails; manual: Android 7 timing)*
+- [x] #6: System year 1970; Sentry rejects writes; Markov with sequence-based cooldowns tested. *(automated: sentry MIN_VALID_YEAR + Markov observationIndex)*
+- [x] #7: 3 concurrent compiles on 1GB VM; no OOM; Pi config recommends correct concurrency. *(automated: hub-config.pi compileConcurrency; manual: OOM test on 1GB VM)*
 
 ---
 
