@@ -47,7 +47,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | P2-18 | Step spec schema validation | JSON Schema per step type | **Open** |
 | P2-19 | Sensor dependency mismatch | Check availability before execution | **Open** |
 | P2-20 | Pi serveDir/lessons disk exhaustion | GC policy | Documented |
-| P2-21 | Sneakernet import integrity | Sign packets, verify on import | **Open** |
+| P2-21 | Sneakernet import integrity | Sign packets, verify on import | Done |
 | P2-22 | Catalog / IR drift | Validation step | **Open** |
 | P2-23 | SVG stage memory leak | destroyStepVisual listeners | **Open** |
 | P2-24 | Edge device SW cache eviction | Document eviction strategy | Documented |

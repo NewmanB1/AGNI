@@ -209,6 +209,8 @@ This document extends the Phase 1 remediation (`ARCHITECTURAL-VULNERABILITIES-RE
 
 **Fix:** Sign sneakernet packets. Verify on import.
 
+**Status:** Done. Export produces signed envelope (v1) when AGNI_PRIVATE_KEY_PATH is set. Import verifies signature before merge; rejects tampered packets. Legacy unsigned packets require `--allow-unsigned`. See `scripts/sneakernet.js`, `@agni/utils/crypto` (verifyPayload).
+
 ---
 
 ### 22. Catalog / IR Drift

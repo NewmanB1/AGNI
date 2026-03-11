@@ -429,7 +429,7 @@ Theta handles prerequisite enforcement; the LMS engine handles selection within 
 `federation.ts` without sharing raw student data. Each hub improves from the
 collective without centralising sensitive learning logs.
 
-**State and sneakernet:** LMS state is migrated/repaired on load via `packages/agni-engine/migrations.js`; CLI supports `lms-repair`. Progress can be exported/imported as gzip+base64 with `scripts/sneakernet.js` (`npm run sneakernet -- export|import`).
+**State and sneakernet:** LMS state is migrated/repaired on load via `packages/agni-engine/migrations.js`; CLI supports `lms-repair`. Progress can be exported/imported with `scripts/sneakernet.js` (`npm run sneakernet -- export|import`). When `AGNI_PRIVATE_KEY_PATH` is set, packets are signed; import verifies before merge. Use `--allow-unsigned` for legacy packets.
 
 ### 7.3 The Skill Collapse Concept
 

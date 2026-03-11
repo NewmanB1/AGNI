@@ -192,5 +192,29 @@ function getPublicKeySpki(keyPath) {
   }
 }
 
+/**
+ * Verify an Ed25519 signature over a payload string.
+ * Used for sneakernet packets and manifest verification.
+ * @param  {string} payloadString   the signed payload (e.g. base64 gzip)
+ * @param  {string} signatureBase64 base64-encoded Ed25519 signature (64 bytes)
+ * @param  {string} publicKeySpki   base64-encoded SPKI public key
+ * @returns {boolean}
+ */
+function verifyPayload(payloadString, signatureBase64, publicKeySpki) {
+  if (typeof payloadString !== 'string' || typeof signatureBase64 !== 'string' || typeof publicKeySpki !== 'string') {
+    return false;
+  }
+  if (!signatureBase64 || !publicKeySpki) return false;
+  try {
+    const data = Buffer.from(payloadString, 'utf8');
+    const sigBuf = Buffer.from(signatureBase64, 'base64');
+    const pubBuf = Buffer.from(publicKeySpki, 'base64');
+    const keyObject = crypto.createPublicKey({ key: pubBuf, format: 'der', type: 'spki' });
+    return crypto.verify(null, data, keyObject, sigBuf);
+  } catch (err) {
+    log.warn('Verify payload failed: ' + (err && err.message));
+    return false;
+  }
+}
 
-module.exports = { signContent, signManifestPayload, canonicalJSON, getPublicKeySpki, computeSRI };
+module.exports = { signContent, signManifestPayload, canonicalJSON, getPublicKeySpki, computeSRI, verifyPayload };

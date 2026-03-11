@@ -6,7 +6,7 @@ const os = require('os');
 const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const crypto = require('crypto');
-const { computeSRI, signManifestPayload, canonicalJSON } = require('@agni/utils/crypto');
+const { computeSRI, signManifestPayload, canonicalJSON, verifyPayload, getPublicKeySpki } = require('@agni/utils/crypto');
 
 describe('computeSRI', () => {
   it('returns sha384-<base64> format', () => {
@@ -88,5 +88,43 @@ describe('signManifestPayload (hub-signed manifest P0 #5)', () => {
     const keyObject = crypto.createPublicKey({ key: fs.readFileSync(pemPath, 'utf8'), format: 'pem' });
     const data = Buffer.from(payload, 'utf8');
     assert.ok(crypto.verify(null, data, keyObject, sigBuf), 'signature should verify');
+  });
+});
+
+describe('verifyPayload (sneakernet/manifest verification)', () => {
+  let pemPath;
+
+  before(() => {
+    const { privateKey } = crypto.generateKeyPairSync('ed25519', {
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+      publicKeyEncoding: { type: 'spki', format: 'pem' }
+    });
+    pemPath = path.join(os.tmpdir(), 'agni-verify-test-' + Date.now() + '.pem');
+    fs.writeFileSync(pemPath, privateKey, 'utf8');
+  });
+
+  after(() => {
+    try { fs.unlinkSync(pemPath); } catch (e) { /* ignore */ }
+  });
+
+  it('verifies payload signed with signManifestPayload', () => {
+    const payload = 'H4sIAAAAAAAA/6tWykhUslJSUKrISdNLLErVUcpLLEpVslJQgnEVJOUX5eelK1VwAQB2qJHwEQAAAA==';
+    const sig = signManifestPayload(payload, pemPath);
+    const spki = getPublicKeySpki(pemPath);
+    assert.ok(verifyPayload(payload, sig, spki), 'valid signature should verify');
+  });
+
+  it('rejects tampered payload', () => {
+    const payload = 'original';
+    const sig = signManifestPayload(payload, pemPath);
+    const spki = getPublicKeySpki(pemPath);
+    assert.ok(verifyPayload(payload, sig, spki));
+    assert.ok(!verifyPayload('tampered', sig, spki), 'tampered payload should fail');
+  });
+
+  it('returns false for invalid inputs', () => {
+    assert.ok(!verifyPayload('', 'sig', 'key'));
+    assert.ok(!verifyPayload('p', '', 'key'));
+    assert.ok(!verifyPayload('p', 'sig', ''));
   });
 });
