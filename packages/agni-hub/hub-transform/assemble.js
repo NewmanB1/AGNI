@@ -24,6 +24,7 @@ const { resolveFactoryPath } = require('@agni/utils/runtimeManifest');
 function assembleHtml(ir, options) {
   const runtimeDir = require('@agni/runtime').RUNTIME_ROOT;
   const factoryLoaderJs = fs.readFileSync(resolveFactoryPath(runtimeDir, 'factory-loader.js'), 'utf8');
+  const stepRenderersJs = fs.readFileSync(resolveFactoryPath(runtimeDir, 'step-renderers.js'), 'utf8');
   const playerJs = fs.readFileSync(resolveFactoryPath(runtimeDir, 'player.js'), 'utf8');
   const styles = fs.readFileSync(path.join(runtimeDir, 'style.css'), 'utf8');
   const opts = options || {};
@@ -42,6 +43,7 @@ function assembleHtml(ir, options) {
     publicKeySpki:   publicKeySpki != null ? publicKeySpki : '',
     deviceId:        deviceId || '',
     factoryLoaderJs: factoryLoaderJs,
+    stepRenderersJs: stepRenderersJs,
     playerJs:        playerJs
   });
   return buildPwaShell(ir, styles, lessonScript, nonce);

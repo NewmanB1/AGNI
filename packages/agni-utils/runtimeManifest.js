@@ -11,6 +11,7 @@ const path = require('path');
 // Includes all runtime files; some (player, factory-loader, etc.) are loaded
 // by html builder or shared-runtime, not via getOrderedFactoryFiles.
 const FACTORY_PATH_MAP = {
+  'step-renderers.js':          'ui/step-renderers.js',
   'a11y.js':                    'ui/a11y.js',
   'narration.js':               'ui/narration.js',
   'player.js':                  'ui/player.js',

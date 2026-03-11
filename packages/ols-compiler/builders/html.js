@@ -50,6 +50,7 @@ async function buildHtml(lessonData, options) {
 
   const runtimeDir = require('@agni/runtime').RUNTIME_ROOT;
 
+  const stepRenderersJs = fs.readFileSync(resolveFactoryPath(runtimeDir, 'step-renderers.js'), 'utf8');
   const playerJs        = fs.readFileSync(resolveFactoryPath(runtimeDir, 'player.js'),         'utf8');
   const factoryLoaderJs = fs.readFileSync(resolveFactoryPath(runtimeDir, 'factory-loader.js'), 'utf8');
   const styles          = fs.readFileSync(path.join(runtimeDir, 'style.css'),          'utf8');
@@ -130,6 +131,7 @@ async function buildHtml(lessonData, options) {
     publicKeySpki:   publicKeySpki || '',
     deviceId:        options.deviceId || '',
     factoryLoaderJs: factoryLoaderJs,
+    stepRenderersJs: stepRenderersJs,
     playerJs:        playerJs
   });
   const cspMeta = buildCspMeta(nonce);

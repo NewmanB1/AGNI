@@ -8,6 +8,7 @@ function buildLessonScript(ir, options) {
   const publicKeySpki  = options.publicKeySpki != null ? options.publicKeySpki : '';
   const deviceId       = options.deviceId != null ? options.deviceId : '';
   const factoryLoaderJs = options.factoryLoaderJs || '';
+  const stepRenderersJs = options.stepRenderersJs || '';
   const playerJs        = options.playerJs || '';
 
   return [
@@ -22,6 +23,7 @@ function buildLessonScript(ir, options) {
     'window.OLS_PUBLIC_KEY     = ' + JSON.stringify(publicKeySpki) + ';',
     'window.OLS_INTENDED_OWNER = ' + JSON.stringify(deviceId) + ';',
     '',
+    stepRenderersJs ? '// step-renderers.js (quiz, fill-blank, matching, ordering, hardware_trigger)\n' + stepRenderersJs + '\n' : '',
     '// player.js',
     playerJs,
     '',
