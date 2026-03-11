@@ -2,10 +2,27 @@
  * Central type definitions for AGNI / OLS.
  * Canonical types package — used by JSDoc and TS-aware tooling.
  * No runtime impact.
+ *
+ * Schema-driven types (generated from schemas/*.schema.json) are in ./generated/.
+ * Regenerate with: npm run codegen:types
  */
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Lesson + IR types
+// Schema-generated types (do not edit generated/*.d.ts)
+// ──────────────────────────────────────────────────────────────────────────────
+
+export type { AGNIOpenLessonStandardV18 } from './generated/ols';
+export type { AGNIGovernancePolicy } from './generated/governance-policy';
+export type { OLSGraphWeightsDiscoveredCohortCognitionMap } from './generated/graph-weights';
+
+/** Validated OLS lesson YAML (schema-validated input). Use for compiler input. */
+export type OlsLessonInput = import('./generated/ols').AGNIOpenLessonStandardV18;
+
+/** Graph weights (sentry/theta). Generated from schemas/graph-weights.schema.json */
+export type GraphWeights = import('./generated/graph-weights').OLSGraphWeightsDiscoveredCohortCognitionMap;
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Lesson + IR types (hand-written; no schemas for IR/sidecar yet)
 // ──────────────────────────────────────────────────────────────────────────────
 
 export interface UTULabel {
@@ -330,18 +347,8 @@ export interface HubCompileResult {
 // Governance types
 // ──────────────────────────────────────────────────────────────────────────────
 
-export interface GovernancePolicy {
-  utuTargets?: Array<{ class: string; band: number }>;
-  allowedTeachingModes?: string[];
-  minDifficulty?: number;
-  maxDifficulty?: number;
-  requireUtu?: boolean;
-  requireTeachingMode?: boolean;
-  allowedProtocols?: number[];   // P1–P5; e.g. [1,2,3] for rigor
-  minProtocol?: number;
-  maxProtocol?: number;
-  failureModeHints?: boolean;
-}
+/** Policy for lesson compliance. Generated from schemas/governance-policy.schema.json */
+export type GovernancePolicy = import('./generated/governance-policy').AGNIGovernancePolicy;
 
 export interface ComplianceResult {
   status: 'ok' | 'warning' | 'fail';

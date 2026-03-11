@@ -78,7 +78,7 @@ This document describes the **reference implementation** direction for AGNI: a *
 | **Governance** | Policy schema + pure (policy, sidecar) to ComplianceResult | Done: governance-policy.schema.json; policy.js validates; compliance is pure |
 | **Theta** | Pure (index, graph, student) to ordered lessons | Done: computeLessonOrder, applyRecommendationOverride |
 | **LMS engine** | Pure (state, observation) to newState; persistence at edge | Done: applyObservation(state, observation); recordObservation = load then apply then save |
-| **Types** | Types aligned with schemas; optional codegen | Done: index.d.ts, LMSObservation; codegen:validate-schemas for schema load check |
+| **Types** | Types aligned with schemas; optional codegen | Done: index.d.ts, LMSObservation; codegen:validate-schemas; **schema-driven codegen** (codegen:types from ols, graph-weights, governance-policy schemas); GovernancePolicy, OlsLessonInput, GraphWeights from generated |
 | **Reference boundaries** | Document pure core vs edges | Done: see section 4.2 below |
 
 ---
@@ -114,6 +114,6 @@ When adding or changing behaviour, keep logic in the pure core and reserve edges
 ## 6. References
 
 - **Current schemas:** `schemas/ols.schema.json`, `schemas/graph_weights.schema.json`, **`schemas/governance-policy.schema.json`** (Phase 2)
-- **Types:** `src/types/index.d.ts` (today’s manual types; future: could be generated or kept in sync with schemas)
+- **Types:** `packages/types/` (schema-generated: `packages/types/generated/`) (today’s schema-generated for OLS, graph_weights, governance-policy; hand-written for IR, LMS)
 - **API contract:** `docs/api-contract.md` (external behaviour; could be schema/OpenAPI later)
 - **Sprint plan:** `docs/SPRINT-PLAN.md` — tracks all completed and planned sprints — section “Next sprints with an eye on the refactor” gives a phased order: Phase 1 (lock behaviour: D, E, H), Phase 2 (schema + pure pipelines: K compiler, L governance, M engine), Phase 3 (F, G, N). Use it when planning work that moves toward this vision.

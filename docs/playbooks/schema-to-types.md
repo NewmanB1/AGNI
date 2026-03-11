@@ -1,18 +1,21 @@
-# Schema-to-Types and Codegen (Optional)
+# Schema-to-Types and Codegen
 
-This playbook describes how to keep TypeScript types and runtime validators aligned with JSON schemas (OLS, graph_weights, governance policy). **Optional:** adopt when the team is ready to maintain codegen.
+This playbook describes how TypeScript types stay aligned with JSON schemas (OLS, graph_weights, governance policy). Schema-driven codegen is **implemented**.
 
 ---
 
 ## 1. Current State
 
 - **Schemas:** `schemas/ols.schema.json`, `schemas/graph_weights.schema.json`, `schemas/governance-policy.schema.json`
-- **Types:** `packages/types/index.d.ts` — hand-written types for IR, sidecar, LMS state, governance. Not generated from schemas.
-- **Validation:** Compiler and author API use Ajv with the OLS schema; governance policy is validated on load. No generated validators.
+- **Generated types:** `packages/types/generated/` — TypeScript interfaces generated from schemas via `json-schema-to-typescript`
+- **Hand-written types:** `packages/types/index.d.ts` — IR, sidecar, LMS state (no schemas yet). Re-exports generated types where applicable (e.g. `GovernancePolicy`, `OlsLessonInput`, `GraphWeights`).
+- **Validation:** Compiler and author API use Ajv with schemas at runtime. Types are for compile-time safety.
+
+**Hardware note:** Codegen runs at build/CI time only. No runtime impact on edge devices (Android Nougat) or Village Hub (Raspberry Pi).
 
 ---
 
-## 2. Validating Schemas (No Codegen)
+## 2. Validating Schemas
 
 To ensure schemas are valid JSON Schema and loadable by Ajv:
 
@@ -24,25 +27,24 @@ This compiles each schema with Ajv. If a schema is invalid or has unsupported ke
 
 ---
 
-## 3. Generating Types from Schemas (Optional)
+## 3. Generating Types from Schemas
 
-When you want **generated** TypeScript types so the implementation cannot drift from the spec:
+**Implemented.** To regenerate types after changing a schema:
 
-1. **Install a codegen tool**, e.g.:
-   ```bash
-   npm install -D json-schema-to-typescript
-   ```
+```bash
+npm run codegen:types
+```
 
-2. **Add a script** (e.g. `scripts/codegen-types.js`) that:
-   - Reads `schemas/ols.schema.json` (and optionally graph_weights, governance-policy)
-   - Calls the codegen library to produce TypeScript interfaces
-   - Writes to `packages/types/generated/ols.d.ts` (or similar)
+This writes to `packages/types/generated/`:
+- `ols.d.ts` — validated OLS lesson YAML (from `schemas/ols.schema.json`)
+- `graph-weights.d.ts` — graph weights (from `schemas/graph-weights.schema.json`)
+- `governance-policy.d.ts` — governance policy (from `schemas/governance-policy.schema.json`)
 
-3. **Wire into build:** e.g. `"codegen:types": "node scripts/codegen-types.js"` and run before `typecheck`. Then gradually replace hand-written types in `packages/types/index.d.ts` with re-exports from generated files.
+**You must run this and commit** when you change any of these schemas. CI runs `verify:codegen-sync` to ensure generated files stay in sync.
 
-4. **Caveats:**
-   - Complex schemas (oneOf, conditional, refs) may need hand-tuning or schema simplification.
-   - Keep generated files in `.gitignore` and regenerate in CI, or commit them and regenerate on schema change.
+**Caveats:**
+- Complex schemas (oneOf, conditional, refs) may need hand-tuning. The OLS schema uses oneOf and $ref; current codegen handles them.
+- Generated files are **committed** so offline devs and Pi deploys do not need to run codegen.
 
 ---
 
