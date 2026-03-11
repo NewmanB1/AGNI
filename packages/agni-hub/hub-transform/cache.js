@@ -6,29 +6,29 @@
  * DoS mitigation: LRU eviction, concurrency cap, 202/Retry-After on queue overflow.
  */
 
-var fs   = require('fs');
-var path = require('path');
+const fs   = require('fs');
+const path = require('path');
 
-var envConfig = require('@agni/utils/env-config');
-var buildLessonSidecar = require('@ols/compiler/compiler/build-lesson-ir').buildLessonSidecar;
-var createLogger = require('@agni/utils/logger').createLogger;
+const envConfig = require('@agni/utils/env-config');
+const buildLessonSidecar = require('@ols/compiler/compiler/build-lesson-ir').buildLessonSidecar;
+const createLogger = require('@agni/utils/logger').createLogger;
 
-var log = createLogger('hub-transform:cache');
-var SERVE_DIR = envConfig.serveDir;
+const log = createLogger('hub-transform:cache');
+const SERVE_DIR = envConfig.serveDir;
 
-var _lessonCache = {};
-var _cacheSize = 0;
-var MAX_CACHE_ENTRIES = parseInt(process.env.AGNI_CACHE_MAX || '100', 10);
-var MAX_CONCURRENT_COMPILES = parseInt(process.env.AGNI_COMPILE_CONCURRENCY || '3', 10);
-var _compileSlots = MAX_CONCURRENT_COMPILES;
-var _compileQueue = [];
-var _compilingNow = {};
-var RETRY_AFTER_SECONDS = parseInt(process.env.AGNI_COMPILE_RETRY_AFTER || '3', 10);
+const _lessonCache = {};
+let _cacheSize = 0;
+const MAX_CACHE_ENTRIES = parseInt(process.env.AGNI_CACHE_MAX || '100', 10);
+const MAX_CONCURRENT_COMPILES = parseInt(process.env.AGNI_COMPILE_CONCURRENCY || '3', 10);
+let _compileSlots = MAX_CONCURRENT_COMPILES;
+const _compileQueue = [];
+const _compilingNow = {};
+const RETRY_AFTER_SECONDS = parseInt(process.env.AGNI_COMPILE_RETRY_AFTER || '3', 10);
 
 function getDiskCachePaths(slug) {
-  var lessonsRoot = path.join(SERVE_DIR, 'lessons');
-  var lessonDir = path.join(lessonsRoot, slug);
-  var tmpDir = path.join(lessonsRoot, slug + '.tmp.' + process.pid + '.' + Date.now());
+  const lessonsRoot = path.join(SERVE_DIR, 'lessons');
+  const lessonDir = path.join(lessonsRoot, slug);
+  const tmpDir = path.join(lessonsRoot, slug + '.tmp.' + process.pid + '.' + Date.now());
   return {
     lessonDir: lessonDir,
     tmpDir: tmpDir,
@@ -39,34 +39,34 @@ function getDiskCachePaths(slug) {
 }
 
 function tryReadDiskCache(slug, yamlMtime) {
-  var paths = getDiskCachePaths(slug);
+  const paths = getDiskCachePaths(slug);
   try {
-    var htmlStat = fs.statSync(paths.htmlPath);
+    const htmlStat = fs.statSync(paths.htmlPath);
     if (htmlStat.mtimeMs < yamlMtime) return null;
-    var html = fs.readFileSync(paths.htmlPath, 'utf8');
-    var irRaw = fs.readFileSync(paths.fullIrPath, 'utf8');
-    var ir = JSON.parse(irRaw);
+    const html = fs.readFileSync(paths.htmlPath, 'utf8');
+    const irRaw = fs.readFileSync(paths.fullIrPath, 'utf8');
+    const ir = JSON.parse(irRaw);
     if (!ir || typeof ir !== 'object' || !ir.steps) return null;
-    var sidecar = buildLessonSidecar(ir);
+    const sidecar = buildLessonSidecar(ir);
     return { html: html, sidecar: sidecar, ir: ir };
-  } catch (e) {
+  } catch {
     return null;
   }
 }
 
 function writeDiskCache(slug, html, ir) {
-  var paths = getDiskCachePaths(slug);
+  const paths = getDiskCachePaths(slug);
   try {
     fs.mkdirSync(paths.tmpDir, { recursive: true });
-    var tmpHtml = path.join(paths.tmpDir, 'index.html');
-    var tmpIr = path.join(paths.tmpDir, 'index-ir.json');
-    var tmpFullIr = path.join(paths.tmpDir, 'index-ir-full.json');
+    const tmpHtml = path.join(paths.tmpDir, 'index.html');
+    const tmpIr = path.join(paths.tmpDir, 'index-ir.json');
+    const tmpFullIr = path.join(paths.tmpDir, 'index-ir-full.json');
     fs.writeFileSync(tmpHtml, html, 'utf8');
     fs.writeFileSync(tmpIr, JSON.stringify(buildLessonSidecar(ir), null, 0), 'utf8');
     fs.writeFileSync(tmpFullIr, JSON.stringify(ir, null, 0), 'utf8');
-    var fdHtml = fs.openSync(tmpHtml, 'r');
-    var fdIr = fs.openSync(tmpIr, 'r');
-    var fdFull = fs.openSync(tmpFullIr, 'r');
+    const fdHtml = fs.openSync(tmpHtml, 'r');
+    const fdIr = fs.openSync(tmpIr, 'r');
+    const fdFull = fs.openSync(tmpFullIr, 'r');
     fs.fsyncSync(fdHtml);
     fs.fsyncSync(fdIr);
     fs.fsyncSync(fdFull);
@@ -77,9 +77,9 @@ function writeDiskCache(slug, html, ir) {
       fs.rmSync(paths.lessonDir, { recursive: true });
     }
     fs.renameSync(paths.tmpDir, paths.lessonDir);
-    var lessonsRoot = path.dirname(paths.lessonDir);
+    const lessonsRoot = path.dirname(paths.lessonDir);
     try {
-      var parentFd = fs.openSync(lessonsRoot, 'r');
+      const parentFd = fs.openSync(lessonsRoot, 'r');
       try { fs.fsyncSync(parentFd); } finally { fs.closeSync(parentFd); }
     } catch (err) { log.warn('Parent directory fsync failed', { lessonsRoot: lessonsRoot, error: err.message }); }
   } catch (err) {
@@ -106,8 +106,8 @@ function wouldCompileBeQueued(slug) {
 }
 
 function evictOldest() {
-  var oldestSlug = null;
-  var oldestTime = Infinity;
+  let oldestSlug = null;
+  let oldestTime = Infinity;
   Object.keys(_lessonCache).forEach(function (s) {
     if (_lessonCache[s].lastAccessed < oldestTime) {
       oldestTime = _lessonCache[s].lastAccessed;

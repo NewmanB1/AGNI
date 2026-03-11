@@ -3,8 +3,7 @@
 const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const {
-  validateLesson, validateStep, validateThreshold, validateSvgSpec, validateGate,
-  VALID_FACTORIES, KNOWN_SENSORS
+  validateLesson, validateStep, validateThreshold, validateSvgSpec, validateGate
 } = require('@ols/schema/lesson-validator');
 
 // ── helpers ─────────────────────────────────────────────────────────────────

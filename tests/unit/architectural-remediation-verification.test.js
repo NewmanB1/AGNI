@@ -10,7 +10,7 @@
  * - #7: 3 concurrent compiles on 1GB VM — manual; run: NODE_OPTIONS=--max-old-space-size=512 ...
  */
 
-const { describe, it, before, after } = require('../helpers/test-api');
+const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
@@ -38,6 +38,27 @@ describe('architectural remediation #1: cache poisoning / device binding', funct
     assert.strictEqual(matchA[1], deviceA, 'A should match requested deviceId');
     assert.strictEqual(matchB[1], deviceB, 'B should match requested deviceId');
   });
+
+  it('concurrent assembleHtml with shared IR and different deviceIds yields different OLS_INTENDED_OWNER', async function () {
+    const assemble = require('@agni/hub/hub-transform/assemble');
+    const ir = { meta: { title: 'Test' }, steps: [], _compiledAt: new Date().toISOString() };
+    const deviceA = 'concurrent-alice-' + Date.now();
+    const deviceB = 'concurrent-bob-' + Date.now();
+    const opts = { dev: true };
+
+    const [htmlA, htmlB] = await Promise.all([
+      Promise.resolve(assemble.assembleHtml(ir, { ...opts, deviceId: deviceA })),
+      Promise.resolve(assemble.assembleHtml(ir, { ...opts, deviceId: deviceB }))
+    ]);
+
+    const matchA = htmlA.match(/OLS_INTENDED_OWNER\s*=\s*["']([^"']*)["']/);
+    const matchB = htmlB.match(/OLS_INTENDED_OWNER\s*=\s*["']([^"']*)["']/);
+    assert.ok(matchA, 'htmlA should contain OLS_INTENDED_OWNER');
+    assert.ok(matchB, 'htmlB should contain OLS_INTENDED_OWNER');
+    assert.notStrictEqual(matchA[1], matchB[1], 'concurrent assembly with different deviceIds must yield different OLS_INTENDED_OWNER');
+    assert.strictEqual(matchA[1], deviceA, 'A should match requested deviceId');
+    assert.strictEqual(matchB[1], deviceB, 'B should match requested deviceId');
+  });
 });
 
 // ── #2: saveState calls fsync before rename ───────────────────────────────────
@@ -57,7 +78,7 @@ describe('architectural remediation #2: fsync before rename', function () {
       assert.ok(fsyncCalled, 'atomic write must call fs.fsyncSync for SD card durability');
     } finally {
       fs.fsyncSync = originalFsyncSync;
-      try { fs.unlinkSync(targetPath); } catch (e) {}
+      try { fs.unlinkSync(targetPath); } catch { /* ignore */ }
     }
   });
 });
@@ -104,7 +125,7 @@ describe('architectural remediation #4: sensor event-loop exhaustion', function 
 describe('architectural remediation #5: integrity verification', function () {
   it('tampered LESSON_DATA fails signature verification', function () {
     const crypto = require('crypto');
-    const { signContent, canonicalJSON, getPublicKeySpki } = require('@agni/utils/crypto');
+    const { signContent, canonicalJSON } = require('@agni/utils/crypto');
     const tmpDir = path.join(os.tmpdir(), 'agni-integrity-' + Date.now());
     fs.mkdirSync(tmpDir, { recursive: true });
     const pemPath = path.join(tmpDir, 'key.pem');
@@ -132,7 +153,7 @@ describe('architectural remediation #5: integrity verification', function () {
     const tamperedStr = canonicalJSON({ meta: { title: 'Tampered' }, steps: [] });
     assert.strictEqual(verifySig(tamperedStr, signature), false, 'tampered content must fail verification');
 
-    try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (e) {}
+    try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* ignore */ }
   });
 });
 

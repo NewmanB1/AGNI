@@ -13,7 +13,7 @@ function tempDir() {
   return dir;
 }
 
-var TEST_HUB_KEY = 'test-hub-key-for-unit-tests';
+const TEST_HUB_KEY = 'test-hub-key-for-unit-tests';
 
 function request(port, method, urlPath, body, token) {
   return new Promise((resolve, reject) => {

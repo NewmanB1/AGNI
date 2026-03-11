@@ -64,7 +64,7 @@ describe('Frustration-Theta feedback loop integration', () => {
 
     process.env.AGNI_HUB_API_KEY = HUB_KEY;
     const theta = require('@agni/hub').theta;
-    try { await theta.rebuildLessonIndex(); } catch (_) { /* ok */ }
+    try { await theta.rebuildLessonIndex(); } catch { /* ok */ }
     server = theta.startApi(0);
     const port = await new Promise((r) => server.once('listening', () => r(server.address().port)));
     baseUrl = `http://127.0.0.1:${port}`;

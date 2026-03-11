@@ -32,12 +32,12 @@ function makeElement(tag) {
     textContent: '',
     innerHTML: '',
     get outerHTML() {
-      var tag = el._tag || 'div';
-      var attrs = Object.keys(el._attrs || {}).map(function (k) {
+      const tag = el._tag || 'div';
+      const attrs = Object.keys(el._attrs || {}).map(function (k) {
         return k + '="' + String(el._attrs[k]).replace(/"/g, '&quot;') + '"';
       }).join(' ');
-      var open = attrs ? '<' + tag + ' ' + attrs + '>' : '<' + tag + '>';
-      var inner = el.innerHTML || '';
+      const open = attrs ? '<' + tag + ' ' + attrs + '>' : '<' + tag + '>';
+      const inner = el.innerHTML || '';
       return open + inner + '</' + tag + '>';
     },
     style: {},
@@ -145,14 +145,14 @@ function setupGlobals() {
   globalThis.self = globalThis;
   globalThis.window = globalThis;
   globalThis.Image = function ImageStub() {
-    var _src = '';
-    var img = {
+    let _src = '';
+    const img = {
       onload: null,
       onerror: null,
       get src() { return _src; },
       set src(v) {
         _src = v;
-        var fn = img.onerror;
+        const fn = img.onerror;
         if (typeof fn === 'function') setImmediate(function () { fn(); });
       }
     };
@@ -164,11 +164,11 @@ function setupGlobals() {
 function teardownGlobals() {
   for (const key of Object.keys(_originals)) {
     if (_originals[key] === undefined) {
-      try { delete globalThis[key]; } catch (_) { /* non-configurable */ }
+      try { delete globalThis[key]; } catch { /* non-configurable */ }
     } else {
       try {
         globalThis[key] = _originals[key];
-      } catch (_) {
+      } catch {
         Object.defineProperty(globalThis, key, {
           value: _originals[key],
           writable: true,

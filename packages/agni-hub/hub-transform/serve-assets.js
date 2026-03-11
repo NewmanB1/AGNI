@@ -5,20 +5,20 @@
  * Response helpers (gzip, sendText, sendJson, sendFile) and asset path resolution.
  */
 
-var fs   = require('fs');
-var path = require('path');
-var zlib = require('zlib');
+const fs   = require('fs');
+const path = require('path');
+const zlib = require('zlib');
 
-var envConfig = require('@agni/utils/env-config');
-var { resolveFactoryPath } = require('@agni/utils/runtimeManifest');
+const envConfig = require('@agni/utils/env-config');
+const { resolveFactoryPath } = require('@agni/utils/runtimeManifest');
 
-var constants = require('./constants');
-var ALLOWED_FACTORY_FILES = constants.ALLOWED_FACTORY_FILES;
-var ALLOWED_KATEX_FILES   = constants.ALLOWED_KATEX_FILES;
-var MIME                  = constants.MIME;
+const constants = require('./constants');
+const ALLOWED_FACTORY_FILES = constants.ALLOWED_FACTORY_FILES;
+const ALLOWED_KATEX_FILES   = constants.ALLOWED_KATEX_FILES;
+const MIME                  = constants.MIME;
 
-var FACTORY_DIR = process.env.AGNI_FACTORY_DIR || require('@agni/runtime').RUNTIME_ROOT;
-var KATEX_DIR   = process.env.AGNI_KATEX_DIR || path.join(__dirname, '../../../data/katex-css');
+const FACTORY_DIR = process.env.AGNI_FACTORY_DIR || require('@agni/runtime').RUNTIME_ROOT;
+const KATEX_DIR   = process.env.AGNI_KATEX_DIR || path.join(__dirname, '../../../data/katex-css');
 
 function gzip(buf, cb) {
   zlib.gzip(buf, cb);
@@ -28,7 +28,7 @@ function gzip(buf, cb) {
  * @param {object} [opts] Optional { retryAfter } for 202 responses
  */
 function sendText(req, res, statusCode, contentType, body, opts) {
-  var buf = Buffer.from(body, 'utf8');
+  const buf = Buffer.from(body, 'utf8');
   res.setHeader('Access-Control-Allow-Origin', envConfig.corsOrigin || 'null');
   res.setHeader('Content-Type', contentType);
   if (opts && typeof opts.retryAfter === 'number') {

@@ -70,6 +70,7 @@ if (fs.existsSync(hubPwaDir)) {
 var files = runtimeFiles.concat(hubEdgeFiles);
 
 // ── Syntax patterns (always errors — cause parse failures) ──────────────────
+// Target: Chrome 51 (Android 7.0 Nougat). No ES6+ syntax.
 var SYNTAX_PATTERNS = [
   { re: /\b(let|const)\s/,         name: 'let/const' },
   { re: /=>/,                       name: 'arrow function' },
@@ -80,7 +81,10 @@ var SYNTAX_PATTERNS = [
   { re: /\{\s*\[/,                  name: 'computed property' },
   { re: /\bfunction\s*\*\s/,       name: 'generator function' },
   { re: /\basync\s+function/,      name: 'async function' },
-  { re: /\bawait\s/,               name: 'await keyword' }
+  { re: /\bawait\s/,               name: 'await keyword' },
+  { re: /\bcatch\s*\{/,            name: 'optional catch binding (ES2019)' },
+  { re: /\?\./,                     name: 'optional chaining (?.)' },
+  { re: /\?\?/,                    name: 'nullish coalescing (??)' }
 ];
 
 // ── API patterns NOT in Chrome 51 — errors unless polyfilled ────────────────

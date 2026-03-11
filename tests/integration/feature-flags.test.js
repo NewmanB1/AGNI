@@ -42,7 +42,6 @@ function makeRequest(method, baseUrl, urlPath, body, headers) {
 
 const get = (base, p, h) => makeRequest('GET', base, p, null, h);
 const put = (base, p, b, h) => makeRequest('PUT', base, p, b, h);
-const post = (base, p, b, h) => makeRequest('POST', base, p, b, h);
 
 describe('Feature flags integration', () => {
   let server, baseUrl, adminToken;
@@ -67,7 +66,7 @@ describe('Feature flags integration', () => {
     }
     const login = await accountsService.loginCreator({ email: 'admin@test.local', password: 'testpass123' });
     adminToken = login.token;
-    try { await theta.rebuildLessonIndex(); } catch (_) { /* ok */ }
+    try { await theta.rebuildLessonIndex(); } catch { /* ok */ }
     server = theta.startApi(0);
     const port = await new Promise((r) => server.once('listening', () => r(server.address().port)));
     baseUrl = `http://127.0.0.1:${port}`;

@@ -12,7 +12,7 @@ const { describe, it, before, after } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
-const { setupGlobals, teardownGlobals, makeElement, dom } = require('../helpers/browser-globals');
+const { setupGlobals, teardownGlobals, makeElement } = require('../helpers/browser-globals');
 
 const root = path.resolve(__dirname, '../..');
 const runtimeRoot = path.join(root, 'packages/agni-runtime');

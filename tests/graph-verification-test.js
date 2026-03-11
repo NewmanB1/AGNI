@@ -11,7 +11,7 @@ const fs   = require('fs');
 const path = require('path');
 const os   = require('os');
 
-const DATA_DIR = process.env.AGNI_DATA_DIR || path.join(__dirname, '../data');
+process.env.AGNI_DATA_DIR = process.env.AGNI_DATA_DIR || path.join(__dirname, '../data');
 
 // Lesson index: two lessons, one benefits from weaving mastery, one from farming.
 const LESSON_INDEX = [
@@ -110,7 +110,7 @@ async function runTest() {
     console.log('Graph verification test passed: Weaver first = loops, Farmer first = modulo.');
   } finally {
     process.env.AGNI_DATA_DIR = originalDataDir;
-    try { fs.rmSync(tmpDir, { recursive: true }); } catch (_) {}
+    try { fs.rmSync(tmpDir, { recursive: true }); } catch { /* ignore */ }
   }
 }
 

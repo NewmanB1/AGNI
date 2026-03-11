@@ -69,7 +69,7 @@ describe('migrateLMSState: preserves valid data', () => {
       embedding: { dim: 16, lr: 0.01, reg: 0.001, forgetting: 0.98, students: {}, lessons: {} },
       bandit: { featureDim: 32, A: [], b: new Array(32).fill(0), forgetting: 0.98, observationCount: 5 }
     };
-    const { state, migrated } = migrateLMSState(raw);
+    const { state } = migrateLMSState(raw);
     assert.equal(state.rasch.students.s1.ability, 2.5);
     assert.equal(state.rasch.students.s1.variance, 0.5);
   });

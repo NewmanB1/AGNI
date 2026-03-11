@@ -5,15 +5,15 @@
  * HTML assembly from IR: device binding (signing), PWA shell wrapper.
  */
 
-var fs   = require('fs');
-var path = require('path');
+const fs   = require('fs');
+const path = require('path');
 
-var { signContent, canonicalJSON, getPublicKeySpki } = require('@agni/utils/crypto');
-var generateNonce = require('@agni/utils/csp').generateNonce;
-var buildCspMeta  = require('@agni/utils/csp').buildCspMeta;
-var lessonAssembly = require('@ols/compiler/services/lesson-assembly');
-var _escapeHtml   = require('@agni/utils/io').escapeHtml;
-var { resolveFactoryPath } = require('@agni/utils/runtimeManifest');
+const { signContent, canonicalJSON, getPublicKeySpki } = require('@agni/utils/crypto');
+const generateNonce = require('@agni/utils/csp').generateNonce;
+const buildCspMeta  = require('@agni/utils/csp').buildCspMeta;
+const lessonAssembly = require('@ols/compiler/services/lesson-assembly');
+const _escapeHtml   = require('@agni/utils/io').escapeHtml;
+const { resolveFactoryPath } = require('@agni/utils/runtimeManifest');
 
 /**
  * Assemble HTML from cached IR with per-request signing (device binding).
@@ -22,22 +22,22 @@ var { resolveFactoryPath } = require('@agni/utils/runtimeManifest');
  * @returns {string}
  */
 function assembleHtml(ir, options) {
-  var runtimeDir = require('@agni/runtime').RUNTIME_ROOT;
-  var factoryLoaderJs = fs.readFileSync(resolveFactoryPath(runtimeDir, 'factory-loader.js'), 'utf8');
-  var playerJs = fs.readFileSync(resolveFactoryPath(runtimeDir, 'player.js'), 'utf8');
-  var styles = fs.readFileSync(path.join(runtimeDir, 'style.css'), 'utf8');
-  var opts = options || {};
-  var deviceId = opts.deviceId || null;
-  var privateKeyPath = opts.privateKey || null;
-  var publicKeySpki = opts.publicKeySpki;
+  const runtimeDir = require('@agni/runtime').RUNTIME_ROOT;
+  const factoryLoaderJs = fs.readFileSync(resolveFactoryPath(runtimeDir, 'factory-loader.js'), 'utf8');
+  const playerJs = fs.readFileSync(resolveFactoryPath(runtimeDir, 'player.js'), 'utf8');
+  const styles = fs.readFileSync(path.join(runtimeDir, 'style.css'), 'utf8');
+  const opts = options || {};
+  const deviceId = opts.deviceId || null;
+  const privateKeyPath = opts.privateKey || null;
+  let publicKeySpki = opts.publicKeySpki;
   if (publicKeySpki == null && privateKeyPath) publicKeySpki = getPublicKeySpki(privateKeyPath) || '';
-  var nonce = generateNonce();
-  var nonceBootstrap = 'window.AGNI_CSP_NONCE=' + JSON.stringify(nonce) + ';';
-  var signature = null;
+  const nonce = generateNonce();
+  const nonceBootstrap = 'window.AGNI_CSP_NONCE=' + JSON.stringify(nonce) + ';';
+  let signature = null;
   if (deviceId && privateKeyPath) {
     signature = signContent(canonicalJSON(ir), deviceId, privateKeyPath);
   }
-  var lessonScript = nonceBootstrap + '\n' + lessonAssembly.buildLessonScript(ir, {
+  const lessonScript = nonceBootstrap + '\n' + lessonAssembly.buildLessonScript(ir, {
     signature:       signature != null ? signature : '',
     publicKeySpki:   publicKeySpki != null ? publicKeySpki : '',
     deviceId:        deviceId || '',
@@ -51,10 +51,10 @@ function assembleHtml(ir, options) {
  * Wrap compiled lesson content in the PWA shell HTML.
  */
 function buildPwaShell(ir, styles, lessonScript, nonce) {
-  var lang    = _escapeHtml((ir.meta && ir.meta.language) || 'en');
-  var title   = _escapeHtml((ir.meta && ir.meta.title) || 'AGNI Lesson');
-  var cspMeta = buildCspMeta(nonce);
-  var nonceAttr = ' nonce="' + nonce + '"';
+  const lang    = _escapeHtml((ir.meta && ir.meta.language) || 'en');
+  const title   = _escapeHtml((ir.meta && ir.meta.title) || 'AGNI Lesson');
+  const cspMeta = buildCspMeta(nonce);
+  const nonceAttr = ' nonce="' + nonce + '"';
 
   return [
     '<!DOCTYPE html>',

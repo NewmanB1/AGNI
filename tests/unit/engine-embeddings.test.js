@@ -66,7 +66,6 @@ describe('ensureStudentVector', () => {
     const vec = ensureStudentVector(state, 'stu1');
     const stored = state.embedding.students.stu1.vector;
     assert.strictEqual(vec, stored);
-    const orig = vec[0];
     vec[0] = 999;
     assert.equal(state.embedding.students.stu1.vector[0], 999);
     const copy = ensureStudentVector(state, 'stu1').slice();

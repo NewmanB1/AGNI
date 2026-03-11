@@ -62,7 +62,8 @@ module.exports = [
       'no-var': 'off',
       'prefer-const': 'off',
       'no-control-regex': 'off',
-      'no-undef': 'off'
+      'no-undef': 'off',
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }]
     }
   },
   {
@@ -70,6 +71,17 @@ module.exports = [
     rules: {
       // no-undef:off prevents ref-tracking; MAX_LESSON_CACHE_ENTRIES is used (lessonLimit = ...).
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^MAX_LESSON_CACHE_ENTRIES$' }]
+    }
+  },
+  {
+    files: ['tests/**/*.js'],
+    languageOptions: {
+      globals: { ...globals.node, describe: 'readonly', it: 'readonly', before: 'readonly', after: 'readonly', beforeEach: 'readonly' }
+    },
+    rules: {
+      'no-empty': ['error', { allowEmptyCatch: true }],
+      'no-console': 'off',
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }]
     }
   }
 ];

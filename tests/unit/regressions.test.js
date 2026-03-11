@@ -137,7 +137,7 @@ describe('AUDIT-3: engine functions reject or clamp NaN/Infinity inputs', () => 
     let threw = false;
     try {
       embeddings.updateEmbedding(state, 's1', 'l1', NaN);
-    } catch (_e) {
+    } catch {
       threw = true;
     }
 
@@ -157,7 +157,7 @@ describe('AUDIT-3: engine functions reject or clamp NaN/Infinity inputs', () => 
     let threw = false;
     try {
       thompson.updateBandit(state, 's1', 'l1', NaN);
-    } catch (_e) {
+    } catch {
       threw = true;
     }
 
@@ -172,7 +172,6 @@ describe('AUDIT-3: engine functions reject or clamp NaN/Infinity inputs', () => 
     seedProbes(state, [['p1', 0, 'math']]);
 
     rasch.updateAbility(state, 's1', [{ probeId: 'p1', correct: true }]);
-    const abilityBefore = state.rasch.students['s1'].ability;
 
     rasch.updateAbility(state, 's1', [{ probeId: 'p1', correct: 'yes' }]);
     const abilityAfter = state.rasch.students['s1'].ability;
@@ -191,7 +190,7 @@ describe('AUDIT-3: engine functions reject or clamp NaN/Infinity inputs', () => 
     let threw = false;
     try {
       embeddings.updateEmbedding(state, 's1', 'l1', Infinity);
-    } catch (_e) {
+    } catch {
       threw = true;
     }
 
@@ -272,12 +271,11 @@ describe('AUDIT-6: requireHubKey fails closed when key is not configured', () =>
       delete require.cache[require.resolve('../../packages/agni-hub/context/auth')];
       const { requireHubKey } = require('../../packages/agni-hub/context/auth');
       let responseCode = null;
-      let responseBody = null;
       const handler = requireHubKey(function () { responseCode = 200; });
       handler(
         { headers: {} },
         {},
-        { qs: {}, sendResponse: function (code, body) { responseCode = code; responseBody = body; } }
+        { qs: {}, sendResponse: function (code) { responseCode = code; } }
       );
       assert.equal(responseCode, 503, 'requireHubKey should return 503 when key is not configured, got ' + responseCode);
     } finally {
@@ -319,27 +317,27 @@ describe('AUDIT-INVARIANT: embeddings Bug 1 — updateEmbedding uses pre-update 
     const state = createState({ dim: 2 });
     embeddings.ensureStudentVector(state, 's1');
     embeddings.ensureLessonVector(state, 'l1');
-    var z = state.embedding.students.s1.vector.slice();
-    var w = state.embedding.lessons.l1.vector.slice();
-    var gamma = state.embedding.forgetting;
-    var lr = state.embedding.lr;
-    var reg = state.embedding.reg;
-    var gain = 0.8;
-    var MAG_CAP = 2;
-    var MAX_DELTA = 0.5;
+    const z = state.embedding.students.s1.vector.slice();
+    const w = state.embedding.lessons.l1.vector.slice();
+    const gamma = state.embedding.forgetting;
+    const lr = state.embedding.lr;
+    const reg = state.embedding.reg;
+    const gain = 0.8;
+    const MAG_CAP = 2;
+    const MAX_DELTA = 0.5;
 
     embeddings.updateEmbedding(state, 's1', 'l1', gain);
 
-    var z1 = state.embedding.students.s1.vector;
-    var w1 = state.embedding.lessons.l1.vector;
-    var err = gain - math.dot(z, w);
-    for (var k = 0; k < z.length; k++) {
-      var rawZk = gamma * z[k] + lr * (err * w[k] - reg * z[k]);
-      var rawWk = gamma * w[k] + lr * (err * z[k] - reg * w[k]);
-      var dZ = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, rawZk - z[k]));
-      var dW = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, rawWk - w[k]));
-      var expectedZk = Math.max(-MAG_CAP, Math.min(MAG_CAP, z[k] + dZ));
-      var expectedWk = Math.max(-MAG_CAP, Math.min(MAG_CAP, w[k] + dW));
+    const z1 = state.embedding.students.s1.vector;
+    const w1 = state.embedding.lessons.l1.vector;
+    const err = gain - math.dot(z, w);
+    for (let k = 0; k < z.length; k++) {
+      const rawZk = gamma * z[k] + lr * (err * w[k] - reg * z[k]);
+      const rawWk = gamma * w[k] + lr * (err * z[k] - reg * w[k]);
+      const dZ = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, rawZk - z[k]));
+      const dW = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, rawWk - w[k]));
+      const expectedZk = Math.max(-MAG_CAP, Math.min(MAG_CAP, z[k] + dZ));
+      const expectedWk = Math.max(-MAG_CAP, Math.min(MAG_CAP, w[k] + dW));
       assert.ok(Math.abs(z1[k] - expectedZk) < 1e-9, 'z[' + k + '] must match update rule (gradient clip + cap)');
       assert.ok(Math.abs(w1[k] - expectedWk) < 1e-9, 'w[' + k + '] must match update rule (gradient clip + cap)');
     }
@@ -355,15 +353,15 @@ describe('AUDIT-INVARIANT: embeddings Bug 2 — MAG_CAP and gradient clipping pr
     const state = createState({ dim: 4 });
     embeddings.ensureStudentVector(state, 's1');
     embeddings.ensureLessonVector(state, 'l1');
-    for (var i = 0; i < 200; i++) {
+    for (let i = 0; i < 200; i++) {
       embeddings.updateEmbedding(state, 's1', 'l1', 5.0);
     }
-    var z = state.embedding.students.s1.vector;
-    var w = state.embedding.lessons.l1.vector;
-    var maxZ = Math.max.apply(null, z.map(function (v) { return Math.abs(v); }));
-    var maxW = Math.max.apply(null, w.map(function (v) { return Math.abs(v); }));
+    const z = state.embedding.students.s1.vector;
+    const w = state.embedding.lessons.l1.vector;
+    const maxZ = Math.max.apply(null, z.map(function (v) { return Math.abs(v); }));
+    const maxW = Math.max.apply(null, w.map(function (v) { return Math.abs(v); }));
     assert.ok(maxZ <= 2 && maxW <= 2, 'components must not exceed MAG_CAP=2');
-    var dotZW = math.dot(z, w);
+    const dotZW = math.dot(z, w);
     assert.ok(Math.abs(dotZW) < 50, 'dot(z,w) must stay bounded; old cap=10 gave dot~800 and oscillation');
   });
 });
@@ -403,8 +401,8 @@ describe('AUDIT-INVARIANT: embeddings Bug 3 — reject corrupted vectors and ove
     // Inject Inf to cause overflow in newZk/newWk
     state.embedding.students.s1.vector[0] = 1e308;
     state.embedding.lessons.l1.vector[0] = 1e308;
-    var zBefore = state.embedding.students.s1.vector.slice();
-    var wBefore = state.embedding.lessons.l1.vector.slice();
+    const zBefore = state.embedding.students.s1.vector.slice();
+    const wBefore = state.embedding.lessons.l1.vector.slice();
 
     assert.throws(
       () => embeddings.updateEmbedding(state, 's1', 'l1', 0.5),
@@ -554,11 +552,11 @@ describe('AUDIT-13: embedding updates are magnitude-capped', () => {
     const state = createState({ dim: 4 });
     embeddings.ensureStudentVector(state, 's1');
     embeddings.ensureLessonVector(state, 'l1');
-    for (var i = 0; i < 100; i++) {
+    for (let i = 0; i < 100; i++) {
       embeddings.updateEmbedding(state, 's1', 'l1', 1000);
     }
-    var vec = state.embedding.students['s1'].vector;
-    var maxMag = Math.max.apply(null, vec.map(function (v) { return Math.abs(v); }));
+    const vec = state.embedding.students['s1'].vector;
+    const maxMag = Math.max.apply(null, vec.map(function (v) { return Math.abs(v); }));
     assert.ok(maxMag <= 2, 'Vector magnitude should be capped at 2 (Bug 2), got ' + maxMag);
   });
 });
@@ -578,13 +576,13 @@ describe('AUDIT-14: sampleTheta gracefully handles near-singular A', () => {
     embeddings.ensureLessonVector(state, 'l1');
     thompson.ensureBanditInitialized(state);
     // Make A singular by zeroing the matrix
-    for (var i = 0; i < state.bandit.A.length; i++) {
-      for (var j = 0; j < state.bandit.A[i].length; j++) {
+    for (let i = 0; i < state.bandit.A.length; i++) {
+      for (let j = 0; j < state.bandit.A[i].length; j++) {
         state.bandit.A[i][j] = 0;
       }
     }
     // This should not throw — pass eligibleLessonIds to avoid cold-start early return
-    var result = thompson.selectLesson(state, 's1', { eligibleLessonIds: ['l1'] });
+    const result = thompson.selectLesson(state, 's1', { eligibleLessonIds: ['l1'] });
     // selectLesson returns a lessonId or null, not a crash
     assert.equal(typeof result === 'string' || result === null, true);
   });
@@ -607,13 +605,13 @@ describe('AUDIT-INVARIANT: thompson Bug 3 — fallback returns zero vector, not 
     thompson.ensureBanditInitialized(state);
     state.bandit.b = [100, 200, 300, 400];
     // A = -I: fails cholesky; A + JITTER_LIGHT and A + JITTER still have negative diag
-    var n = 4;
-    for (var i = 0; i < n; i++) {
-      for (var j = 0; j < n; j++) {
+    const n = 4;
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
         state.bandit.A[i][j] = i === j ? -1 : 0;
       }
     }
-    var theta = thompson.sampleTheta(state);
+    const theta = thompson.sampleTheta(state);
     assert.deepEqual(theta, [0, 0, 0, 0], 'fallback must return zero vector, not b');
     assert.ok(math.dot(theta, [1, 1, 1, 1]) === 0, 'dot with zero vector must be 0');
   });
@@ -629,8 +627,8 @@ describe('AUDIT-INVARIANT: thompson Bug 4 — selectLesson(readOnly) does not mu
     embeddings.ensureStudentVector(state, 's1');
     embeddings.ensureLessonVector(state, 'l1');
     thompson.ensureBanditInitialized(state);
-    var studentKeysBefore = Object.keys(state.embedding.students).length;
-    var lessonKeysBefore = Object.keys(state.embedding.lessons).length;
+    const studentKeysBefore = Object.keys(state.embedding.students).length;
+    const lessonKeysBefore = Object.keys(state.embedding.lessons).length;
     thompson.selectLesson(state, 's1', { readOnly: true, eligibleLessonIds: ['l1'] });
     assert.equal(Object.keys(state.embedding.students).length, studentKeysBefore);
     assert.equal(Object.keys(state.embedding.lessons).length, lessonKeysBefore);
@@ -661,7 +659,7 @@ describe('AUDIT-INVARIANT: thompson Bug 5 — selectLesson respects eligibleLess
     thompson.ensureBanditInitialized(state);
 
     // Only l2 is eligible — must select l2, never l1 or l3
-    var result = thompson.selectLesson(state, 's1', { eligibleLessonIds: ['l2'] });
+    const result = thompson.selectLesson(state, 's1', { eligibleLessonIds: ['l2'] });
     assert.strictEqual(result, 'l2', 'must select from eligible set only');
   });
 
@@ -671,7 +669,7 @@ describe('AUDIT-INVARIANT: thompson Bug 5 — selectLesson respects eligibleLess
     embeddings.ensureLessonVector(state, 'l1');
     thompson.ensureBanditInitialized(state);
 
-    var result = thompson.selectLesson(state, 's1', { eligibleLessonIds: [] });
+    const result = thompson.selectLesson(state, 's1', { eligibleLessonIds: [] });
     assert.strictEqual(result, null, 'empty eligible set must return null');
   });
 });
@@ -688,7 +686,7 @@ describe('AUDIT-INVARIANT: thompson Bug 11 — selectLesson cold-start warns and
     thompson.ensureBanditInitialized(state);
     assert.equal(state.bandit.observationCount, 0);
 
-    var result = thompson.selectLesson(state, 's1');
+    const result = thompson.selectLesson(state, 's1');
     assert.strictEqual(result, null);
   });
 });
@@ -706,8 +704,8 @@ describe('AUDIT-INVARIANT: thompson Bug 6 — updateBandit rejects overflow atom
 
     // Inject Inf into A so gamma*A + outerXX overflows
     state.bandit.A[0][0] = Infinity;
-    var Abefore = state.bandit.A.map(function (r) { return r.slice(); });
-    var bbefore = state.bandit.b.slice();
+    const Abefore = state.bandit.A.map(function (r) { return r.slice(); });
+    const bbefore = state.bandit.b.slice();
 
     assert.throws(
       () => thompson.updateBandit(state, 's1', 'l1', 0.5),
@@ -737,7 +735,7 @@ describe('AUDIT-INVARIANT: thompson Bug 6 — updateBandit rejects overflow atom
     thompson.ensureBanditInitialized(state);
 
     state.bandit.b[0] = Infinity;
-    var bbefore = state.bandit.b.slice();
+    const bbefore = state.bandit.b.slice();
 
     assert.throws(
       () => thompson.updateBandit(state, 's1', 'l1', 0.5),
@@ -771,7 +769,6 @@ describe('AUDIT-INVARIANT: thompson Bug 8 — ensureBanditInitialized rejects ja
 describe('AUDIT-15: sampleTheta jitter does not mutate state.bandit.A', () => {
   const thompson = require('@agni/engine/thompson');
   const embeddings = require('@agni/engine/embeddings');
-  const math = require('@agni/engine/math');
   const { createState } = require('../helpers/engine-state');
 
   it('state.bandit.A is unchanged after jitter retry path', () => {
@@ -781,21 +778,21 @@ describe('AUDIT-15: sampleTheta jitter does not mutate state.bandit.A', () => {
     thompson.ensureBanditInitialized(state);
 
     // Make A nearly singular so the first invertSPD fails and jitter fires
-    var n = state.bandit.A.length;
-    for (var i = 0; i < n; i++) {
-      for (var j = 0; j < n; j++) {
+    const n = state.bandit.A.length;
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
         state.bandit.A[i][j] = 0;
       }
     }
 
     // Deep-copy A before sampleTheta
-    var Abefore = state.bandit.A.map(function (row) { return row.slice(); });
+    const Abefore = state.bandit.A.map(function (row) { return row.slice(); });
 
     // sampleTheta may succeed via jitter or fall back to mean — either way A must not change
     thompson.selectLesson(state, 's1', { eligibleLessonIds: ['l1'] });
 
-    for (var r = 0; r < n; r++) {
-      for (var c = 0; c < n; c++) {
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
         assert.equal(
           state.bandit.A[r][c], Abefore[r][c],
           'state.bandit.A[' + r + '][' + c + '] was mutated by jitter retry'
@@ -827,7 +824,7 @@ describe('AUDIT-16: addMat rejects dimension mismatch', () => {
   });
 
   it('accepts matching dimensions', () => {
-    var result = math.addMat([[1, 2], [3, 4]], [[5, 6], [7, 8]]);
+    const result = math.addMat([[1, 2], [3, 4]], [[5, 6], [7, 8]]);
     assert.deepEqual(result, [[6, 8], [10, 12]]);
   });
 });
@@ -840,8 +837,8 @@ describe('AUDIT-17: SM-2 ease factor is capped at 3.0', () => {
   const { updateSchedule } = require('@agni/engine/sm2');
 
   it('ease factor never exceeds 3.0 even with perfect quality', () => {
-    var schedule = { interval: 1, easeFactor: 2.9, repetition: 5 };
-    for (var i = 0; i < 50; i++) {
+    let schedule = { interval: 1, easeFactor: 2.9, repetition: 5 };
+    for (let i = 0; i < 50; i++) {
       schedule = updateSchedule(schedule, 5);
     }
     assert.ok(schedule.easeFactor <= 3.0,
@@ -849,8 +846,8 @@ describe('AUDIT-17: SM-2 ease factor is capped at 3.0', () => {
   });
 
   it('ease factor reaches 3.0 from repeated perfect quality', () => {
-    var schedule = { interval: 1, easeFactor: 2.5, repetition: 0 };
-    for (var i = 0; i < 100; i++) {
+    let schedule = { interval: 1, easeFactor: 2.5, repetition: 0 };
+    for (let i = 0; i < 100; i++) {
       schedule = updateSchedule(schedule, 5);
     }
     assert.equal(schedule.easeFactor, 3.0,
@@ -867,8 +864,8 @@ describe('AUDIT-18: polyfills.js defines repeat before padStart', () => {
     const fs = require('fs');
     const polyfillPath = require.resolve('@agni/runtime/polyfills');
     const src = fs.readFileSync(polyfillPath, 'utf8');
-    var repeatIdx = src.indexOf('String.prototype.repeat');
-    var padStartIdx = src.indexOf('String.prototype.padStart');
+    const repeatIdx = src.indexOf('String.prototype.repeat');
+    const padStartIdx = src.indexOf('String.prototype.padStart');
     assert.ok(repeatIdx !== -1, 'repeat polyfill not found');
     assert.ok(padStartIdx !== -1, 'padStart polyfill not found');
     assert.ok(repeatIdx < padStartIdx,
@@ -903,14 +900,14 @@ describe('AUDIT-20: file-lock MAX_RETRIES * interval exceeds STALE_TIMEOUT', () 
     const path = require('path');
     const lockPath = path.join(__dirname, '../../packages/agni-utils/file-lock.js');
     const lockSrc = fs.readFileSync(lockPath, 'utf8');
-    var staleMatch = lockSrc.match(/STALE_TIMEOUT_MS\s*=\s*(\d+)/);
-    var retryMatch = lockSrc.match(/RETRY_INTERVAL_MS\s*=\s*(\d+)/);
-    var maxMatch = lockSrc.match(/MAX_RETRIES\s*=\s*(\d+)/);
+    const staleMatch = lockSrc.match(/STALE_TIMEOUT_MS\s*=\s*(\d+)/);
+    const retryMatch = lockSrc.match(/RETRY_INTERVAL_MS\s*=\s*(\d+)/);
+    const maxMatch = lockSrc.match(/MAX_RETRIES\s*=\s*(\d+)/);
     assert.ok(staleMatch && retryMatch && maxMatch, 'Could not parse lock constants');
-    var stale = parseInt(staleMatch[1], 10);
-    var interval = parseInt(retryMatch[1], 10);
-    var maxRetries = parseInt(maxMatch[1], 10);
-    var totalRetryMs = maxRetries * interval;
+    const stale = parseInt(staleMatch[1], 10);
+    const interval = parseInt(retryMatch[1], 10);
+    const maxRetries = parseInt(maxMatch[1], 10);
+    const totalRetryMs = maxRetries * interval;
     assert.ok(totalRetryMs > stale,
       'MAX_RETRIES * RETRY_INTERVAL_MS (' + totalRetryMs + 'ms) must exceed STALE_TIMEOUT_MS (' + stale + 'ms)');
   });
@@ -921,22 +918,22 @@ describe('AUDIT-20: file-lock MAX_RETRIES * interval exceeds STALE_TIMEOUT', () 
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('AUDIT-21: governance routes reject unauthenticated requests', () => {
-  var server, port, dataDir;
-  var EXT_TEST_HUB_KEY = 'test-hub-key-gov-' + Date.now();
+  let server, port, dataDir;
+  const EXT_TEST_HUB_KEY = 'test-hub-key-gov-' + Date.now();
 
   before(async () => {
-    var pathMod = require('path');
-    var fsMod = require('fs');
-    var osMod = require('os');
+    const pathMod = require('path');
+    const fsMod = require('fs');
+    const osMod = require('os');
     dataDir = pathMod.join(osMod.tmpdir(), 'agni-gov-auth-test-' + Date.now());
     fsMod.mkdirSync(dataDir, { recursive: true });
     process.env.AGNI_DATA_DIR = dataDir;
     process.env.AGNI_SERVE_DIR = pathMod.join(dataDir, 'serve');
     process.env.AGNI_HUB_API_KEY = EXT_TEST_HUB_KEY;
 
-    var rootNorm = pathMod.resolve(__dirname, '../..').replace(/\\/g, '/');
+    const rootNorm = pathMod.resolve(__dirname, '../..').replace(/\\/g, '/');
     Object.keys(require.cache).forEach(function (key) {
-      var norm = key.replace(/\\/g, '/');
+      const norm = key.replace(/\\/g, '/');
       if (norm.startsWith(rootNorm) && !norm.includes('node_modules')) {
         delete require.cache[key];
       }
@@ -947,7 +944,7 @@ describe('AUDIT-21: governance routes reject unauthenticated requests', () => {
     fsMod.writeFileSync(pathMod.join(dataDir, 'lesson-index.json'), JSON.stringify([]));
     fsMod.writeFileSync(pathMod.join(dataDir, 'approved-catalog.json'), JSON.stringify({ lessonIds: [] }));
 
-    var theta = require('@agni/hub').theta;
+    const theta = require('@agni/hub').theta;
     server = theta.startApi(0);
     await new Promise(function (resolve) { setTimeout(resolve, 200); });
     port = server.address().port;
@@ -955,7 +952,7 @@ describe('AUDIT-21: governance routes reject unauthenticated requests', () => {
 
   after(() => {
     if (server) server.close();
-    var fsMod = require('fs');
+    const fsMod = require('fs');
     fsMod.rmSync(dataDir, { recursive: true, force: true });
     delete process.env.AGNI_DATA_DIR;
     delete process.env.AGNI_SERVE_DIR;
@@ -967,11 +964,10 @@ describe('AUDIT-21: governance routes reject unauthenticated requests', () => {
   });
 
   function rawRequest(method, urlPath) {
-    var http = require('http');
+    const http = require('http');
     return new Promise(function (resolve, reject) {
-      var req = http.request({ hostname: '127.0.0.1', port: port, path: urlPath, method: method }, function (res) {
-        var data = '';
-        res.on('data', function (chunk) { data += chunk; });
+      const req = http.request({ hostname: '127.0.0.1', port: port, path: urlPath, method: method }, function (res) {
+        res.on('data', function () { /* consume */ });
         res.on('end', function () { resolve({ status: res.statusCode }); });
       });
       req.on('error', reject);
@@ -980,17 +976,17 @@ describe('AUDIT-21: governance routes reject unauthenticated requests', () => {
   }
 
   it('GET /api/governance/report returns 401 without auth', async () => {
-    var res = await rawRequest('GET', '/api/governance/report');
+    const res = await rawRequest('GET', '/api/governance/report');
     assert.equal(res.status, 401);
   });
 
   it('GET /api/governance/policy returns 401 without auth', async () => {
-    var res = await rawRequest('GET', '/api/governance/policy');
+    const res = await rawRequest('GET', '/api/governance/policy');
     assert.equal(res.status, 401);
   });
 
   it('GET /api/governance/catalog returns 401 without auth', async () => {
-    var res = await rawRequest('GET', '/api/governance/catalog');
+    const res = await rawRequest('GET', '/api/governance/catalog');
     assert.equal(res.status, 401);
   });
 });
@@ -1070,7 +1066,7 @@ describe('C1-XSS: shared-runtime.js ON_ATTR_RE handles unquoted values', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('C1-ENTITY: shared.js sanitizeHtml strips entity-encoded javascript: URIs', () => {
-  var sharedPath = require.resolve('../../packages/agni-hub/pwa/shared.js');
+  const sharedPath = require.resolve('../../packages/agni-hub/pwa/shared.js');
   delete require.cache[sharedPath];
   const { sanitizeHtml } = require('../../packages/agni-hub/pwa/shared.js');
 
@@ -1681,7 +1677,7 @@ describe('AUDIT-D1: seedLesson clamps difficulty to [1,5]', () => {
 
   after(() => {
     process.env.AGNI_DATA_DIR = origDataDir;
-    try { fs.rmSync(TMP_DIR, { recursive: true, force: true }); } catch (_) {}
+    try { fs.rmSync(TMP_DIR, { recursive: true, force: true }); } catch { /* ignore */ }
   });
 
   it('does not throw when difficulty is NaN; seedLessons completes and probe has finite difficulty', async () => {

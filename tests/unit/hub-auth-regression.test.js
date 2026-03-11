@@ -13,7 +13,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-var HUB_KEY = 'hub-auth-regression-test-key';
+const HUB_KEY = 'hub-auth-regression-test-key';
 
 function request(port, method, urlPath, body, opts) {
   opts = opts || {};
@@ -73,7 +73,7 @@ describe('Hub auth regression', () => {
 
   after(() => {
     if (server) server.close();
-    try { fs.rmSync(dataDir, { recursive: true, force: true }); } catch (_) {}
+    try { fs.rmSync(dataDir, { recursive: true, force: true }); } catch { /* ignore */ }
     delete process.env.AGNI_DATA_DIR;
     delete process.env.AGNI_SERVE_DIR;
     delete process.env.AGNI_YAML_DIR;

@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it, before, after } = require('../helpers/test-api');
+const { describe, it, after } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const { tempDir } = require('../helpers/fixtures');
 

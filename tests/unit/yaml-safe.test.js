@@ -4,8 +4,9 @@
  * Regression: YAML security mitigations (anchor/alias DoS, max size, JSON_SCHEMA).
  */
 const assert = require('assert');
-const { safeYamlLoad, parseLessonFromString } = require('@ols/compiler/services/compiler');
 const yaml = require('js-yaml');
+const { describe, it } = require('../helpers/test-api');
+const { parseLessonFromString } = require('@ols/compiler/services/compiler');
 
 describe('safeYamlLoad / YAML security', function () {
   it('parses valid lesson YAML', function () {

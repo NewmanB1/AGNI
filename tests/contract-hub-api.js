@@ -300,18 +300,16 @@ async function run(baseUrl, bearer) {
 }
 
 async function main() {
-  const path = require('path');
   process.env.AGNI_HUB_API_KEY = CONTRACT_HUB_KEY;
   const theta = require('@agni/hub').theta;
 
-  let server;
   try {
     await theta.rebuildLessonIndex();
   } catch (e) {
     console.warn('[contract-hub-api] rebuildLessonIndex failed (no serve dir?):', e.message);
   }
 
-  server = theta.startApi(0);
+  const server = theta.startApi(0);
   const port = new Promise((resolve) => {
     server.once('listening', () => resolve(server.address().port));
   });

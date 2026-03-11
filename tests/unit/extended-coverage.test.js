@@ -132,7 +132,7 @@ describe('json-store error paths', () => {
 const { createLogger } = require('@agni/utils/logger');
 
 describe('logger structured output', () => {
-  it('logger.info outputs valid JSON to stdout', (t) => {
+  it('logger.info outputs valid JSON to stdout', (_t) => {
     const original = console.log;
     let captured = null;
     console.log = (line) => { captured = line; };
@@ -209,7 +209,7 @@ describe('rasch edge cases', () => {
   it('handles NaN correct input gracefully', () => {
     const state = createState();
     seedProbes(state, [['p1', 0, 'math']]);
-    const delta = rasch.updateAbility(state, 'stu', [{ probeId: 'p1', correct: NaN }]);
+    rasch.updateAbility(state, 'stu', [{ probeId: 'p1', correct: NaN }]);
     assert.ok(state.rasch.students['stu'] !== undefined, 'Student should be initialized');
     const ability = state.rasch.students['stu'].ability;
     assert.ok(Number.isFinite(ability), 'Ability should be finite even with NaN input');
@@ -284,7 +284,7 @@ describe('migrations edge cases', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 // 5. Extended API integration tests
 // ═══════════════════════════════════════════════════════════════════════════
-var EXT_TEST_HUB_KEY = 'test-hub-key-for-ext-tests';
+const EXT_TEST_HUB_KEY = 'test-hub-key-for-ext-tests';
 
 function apiRequest(port, method, urlPath, body, token) {
   return new Promise((resolve, reject) => {
@@ -322,9 +322,9 @@ describe('Extended API tests', () => {
 
     // Clear ALL project modules from cache so env-config picks up the new DATA_DIR.
     // The theta module tree is large — partial clearing leaves stale references.
-    var rootNorm = path.resolve(__dirname, '../..').replace(/\\/g, '/');
+    const rootNorm = path.resolve(__dirname, '../..').replace(/\\/g, '/');
     Object.keys(require.cache).forEach(function (key) {
-      var norm = key.replace(/\\/g, '/');
+      const norm = key.replace(/\\/g, '/');
       if (norm.startsWith(rootNorm) && !norm.includes('node_modules')) {
         delete require.cache[key];
       }

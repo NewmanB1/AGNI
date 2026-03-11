@@ -17,32 +17,32 @@
 'use strict';
 /// <reference types="node" />
 
-var path = require('path');
-var http = require('http');
-var { loadHubConfig } = require('@agni/utils/hub-config');
-var createLogger = require('@agni/utils/logger').createLogger;
+const path = require('path');
+const http = require('http');
+const { loadHubConfig } = require('@agni/utils/hub-config');
+const createLogger = require('@agni/utils/logger').createLogger;
 
 loadHubConfig(path.join(__dirname, '../../data'));
 
-var log = createLogger('hub-transform');
-var routeHandlers = require('./hub-transform/route-handlers');
-var compile = require('./hub-transform/compile');
-var envConfig = require('@agni/utils/env-config');
+const log = createLogger('hub-transform');
+const routeHandlers = require('./hub-transform/route-handlers');
+const compile = require('./hub-transform/compile');
+const envConfig = require('@agni/utils/env-config');
 
-var SERVE_PORT = envConfig.servePort;
+const SERVE_PORT = envConfig.servePort;
 
 function handleRequest(req, res, options) {
   return routeHandlers.handleRequest(req, res, options);
 }
 
 function attachRoutes(server, options) {
-  var listeners = server.listeners('request').slice();
+  const listeners = server.listeners('request').slice();
   server.removeAllListeners('request');
 
   server.on('request', function (req, res) {
-    var handled = handleRequest(req, res, options || {});
+    const handled = handleRequest(req, res, options || {});
     if (!handled) {
-      for (var i = 0; i < listeners.length; i++) {
+      for (let i = 0; i < listeners.length; i++) {
         listeners[i].call(server, req, res);
       }
     }
@@ -52,8 +52,8 @@ function attachRoutes(server, options) {
 }
 
 function startStandalone(options) {
-  var server = http.createServer(function (req, res) {
-    var handled = handleRequest(req, res, options || {});
+  const server = http.createServer(function (req, res) {
+    const handled = handleRequest(req, res, options || {});
     if (!handled) {
       res.writeHead(404);
       res.end(JSON.stringify({ error: 'Not found' }));

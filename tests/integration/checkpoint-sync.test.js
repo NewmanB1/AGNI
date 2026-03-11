@@ -61,7 +61,7 @@ describe('Checkpoint sync integration', () => {
   before(async () => {
     process.env.AGNI_HUB_API_KEY = HUB_KEY;
     const theta = require('@agni/hub').theta;
-    try { await theta.rebuildLessonIndex(); } catch (_) { /* no serve dir */ }
+    try { await theta.rebuildLessonIndex(); } catch { /* no serve dir */ }
     server = theta.startApi(0);
     const port = await new Promise((r) => server.once('listening', () => r(server.address().port)));
     baseUrl = `http://127.0.0.1:${port}`;

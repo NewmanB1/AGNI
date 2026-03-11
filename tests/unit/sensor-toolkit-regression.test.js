@@ -12,8 +12,8 @@ const { setupGlobals, teardownGlobals } = require('../helpers/browser-globals');
 // ── Orientation threshold evaluator (STK-1.2) ─────────────────────────────────
 
 describe('STK-1.2: orientation threshold evaluator supports orientation == flat', () => {
-  var S;
-  var compile;
+  let S;
+  let compile;
 
   before(function () {
     setupGlobals();
@@ -33,29 +33,29 @@ describe('STK-1.2: orientation threshold evaluator supports orientation == flat'
   });
 
   it('evaluates orientation == flat when orientation is flat', () => {
-    var evaluate = compile('orientation == flat');
-    var m = new Map();
+    const evaluate = compile('orientation == flat');
+    const m = new Map();
     m.set('orientation', 'flat');
     assert.equal(evaluate(m), true);
   });
 
   it('evaluates orientation == flat as false when orientation is portrait', () => {
-    var evaluate = compile('orientation == flat');
-    var m = new Map();
+    const evaluate = compile('orientation == flat');
+    const m = new Map();
     m.set('orientation', 'portrait');
     assert.equal(evaluate(m), false);
   });
 
   it('evaluates orientation == portrait when orientation is portrait', () => {
-    var evaluate = compile('orientation == portrait');
-    var m = new Map();
+    const evaluate = compile('orientation == portrait');
+    const m = new Map();
     m.set('orientation', 'portrait');
     assert.equal(evaluate(m), true);
   });
 
   it('evaluates orientation != flat when orientation is landscape', () => {
-    var evaluate = compile('orientation != flat');
-    var m = new Map();
+    const evaluate = compile('orientation != flat');
+    const m = new Map();
     m.set('orientation', 'landscape');
     assert.equal(evaluate(m), true);
   });

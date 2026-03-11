@@ -4,7 +4,7 @@ const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const { ensureBanditInitialized, selectLesson, updateBandit } = require('@agni/engine/thompson');
 const { ensureLessonVector } = require('@agni/engine/embeddings');
-const { createState, seedProbes } = require('../helpers/engine-state');
+const { createState } = require('../helpers/engine-state');
 
 describe('ensureBanditInitialized', () => {
   it('initializes A and b when null', () => {

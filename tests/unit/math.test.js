@@ -59,7 +59,7 @@ describe('dot', () => {
   });
 
   it('throws for sparse or non-finite vector', () => {
-    const sparse = [1, , 3];
+    const sparse = [1, , 3]; // eslint-disable-line no-sparse-arrays -- intentional
     assert.throws(() => math.dot(sparse, [1, 2, 3]), /non-finite/);
     assert.throws(() => math.dot([1, 2, 3], sparse), /non-finite/);
   });
@@ -89,7 +89,7 @@ describe('addVec', () => {
   });
 
   it('throws for sparse or non-finite vector', () => {
-    const sparse = [1, , 3];
+    const sparse = [1, , 3]; // eslint-disable-line no-sparse-arrays -- intentional
     assert.throws(() => math.addVec(sparse, [1, 2, 3]), /non-finite/);
     assert.throws(() => math.addVec([1, 2, 3], sparse), /non-finite/);
   });
@@ -145,7 +145,7 @@ describe('outer', () => {
   });
 
   it('throws for sparse or non-finite vector', () => {
-    const sparse = [1, , 3];  // hole at index 1
+    const sparse = [1, , 3]; // eslint-disable-line no-sparse-arrays -- hole at index 1
     assert.throws(() => math.outer(sparse, [1, 2, 3]), /non-finite/);
     assert.throws(() => math.outer([1, 2], sparse), /non-finite/);
   });
@@ -198,7 +198,7 @@ describe('scaleMat', () => {
   });
 
   it('throws for sparse/jagged or non-finite matrix', () => {
-    const sparseRow = [1, , 3];
+    const sparseRow = [1, , 3]; // eslint-disable-line no-sparse-arrays -- intentional
     assert.throws(() => math.scaleMat([sparseRow, [4, 5, 6]], 2), /non-finite/);
     assert.throws(() => math.scaleMat([[1, 2], [3, 4, 5]], 2), /jagged/);
   });
@@ -407,7 +407,7 @@ describe('invertSPD', () => {
   it('inverts a 2x2 SPD matrix', () => {
     const A = [[4, 2], [2, 3]];
     const Ainv = math.invertSPD(A);
-    const product = A.map((row, i) =>
+    const product = A.map((row) =>
       row.map((_, j) => math.dot(row, Ainv.map(r => r[j])))
     );
     assert.ok(matApproxEqual(product, math.identity(2), 1e-8));
@@ -423,7 +423,7 @@ describe('invertSPD', () => {
     const A = [[2, -1, 0], [-1, 2, -1], [0, -1, 2]];
     const Ainv = math.invertSPD(A);
     const I = math.identity(3);
-    const product = A.map((row, i) =>
+    const product = A.map((row) =>
       row.map((_, j) => math.dot(row, Ainv.map(r => r[j])))
     );
     assert.ok(matApproxEqual(product, I, 1e-8), 'A * A^-1 should equal I');

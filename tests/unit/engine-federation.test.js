@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const math = require('@agni/engine/math');
 const { ensureBanditInitialized, updateBandit } = require('@agni/engine/thompson');
 const { ensureLessonVector } = require('@agni/engine/embeddings');
-const { addSyncId, contentHash, getBanditSummary, mergeBanditSummaries } = require('@agni/engine/federation');
+const { addSyncId, getBanditSummary, mergeBanditSummaries } = require('@agni/engine/federation');
 const { createState } = require('../helpers/engine-state');
 
 const EPSILON = 1e-6;
@@ -104,7 +104,7 @@ describe('getBanditSummary', () => {
 
 describe('mergeBanditSummaries', () => {
   function makeSummary(featureDim, sampleSize) {
-    var embeddingDim = featureDim / 2;  // featureDim === embeddingDim * 2
+    const embeddingDim = featureDim / 2;  // featureDim === embeddingDim * 2
     return {
       embeddingDim,
       mean: Array(featureDim).fill(0).map((_, i) => i * 0.1),

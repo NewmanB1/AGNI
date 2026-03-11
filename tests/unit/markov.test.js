@@ -4,7 +4,7 @@ const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 
 const markov = require('@agni/engine/markov');
-const { createState, seedProbes } = require('../helpers/engine-state');
+const { createState } = require('../helpers/engine-state');
 
 describe('markov — ensureMarkovState', function () {
   it('initializes markov sub-state if missing', function () {

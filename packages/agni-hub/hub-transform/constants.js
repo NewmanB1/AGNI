@@ -7,7 +7,7 @@
  */
 
 // Whitelist prevents directory traversal. Only files in this set can be served from /factories/.
-var ALLOWED_FACTORY_FILES = new Set([
+const ALLOWED_FACTORY_FILES = new Set([
   'polyfills.js',
   'binary-utils.js',
   'shared-runtime.js',
@@ -31,7 +31,7 @@ var ALLOWED_FACTORY_FILES = new Set([
   'edge-theta.js'
 ]);
 
-var ALLOWED_KATEX_FILES = new Set([
+const ALLOWED_KATEX_FILES = new Set([
   'katex-core.css',
   'katex-fonts.css',
   'katex-symbols-algebra.css',
@@ -41,7 +41,7 @@ var ALLOWED_KATEX_FILES = new Set([
   'katex-symbols-sets.css'
 ]);
 
-var MIME = {
+const MIME = {
   '.js':   'application/javascript; charset=utf-8',
   '.css':  'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
@@ -49,14 +49,14 @@ var MIME = {
 };
 
 /** Base factory deps order: polyfills before shared-runtime (required for load order). */
-var BASE_FACTORY_DEPS = [
+const BASE_FACTORY_DEPS = [
   { file: 'polyfills.js' },
   { file: 'binary-utils.js' },
   { file: 'shared-runtime.js' },
   { file: 'integrity.js' }
 ];
 
-var RUNTIME_VERSION = require('../../../package.json').version || '0.0.0';
+const RUNTIME_VERSION = require('../../../package.json').version || '0.0.0';
 
 module.exports = {
   ALLOWED_FACTORY_FILES:  ALLOWED_FACTORY_FILES,

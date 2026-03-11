@@ -1,4 +1,4 @@
-/* eslint-disable */
+ 
 // @ts-nocheck — PWA browser bootstrap; uses LESSON_DATA, AGNI_LOADER globals
 // shell-boot.js ΓÇö PWA shell bootstrap
 // Loaded as external script to satisfy CSP script-src 'self'.

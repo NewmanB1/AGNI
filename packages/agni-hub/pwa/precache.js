@@ -64,7 +64,8 @@
               storedAt: Date.now()
             };
             localStorage.setItem('agni_theta_snapshot', JSON.stringify(payload));
-          } catch (_store) { void 0; }
+          // eslint-disable-next-line no-unused-vars
+          } catch (_e) { void 0; }
         }
         if (!Array.isArray(data.precacheSlugs) || data.precacheSlugs.length === 0) return;
         var requested = 0;
