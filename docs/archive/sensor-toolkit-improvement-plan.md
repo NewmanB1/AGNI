@@ -1,3 +1,5 @@
+> **Issues moved to:** [UNRESOLVED-ISSUES-MASTER-LIST.md](../UNRESOLVED-ISSUES-MASTER-LIST.md)
+
 # Sensor Toolkit Improvement Plan
 
 Implementation plan for sensor toolkit enhancements, with guards against regression and proof of completion. Aligns with hardware targets (Android 7.0 Nougat, Chrome 51 WebView, ES5). See [RUN-ENVIRONMENTS.md](../RUN-ENVIRONMENTS.md) and `.cursor/rules/sprint-verification.md`.

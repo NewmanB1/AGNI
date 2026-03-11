@@ -1,13 +1,5 @@
 'use strict';
 
-const generateLesson = (function () {
-  try {
-    return require('@agni/lesson-gen').generateLesson;
-  } catch {
-    return null;
-  }
-})();
-
 function register(router, ctx) {
   const { authorService, accountsService, handleJsonBody,
           adminOnly, authOnly } = ctx;
@@ -60,20 +52,6 @@ function register(router, ctx) {
       const result = await authorService.previewForAuthor(parsed.lessonData);
       if (result.error) return sendResponse(400, { error: result.error });
       sendResponse(200, { ir: result.ir, sidecar: result.sidecar });
-    });
-  }));
-
-  router.post('/api/author/generate', authOnly((req, res, { sendResponse }) => {
-    handleJsonBody(req, sendResponse, async (body) => {
-      const skillDescription = body?.skillDescription;
-      const archetypeId = body?.archetypeId;
-      const result = await authorService.generateForAuthor({
-        skillDescription,
-        archetypeId,
-        generateLesson: generateLesson || undefined
-      });
-      if (!result.ok) return sendResponse(400, { ok: false, error: result.error });
-      sendResponse(200, { ok: true, lesson: result.lesson });
     });
   }));
 }

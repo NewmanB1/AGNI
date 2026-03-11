@@ -42,7 +42,7 @@ Before marking any item `[x]`:
 
 ## Phase B: Sensor Toolkit
 
-**Reference:** `docs/playbooks/sensor-toolkit-improvement-plan.md` (detailed spec).
+**Reference:** `sensor-toolkit-improvement-plan.md` (detailed spec; archived).
 
 **Execution order:** B1 → B2; B3, B4 (parallel); B5, B6, B7 (parallel); B8 → B9.
 
@@ -146,5 +146,5 @@ C1, C2 (independent)
 
 - **Sprint verification:** `.cursor/rules/sprint-verification.md`
 - **Sentry detail:** `docs/SPRINT-SENTRY-IMPROVEMENTS.md`
-- **Sensor detail:** `docs/playbooks/sensor-toolkit-improvement-plan.md`
+- **Sensor detail:** `sensor-toolkit-improvement-plan.md`
 - **Accessibility:** `docs/accessibility/INTENSITY-SETTINGS.md`, `HAPTIC-TESTING-TEMPLATE.md`

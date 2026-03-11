@@ -1,3 +1,5 @@
+> **Issues moved to:** [UNRESOLVED-ISSUES-MASTER-LIST.md](../UNRESOLVED-ISSUES-MASTER-LIST.md)
+
 # Opportunistic Lesson Precaching Plan
 
 Plan to enable proactive precaching of multiple lessons on edge devices when the hub is reachable, reducing latency and improving offline resilience.

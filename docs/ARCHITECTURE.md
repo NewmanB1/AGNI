@@ -153,9 +153,9 @@ AGNI (root)
 │   ├── agni-governance/          # policy, compliance, catalog
 │   ├── agni-services/            # accounts, author, governance, LMS, lesson-chain, lessonAssembly
 │   ├── agni-hub/                 # theta.js, hub-transform.js, sentry.js, sync.js, routes/
-│   ├── agni-cli/                 # CLI entry point (cli.js)
-│   └── agni-lesson-gen/          # LLM lesson generator
+│   └── agni-cli/                 # CLI entry point (cli.js)
 │
+├── tools/curriculum-gen/         # Independent bulk lesson generator (not part of core AGNI)
 ├── hub-tools/                    # Wrappers that delegate to packages
 │   ├── theta.js                  # Spawns packages/agni-hub/theta.js
 │   ├── sentry.js

@@ -182,18 +182,3 @@ describe('slugExists', () => {
     assert.ok(!author.slugExists('nope', yamlDir));
   });
 });
-
-describe('generateForAuthor (services improvement S1)', () => {
-  it('returns error when generateLesson is not passed', async () => {
-    const result = await author.generateForAuthor({ skillDescription: 'test', archetypeId: null });
-    assert.ok(result.error);
-    assert.ok(result.error.indexOf('generateLesson') !== -1);
-  });
-
-  it('returns error for empty skill description', async () => {
-    const mockGen = async () => ({ lesson: {}, issues: [] });
-    const result = await author.generateForAuthor({ skillDescription: '', generateLesson: mockGen });
-    assert.ok(result.error);
-    assert.equal(result.error, 'Skill description is required');
-  });
-});

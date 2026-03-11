@@ -1,8 +1,8 @@
 # @agni/runtime Improvement Plan
 
-Plan to address documentation gaps, stale paths, SVG registry/export options, accessibility follow-up, and package tooling in `packages/agni-runtime`. Follows `docs/RUNTIME-MANIFEST-IMPROVEMENT-PLAN.md`, `docs/HUB-IMPROVEMENT-PLAN.md`, and `.cursor/rules/sprint-verification.md`.
+Plan to address documentation gaps, stale paths, SVG registry/export options, accessibility follow-up, and package tooling in `packages/agni-runtime`. Follows `RUNTIME-MANIFEST-IMPROVEMENT-PLAN.md`, `HUB-IMPROVEMENT-PLAN.md`, and `.cursor/rules/sprint-verification.md`.
 
-**Reference:** Sensor toolkit (STK-1.1–3.3) and SVG tools (P1.1–4.1) are already complete per `docs/playbooks/sensor-toolkit-improvement-plan.md` and `docs/SVG-TOOLS-IMPROVEMENT-PLAN.md`.
+**Reference:** Sensor toolkit (STK-1.1–3.3) and SVG tools (P1.1–4.1) are already complete per `sensor-toolkit-improvement-plan.md` and `SVG-TOOLS-IMPROVEMENT-PLAN.md`.
 
 ---
 

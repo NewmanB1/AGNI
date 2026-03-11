@@ -271,37 +271,6 @@ function slugExists(slug, yamlDir) {
   return fs.existsSync(path.join(dir, safeName + '.yaml'));
 }
 
-/**
- * Generate a lesson draft using AI.
- * Caller must pass generateLesson (e.g. from scripts/generate-lesson). Requires AGNI_LLM_API_KEY.
- * Archetype hint is prepended to the skill description.
- * @param {{ skillDescription: string, archetypeId?: string, generateLesson?: function }}
- * @returns {Promise<{ ok: boolean, lesson?: object, error?: string }>}
- */
-async function generateForAuthor({ skillDescription, archetypeId, generateLesson }) {
-  const desc = (skillDescription || '').trim();
-  if (!desc) return { ok: false, error: 'Skill description is required' };
-  if (!generateLesson || typeof generateLesson !== 'function') {
-    return { error: 'AI generation requires generateLesson to be passed by the caller (e.g. from scripts/generate-lesson).' };
-  }
-  if (!process.env.AGNI_LLM_API_KEY) {
-    return { error: 'AI generation requires AGNI_LLM_API_KEY. Configure on the hub.' };
-  }
-  const fullDesc = archetypeId
-    ? 'Pedagogical archetype: ' + archetypeId + '. ' + desc
-    : desc;
-  try {
-    const result = await generateLesson(fullDesc, { verbose: false });
-    const errs = (result.issues || []).filter((i) => i.severity === 'error');
-    if (errs.length > 0) {
-      return { ok: false, error: 'Generated lesson has validation errors: ' + errs.map((e) => e.message).join('; ') };
-    }
-    return { ok: true, lesson: result.lesson };
-  } catch (e) {
-    return { ok: false, error: e.message };
-  }
-}
-
 module.exports = {
   parseAuthorBody: parseAuthorBody,
   validateForAuthor: validateForAuthor,
@@ -311,6 +280,5 @@ module.exports = {
   listSavedLessons: listSavedLessons,
   deleteLesson: deleteLesson,
   slugExists: slugExists,
-  deriveSlug: deriveSlug,
-  generateForAuthor: generateForAuthor
+  deriveSlug: deriveSlug
 };

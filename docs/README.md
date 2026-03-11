@@ -22,7 +22,7 @@ This is the **single entry point** for AGNI documentation. For code layout, see 
 |:---|:---|:---|
 | **Teacher** | [Teachers Guide](guides/TEACHERS.md) | [Lesson Creators Guide](guides/LESSON-CREATORS.md) if you want to write lessons |
 | **Parent** | [Parents Guide](guides/PARENTS.md) | *(that's all you need)* |
-| **Lesson Creator** | [Lesson Creators Guide](guides/LESSON-CREATORS.md) | [Threshold Grammar](specs/threshold_grammar.md), [AI Prompts](prompts/lesson-design-stack.md), [Translation Tutorial](tutorials/fork-and-translate-lesson.md) |
+| **Lesson Creator** | [Lesson Creators Guide](guides/LESSON-CREATORS.md) | [Threshold Grammar](specs/threshold_grammar.md), [Translation Tutorial](tutorials/fork-and-translate-lesson.md) — template-based wizard |
 | **Governance Authority** | [Governance Authority Guide](guides/GOVERNANCE-AUTHORITY.md) | [UTU Architecture](specs/utu-architecture.md) for the skill coordinate system |
 | **Field Tech / Sysadmin** | [Field Tech Guide](guides/FIELD-TECH.md) | [Deployment Guide](DEPLOYMENT.md), [API Contract](api-contract.md) |
 | **Open Source Developer** | [Developers Guide](guides/DEVELOPERS.md) | [Onboarding Concepts](ONBOARDING-CONCEPTS.md), [Architecture](ARCHITECTURE.md), [Conventions](CONVENTIONS.md) |
@@ -38,7 +38,7 @@ This is the **single entry point** for AGNI documentation. For code layout, see 
 - [guides/PARENTS.md](guides/PARENTS.md) — Linking to your child, viewing progress
 - [guides/GOVERNANCE-AUTHORITY.md](guides/GOVERNANCE-AUTHORITY.md) — Setting policy, managing the approved catalog, compliance
 - [guides/FIELD-TECH.md](guides/FIELD-TECH.md) — Hub deployment, configuration, maintenance, troubleshooting
-- [guides/LESSON-CREATORS.md](guides/LESSON-CREATORS.md) — Writing YAML lessons, validation, sensor steps, publishing
+- [guides/LESSON-CREATORS.md](guides/LESSON-CREATORS.md) — Template-based wizard, YAML validation, sensor steps, publishing
 - [guides/DEVELOPERS.md](guides/DEVELOPERS.md) — Architecture, dev setup, conventions, contribution workflow
 
 ## Package Structure
@@ -135,8 +135,8 @@ Completed sprint documents and superseded plans are preserved in [`archive/`](ar
 **Improvement plans** (all completed; work merged into ROADMAP)
 
 - `HUB-IMPROVEMENT-PLAN.md`, `HUB-CANONICAL-MIGRATION-PLAN.md`, `SERVICES-IMPROVEMENT-PLAN.md`
-- `PACKAGES-IMPROVEMENT-PLAN.md`, `RUNTIME-IMPROVEMENT-PLAN.md`, `BACKLOG-REMEDIATION-PLAN.md`
-- `SVG-TOOLS-IMPROVEMENT-PLAN.md`, `OPPORTUNISTIC-PRECACHE-PLAN.md`
+- `PACKAGES-IMPROVEMENT-PLAN.md`, `RUNTIME-IMPROVEMENT-PLAN.md`, `RUNTIME-MANIFEST-IMPROVEMENT-PLAN.md`, `BACKLOG-REMEDIATION-PLAN.md`
+- `SVG-TOOLS-IMPROVEMENT-PLAN.md`, `sensor-toolkit-improvement-plan.md`, `OPPORTUNISTIC-PRECACHE-PLAN.md`
 - `GOVERNANCE-IMPROVEMENT-PLAN.md`, `LESSON-CREATOR-IMPROVEMENT-PLAN.md`
 - `CONSOLIDATED-ROADMAP.md`, `REMAINING-IMPROVEMENTS-PLAN.md` — tactical task lists (all tiers complete)
 

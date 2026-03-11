@@ -41,6 +41,8 @@ This directory holds **completed** or **superseded** planning documents. They ar
 | `HUB-CANONICAL-MIGRATION-PLAN.md` | Migration from src/ to packages/agni-hub |
 | `PACKAGES-IMPROVEMENT-PLAN.md` | Monorepo package layout |
 | `RUNTIME-IMPROVEMENT-PLAN.md` | Runtime (player, sensors) improvements |
+| `RUNTIME-MANIFEST-IMPROVEMENT-PLAN.md` | runtimeManifest.js DRY refactor, API cleanup, CI guards (all Done) |
+| `sensor-toolkit-improvement-plan.md` | Sensor toolkit enhancements: orientation, shake, Phyphox sound, fallback (all Done) |
 | `SERVICES-IMPROVEMENT-PLAN.md` | Services layer improvements |
 | `SVG-TOOLS-IMPROVEMENT-PLAN.md` | SVG factory and tools |
 | `LESSON-CREATOR-IMPROVEMENT-PLAN.md` | Lesson authoring improvements |
@@ -49,7 +51,7 @@ This directory holds **completed** or **superseded** planning documents. They ar
 
 | Document | Summary |
 |----------|---------|
-| `OPPORTUNISTIC-PRECACHE-PLAN.md` | Edge device precaching strategy (planned, not yet implemented) |
+| `OPPORTUNISTIC-PRECACHE-PLAN.md` | Edge device precaching strategy (all phases complete) |
 | `DOCUMENT-REVIEW-2025-03.md` | Document review snapshot |
 | `check-hub-config-pi-audit.md` | Hub config Pi audit notes |
 

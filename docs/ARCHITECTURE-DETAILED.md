@@ -64,7 +64,7 @@ Canonical implementations live in `packages/`. **Edit packages directly.** Tests
 | **@agni/services** | `packages/agni-services/` | Top-down API: accounts, author, governance, LMS, lesson-chain, lessonAssembly | @ols/compiler, @agni/engine, @agni/governance |
 | **@agni/hub** | `packages/agni-hub/` | Hub server: theta, hub-transform, sentry, sync, routes | @agni/services, theta, hub-transform |
 | **@agni/plugins** | `packages/agni-plugins/` | Factory/step/sensor registration | Leaf |
-| **@agni/lesson-gen** | `packages/agni-lesson-gen/` | LLM lesson generator | Optional, tools |
+| **tools/curriculum-gen** | `tools/curriculum-gen/` | Bulk lesson generator | Independent tool, not part of core AGNI |
 
 ### Dependency Flow (acyclic)
 

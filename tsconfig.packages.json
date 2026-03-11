@@ -21,7 +21,6 @@
     "packages/ols-compiler/**/*.js",
     "packages/ols-schema/**/*.js",
     "packages/agni-plugins/**/*.js",
-    "packages/agni-lesson-gen/**/*.js",
     "packages/**/*.d.ts"
   ],
   "exclude": ["node_modules", "**/*.test.js"]

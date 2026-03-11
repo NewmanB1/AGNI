@@ -4,7 +4,7 @@ const https = require('https');
 const http = require('http');
 
 /**
- * LLM API client. Supports OpenAI, Anthropic, and Google Gemini.
+ * LLM API client. Supports Gemini (recommended) and other providers.
  *
  * Config: { provider, apiKey, model, baseUrl?, maxTokens?, temperature? }
  */

@@ -36,7 +36,6 @@ module.exports = [
     files: [
       'packages/agni-engine/**/*.js',
       'packages/agni-governance/**/*.js',
-      'packages/agni-lesson-gen/**/*.js',
       'packages/agni-plugins/**/*.js',
       'packages/agni-utils/**/*.js',
       'packages/ols-compiler/**/*.js',
@@ -54,7 +53,7 @@ module.exports = [
     }
   },
   {
-    files: ['packages/agni-lesson-gen/**/*.js', 'packages/agni-engine/math.js'],
+    files: ['packages/agni-engine/math.js'],
     rules: { 'no-console': 'off' }
   },
   {

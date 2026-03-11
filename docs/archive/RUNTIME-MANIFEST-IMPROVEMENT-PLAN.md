@@ -1,3 +1,5 @@
+> **Issues moved to:** [UNRESOLVED-ISSUES-MASTER-LIST.md](../UNRESOLVED-ISSUES-MASTER-LIST.md)
+
 # runtimeManifest.js Improvement Plan
 
 Plan to address gaps in `packages/agni-utils/runtimeManifest.js`: DRY refactor, API cleanup, documentation, defensive handling, test and playbook updates, and CI guards. Follows `docs/archive/SERVICES-IMPROVEMENT-PLAN.md`, `docs/archive/HUB-IMPROVEMENT-PLAN.md`, and `.cursor/rules/sprint-verification.md`.

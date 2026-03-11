@@ -30,15 +30,14 @@ This works automatically for any `.yaml` file inside `lessons/`.
 
 ---
 
-## Quick start
+## Quick start: template-based wizard flow
 
-1. Start from the hello-world template (no sensors, simplest possible lesson):
+The lesson creator is a **wizard that selects from pre-created templates**. Choose a template, then edit and validate:
+
+1. Pick a template — **hello-world** (simplest, no sensors) or **all-step-types** (every step type):
    ```bash
    cp lessons/hello-world.yaml lessons/my-lesson.yaml
-   ```
-   Or from the comprehensive reference showing every step type:
-   ```bash
-   cp lessons/examples/all-step-types.yaml lessons/my-lesson.yaml
+   # or: cp lessons/examples/all-step-types.yaml lessons/my-lesson.yaml
    ```
 
 2. Open it in VS Code — you'll get autocomplete and inline validation immediately.
@@ -179,23 +178,6 @@ Errors block compilation. Warnings are advisory (e.g. "missing description — r
 
 ---
 
-## AI-assisted lesson creation
-
-Two options:
-
-**Option A: Automated generation** — give a skill description, get a complete lesson:
-
-```bash
-# Requires AGNI_LLM_API_KEY env var (OpenAI or Anthropic)
-node scripts/generate-lesson.js "Understand buoyancy through a hands-on water experiment" --out lessons/buoyancy.yaml
-```
-
-The generator drives the LLM through a 10-phase pedagogical design process, validates the output, and auto-fixes errors if needed.
-
-**Option B: Manual with AI prompts** — use **[prompts/lesson-design-stack.md](../prompts/lesson-design-stack.md)** as a step-by-step workflow with ChatGPT, Claude, or any LLM. Copy each prompt phase into the chat, paste the output back, and iterate.
-
----
-
 ## Translating a lesson
 
 See the full tutorial: **[tutorials/fork-and-translate-lesson.md](../tutorials/fork-and-translate-lesson.md)**.
@@ -246,5 +228,6 @@ To make your lesson available on a Village Hub:
 - [Threshold Grammar spec](../specs/threshold_grammar.md) — full sensor threshold syntax
 - [UTU Architecture spec](../specs/utu-architecture.md) — skill coordinate system
 - [OLS JSON Schema](../../schemas/ols.schema.json) — the definitive field reference (your editor reads this)
-- [AI lesson design prompts](../prompts/lesson-design-stack.md) — structured AI-assisted authoring
 - [Translation tutorial](../tutorials/fork-and-translate-lesson.md) — fork and translate step-by-step
+
+> **Note:** Bulk lesson generation (e.g. curriculum-gen in `tools/`) is an **independent tool** and not part of the core AGNI system. The lesson creator is template-based.

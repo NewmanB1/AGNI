@@ -1,3 +1,5 @@
+> **Issues moved to:** [UNRESOLVED-ISSUES-MASTER-LIST.md](../UNRESOLVED-ISSUES-MASTER-LIST.md)
+
 # Sprint R16: Verified Open Bugs
 
 Replaces `SPRINT-R11-REMEDIATION.md` (retired — ~80% of its items were already

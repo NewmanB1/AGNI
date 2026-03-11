@@ -68,11 +68,6 @@ export interface AuthorService {
   deleteLesson(slug: string, yamlDir?: string): { ok?: boolean; deleted?: string[] } | ServiceError;
   slugExists(slug: string, yamlDir?: string): boolean;
   deriveSlug(lessonData: Record<string, unknown>): string;
-  generateForAuthor(opts: {
-    skillDescription: string;
-    archetypeId?: string;
-    generateLesson?: (desc: string, opts?: { verbose?: boolean }) => Promise<{ lesson?: Record<string, unknown>; issues?: Array<{ severity: string; message: string }> }>;
-  }): Promise<{ ok?: boolean; lesson?: Record<string, unknown>; error?: string }>;
 }
 
 // ─── Governance service ──────────────────────────────────────────────────────

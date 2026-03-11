@@ -80,7 +80,7 @@ Runs on developer machine or CI. Not edge, not necessarily Pi.
 |------|------|
 | `packages/agni-cli/cli.js` | CLI (compile, hub setup, lms-repair) |
 | `scripts/*.js` | Verification, init, wizards |
-| `tools/curriculum-gen/*.js` | LLM lesson generator |
+| `tools/curriculum-gen/*.js` | Independent bulk lesson generator (not part of core AGNI) |
 | `tests/*` | Unit, integration, contract tests |
 
 ---

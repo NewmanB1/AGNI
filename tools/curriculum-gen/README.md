@@ -1,5 +1,7 @@
 # @agni/curriculum-gen
 
+**Independent tool** — not part of core AGNI. The lesson creator in AGNI is a template-based wizard.
+
 LLM-driven K-12 curriculum generator for OLS/AGNI. Generates hundreds of lessons
 to systematically exercise every archetype, SVG factory, sensor, and step type —
 surfacing gaps in the platform that need to be addressed.
@@ -74,9 +76,9 @@ Create `config.json` from the example:
 
 ```json
 {
-  "provider": "gemini",         // "gemini", "openai", or "anthropic"
+  "provider": "gemini",         // gemini recommended; other providers configurable
   "apiKey": "YOUR_API_KEY",
-  "model": "gemini-2.0-flash",  // or "gemini-2.5-flash", "gpt-4o", etc.
+  "model": "gemini-2.0-flash",  // or gemini-2.5-flash for this provider
   "maxTokens": 4096,
   "temperature": 0.7,
   "rateLimit": {
@@ -104,9 +106,7 @@ Set `delayMs` to at least `60000 / requestsPerMinute` to avoid quota errors.
 
 | Provider | Best model | Cost | Notes |
 |----------|-----------|------|-------|
-| Gemini | `gemini-2.0-flash` | Lowest | Recommended for bulk generation |
-| OpenAI | `gpt-4o` | Medium | Good YAML quality |
-| Anthropic | `claude-sonnet-4-20250514` | Higher | Excellent pedagogical quality |
+| Gemini | `gemini-2.0-flash` | Lowest | Recommended (free tier, open) |
 
 ## Preview mode
 
@@ -189,7 +189,7 @@ tools/curriculum-gen/
 │   ├── planner.js           Lesson plan generator
 │   ├── preview.js           Dry-run prompt previewer
 │   ├── prompt-builder.js    Per-lesson prompt construction
-│   ├── generator.js         LLM API client (OpenAI/Anthropic/Gemini)
+│   ├── generator.js         LLM API client (Gemini recommended)
 │   ├── runner.js            Batch orchestrator with resume
 │   ├── lesson-validate.js   OLS validation + gap extraction
 │   ├── batch-validate.js    Bulk re-validation
