@@ -15,7 +15,7 @@
 //   local development without a private key. In production, missing signatures
 //   always fail verification.
 //
-// ES5 only — targets Android 6.0+ (Chrome 44 WebView).
+// ES5 only — targets Android 7.0+ (Chrome 51 WebView). See docs/RUN-ENVIRONMENTS.md.
 //
 // SCOPE (v2.2): Content = canonicalJSON(LESSON_DATA) + NUL + OLS_INTENDED_OWNER.
 // Narrow scope reduces verification time and UI blocking (remediation #5c).
@@ -90,7 +90,7 @@
     });
   }
 
-  // Pure-JS UTF-8 encoder for Chrome 44 where TextEncoder may be missing
+  // Pure-JS UTF-8 encoder for Chrome 51 where TextEncoder may be missing
   function utf8Encode(str) {
     if (typeof TextEncoder === 'function') {
       return new TextEncoder().encode(str);
@@ -112,7 +112,7 @@
     return new Uint8Array(bytes);
   }
 
-  // Pure-JS SHA-256 for Chrome 44 where crypto.subtle may be unavailable
+  // Pure-JS SHA-256 for Chrome 51 where crypto.subtle may be unavailable
   // (requires HTTPS context which the Pi may not provide)
   function sha256Fallback(data) {
     if (global.nacl && global.nacl.hash) {

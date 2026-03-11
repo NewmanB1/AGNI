@@ -1,6 +1,6 @@
 // @ts-nocheck — Polyfills for DOM; type signatures conflict with lib.dom.d.ts
 // packages/agni-runtime/polyfills.js
-// ES5 polyfills for Chrome 44 WebView (Android 6.0 Marshmallow)
+// ES5 polyfills for Chrome 51 WebView (Android 7.0 Nougat). See docs/RUN-ENVIRONMENTS.md.
 //
 // Loaded FIRST by factory-loader before any other runtime code.
 // Provides shims for ES6+ APIs used across the factory pipeline.

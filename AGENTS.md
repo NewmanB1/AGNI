@@ -55,7 +55,7 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 1. **Canonical code in packages.** Edit `packages/*`, not `src/` re-exports.
 2. **Public API via index.** Export new functions from the module's `index.js`.
 3. **Service layer returns `{ error }` on failure**; internal functions may throw.
-4. **Browser runtime is ES5** — Edge devices (Android 7.0 Nougat, Chrome 51) run `packages/agni-runtime/` and `packages/agni-hub/pwa/`, `sw.js`. Use `var`, `function`, `catch (e)`—no `let`/`const`, arrow functions, template literals, `class`, spread, optional catch. Guard: `npm run test:es5`. See `.cursor/rules/edge-device-es5.md`.
+4. **Browser runtime is ES5** — Edge devices (Android 7.0 Nougat, Chrome 51) run `packages/agni-runtime/` and `packages/agni-hub/pwa/`, `sw.js`. Use `var`, `function`, `catch (e)`—no `let`/`const`, arrow functions, template literals, `class`, spread, optional catch. Guard: `npm run test:es5`. **Single source of truth:** `docs/RUN-ENVIRONMENTS.md`. See `.cursor/rules/edge-device-es5.md`.
 5. **Playbooks** in `docs/playbooks/` describe how to change compiler, runtime, LMS, governance.
 6. **CI gates** in `scripts/`: `verify:all` runs core, runtime, hub, services, governance groups (see `docs/VERIFICATION-GUARDS.md`).
 

@@ -8,7 +8,7 @@ This document describes the structure of automated guards against regression. Ru
 |-------|--------|----------|
 | **verify:core** | Cross-cutting | dead-files, lesson-gen-test-target, dts, innerhtml, factory-order, precache-regression, schema-sync, codegen-sync, canonical, canonical-imports, node-version-docs, engine-no-ts, package-headers, skill-dag, run-environments, architectural-remediation, **es5** |
 
-**Edge device (Android Nougat) guard:** `test:es5` runs `scripts/check-es5.js` and enforces ES5-only syntax and APIs in `packages/agni-runtime/`, `packages/agni-hub/sw.js`, and `packages/agni-hub/pwa/*.js`. These run in Chrome 51 WebView on student devices. See `.cursor/rules/edge-device-es5.md`.
+**Edge device (Android Nougat) guard:** `test:es5` runs `scripts/check-es5.js` and enforces ES5-only syntax and APIs in `packages/agni-runtime/`, `packages/agni-hub/sw.js`, and `packages/agni-hub/pwa/*.js`. These run in Chrome 51 WebView on student devices. See `docs/RUN-ENVIRONMENTS.md` and `.cursor/rules/edge-device-es5.md`.
 | **verify:runtime** | `packages/agni-runtime/` | svg-tools, runtime-manifest, runtime-headers, runtime-docs, runtime-lint, sensors |
 | **verify:hub** | Hub + auth | hub-config-pi, hub-config-bootstrap, unauthed-routes, version-sync, api-contract-auth, hub-imports, hub-no-scripts, hub-test-targets, hub-docs, hub-lint, config-injection, theta-api |
 | **verify:services** | `packages/agni-services/` | services-no-scripts, services-test-targets, services-docs, services-lint |

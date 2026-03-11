@@ -1,6 +1,6 @@
 # Sensor Toolkit Improvement Plan
 
-Implementation plan for sensor toolkit enhancements, with guards against regression and proof of completion. Aligns with hardware targets (Android 6.0+, Chrome 44 WebView, ES5) and `.cursor/rules/sprint-verification.md`.
+Implementation plan for sensor toolkit enhancements, with guards against regression and proof of completion. Aligns with hardware targets (Android 7.0 Nougat, Chrome 51 WebView, ES5). See [RUN-ENVIRONMENTS.md](../RUN-ENVIRONMENTS.md) and `.cursor/rules/sprint-verification.md`.
 
 **Reference:** Prior analysis in conversation; improvements derived from `docs/specs/threshold_grammar.md`, `packages/agni-runtime/sensors/sensor-bridge.js`, and `packages/agni-runtime/sensors/threshold-evaluator.js`.
 
@@ -79,7 +79,7 @@ Implementation plan for sensor toolkit enhancements, with guards against regress
 
 ### STK-1.4: Document light/mic as Phyphox-only
 
-**Task:** Update `docs/specs/threshold_grammar.md` and any author-facing docs to state that `light` and `mic`/`sound.level` require Phyphox on most devices; native AmbientLightSensor and Web Audio have limited support on Chrome 44 / Android 6.
+**Task:** Update `docs/specs/threshold_grammar.md` and any author-facing docs to state that `light` and `mic`/`sound.level` require Phyphox on most devices; native AmbientLightSensor and Web Audio have limited support on Chrome 51 / Android 7.
 
 **Deliverable:**
 - Add a "Sensor availability" subsection to the spec: which sensors are native vs Phyphox-only.

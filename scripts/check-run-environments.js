@@ -64,7 +64,7 @@ EDGE_FILES.forEach(function (rel) {
   if (!fs.existsSync(full)) return;
   var head = readFirstLines(full, 25);
   if (!hasMarker(head, EDGE_MARKERS)) {
-    errors.push(rel + ': missing edge-device documentation (ES5, Chrome 44, Marshmallow) in header');
+    errors.push(rel + ': missing edge-device documentation (ES5, Chrome 51, Android 7.0 Nougat) in header');
   }
 });
 

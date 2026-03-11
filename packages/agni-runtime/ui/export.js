@@ -1,5 +1,5 @@
 // packages/agni-runtime/ui/export.js
-// ES5 compatible — targets Android 6.0+ (Chrome 44 WebView).
+// ES5 compatible — targets Android 7.0+ (Chrome 51 WebView).
 
 /**
  * Generates a compressed Base64 string representing the learning proof.

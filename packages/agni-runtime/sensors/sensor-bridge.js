@@ -70,7 +70,7 @@
   var _motionBuffer = {};
   var _motionThrottleTimer = null;
 
-  // Detect passive event listener support (Chrome 49+; false on Chrome 44)
+  // Detect passive event listener support (Chrome 51 supports it)
   var _supportsPassive = false;
   try {
     var _passiveOpts = Object.defineProperty({}, 'passive', { get: function () { _supportsPassive = true; return true; } });

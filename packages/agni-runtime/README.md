@@ -2,7 +2,7 @@
 
 The AGNI browser runtime. This is what runs on the student's device — the lesson player, sensor bridge, SVG factory system, and all UI components.
 
-**Important:** All files in this package must be **ES5-compatible** (Chrome 44+, no arrow functions, no let/const, no template literals). Run `npm run test:es5` to verify.
+**Important:** All files in this package must be **ES5-compatible** for Chrome 51 (Android 7.0 Nougat). No arrow functions, no let/const, no template literals. Run `npm run test:es5` to verify. See `docs/RUN-ENVIRONMENTS.md`.
 
 ## What's here
 

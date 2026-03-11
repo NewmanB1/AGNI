@@ -9,7 +9,7 @@
 // Depends on: nothing (standalone)
 // Load order: before player.js (prefs must be available at init)
 //
-// ES5 only — targets Android 6.0+ (Chrome 44 WebView).
+// ES5 only — targets Android 7.0+ (Chrome 51 WebView).
 
 (function (global) {
   'use strict';

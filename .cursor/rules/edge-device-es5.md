@@ -2,6 +2,8 @@
 
 **Scope:** Code that runs in the student's browser/WebView on edge devices (Android 7.0 Nougat, API 24, Chrome 51).
 
+**Single source of truth:** `docs/RUN-ENVIRONMENTS.md`.
+
 ## Constraint
 
 Edge device code MUST be **strict ES5**. No ES6+ syntax or APIs not available in Chrome 51.

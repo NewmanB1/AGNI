@@ -1,8 +1,18 @@
 # AGNI Run Environments
 
-**Hardware constraints (canonical):**
-- **Village Hub:** Raspberry Pi — Node.js 14+, ARM, limited RAM
-- **Edge devices (students):** Android 7.0 (Nougat, API 24) — Chrome 51 WebView, ES5 only, vanilla JS/HTML5/CSS3
+**Single source of truth for hardware constraints.** Other docs and package headers should reference this file. See "Linking to this document" below.
+
+---
+
+## Edge device baseline (canonical)
+
+- **OS:** Android 7.0 (Nougat, API 24)
+- **WebView:** Chrome 51
+- **JavaScript:** ES5 only (no `let`/`const`, arrow functions, template literals, `class`, spread, etc.)
+- **Stack:** Vanilla JS, HTML5, CSS3 — no frameworks
+
+**Village Hub:**
+- **Hardware:** Raspberry Pi — Node.js 14+, ARM, limited RAM
 
 This document maps every piece of code to its run environment and enforced constraints.
 
@@ -110,3 +120,12 @@ Runs in teacher's browser. May use a modern desktop browser; not constrained to 
 - **Run-environment unit tests:** `node --test tests/unit/run-environments.test.js`
 
 These run as part of `npm run verify:all`.
+
+---
+
+## Linking to this document
+
+When documenting edge or hub constraints elsewhere, reference this file:
+
+- **Short:** "See `docs/RUN-ENVIRONMENTS.md`"
+- **Inline:** "Edge: Android 7.0 (Nougat), Chrome 51 — see `docs/RUN-ENVIRONMENTS.md`"

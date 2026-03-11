@@ -1,6 +1,6 @@
 // packages/agni-runtime/rendering/svg-helpers.js
 // AGNI SVG Helpers — shared utilities for all SVG factories.
-// Loaded before svg-factories.js. ES5-compatible for Chrome 44+.
+// Loaded before svg-factories.js. ES5-compatible for Chrome 51 (Android 7.0 Nougat).
 // ─────────────────────────────────────────────────────────────────────────────
 
 (function (global) {

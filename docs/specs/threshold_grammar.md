@@ -49,7 +49,7 @@ Computed states for easier authoring.
 | `mic` / `sound.level` | ⚠️ Web Audio + getUserMedia (permission, heavier on old devices) | ✅ |
 | `pressure`, `temperature`, `mag.*` | — | ✅ |
 
-**For 10-year-old phones (Chrome 44, Android 6):** `light` and `mic`/`sound.level` are best supplied via the Phyphox postMessage bridge. Native AmbientLightSensor and Web Audio have poor or no support on older WebViews.
+**For resource-constrained devices (Chrome 51, Android 7.0):** `light` and `mic`/`sound.level` are best supplied via the Phyphox postMessage bridge. Native AmbientLightSensor and Web Audio have poor or no support on many WebViews. See `docs/RUN-ENVIRONMENTS.md`.
 
 ---
 

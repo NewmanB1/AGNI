@@ -1,7 +1,7 @@
 'use strict';
 
 // @agni/runtime — browser runtime
-// These are ES5 IIFE files that run in the browser (Chrome 44+).
+// These are ES5 IIFE files that run in the browser (Chrome 51, Android 7.0 Nougat).
 // They attach to window.AGNI_SHARED and window.AGNI_SVG globals.
 //
 // This barrel is for Node.js tooling (build scripts, tests, manifest).

@@ -2,7 +2,7 @@
 // AGNI LMS Engine — pure math utilities
 //
 // Runs on: Village Hub (Raspberry Pi, Node 14+). CommonJS.
-// BOUNDARY: Must NOT be imported by packages/agni-runtime (Chrome 44 / ES5). Use zeros(),
+// BOUNDARY: Must NOT be imported by packages/agni-runtime (Chrome 51 / ES5). Use zeros(),
 // isNonNegativeInteger, etc. instead of Array.fill/Number.isInteger for future-proofing.
 //
 // No external dependencies. Used across Rasch, embeddings, and bandit layers.

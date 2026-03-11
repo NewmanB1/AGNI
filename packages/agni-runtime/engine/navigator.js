@@ -10,8 +10,8 @@
  *   2. The Local Learner Profile (Pedagogical Fit & Learning Style)
  *
  * Environment: Isomorphic (Node.js & Browser)
- * Browser target: ES5 strict — must run on non-updatable Android 6.0 WebViews
- * (Chrome 44+). No let/const, no arrow functions, no template literals,
+ * Browser target: ES5 strict — must run on Android 7.0 Nougat (Chrome 51).
+ * No let/const, no arrow functions, no template literals,
  * no for...of, no spread, no Set/Map, no Object.assign.
  */
 

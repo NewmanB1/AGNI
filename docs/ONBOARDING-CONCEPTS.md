@@ -14,7 +14,7 @@ AGNI is organized as an **npm workspaces monorepo**. Each package has a clear bo
 | [`packages/ols-compiler`](../packages/ols-compiler/) | `@ols/compiler` | Lesson compiler: YAML → IR → HTML/native/YAML-packet |
 | [`packages/agni-utils`](../packages/agni-utils/) | `@agni/utils` | Shared utilities: logging, config, crypto, I/O (pure leaf — no deps) |
 | [`packages/agni-engine`](../packages/agni-engine/) | `@agni/engine` | Learning engine: Rasch, Thompson, embeddings, PageRank, federation |
-| [`packages/agni-runtime`](../packages/agni-runtime/) | `@agni/runtime` | Browser runtime: player, sensors, SVG factories (ES5, Chrome 44+) |
+| [`packages/agni-runtime`](../packages/agni-runtime/) | `@agni/runtime` | Browser runtime: player, sensors, SVG factories (ES5, Chrome 51 — see [RUN-ENVIRONMENTS.md](RUN-ENVIRONMENTS.md)) |
 | [`packages/agni-governance`](../packages/agni-governance/) | `@agni/governance` | Policy enforcement, compliance evaluation, catalog management |
 | [`packages/agni-hub`](../packages/agni-hub/) | `@agni/hub` | Village Hub server: HTTP routes, theta, accounts, telemetry |
 | [`portal/`](../portal/) | — | Vanilla HTML/CSS/JS teacher and admin portal |

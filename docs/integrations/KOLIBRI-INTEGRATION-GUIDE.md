@@ -40,7 +40,7 @@ for f in lessons/*.yaml; do
 done
 ```
 
-Output files in `dist/` are **self-contained** — they include the runtime, polyfills, and lesson content. No server required. Works offline on Android 6.0+ (Chrome 44 WebView).
+Output files in `dist/` are **self-contained** — they include the runtime, polyfills, and lesson content. No server required. Works offline on Android 7.0+ (Chrome 51 WebView). See [RUN-ENVIRONMENTS.md](../RUN-ENVIRONMENTS.md).
 
 ---
 
@@ -128,7 +128,7 @@ If you prefer not to use Ricecooker:
 | Accelerometer | ✅ | Android 4+, iOS 9+; requires user gesture to request permission |
 | Vibration (haptics) | ✅ | Where `navigator.vibrate` is supported |
 | Offline | ✅ | OLS bundles are self-contained; Kolibri caches content offline |
-| ES5 runtime | ✅ | AGNI targets Chrome 44+ for 10-year-old phones |
+| ES5 runtime | ✅ | AGNI targets Chrome 51 (Android 7.0 Nougat) — see [RUN-ENVIRONMENTS.md](../RUN-ENVIRONMENTS.md) |
 
 ---
 
