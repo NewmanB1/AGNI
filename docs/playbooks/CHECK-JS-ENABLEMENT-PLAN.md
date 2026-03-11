@@ -4,7 +4,7 @@ This document outlines the plan to fix type mismatches so `checkJs: true` can be
 
 **Goal:** `npm run typecheck:packages` passes with `checkJs: true` and strict mode enabled.
 
-**Current state:** `checkJs` is **enabled**; typecheck passes. Engine, hub, utils, ols-* use targeted fixes; runtime uses @ts-nocheck on heavy files.
+**Current state:** `checkJs` is **enabled**; typecheck passes. Engine (math.d.ts, thompson.d.ts), hub-transform/compile.js, hub, utils, ols-* use targeted fixes; runtime uses @ts-nocheck on heavy files. See `typing-and-languages.md` for hardware-impact note (checkJs has zero impact on Android Nougat or Pi).
 
 ---
 

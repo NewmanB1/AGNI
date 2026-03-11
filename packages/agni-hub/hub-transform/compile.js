@@ -103,7 +103,9 @@ async function doCompile(slug, loaded) {
     try {
       const srcPath = resolveFactoryPath(FACTORY_DIR, dep.file);
       if (fs.existsSync(srcPath)) {
-        dep.integrity = computeSRI(fs.readFileSync(srcPath, 'utf8'));
+        /** @type {{ file: string, version: string, integrity?: string }} */
+        const depWithIntegrity = dep;
+        depWithIntegrity.integrity = computeSRI(fs.readFileSync(srcPath, 'utf8'));
       }
     } catch (e) {
       log.warn('Could not compute SRI for ' + dep.file + ': ' + (e && e.message));
@@ -181,9 +183,11 @@ async function compileLesson(slug, options) {
 
   if (cache.wouldCompileBeQueued(slug)) {
     const err = new Error('Compile queue full');
-    err.code = 'QUEUED';
-    err.retryAfter = cache.getRetryAfterSeconds();
-    return Promise.reject(err);
+    /** @type {Error & { code?: string, retryAfter?: number }} */
+    const queueErr = err;
+    queueErr.code = 'QUEUED';
+    queueErr.retryAfter = cache.getRetryAfterSeconds();
+    return Promise.reject(queueErr);
   }
 
   function runCompile() {

@@ -21,13 +21,17 @@ The engine uses ES5-only JavaScript to avoid a compile step and prevent stale-bu
 ## Typecheck scope
 
 - **`npm run typecheck`** — Runs both `tsconfig.json` and `tsconfig.packages.json` (packages/).
-- **`npm run typecheck:packages`** — Validates all packages: module resolution, `.d.ts` coherence. Uses relaxed settings (`checkJs: false`) so JS implementation is not type-checked; tighten over time by enabling `checkJs` and fixing type errors.
+- **`npm run typecheck:packages`** — Validates all packages with `checkJs: true`. Module resolution, `.d.ts` coherence, and JSDoc types are checked. Some runtime/PWA files use `@ts-nocheck` where global typing is complex (see `CHECK-JS-ENABLEMENT-PLAN.md`).
 - **`npm run typecheck:services`** — Stricter check for `packages/agni-services/` only (full JSDoc validation).
 
 ## Single place for shared types
 
 **`packages/types/index.d.ts`** — Lesson meta, IR, sidecar, LMS state, governance, etc. Canonical type definitions. Keep aligned with schemas (`schemas/ols.schema.json`, etc.) and with actual usage in compiler, engine, and hub. Do not add runtime code here.
 
-## Enabling checkJs for packages
+## checkJs and hardware constraints
 
-Packages are currently type-checked with `checkJs: false` (module resolution and `.d.ts` only). Partial implementation completed: shared types, runtime globals, hub-transform fixes, and `@ts-nocheck` on PWA/polyfills/svg-factories. Remaining work and full plan: **`docs/playbooks/CHECK-JS-ENABLEMENT-PLAN.md`**.
+**checkJs has zero impact on edge devices or the Raspberry Pi hub.** Typecheck (`tsc --noEmit`) runs only on dev machines and CI. It produces no build artifacts and does not change any deployed code. Edge devices (Android Nougat) run the same JS files; only syntax is constrained by `test:es5`. Type annotations in JSDoc are stripped at runtime and do not affect bundle size or execution.
+
+## checkJs status
+
+Packages are type-checked with **`checkJs: true`**. Engine, hub, utils, and ols-* are checked. Some runtime/PWA files use `@ts-nocheck` where global typing (`LESSON_DATA`, `AGNI_*`, DOM) would require extensive augmentation. Full plan and remaining work: **`docs/playbooks/CHECK-JS-ENABLEMENT-PLAN.md`**.

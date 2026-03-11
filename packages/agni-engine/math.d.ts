@@ -1,6 +1,10 @@
 // packages/agni-engine/math.d.ts — type declarations for math.js
 
 export const CHOLESKY_EPSILON: number;
+export function zeros(n: number): number[];
+export function isNonNegativeInteger(x: unknown): boolean;
+export function isPositiveInteger(x: unknown): boolean;
+export function assertEmbeddingDim(x: number, prefix?: string): void;
 export const CHOLESKY_SYMMETRY_TOL: number;
 export function dot(a: number[], b: number[]): number;
 export function addVec(a: number[], b: number[]): number[];
