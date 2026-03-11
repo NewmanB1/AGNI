@@ -46,6 +46,8 @@ This directory holds **completed** or **superseded** planning documents. They ar
 | `ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md` | Phase 1: seven architectural vulnerabilities (all Done) |
 | `ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN.md` | Phase 2: 28 additional vulns (P2-1–28); some Open, see master list |
 | `ARCHITECTURAL-AUDIT-FINDINGS.md` | Audit: spec.type, graph clamp, PWA handshake, supply chain (all addressed) |
+| `ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md` | Status of Phase 1 (7 vulns) + H1–H5; all Done |
+| `GAP-ANALYSIS-AND-MITIGATIONS.md` | OLS gaps (YAML, DAG, HTML scrape, etc.); all 7 Resolved |
 | `SERVICES-IMPROVEMENT-PLAN.md` | Services layer improvements |
 | `SVG-TOOLS-IMPROVEMENT-PLAN.md` | SVG factory and tools |
 | `LESSON-CREATOR-IMPROVEMENT-PLAN.md` | Lesson authoring improvements |

@@ -301,7 +301,7 @@ This document extends the Phase 1 remediation (`ARCHITECTURAL-VULNERABILITIES-RE
 ## References
 
 - Phase 1: `ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md` (same archive)
-- Status: `ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md`
+- Status: `ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md` (same archive)
 - hub-transform: `packages/agni-hub/hub-transform.js`
 - yaml-safe: `packages/agni-utils/yaml-safe.js`
 - svg-registry: `packages/agni-runtime/rendering/svg-registry.js`

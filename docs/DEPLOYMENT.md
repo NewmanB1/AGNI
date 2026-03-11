@@ -237,4 +237,4 @@ du -sh /home/pi/AGNI/data/
 - **Sentry playbook:** `docs/playbooks/sentry.md`
 - **Federation:** `docs/playbooks/federation.md`
 - **Village security:** `docs/playbooks/village-security.md` — hardening, WiFi client isolation, edge kiosk, safe state writes (fsync)
-- **Architectural remediation:** `docs/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md` — implementation status
+- **Architectural remediation:** `docs/archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md` — implementation status

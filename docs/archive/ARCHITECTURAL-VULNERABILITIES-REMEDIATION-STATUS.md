@@ -1,3 +1,5 @@
+> **Issues moved to:** [UNRESOLVED-ISSUES-MASTER-LIST.md](../UNRESOLVED-ISSUES-MASTER-LIST.md)
+
 # Architectural Vulnerabilities — Remediation Status & Remaining Plan
 
 This document tracks implementation status of the seven architectural vulnerabilities and outlines remaining work. The full specification is in `docs/archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`.

@@ -82,6 +82,6 @@ module.exports = hub.hubTransform || hub;
 ## References
 
 - `docs/RUN-ENVIRONMENTS.md` — Edge (Chrome 51), Hub (Node 14+)
-- `docs/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md` — Prior audit
+- `docs/archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md` — Prior audit
 - `packages/agni-runtime/rendering/svg-stage.js` — Stage system v1.8.0
 - `packages/agni-utils/yaml-safe.js` — Safe YAML load

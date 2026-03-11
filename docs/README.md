@@ -60,12 +60,12 @@ AGNI is an **npm workspaces monorepo**. Each package has its own README with det
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — System architecture for AGNI/OLS: phases, governance, and design decisions. **Canonical single source of truth.**
 - [ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md](archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md) — Plan to address seven architectural vulnerabilities (cache poisoning, fsync, cycles, sensors, integrity, time-skew, memory); archived (see master list).
-- [ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md](ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md) — Implementation status and remaining work.
+- [ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md](archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md) — Implementation status and remaining work; archived (see master list).
 - [ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN.md](archive/ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN.md) — Phase 2: 28 additional issues (disk cache, YAML DoS, Markdown XSS, directory fsync, etc.); archived (see master list).
 - [ARCHITECTURAL-AUDIT-FINDINGS.md](archive/ARCHITECTURAL-AUDIT-FINDINGS.md) — Audit findings for spec.type whitelist, graph weight clamping, PWA/factory handshake, factory supply chain; archived.
 - [OLS-QUICK-REFERENCE.md](OLS-QUICK-REFERENCE.md) — Condensed flow, components, and key paths.
 - [VERIFICATION-REPORT.md](VERIFICATION-REPORT.md) — Cross-check of architectural claims vs codebase.
-- [GAP-ANALYSIS-AND-MITIGATIONS.md](GAP-ANALYSIS-AND-MITIGATIONS.md) — Known gaps, severity, and proposed mitigations.
+- [GAP-ANALYSIS-AND-MITIGATIONS.md](archive/GAP-ANALYSIS-AND-MITIGATIONS.md) — Known gaps, severity, and proposed mitigations; archived (see master list).
 - [REFERENCE-IMPLEMENTATION-VISION.md](REFERENCE-IMPLEMENTATION-VISION.md) — Future refactor direction toward a schema-based, functional reference implementation.
 - [ONBOARDING-CONCEPTS.md](ONBOARDING-CONCEPTS.md) — Short glossary of key concepts for new contributors.
 

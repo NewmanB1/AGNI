@@ -75,7 +75,7 @@ When writing scripts that inspect implementations (e.g. `check-dts-arity.js`, `c
 
 - **Architecture:** `docs/ARCHITECTURE.md`
 - **Configuration:** `docs/CONFIGURATION.md` (env vars, bootstrap order, hub-config)
-- **Architectural remediation:** `docs/archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`, `docs/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md`
+- **Architectural remediation:** `docs/archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`, `docs/archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md`
 - **Concepts:** `docs/ONBOARDING-CONCEPTS.md`
 - **Conventions:** `docs/CONVENTIONS.md`
 - **Playbooks:** `docs/playbooks/` (compiler, runtime, lms, governance, etc.)

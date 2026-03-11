@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Verification tests for ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md checklist.
+ * Verification tests for docs/archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md checklist.
  * Covers items #1–#7 where automated verification is possible.
  *
  * Manual items (documented here for reference):

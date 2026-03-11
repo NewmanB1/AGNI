@@ -1,6 +1,8 @@
+> **Issues moved to:** [UNRESOLVED-ISSUES-MASTER-LIST.md](../UNRESOLVED-ISSUES-MASTER-LIST.md)
+
 # OLS Known Gaps — Analysis & Proposed Mitigations
 
-Expands on `docs/ARCHITECTURE.md` Appendix: Known Gaps with actionable proposals. See also `docs/VERIFICATION-REPORT.md`.
+Expands on `../ARCHITECTURE.md` Appendix: Known Gaps with actionable proposals. See also `../VERIFICATION-REPORT.md`.
 
 ---
 
@@ -10,7 +12,7 @@ Expands on `docs/ARCHITECTURE.md` Appendix: Known Gaps with actionable proposals
 
 **Current state:** Partially addressed. `meta.yamlSchemaVersion` exists in `schemas/ols.schema.json`. `build-lesson-ir.js` checks against `KNOWN_SCHEMA_VERSIONS` and logs a warning when unknown. IR propagates `yamlSchemaVersion` to the sidecar.
 
-**Resolved:** Versioning policy documented in `docs/CONVENTIONS.md` § "YAML/IR schema versioning". When introducing new schema versions, update `KNOWN_SCHEMA_VERSIONS` in `build-lesson-ir.js`.
+**Resolved:** Versioning policy documented in `../CONVENTIONS.md` § "YAML/IR schema versioning". When introducing new schema versions, update `KNOWN_SCHEMA_VERSIONS` in `build-lesson-ir.js`.
 
 ---
 
@@ -18,7 +20,7 @@ Expands on `docs/ARCHITECTURE.md` Appendix: Known Gaps with actionable proposals
 
 **Gap (was):** Cycles made lessons ineligible; theta threw at startup, bricking the hub.
 
-**Current state:** **Resolved.** Theta gracefully degrades: prunes cycle nodes, excludes affected lessons, logs error. Hub stays up. Set `AGNI_STRICT_SKILL_GRAPH=1` for strict mode (throw). `verify:skill-dag` in `verify:all`; `scripts/check-skill-dag.js` validates. See `docs/archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`.
+**Current state:** **Resolved.** Theta gracefully degrades: prunes cycle nodes, excludes affected lessons, logs error. Hub stays up. Set `AGNI_STRICT_SKILL_GRAPH=1` for strict mode (throw). `verify:skill-dag` in `verify:all`; `scripts/check-skill-dag.js` validates. See `ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`.
 
 ---
 
@@ -26,13 +28,13 @@ Expands on `docs/ARCHITECTURE.md` Appendix: Known Gaps with actionable proposals
 
 **Gap (was):** Theta fell back to HTML scraping when no IR sidecar existed. Brittle; markup changes could break indexing.
 
-**Current state:** **Resolved.** Theta refuses to index lessons without a valid IR sidecar. Lessons without `index-ir.json` are skipped (not indexed); a warning is logged. HTML scraping has been removed from runtime. Single source of truth: IR only. See `docs/ARCHITECTURE.md` Known Gaps table.
+**Current state:** **Resolved.** Theta refuses to index lessons without a valid IR sidecar. Lessons without `index-ir.json` are skipped (not indexed); a warning is logged. HTML scraping has been removed from runtime. Single source of truth: IR only. See `../ARCHITECTURE.md` Known Gaps table.
 
 ---
 
 ## 4. Device UUID Trust
 
-**Gap (resolved):** The Hub signs only for *authenticated* pseudoId from session (PIN or transfer token). No client-supplied UUID path. When auth is disabled, unsigned lessons are served. See `docs/ARCHITECTURE.md` §5.
+**Gap (resolved):** The Hub signs only for *authenticated* pseudoId from session (PIN or transfer token). No client-supplied UUID path. When auth is disabled, unsigned lessons are served. See `../ARCHITECTURE.md` §5.
 
 **Proposed mitigation:**
 - Document clearly: trust boundary is hub–device. P2P cloning is prevented by signature.
