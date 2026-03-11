@@ -28,6 +28,9 @@ const SCHEMA_MAP = [
   { file: 'ols.schema.json', out: 'ols.d.ts', rootName: 'OlsLesson' },
   { file: 'graph-weights.schema.json', out: 'graph-weights.d.ts', rootName: 'GraphWeights' },
   { file: 'governance-policy.schema.json', out: 'governance-policy.d.ts', rootName: 'GovernancePolicy' },
+  { file: 'inferred-features.schema.json', out: 'inferred-features.d.ts', rootName: 'InferredFeatures' },
+  { file: 'lesson-sidecar.schema.json', out: 'lesson-sidecar.d.ts', rootName: 'LessonSidecar' },
+  { file: 'lesson-ir.schema.json', out: 'lesson-ir.d.ts', rootName: 'LessonIR' },
 ];
 
 async function main() {

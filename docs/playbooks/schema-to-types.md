@@ -6,9 +6,9 @@ This playbook describes how TypeScript types stay aligned with JSON schemas (OLS
 
 ## 1. Current State
 
-- **Schemas:** `schemas/ols.schema.json`, `schemas/graph_weights.schema.json`, `schemas/governance-policy.schema.json`
+- **Schemas:** `schemas/ols.schema.json`, `schemas/graph-weights.schema.json`, `schemas/governance-policy.schema.json`, `schemas/inferred-features.schema.json`, `schemas/lesson-sidecar.schema.json`, `schemas/lesson-ir.schema.json`
 - **Generated types:** `packages/types/generated/` — TypeScript interfaces generated from schemas via `json-schema-to-typescript`
-- **Hand-written types:** `packages/types/index.d.ts` — IR, sidecar, LMS state (no schemas yet). Re-exports generated types where applicable (e.g. `GovernancePolicy`, `OlsLessonInput`, `GraphWeights`).
+- **Hand-written types:** `packages/types/index.d.ts` — `LessonOntology` (raw YAML input), LMS state, governance report types. Re-exports generated IR/sidecar types.
 - **Validation:** Compiler and author API use Ajv with schemas at runtime. Types are for compile-time safety.
 
 **Hardware note:** Codegen runs at build/CI time only. No runtime impact on edge devices (Android Nougat) or Village Hub (Raspberry Pi).
@@ -39,6 +39,9 @@ This writes to `packages/types/generated/`:
 - `ols.d.ts` — validated OLS lesson YAML (from `schemas/ols.schema.json`)
 - `graph-weights.d.ts` — graph weights (from `schemas/graph-weights.schema.json`)
 - `governance-policy.d.ts` — governance policy (from `schemas/governance-policy.schema.json`)
+- `inferred-features.d.ts` — inferred pedagogical features (from `schemas/inferred-features.schema.json`)
+- `lesson-sidecar.d.ts` — lesson sidecar / index-ir.json (from `schemas/lesson-sidecar.schema.json`)
+- `lesson-ir.d.ts` — lesson IR (from `schemas/lesson-ir.schema.json`)
 
 **You must run this and commit** when you change any of these schemas. CI runs `verify:codegen-sync` to ensure generated files stay in sync.
 

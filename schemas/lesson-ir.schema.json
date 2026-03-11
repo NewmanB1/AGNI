@@ -1,0 +1,165 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agni-project.org/schemas/lesson-ir.schema.json",
+  "title": "AGNI Lesson IR",
+  "description": "Compiler intermediate representation. Output of buildLessonIR.",
+  "type": "object",
+  "required": [
+    "steps",
+    "inferredFeatures",
+    "metadata_source",
+    "_devMode",
+    "_compiledAt",
+    "_schemaVersion"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "meta": {
+      "$ref": "#/$defs/LessonMeta",
+      "description": "Lesson metadata (identifier, title, etc.)."
+    },
+    "ontology": {
+      "$ref": "#/$defs/LessonOntologyNormalized",
+      "description": "Normalized skill requires/provides."
+    },
+    "gate": {
+      "oneOf": [
+        { "$ref": "#/$defs/GateLogic" },
+        { "type": "null" }
+      ],
+      "description": "Prerequisite gate."
+    },
+    "steps": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/LessonStep" },
+      "description": "Lesson steps (content, specs, thresholds)."
+    },
+    "inferredFeatures": {
+      "$ref": "inferred-features.schema.json",
+      "description": "Inferred pedagogical features."
+    },
+    "requires": {
+      "$ref": "#/$defs/LessonRequires",
+      "description": "Factory dependencies for factory-loader."
+    },
+    "metadata_source": {
+      "type": "string",
+      "description": "inferred, declared, or mixed."
+    },
+    "_devMode": {
+      "type": "boolean",
+      "description": "Development mode flag."
+    },
+    "_compiledAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO timestamp of compilation."
+    },
+    "_schemaVersion": {
+      "type": "string",
+      "description": "Schema version (e.g. 1.8.0)."
+    }
+  },
+  "$defs": {
+    "LessonMeta": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "identifier": { "type": "string" },
+        "slug": { "type": "string" },
+        "title": { "type": "string" },
+        "language": { "type": "string" },
+        "utu": { "$ref": "#/$defs/UTULabel" },
+        "teaching_mode": { "type": "string" },
+        "is_group": { "type": "boolean" },
+        "yamlSchemaVersion": { "type": "string" },
+        "declared_features": {
+          "type": "object",
+          "properties": {
+            "blooms_level": { "type": "string", "enum": ["remember", "understand", "apply", "analyze", "evaluate", "create"] },
+            "vark": { "oneOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }] },
+            "teaching_style": { "type": "string" }
+          }
+        }
+      }
+    },
+    "UTULabel": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "class": { "type": "string" },
+        "band": { "type": "number", "minimum": 1, "maximum": 6 },
+        "protocol": { "type": "number", "minimum": 1, "maximum": 5 }
+      }
+    },
+    "LessonSkillRef": {
+      "type": "object",
+      "required": ["skill"],
+      "additionalProperties": false,
+      "properties": {
+        "skill": { "type": "string" },
+        "level": { "type": "number" }
+      }
+    },
+    "LessonOntologyNormalized": {
+      "type": "object",
+      "required": ["requires", "provides"],
+      "additionalProperties": false,
+      "properties": {
+        "requires": { "type": "array", "items": { "$ref": "#/$defs/LessonSkillRef" } },
+        "provides": { "type": "array", "items": { "$ref": "#/$defs/LessonSkillRef" } }
+      }
+    },
+    "GateLogic": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["quiz", "manual_verification"] },
+        "skill_target": { "type": "string" },
+        "question": { "type": "string" },
+        "expected_answer": { "type": "string" },
+        "answer": { "type": "string" },
+        "on_fail": { "type": "string" },
+        "on_pass": { "type": "string" },
+        "passing_score": { "type": "number" },
+        "retry_delay": { "type": "string" },
+        "max_attempts": { "type": "number" }
+      }
+    },
+    "LessonStep": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "title": { "type": "string" },
+        "label": { "type": "string" },
+        "content": { "type": "string" },
+        "feedback": { "type": "string" },
+        "spec": { "type": "object", "additionalProperties": true },
+        "threshold": { "type": "object", "additionalProperties": true },
+        "htmlContent": { "type": "string" }
+      }
+    },
+    "LessonRequires": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "factories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["file", "version"],
+            "additionalProperties": false,
+            "properties": {
+              "file": { "type": "string" },
+              "version": { "type": "string" },
+              "integrity": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

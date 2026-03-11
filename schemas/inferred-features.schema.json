@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agni-project.org/schemas/inferred-features.schema.json",
+  "title": "AGNI Inferred Features",
+  "description": "Compiler-inferred pedagogical features: VARK profile, Bloom ceiling, factory manifest, etc.",
+  "type": "object",
+  "required": [
+    "flags",
+    "katexAssets",
+    "factoryManifest",
+    "vark",
+    "bloomsCeiling",
+    "bloomsLabel",
+    "dominantTeachingStyle",
+    "stepTypeCounts",
+    "difficulty"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "flags": {
+      "$ref": "#/$defs/InferredFeatureFlags",
+      "description": "Boolean flags for equation types, sensors, visuals, etc."
+    },
+    "katexAssets": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "KaTeX asset identifiers used in the lesson."
+    },
+    "factoryManifest": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "SVG factory filenames required by the lesson."
+    },
+    "vark": {
+      "$ref": "#/$defs/VarkProfile",
+      "description": "VARK learning style profile (visual, auditory, read/write, kinesthetic)."
+    },
+    "bloomsCeiling": {
+      "type": "number",
+      "description": "Highest Bloom level inferred (1-6)."
+    },
+    "bloomsLabel": {
+      "type": "string",
+      "description": "Bloom level label (e.g. remember, understand, apply)."
+    },
+    "dominantTeachingStyle": {
+      "type": "string",
+      "description": "Dominant teaching style inferred (e.g. socratic, didactic)."
+    },
+    "stepTypeCounts": {
+      "type": "object",
+      "additionalProperties": { "type": "integer" },
+      "description": "Count of steps by type (text, svg, quiz, etc.)."
+    },
+    "difficulty": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Difficulty rating 1-5."
+    },
+    "archetypeId": {
+      "type": ["string", "null"],
+      "description": "Best-fit pedagogical archetype ID (e.g. embodied-discovery). Set by compiler via archetypeMatch."
+    },
+    "coherence": {
+      "type": "number",
+      "description": "Archetype coherence score (0–~1.38). Higher = more pedagogically aligned."
+    }
+  },
+  "$defs": {
+    "InferredFeatureFlags": {
+      "type": "object",
+      "required": [
+        "has_equations",
+        "equation_types",
+        "has_sensors",
+        "has_tables",
+        "has_static_visuals",
+        "has_dynamic_visuals",
+        "has_geometry",
+        "has_visuals"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "has_equations": { "type": "boolean" },
+        "equation_types": {
+          "type": "object",
+          "required": ["algebra", "trig", "calculus", "physics", "sets"],
+          "additionalProperties": false,
+          "properties": {
+            "algebra": { "type": "boolean" },
+            "trig": { "type": "boolean" },
+            "calculus": { "type": "boolean" },
+            "physics": { "type": "boolean" },
+            "sets": { "type": "boolean" }
+          }
+        },
+        "has_sensors": { "type": "boolean" },
+        "has_tables": { "type": "boolean" },
+        "has_static_visuals": { "type": "boolean" },
+        "has_dynamic_visuals": { "type": "boolean" },
+        "has_geometry": { "type": "boolean" },
+        "has_visuals": { "type": "boolean" }
+      }
+    },
+    "VarkProfile": {
+      "type": "object",
+      "required": ["visual", "auditory", "readWrite", "kinesthetic"],
+      "additionalProperties": false,
+      "properties": {
+        "visual": { "type": "number" },
+        "auditory": { "type": "number" },
+        "readWrite": { "type": "number" },
+        "kinesthetic": { "type": "number" }
+      }
+    }
+  }
+}

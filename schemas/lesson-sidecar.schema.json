@@ -1,0 +1,153 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agni-project.org/schemas/lesson-sidecar.schema.json",
+  "title": "AGNI Lesson Sidecar",
+  "description": "Lesson sidecar (index-ir.json) written alongside compiled HTML. Consumed by theta, governance, hub.",
+  "type": "object",
+  "required": [
+    "identifier",
+    "slug",
+    "title",
+    "language",
+    "difficulty",
+    "compiledAt",
+    "schemaVersion",
+    "metadata_source",
+    "ontology",
+    "gate",
+    "inferredFeatures",
+    "katexAssets",
+    "factoryManifest"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "identifier": {
+      "type": "string",
+      "description": "Unique lesson identifier (e.g. ols:physics:gravity_v1)."
+    },
+    "slug": {
+      "type": "string",
+      "description": "URL-safe lesson slug."
+    },
+    "title": {
+      "type": "string",
+      "description": "Lesson title."
+    },
+    "language": {
+      "type": "string",
+      "description": "BCP-47 language tag."
+    },
+    "difficulty": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Difficulty 1-5."
+    },
+    "utu": {
+      "$ref": "#/$defs/UTULabel",
+      "description": "Governance / taxonomy (UTU)."
+    },
+    "teaching_mode": {
+      "type": "string",
+      "description": "Teaching mode (e.g. socratic, didactic)."
+    },
+    "is_group": {
+      "type": "boolean",
+      "description": "Whether designed for group work."
+    },
+    "compiledAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO timestamp of compilation."
+    },
+    "schemaVersion": {
+      "type": "string",
+      "description": "Schema version (e.g. 1.8.0)."
+    },
+    "metadata_source": {
+      "type": "string",
+      "enum": ["inferred", "declared", "mixed"],
+      "description": "Whether metadata came from inference, declaration, or both."
+    },
+    "ontology": {
+      "type": "object",
+      "required": ["requires", "provides"],
+      "additionalProperties": false,
+      "properties": {
+        "requires": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/LessonSkillRef" }
+        },
+        "provides": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/LessonSkillRef" }
+        }
+      }
+    },
+    "gate": {
+      "oneOf": [
+        { "$ref": "#/$defs/GateLogic" },
+        { "type": "null" }
+      ],
+      "description": "Prerequisite gate (quiz or manual)."
+    },
+    "inferredFeatures": {
+      "$ref": "inferred-features.schema.json",
+      "description": "Feature profile for LMS and reporting."
+    },
+    "katexAssets": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "KaTeX asset identifiers."
+    },
+    "factoryManifest": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "SVG factory filenames."
+    },
+    "lessonHash": {
+      "type": "string",
+      "description": "SHA-256 hash of IR for caching, deduplication, federation."
+    }
+  },
+  "$defs": {
+    "UTULabel": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "class": { "type": "string", "description": "e.g. MAC-2" },
+        "band": { "type": "number", "minimum": 1, "maximum": 6, "description": "Developmental band 1-6" },
+        "protocol": { "type": "number", "minimum": 1, "maximum": 5 }
+      }
+    },
+    "LessonSkillRef": {
+      "type": "object",
+      "required": ["skill"],
+      "additionalProperties": false,
+      "properties": {
+        "skill": { "type": "string" },
+        "level": { "type": "number" }
+      }
+    },
+    "GateLogic": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["quiz", "manual_verification"]
+        },
+        "skill_target": { "type": "string" },
+        "question": { "type": "string" },
+        "expected_answer": { "type": "string" },
+        "answer": { "type": "string" },
+        "on_fail": { "type": "string" },
+        "on_pass": { "type": "string" },
+        "passing_score": { "type": "number" },
+        "retry_delay": { "type": "string" },
+        "max_attempts": { "type": "number" }
+      }
+    }
+  }
+}

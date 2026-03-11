@@ -14,6 +14,18 @@
 export type { AGNIOpenLessonStandardV18 } from './generated/ols';
 export type { AGNIGovernancePolicy } from './generated/governance-policy';
 export type { OLSGraphWeightsDiscoveredCohortCognitionMap } from './generated/graph-weights';
+export type { AGNIInferredFeatures, InferredFeatureFlags, VarkProfile } from './generated/inferred-features';
+export type { AGNILessonSidecar } from './generated/lesson-sidecar';
+export type {
+  AGNILessonIR,
+  LessonMeta,
+  LessonSkillRef,
+  LessonOntologyNormalized,
+  GateLogic,
+  LessonStep,
+  LessonRequires,
+  UTULabel,
+} from './generated/lesson-ir';
 
 /** Validated OLS lesson YAML (schema-validated input). Use for compiler input. */
 export type OlsLessonInput = import('./generated/ols').AGNIOpenLessonStandardV18;
@@ -21,43 +33,20 @@ export type OlsLessonInput = import('./generated/ols').AGNIOpenLessonStandardV18
 /** Graph weights (sentry/theta). Generated from schemas/graph-weights.schema.json */
 export type GraphWeights = import('./generated/graph-weights').OLSGraphWeightsDiscoveredCohortCognitionMap;
 
+/** Lesson IR. Generated from schemas/lesson-ir.schema.json */
+export type LessonIR = import('./generated/lesson-ir').AGNILessonIR;
+
+/** Lesson sidecar (index-ir.json). Generated from schemas/lesson-sidecar.schema.json */
+export type LessonSidecar = import('./generated/lesson-sidecar').AGNILessonSidecar;
+
+/** Inferred pedagogical features. Generated from schemas/inferred-features.schema.json */
+export type InferredFeatures = import('./generated/inferred-features').AGNIInferredFeatures;
+
 // ──────────────────────────────────────────────────────────────────────────────
-// Lesson + IR types (hand-written; no schemas for IR/sidecar yet)
+// Lesson types (hand-written; raw YAML input, aliases)
 // ──────────────────────────────────────────────────────────────────────────────
 
-export interface UTULabel {
-  class?: string;     // e.g. "MAC-2"
-  band?: number;      // developmental band (1–6)
-  protocol?: number;  // pedagogical protocol (1–5)
-}
-
-export interface LessonMeta {
-  identifier?: string;
-  slug?: string;
-  title?: string;
-  language?: string;
-  /** Governance / taxonomy (UTU). See docs/ARCHITECTURE.md */
-  utu?: UTULabel;
-  /** Author-declared teaching mode (e.g. socratic, didactic, guided_discovery). */
-  teaching_mode?: string;
-  /** Whether this lesson is designed for group/collaborative work. */
-  is_group?: boolean;
-  /** Optional schema version for forward-compat checks (e.g. 1.8.0). */
-  yamlSchemaVersion?: string;
-  /** Author-declared pedagogical feature overrides (confidence 1.0). */
-  declared_features?: {
-    blooms_level?: 'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create';
-    vark?: string | string[];
-    teaching_style?: string;
-  };
-  // Additional author-defined metadata is allowed.
-  [key: string]: unknown;
-}
-
-export interface LessonSkillRef {
-  skill: string;
-  level?: number;
-}
+import type { LessonSkillRef, GateLogic } from './generated/lesson-ir';
 
 /** Raw YAML ontology input: allows string shorthand or full LessonSkillRef. */
 export interface LessonOntology {
@@ -66,143 +55,8 @@ export interface LessonOntology {
   [key: string]: unknown;
 }
 
-/** Normalized ontology: compiler produces this. Consumers use LessonSkillRef[] only. */
-export interface LessonOntologyNormalized {
-  requires: LessonSkillRef[];
-  provides: LessonSkillRef[];
-}
-
-/** Gate logic for Zero-Trust prerequisite check. Matches schemas/ols.schema.json gateLogic.
- *  Must be schema-validated; do not allow arbitrary unknown payloads in executable logic.
- *  Runtime may add: max_attempts, answer (alias for expected_answer), on_pass. */
-export interface GateLogic {
-  type: 'quiz' | 'manual_verification';
-  skill_target?: string;
-  question?: string;
-  expected_answer?: string;
-  answer?: string;
-  on_fail?: string;
-  on_pass?: string;
-  passing_score?: number;
-  retry_delay?: string;
-  max_attempts?: number;
-}
-
-/** Gate in lesson IR. When schema-validated, must be GateLogic. Legacy paths may pass unknown. */
+/** Gate in lesson IR. Alias for GateLogic (generated). */
 export type LessonGate = GateLogic;
-
-export interface LessonStep {
-  id?: string;
-  type?: string;
-  title?: string;
-  label?: string;
-  content?: string;
-  feedback?: string;
-  spec?: Record<string, unknown>;
-  threshold?: Record<string, unknown>;
-  // Added by buildLessonIR:
-  htmlContent?: string;
-  // Allow for future step-level fields.
-  [key: string]: unknown;
-}
-
-export interface InferredFeatureFlags {
-  has_equations: boolean;
-  equation_types: {
-    algebra: boolean;
-    trig: boolean;
-    calculus: boolean;
-    physics: boolean;
-    sets: boolean;
-  };
-  has_sensors: boolean;
-  has_tables: boolean;
-  has_static_visuals: boolean;
-  has_dynamic_visuals: boolean;
-  has_geometry: boolean;
-  has_visuals: boolean;
-}
-
-export interface VarkProfile {
-  visual: number;
-  auditory: number;
-  readWrite: number;
-  kinesthetic: number;
-}
-
-export interface InferredFeatures {
-  flags: InferredFeatureFlags;
-  katexAssets: string[];
-  factoryManifest: string[];
-  vark: VarkProfile;
-  bloomsCeiling: number;
-  bloomsLabel: string;
-  dominantTeachingStyle: string;
-  stepTypeCounts: Record<string, number>;
-  difficulty: number;
-  /** Best-fit pedagogical archetype ID (e.g. 'embodied-discovery'). Set by compiler via archetypeMatch. */
-  archetypeId?: string | null;
-  /** Archetype coherence score (0–~1.38). Higher = lesson's dimensions are more pedagogically aligned. */
-  coherence?: number;
-  // Open-ended extension point for future inference fields.
-  [key: string]: unknown;
-}
-
-/** Runtime dependency list (factories) embedded in LESSON_DATA by compiler. */
-export interface LessonRequires {
-  factories?: Array<{ file: string; version: string; integrity?: string }>;
-}
-
-export interface LessonIR {
-  meta?: LessonMeta;
-  /** Normalized at compile time; consumers use LessonSkillRef[] only. */
-  ontology?: LessonOntologyNormalized;
-  gate?: LessonGate | null;
-  steps: LessonStep[];
-  inferredFeatures: InferredFeatures;
-  /** Set by html.js / hub-transform; consumed by factory-loader.js */
-  requires?: LessonRequires;
-  metadata_source: 'inferred' | 'declared' | 'mixed' | string;
-  _devMode: boolean;
-  _compiledAt: string;      // ISO timestamp
-  _schemaVersion: string;   // e.g. "1.8.0"
-  // Allow additional fields copied through from YAML.
-  [key: string]: unknown;
-}
-
-export interface LessonSidecar {
-  // Identity
-  identifier: string;
-  slug: string;
-  title: string;
-  language: string;
-  difficulty: number;
-
-  // Governance / pedagogy (for reporting and compliance)
-  utu?: UTULabel;
-  teaching_mode?: string;
-  is_group?: boolean;
-
-  // Compiler stamps
-  compiledAt: string;
-  schemaVersion: string;
-  metadata_source: LessonIR['metadata_source'];
-
-  // Curriculum / scheduling
-  ontology: {
-    requires: LessonSkillRef[];
-    provides: LessonSkillRef[];
-  };
-  gate: LessonGate | null;
-
-  // Feature profile
-  inferredFeatures: InferredFeatures;
-  katexAssets: string[];
-  factoryManifest: string[];
-
-  /** Deterministic SHA-256 hash of IR for caching, deduplication, federation. */
-  lessonHash?: string;
-}
 
 // Factory manifest entries are currently just filenames, but aliased here
 // to make future refactors (e.g. richer objects) easier.

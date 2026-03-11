@@ -71,7 +71,7 @@ Use these instead of ad-hoc mtime checks or inline escape functions.
 
 ## Types and contracts
 
-- **Shared types in `packages/types/index.d.ts`.** IR, sidecar, LMS state, governance, and API payloads. When you add a new field to the IR or sidecar, update the type and the compiler/governance code together.
+- **Shared types in `packages/types/index.d.ts`.** IR, sidecar, LMS state, governance, and API payloads. IR and sidecar types are **schema-driven** — when you add a field to the IR or sidecar, update `schemas/lesson-ir.schema.json` or `schemas/lesson-sidecar.schema.json`, run `npm run codegen:types`, and update the compiler/governance code.
 - **API contract in `docs/api-contract.md`.** Any new or changed hub HTTP endpoint must be documented there and reflected in `portal/js/api.js` if the portal uses it.
 
 ## Playbooks
