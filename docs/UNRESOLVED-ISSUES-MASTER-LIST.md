@@ -4,6 +4,25 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 
 ---
 
+## ARCHITECTURAL-VULNERABILITIES-REMEDIATION (Phase 1 + Hardening)
+
+| ID | Issue | Location | Status |
+|----|-------|----------|--------|
+| 1 | Cache poisoning / device binding race | hub-transform.js | Done |
+| 2 | False-atomic write (no fsync) | agni-engine, json-store.js | Done |
+| 3 | Cycle-triggered global DoS | theta.js | Done |
+| 4 | Chrome 51 sensor event-loop exhaustion | sensor-bridge.js | Done |
+| 5 | Ed25519 / TweetNaCl UI blocking | integrity.js, player.js, crypto.js | Done |
+| 6 | Time-skew telemetry corruption | sentry.js, sync.js, markov.js | Done |
+| 7 | KaTeX / Markdown memory spikes | package.json, hub-config | Done |
+| H1 | Thundering herd (compile queue timeout) | hub-transform.js | Done |
+| H2 | SD card directory fsync | json-store.js, hub-transform.js | Done |
+| H3 | Sensor hardware failure blocking | threshold-evaluator.js, player.js | Done |
+| H4 | Sneakernet Bayesian double-count | federation.js, engine | Done |
+| H5 | Student-to-student token theft | accounts.js, http-helpers.js, hub-transform.js | Done |
+
+---
+
 ## ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN
 
 | ID | Issue | Location | Status |
@@ -295,4 +314,4 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 
 ## References
 
-- Source documents: `ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN.md`, `AUDIT-HARDENING-PLAN.md`, `LEN-001-MATH-ENGINE-BUGS.md`, `SHIM-AND-CODE-AUDIT-FINDINGS.md`, `GAP-ANALYSIS-AND-MITIGATIONS.md`, `archive/RUNTIME-MANIFEST-IMPROVEMENT-PLAN.md`, `archive/sensor-toolkit-improvement-plan.md`, `archive/OPPORTUNISTIC-PRECACHE-PLAN.md`, `PHASE-3-REMEDIATION-PLAN.md`, `archive/SPRINT-R16-OPEN-BUGS.md`, `ROADMAP.md`, `YEAR2-PREP.md`, `LAUNCH-AND-COMMUNITY.md`, `CHECK-JS-ENABLEMENT-PLAN.md`, `CHECK-JS-FINISH-PLAN.md`
+- Source documents: `ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`, `ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md`, `ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN.md`, `AUDIT-HARDENING-PLAN.md`, `LEN-001-MATH-ENGINE-BUGS.md`, `SHIM-AND-CODE-AUDIT-FINDINGS.md`, `GAP-ANALYSIS-AND-MITIGATIONS.md`, `archive/RUNTIME-MANIFEST-IMPROVEMENT-PLAN.md`, `archive/sensor-toolkit-improvement-plan.md`, `archive/OPPORTUNISTIC-PRECACHE-PLAN.md`, `PHASE-3-REMEDIATION-PLAN.md`, `archive/SPRINT-R16-OPEN-BUGS.md`, `ROADMAP.md`, `YEAR2-PREP.md`, `LAUNCH-AND-COMMUNITY.md`, `CHECK-JS-ENABLEMENT-PLAN.md`, `CHECK-JS-FINISH-PLAN.md`

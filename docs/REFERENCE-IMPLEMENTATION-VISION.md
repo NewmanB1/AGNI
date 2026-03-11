@@ -60,11 +60,11 @@ This document describes the **reference implementation** direction for AGNI: a *
 
 ## 4. Relation to current codebase
 
-- **Already aligned**  
+- **Already aligned**
   - Single canonical IR (`buildLessonIR`); schemas for OLS and graph_weights; services layer; typed API contract. These are steps toward “schema as contract” and clear boundaries.
-- **Future refactor**  
+- **Future refactor**
   - Gradually move to schema-driven validation and codegen where it pays off; introduce pure pipelines and immutable core data where the change is small and the benefit is high (e.g. compiler path, theta “compute order” function).
-- **Not a rewrite**  
+- **Not a rewrite**
   - The vision is to refactor when touching code—not a big-bang rewrite. Prefer incremental steps: e.g. “this module’s public API is now (input) → (output) with no side effects,” or “this route now validates against schema X before calling the engine.”
 
 ---
