@@ -19,8 +19,8 @@ const BAD_PATTERNS = [
   /hub-tools\/routes\//
 ];
 
-// Meta-docs that describe the migration (mention old paths by design)
-const SKIP_FILES = ['docs/PHASE-3-REMEDIATION-PLAN.md'];
+// Meta-docs that describe the migration (mention old paths by design); PHASE-3 is in archive (not scanned)
+const SKIP_FILES = [];
 
 function walkDir(dir, out, skipArchive) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });

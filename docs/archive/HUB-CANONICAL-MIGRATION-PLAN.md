@@ -306,6 +306,6 @@ Phase 4 (docs) ────► Can run in parallel with Phase 1–3             
 ## References
 
 - `.cursor/rules/sprint-verification.md` — Regression tests, CI gates, wiring proof
-- `docs/PHASE-3-REMEDIATION-PLAN.md` — Prior hub migration (tests, scripts, docs)
+- `PHASE-3-REMEDIATION-PLAN.md` — Prior hub migration (tests, scripts, docs; same archive)
 - `docs/archive/SPRINT-R16-OPEN-BUGS.md` — R16 items (C1–C3) — verify status; many marked Done
 - `AGENTS.md` — Canonical package layout

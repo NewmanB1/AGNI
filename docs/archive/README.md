@@ -48,6 +48,7 @@ This directory holds **completed** or **superseded** planning documents. They ar
 | `ARCHITECTURAL-AUDIT-FINDINGS.md` | Audit: spec.type, graph clamp, PWA handshake, supply chain (all addressed) |
 | `ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md` | Status of Phase 1 (7 vulns) + H1–H5; all Done |
 | `GAP-ANALYSIS-AND-MITIGATIONS.md` | OLS gaps (YAML, DAG, HTML scrape, etc.); all 7 Resolved |
+| `PHASE-3-REMEDIATION-PLAN.md` | Hub migration Phase 3 + ROADMAP Phase 3; A/B Done, B1.1 Deferred, C→R16 |
 | `SERVICES-IMPROVEMENT-PLAN.md` | Services layer improvements |
 | `SVG-TOOLS-IMPROVEMENT-PLAN.md` | SVG factory and tools |
 | `LESSON-CREATOR-IMPROVEMENT-PLAN.md` | Lesson authoring improvements |

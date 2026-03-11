@@ -1,3 +1,5 @@
+> **Issues moved to:** [UNRESOLVED-ISSUES-MASTER-LIST.md](../UNRESOLVED-ISSUES-MASTER-LIST.md)
+
 # Phase 3 Remediation Plan
 
 Plan to fix all outstanding Phase 3 issues (hub migration + ROADMAP) with regression guards and proof of completion. Follows `docs/.cursor/rules/sprint-verification.md`.
