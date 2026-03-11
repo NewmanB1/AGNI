@@ -121,21 +121,22 @@ async function doCompile(slug, loaded) {
 
   const _lessonCache = cache.getLessonCache();
   const _cacheSize = cache.getCacheSize();
-  const MAX_CACHE_ENTRIES = cache.getMaxCacheEntries();
   const isUpdate = !!_lessonCache[slug];
+  const oldEntry = _lessonCache[slug];
+  const oldByteSize = (oldEntry && typeof oldEntry.byteSize === 'number') ? oldEntry.byteSize : 0;
+  const byteSize = cache.computeEntryBytes(ir, sidecar);
 
-  if (!isUpdate && _cacheSize >= MAX_CACHE_ENTRIES) {
-    const evicted = cache.evictOldest();
-    if (evicted) log.debug('Cache evicted', { slug: evicted });
-  }
+  cache.ensureRoomFor(byteSize, oldByteSize);
 
   _lessonCache[slug] = {
     ir: ir,
     sidecar: sidecar,
     mtime: loaded.mtime,
-    lastAccessed: Date.now()
+    lastAccessed: Date.now(),
+    byteSize: byteSize
   };
   cache.setCacheSize(_cacheSize + (isUpdate ? 0 : 1));
+  cache.addCacheBytes(byteSize - oldByteSize);
 
   cache.writeDiskCache(slug, assemble.assembleHtml(ir, {}), ir);
   return { ir: ir, sidecar: sidecar, lessonIR: ir };
@@ -156,11 +157,17 @@ async function compileLesson(slug, options) {
     if (options.dev) log.debug('Disk cache hit', { slug: slug });
     const diskCache = cache.getLessonCache();
     if (!diskCache[slug]) {
-      if (cache.getCacheSize() >= cache.getMaxCacheEntries()) {
-        cache.evictOldest();
-      }
-      diskCache[slug] = { ir: disk.ir, sidecar: disk.sidecar, mtime: loaded.mtime, lastAccessed: Date.now() };
+      const byteSize = cache.computeEntryBytes(disk.ir, disk.sidecar);
+      cache.ensureRoomFor(byteSize, 0);
+      diskCache[slug] = {
+        ir: disk.ir,
+        sidecar: disk.sidecar,
+        mtime: loaded.mtime,
+        lastAccessed: Date.now(),
+        byteSize: byteSize
+      };
       cache.setCacheSize(cache.getCacheSize() + 1);
+      cache.addCacheBytes(byteSize);
     } else {
       diskCache[slug].lastAccessed = Date.now();
     }

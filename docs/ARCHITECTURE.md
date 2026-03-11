@@ -289,7 +289,7 @@ Compilation cost (Markdown + KaTeX + inference) is network-triggerable CPU load.
 | Concurrent-request deduplication | Per-slug in-flight guard: same slug awaits existing Promise |
 | Concurrency cap | `AGNI_COMPILE_CONCURRENCY` (default 3) limits parallel compilations |
 | Queue overflow (thundering herd) | When no slot available, return 202 Accepted + Retry-After; client auto-refreshes. Config: `AGNI_COMPILE_RETRY_AFTER` (default 3s). |
-| LRU eviction | `AGNI_CACHE_MAX` (default 100 entries) caps memory |
+| LRU eviction | `AGNI_CACHE_MAX_BYTES` (bytes) or `AGNI_CACHE_MAX` (entries). Pi: 25 MB recommended |
 
 On-demand hub-transform checks disk first; if `index.html` exists and its mtime ≥ YAML mtime, serves from disk. Otherwise compiles, populates memory cache, and writes to disk. Theta's `rebuildLessonIndex()` reads `index-ir.json` sidecars. Static build output (CLI `--output`) may also write to `serveDir/lessons/<slug>/`.
 

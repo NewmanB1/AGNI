@@ -53,7 +53,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | P2-24 | Edge device SW cache eviction | Document eviction strategy | Documented |
 | P2-25 | Spec.type whitelist (prototype pollution) | SVG registry | Done (audit) |
 | P2-26 | LMS federation merge correctness | posteriorVersion, trainingWindow | Done |
-| P2-27 | Memory budget (LRU by bytes) | Cache by bytes, not count | **Open** |
+| P2-27 | Memory budget (LRU by bytes) | Cache by bytes, not count | Done |
 | P2-28 | Compile concurrency starvation | min(cores-2, 2) formula | **Open** |
 
 ---

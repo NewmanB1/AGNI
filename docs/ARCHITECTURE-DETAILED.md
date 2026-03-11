@@ -250,7 +250,7 @@ rawYaml
 **Caching:**
 
 - **Disk:** `serveDir/lessons/<slug>/index.html`, `index-ir.json`, `index-ir-full.json`
-- **Memory:** LRU keyed by `slug + YAML mtime`. MAX_CACHE_ENTRIES (default 100), MAX_CONCURRENT_COMPILES (default 3)
+- **Memory:** LRU keyed by `slug + YAML mtime`. MAX_CACHE_BYTES (bytes) or MAX_CACHE_ENTRIES (count). Pi: 25 MB. MAX_CONCURRENT_COMPILES (default 3)
 - **Per-slug in-flight guard:** Concurrent requests for same slug await the same Promise (DoS mitigation).
 
 **Device binding:** `_getRequestCompileOptions()` extracts session token → `validateStudentSession` → pseudoId. If valid, `_assembleHtml` uses pseudoId as deviceId for signing.

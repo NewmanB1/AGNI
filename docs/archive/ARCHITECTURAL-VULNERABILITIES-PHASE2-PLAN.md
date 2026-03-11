@@ -261,6 +261,8 @@ This document extends the Phase 1 remediation (`ARCHITECTURAL-VULNERABILITIES-RE
 
 **Fix:** Cache by bytes, not count. Or reduce MAX_CACHE_ENTRIES on Pi.
 
+**Status:** Done. `AGNI_CACHE_MAX_BYTES` enables byte-based LRU. hub-config.pi.json sets 25 MB. When 0, falls back to entry count (`AGNI_CACHE_MAX`).
+
 ---
 
 ### 28. Compile Concurrency Starvation

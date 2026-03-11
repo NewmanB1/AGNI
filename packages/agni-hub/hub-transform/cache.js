@@ -3,7 +3,10 @@
 /**
  * hub-transform/cache.js
  * Disk and in-memory lesson cache, compile slot management, in-flight guard.
- * DoS mitigation: LRU eviction, concurrency cap, 202/Retry-After on queue overflow.
+ * DoS mitigation: LRU eviction (by bytes or count), concurrency cap, 202/Retry-After on queue overflow.
+ *
+ * When AGNI_CACHE_MAX_BYTES is set, eviction is by memory budget (bytes). Otherwise uses
+ * AGNI_CACHE_MAX (entry count). Pi deployments should set bytes (e.g. 25e6) to avoid OOM.
  */
 
 const fs   = require('fs');
@@ -18,7 +21,9 @@ const SERVE_DIR = envConfig.serveDir;
 
 const _lessonCache = {};
 let _cacheSize = 0;
+let _cacheBytes = 0;
 const MAX_CACHE_ENTRIES = parseInt(process.env.AGNI_CACHE_MAX || '100', 10);
+const MAX_CACHE_BYTES = parseInt(process.env.AGNI_CACHE_MAX_BYTES || '0', 10);
 const MAX_CONCURRENT_COMPILES = parseInt(process.env.AGNI_COMPILE_CONCURRENCY || '3', 10);
 let _compileSlots = MAX_CONCURRENT_COMPILES;
 const _compileQueue = [];
@@ -123,6 +128,15 @@ function wouldCompileBeQueued(slug) {
   return _compileSlots === 0;
 }
 
+function computeEntryBytes(ir, sidecar) {
+  if (!ir || !sidecar) return 0;
+  try {
+    return Buffer.byteLength(JSON.stringify(ir), 'utf8') + Buffer.byteLength(JSON.stringify(sidecar), 'utf8');
+  } catch (_e) {
+    return 0;
+  }
+}
+
 function evictOldest() {
   let oldestSlug = null;
   let oldestTime = Infinity;
@@ -133,6 +147,8 @@ function evictOldest() {
     }
   });
   if (oldestSlug) {
+    const entry = _lessonCache[oldestSlug];
+    if (entry && typeof entry.byteSize === 'number') _cacheBytes -= entry.byteSize;
     delete _lessonCache[oldestSlug];
     _cacheSize--;
     return oldestSlug;
@@ -140,25 +156,62 @@ function evictOldest() {
   return null;
 }
 
+/**
+ * Evict oldest entries until there is room for byteSize bytes.
+ * When MAX_CACHE_BYTES is 0, uses count-based logic (room for one more entry).
+ * @param {number} byteSize   bytes we want to add
+ * @param {number} [oldByteSize]  bytes of existing entry we're replacing (0 for new)
+ */
+function ensureRoomFor(byteSize, oldByteSize) {
+  oldByteSize = oldByteSize || 0;
+  if (MAX_CACHE_BYTES > 0) {
+    let budgetAfter = _cacheBytes - oldByteSize + byteSize;
+    while (budgetAfter > MAX_CACHE_BYTES) {
+      const evicted = evictOldest();
+      if (!evicted) break;
+      budgetAfter = _cacheBytes - oldByteSize + byteSize;
+      log.debug('Evicted for byte budget', { slug: evicted, bytesNow: _cacheBytes });
+    }
+  } else {
+    const limit = oldByteSize > 0 ? MAX_CACHE_ENTRIES : MAX_CACHE_ENTRIES - 1;
+    while (_cacheSize > limit) {
+      const evicted = evictOldest();
+      if (!evicted) break;
+    }
+  }
+}
+
+function addCacheBytes(delta) {
+  _cacheBytes += delta;
+  if (_cacheBytes < 0) _cacheBytes = 0;
+}
+
 function getLessonCache() { return _lessonCache; }
 function getCacheSize() { return _cacheSize; }
 function setCacheSize(n) { _cacheSize = n; }
+function getCacheBytes() { return _cacheBytes; }
 function getMaxCacheEntries() { return MAX_CACHE_ENTRIES; }
+function getMaxCacheBytes() { return MAX_CACHE_BYTES; }
 function getCompilingNow() { return _compilingNow; }
 function getRetryAfterSeconds() { return RETRY_AFTER_SECONDS; }
 
 module.exports = {
-  validateCachedIr:    validateCachedIr,
-  tryReadDiskCache:    tryReadDiskCache,
-  writeDiskCache:      writeDiskCache,
-  acquireCompileSlot:  acquireCompileSlot,
-  releaseCompileSlot:  releaseCompileSlot,
+  validateCachedIr:     validateCachedIr,
+  tryReadDiskCache:     tryReadDiskCache,
+  writeDiskCache:       writeDiskCache,
+  acquireCompileSlot:   acquireCompileSlot,
+  releaseCompileSlot:   releaseCompileSlot,
   wouldCompileBeQueued: wouldCompileBeQueued,
-  evictOldest:         evictOldest,
-  getLessonCache:      getLessonCache,
-  getCacheSize:        getCacheSize,
-  setCacheSize:        setCacheSize,
-  getMaxCacheEntries:  getMaxCacheEntries,
-  getCompilingNow:     getCompilingNow,
+  evictOldest:          evictOldest,
+  ensureRoomFor:        ensureRoomFor,
+  computeEntryBytes:    computeEntryBytes,
+  addCacheBytes:        addCacheBytes,
+  getLessonCache:       getLessonCache,
+  getCacheSize:         getCacheSize,
+  setCacheSize:         setCacheSize,
+  getCacheBytes:        getCacheBytes,
+  getMaxCacheEntries:   getMaxCacheEntries,
+  getMaxCacheBytes:     getMaxCacheBytes,
+  getCompilingNow:      getCompilingNow,
   getRetryAfterSeconds: getRetryAfterSeconds
 };

@@ -67,6 +67,7 @@ These JSON keys in `hub-config.json` map to the env vars below (via `loadHubConf
 | `minLocalEdges` | `AGNI_MIN_LOCAL_EDGES` |
 | `approvedCatalog` | `AGNI_APPROVED_CATALOG` |
 | `cacheMax` | `AGNI_CACHE_MAX` |
+| `cacheMaxBytes` | `AGNI_CACHE_MAX_BYTES` |
 | `compileConcurrency` | `AGNI_COMPILE_CONCURRENCY` |
 | `syncTransport` | `AGNI_SYNC_TRANSPORT` |
 | `privateKeyPath` | `AGNI_PRIVATE_KEY_PATH` |
@@ -112,7 +113,8 @@ These JSON keys in `hub-config.json` map to the env vars below (via `loadHubConf
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AGNI_CACHE_MAX` | `100` | Max in-memory lesson cache entries (LRU) |
+| `AGNI_CACHE_MAX` | `100` | Max in-memory lesson cache entries (LRU) when cacheMaxBytes not set |
+| `AGNI_CACHE_MAX_BYTES` | `0` | Max in-memory cache bytes (LRU by bytes). When set, overrides count-based eviction. Pi: 26214400 (25 MB) recommended |
 | `AGNI_COMPILE_CONCURRENCY` | `3` | Max parallel compilations; use `1` for Pi 3 (1GB), `2` for Pi 4 (2GB) |
 | `AGNI_COMPILE_RETRY_AFTER` | `3` | Seconds in Retry-After when queue full (202 response) |
 
