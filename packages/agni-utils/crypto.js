@@ -153,6 +153,31 @@ function computeSRI(content) {
 }
 
 /**
+ * Signs an arbitrary payload (e.g. factory manifest) with Ed25519.
+ * No device binding — used for hub-signed resource manifests.
+ * @param  {string} payloadString  canonical JSON of the payload
+ * @param  {string} privateKeyPath path to PEM-encoded Ed25519 private key
+ * @returns {string|null}          base64 Ed25519 signature, or null
+ */
+function signManifestPayload(payloadString, privateKeyPath) {
+  if (typeof payloadString !== 'string') return null;
+  if (typeof privateKeyPath !== 'string' || !privateKeyPath) return null;
+  try {
+    const stat = fs.statSync(privateKeyPath);
+    if (_keyCache.path !== privateKeyPath || _keyCache.mtime !== stat.mtimeMs) {
+      _keyCache = { path: privateKeyPath, mtime: stat.mtimeMs, key: fs.readFileSync(privateKeyPath, 'utf8') };
+    }
+    const privateKey = _keyCache.key;
+    const data = Buffer.from(payloadString, 'utf8');
+    const signature = crypto.sign(null, data, privateKey);
+    return signature.toString('base64');
+  } catch (err) {
+    log.warn('Manifest signing failed: ' + (err && err.message));
+    return null;
+  }
+}
+
+/**
  * Export public key as base64 SPKI DER from a PEM file (private or public).
  * @param  {string} keyPath path to PEM file
  * @returns {string|null} base64 SPKI or null
@@ -171,4 +196,4 @@ function getPublicKeySpki(keyPath) {
 }
 
 
-module.exports = { signContent, canonicalJSON, getPublicKeySpki, computeSRI, SIG_PLACEHOLDER };
+module.exports = { signContent, signManifestPayload, canonicalJSON, getPublicKeySpki, computeSRI, SIG_PLACEHOLDER };

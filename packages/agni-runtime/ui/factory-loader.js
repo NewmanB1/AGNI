@@ -63,6 +63,7 @@
   var _hubUrl      = null;
   var _onlineQueue = [];   // deps queued while offline
   var _lastError   = null; // first execution error encountered this session
+  var _manifestMap = null; // { 'file@version': { integrity } } — hub-signed manifest (P0 #5)
 
   // ── Hub URL resolution ──────────────────────────────────────────────────────
 
@@ -199,6 +200,74 @@
       return cache.put(url, response);
     }).catch(function (e) {
       console.warn('[LOADER] Cache write failed for', url, ':', e.message);
+    });
+  }
+
+  // ── Hub-signed manifest (P0 #5 supply-chain) ─────────────────────────────────
+
+  function canonicalJSON(obj) {
+    if (obj === null || obj === undefined) return 'null';
+    var t = typeof obj;
+    if (t === 'number') return isFinite(obj) ? String(obj) : 'null';
+    if (t === 'boolean') return String(obj);
+    if (t === 'string') return JSON.stringify(obj);
+    if (Array.isArray(obj)) {
+      var parts = [];
+      for (var i = 0; i < obj.length; i++) parts.push(canonicalJSON(obj[i]));
+      return '[' + parts.join(',') + ']';
+    }
+    if (t === 'object') {
+      var keys = Object.keys(obj).sort();
+      var pairs = [];
+      for (var k = 0; k < keys.length; k++) {
+        var key = keys[k];
+        if (obj[key] !== undefined) pairs.push(JSON.stringify(key) + ':' + canonicalJSON(obj[key]));
+      }
+      return '{' + pairs.join(',') + '}';
+    }
+    return 'null';
+  }
+
+  function base64ToBytes(b64) {
+    var binary = atob(b64);
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  function verifyManifestSignature(manifest, publicKeySpki) {
+    if (!manifest || !manifest.signature || !publicKeySpki) return Promise.resolve(false);
+    var payload = { version: manifest.version, factories: manifest.factories, timestamp: manifest.timestamp };
+    var payloadStr = canonicalJSON(payload);
+    var payloadBytes = utf8Encode(payloadStr);
+    var sigBytes = base64ToBytes(manifest.signature);
+    var spkiBytes = base64ToBytes(publicKeySpki);
+    var rawPubKey = spkiBytes.slice(spkiBytes.length - 32);
+    if (global.nacl && global.nacl.sign && global.nacl.sign.detached && global.nacl.sign.detached.verify) {
+      return Promise.resolve(global.nacl.sign.detached.verify(payloadBytes, sigBytes, rawPubKey));
+    }
+    if (global.crypto && global.crypto.subtle && typeof global.crypto.subtle.importKey === 'function') {
+      return global.crypto.subtle.importKey('spki', spkiBytes, { name: 'Ed25519' }, false, ['verify'])
+        .then(function (pk) {
+          return global.crypto.subtle.verify('Ed25519', pk, sigBytes, payloadBytes);
+        })
+        .catch(function () { return false; });
+    }
+    return Promise.resolve(false);
+  }
+
+  function fetchAndVerifyManifest(hubUrl, publicKeySpki) {
+    var url = hubUrl.replace(/\/+$/, '') + '/factories/manifest.json';
+    return fetch(url).then(function (r) {
+      if (!r.ok) throw new Error('Manifest fetch failed: HTTP ' + r.status);
+      return r.json();
+    }).then(function (manifest) {
+      if (!manifest.factories || !Array.isArray(manifest.factories)) throw new Error('Invalid manifest');
+      if (!publicKeySpki || !manifest.signature) return manifest;
+      return verifyManifestSignature(manifest, publicKeySpki).then(function (valid) {
+        if (!valid) throw new Error('Manifest signature verification failed');
+        return manifest;
+      });
     });
   }
 
@@ -345,8 +414,14 @@
     if (global.DEV_MODE) console.log('[LOADER] Loading:', key, 'from', url);
 
     function verifyAndExecute(text) {
-      if (dep.integrity) {
-        return verifySRI(text, dep.integrity).then(function (valid) {
+      var integrityToUse = dep.integrity;
+      if (_manifestMap) {
+        var manifestEntry = _manifestMap[key];
+        if (!manifestEntry) throw new Error('Factory ' + dep.file + ' not in hub-signed manifest');
+        integrityToUse = manifestEntry.integrity;
+      }
+      if (integrityToUse) {
+        return verifySRI(text, integrityToUse).then(function (valid) {
           if (!valid) throw new Error('SRI verification failed for ' + dep.file);
           executeScript(text, url);
         });
@@ -462,6 +537,29 @@
       return Promise.resolve();
     }
 
+    var manifestPromise = Promise.resolve();
+    if (_hubUrl) {
+      manifestPromise = fetchAndVerifyManifest(_hubUrl, global.OLS_PUBLIC_KEY || '')
+        .then(function (manifest) {
+          if (manifest && manifest.factories && manifest.signature) {
+            var map = {};
+            for (var i = 0; i < manifest.factories.length; i++) {
+              var f = manifest.factories[i];
+              map[cacheKey(f.file, f.version)] = { integrity: f.integrity };
+            }
+            _manifestMap = map;
+            if (global.DEV_MODE) console.log('[LOADER] Hub manifest verified');
+          }
+        })
+        .catch(function (err) {
+          if (/signature verification failed/i.test(err.message)) {
+            console.error('[LOADER] Manifest signature invalid:', err.message);
+            throw err;
+          }
+          if (global.DEV_MODE) console.log('[LOADER] No manifest, using lesson SRI:', err.message);
+        });
+    }
+
     var phase1 = [];  // polyfills
     var phase2 = [];  // shared-runtime + binary-utils (no cross-dependency)
     var phase3 = [];  // everything else (depends on AGNI_SHARED / AGNI_SVG)
@@ -483,10 +581,12 @@
       return Promise.all(list.map(function (dep) { return loadOne(dep); }));
     }
 
-    return runPhase(phase1).then(function () {
-      return runPhase(phase2);
-    }).then(function () {
-      return runPhase(phase3);
+    return manifestPromise.then(function () {
+      return runPhase(phase1).then(function () {
+        return runPhase(phase2);
+      }).then(function () {
+        return runPhase(phase3);
+      });
     });
   }
 

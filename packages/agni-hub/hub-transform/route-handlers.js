@@ -15,6 +15,7 @@ const accountsService = require('@agni/services/accounts');
 const compile   = require('./compile');
 const assemble  = require('./assemble');
 const serveAssets = require('./serve-assets');
+const factoryManifest = require('./factory-manifest');
 
 const createLogger = require('@agni/utils/logger').createLogger;
 const log = createLogger('hub-transform');
@@ -146,6 +147,18 @@ function handleRequest(req, res, options) {
       sendText(req, res, 500, 'text/html; charset=utf-8',
         '<h1>Compilation error</h1><pre>' + escapeHtml(err.message) + '</pre>');
     });
+    return true;
+  }
+
+  // GET /factories/manifest.json — hub-signed factory manifest (P0 #5)
+  if (req.method === 'GET' && urlPath === '/factories/manifest.json') {
+    try {
+      const manifest = factoryManifest.getFactoryManifest();
+      sendJson(req, res, 200, manifest);
+    } catch (err) {
+      log.warn('Factory manifest error', { error: err.message });
+      sendJson(req, res, 500, { error: 'Manifest unavailable' });
+    }
     return true;
   }
 

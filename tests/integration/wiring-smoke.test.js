@@ -153,6 +153,16 @@ describe('Wiring smoke tests', function () {
     assert.ok(res.body.indexOf('String.prototype') !== -1, 'Response body missing String.prototype polyfill');
   });
 
+  it('GET /factories/manifest.json returns 200 with hub-signed manifest (P0 #5)', async function () {
+    const res = await httpGet(port, '/factories/manifest.json');
+    assert.equal(res.status, 200, '/factories/manifest.json not served');
+    var parsed;
+    assert.doesNotThrow(function () { parsed = JSON.parse(res.body); }, 'manifest.json is not valid JSON');
+    assert.ok(parsed.version, 'manifest missing version');
+    assert.ok(Array.isArray(parsed.factories), 'manifest.factories must be array');
+    assert.ok(parsed.timestamp, 'manifest missing timestamp');
+  });
+
   // ── PWA asset routes ──────────────────────────────────────────────────
 
   it('GET /factory-loader.js returns 200 with AGNI_LOADER', async function () {

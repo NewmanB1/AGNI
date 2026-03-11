@@ -281,8 +281,8 @@ This document extends the Phase 1 remediation (`ARCHITECTURAL-VULNERABILITIES-RE
 |---|--------|----------|
 | 1, 2, 7 | Done | hub-transform transactional compile, IR validation |
 | 3, 4 | Done | yaml-safe.js: depthOf, MAX_STEPS, maxKeys |
-| 5 | Partial | SRI + versioned URLs; hub-signed manifest not implemented (see ARCHITECTURAL-AUDIT-FINDINGS.md) |
-| 6 | Done | rehype-sanitize in markdown-pipeline.js |
+| 5 | Done | SRI + versioned URLs; hub-signed manifest at /factories/manifest.json; device verifies before loading factories |
+| 6 | Done | rehype-sanitize with protocols allowlist (href: https/mailto, src: https only) |
 | 8 | Done | json-store, atomic-write, engine, hub-transform: parent dir fsync |
 | 9 | Done | Version in factory URL; _runtimeVersion in LESSON_DATA |
 | 10 | Done | Audited: shell-boot and player await loadDependencies |

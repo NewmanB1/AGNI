@@ -186,6 +186,45 @@ describe('architectural remediation #6: time-skew protection', function () {
   });
 });
 
+// ── Phase 2 P0 #2: IR validation on cache read ───────────────────────────────
+
+describe('Phase 2 P0 #2: cache IR validation (force recompile on invalid)', function () {
+  it('validateCachedIr rejects truncated or corrupt IR', function () {
+    const cache = require('@agni/hub/hub-transform/cache');
+    const { validateCachedIr } = cache;
+
+    assert.strictEqual(validateCachedIr(null), false);
+    assert.strictEqual(validateCachedIr({}), false);
+    assert.strictEqual(validateCachedIr({ steps: 'not-array' }), false);
+    assert.strictEqual(validateCachedIr({ steps: [] }), false);
+    assert.strictEqual(validateCachedIr({
+      steps: [{ id: 's1', type: 'instruction' }],
+      inferredFeatures: {}
+    }), false, 'missing meta');
+    assert.strictEqual(validateCachedIr({
+      steps: [{ id: 's1', type: 'instruction' }],
+      meta: {}
+    }), false, 'missing inferredFeatures');
+    assert.strictEqual(validateCachedIr({
+      steps: [{ id: 's1' }],
+      meta: {},
+      inferredFeatures: {}
+    }), false, 'step missing type');
+    assert.strictEqual(validateCachedIr({
+      steps: [{ type: 'instruction' }],
+      meta: {},
+      inferredFeatures: {}
+    }), false, 'step missing id');
+
+    const valid = {
+      meta: { title: 'T' },
+      inferredFeatures: {},
+      steps: [{ id: 's1', type: 'instruction', content: 'x' }]
+    };
+    assert.strictEqual(validateCachedIr(valid), true);
+  });
+});
+
 // ── #7: Pi config concurrency ────────────────────────────────────────────────
 
 describe('architectural remediation #7: Pi config and OOM mitigation', function () {

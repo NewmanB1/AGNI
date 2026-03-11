@@ -1,12 +1,14 @@
 'use strict';
 
 /**
- * Regression: YAML security mitigations (anchor/alias DoS, max size, JSON_SCHEMA).
+ * Regression: YAML security mitigations (anchor/alias DoS, max size, max depth,
+ * key explosion, max steps). P0 #3, #4.
  */
 const assert = require('assert');
 const yaml = require('js-yaml');
 const { describe, it } = require('../helpers/test-api');
 const { parseLessonFromString } = require('@ols/compiler/services/compiler');
+const { safeYamlLoad, DEFAULT_MAX_STEPS } = require('@agni/utils/yaml-safe');
 
 describe('safeYamlLoad / YAML security', function () {
   it('parses valid lesson YAML', function () {
@@ -36,5 +38,26 @@ describe('safeYamlLoad / YAML security', function () {
     const small = 'meta: { title: OK }\nsteps: []';
     const r = parseLessonFromString(small, { maxBytes: 10000 });
     assert.ok(!r.error, r.error || '');
+  });
+
+  it('rejects deep nesting (P0 #3)', function () {
+    let nested = 'x: 1';
+    for (let i = 0; i < 60; i++) nested = 'a: { ' + nested + ' }';
+    assert.throws(
+      function () { safeYamlLoad(nested, { maxDepth: 10 }); },
+      /nesting|limits|DoS/i
+    );
+  });
+
+  it('rejects key explosion in steps (P0 #4)', function () {
+    const steps = {};
+    for (let i = 0; i < DEFAULT_MAX_STEPS + 10; i++) {
+      steps['step' + i] = { id: 's' + i, type: 'content', content: 'x' };
+    }
+    const raw = yaml.dump({ meta: { title: 'Test' }, steps: steps });
+    assert.throws(
+      function () { safeYamlLoad(raw); },
+      /steps.*max|exceeds/i
+    );
   });
 });

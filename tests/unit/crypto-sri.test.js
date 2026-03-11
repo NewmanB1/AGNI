@@ -1,9 +1,12 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 const { describe, it } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
 const crypto = require('crypto');
-const { computeSRI } = require('@agni/utils/crypto');
+const { computeSRI, signManifestPayload, canonicalJSON } = require('@agni/utils/crypto');
 
 describe('computeSRI', () => {
   it('returns sha384-<base64> format', () => {
@@ -44,5 +47,46 @@ describe('computeSRI', () => {
     const content = '// \u{1F4DA}';
     const sri = computeSRI(content);
     assert.match(sri, /^sha384-/);
+  });
+});
+
+describe('signManifestPayload (hub-signed manifest P0 #5)', () => {
+  let pemPath;
+
+  before(() => {
+    const { privateKey } = crypto.generateKeyPairSync('ed25519', {
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+      publicKeyEncoding: { type: 'spki', format: 'pem' }
+    });
+    pemPath = path.join(os.tmpdir(), 'agni-manifest-test-' + Date.now() + '.pem');
+    fs.writeFileSync(pemPath, privateKey, 'utf8');
+  });
+
+  after(() => {
+    try { fs.unlinkSync(pemPath); } catch (e) { /* ignore */ }
+  });
+
+  it('signs payload and produces base64 signature', () => {
+    const payload = canonicalJSON({ version: '1.0', factories: [], timestamp: '2026-01-01T00:00:00.000Z' });
+    const sig = signManifestPayload(payload, pemPath);
+    assert.ok(sig, 'signature should be non-null');
+    assert.match(sig, /^[A-Za-z0-9+/]+=*$/, 'signature should be base64');
+    assert.ok(sig.length >= 64, 'Ed25519 signature is 64 bytes base64');
+  });
+
+  it('returns null for empty privateKeyPath', () => {
+    assert.strictEqual(signManifestPayload('{}', ''), null);
+    assert.strictEqual(signManifestPayload('{}', null), null);
+  });
+
+  it('signature verifies with Node crypto', () => {
+    const manifest = { version: '1.0', factories: [{ file: 'x.js', version: '1', integrity: 'sha384-x' }], timestamp: '2026-01-01T00:00:00.000Z' };
+    const payload = canonicalJSON(manifest);
+    const sig = signManifestPayload(payload, pemPath);
+    assert.ok(sig);
+    const sigBuf = Buffer.from(sig, 'base64');
+    const keyObject = crypto.createPublicKey({ key: fs.readFileSync(pemPath, 'utf8'), format: 'pem' });
+    const data = Buffer.from(payload, 'utf8');
+    assert.ok(crypto.verify(null, data, keyObject, sigBuf), 'signature should verify');
   });
 });

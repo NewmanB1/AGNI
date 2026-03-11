@@ -90,6 +90,22 @@ describe('buildLessonIR', () => {
     assert.ok(ir.ontology);
     assert.equal(ir.ontology.requires[0].skill, 'reading');
   });
+
+  it('strips javascript: and data: from Markdown links/images (P0 #6 XSS)', async () => {
+    const lesson = minimalLesson({
+      steps: [
+        {
+          id: 'xss_1',
+          type: 'instruction',
+          content: '[click](javascript:alert(1)) and ![img](data:text/html,<script>alert(2)</script>)'
+        }
+      ]
+    });
+    const ir = await buildLessonIR(lesson, {});
+    const html = ir.steps[0].htmlContent;
+    assert.ok(!/javascript:/i.test(html), 'javascript: link should be stripped: ' + html);
+    assert.ok(!/data:text\/html/i.test(html), 'data: img src should be stripped: ' + html);
+  });
 });
 
 // ── buildLessonSidecar ───────────────────────────────────────────────────────

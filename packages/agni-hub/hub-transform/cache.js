@@ -38,6 +38,24 @@ function getDiskCachePaths(slug) {
   };
 }
 
+/**
+ * Validate cached IR structure before use. Catches truncated or corrupted cache.
+ * P0 #2: Invalid IR → force recompile.
+ * @param {object} ir - Parsed IR from disk
+ * @returns {boolean} true if valid
+ */
+function validateCachedIr(ir) {
+  if (!ir || typeof ir !== 'object') return false;
+  if (!Array.isArray(ir.steps)) return false;
+  for (let i = 0; i < ir.steps.length; i++) {
+    const s = ir.steps[i];
+    if (!s || typeof s !== 'object' || !s.id || !s.type) return false;
+  }
+  if (!ir.meta || typeof ir.meta !== 'object') return false;
+  if (!ir.inferredFeatures || typeof ir.inferredFeatures !== 'object') return false;
+  return true;
+}
+
 function tryReadDiskCache(slug, yamlMtime) {
   const paths = getDiskCachePaths(slug);
   try {
@@ -46,7 +64,7 @@ function tryReadDiskCache(slug, yamlMtime) {
     const html = fs.readFileSync(paths.htmlPath, 'utf8');
     const irRaw = fs.readFileSync(paths.fullIrPath, 'utf8');
     const ir = JSON.parse(irRaw);
-    if (!ir || typeof ir !== 'object' || !ir.steps) return null;
+    if (!validateCachedIr(ir)) return null;
     const sidecar = buildLessonSidecar(ir);
     return { html: html, sidecar: sidecar, ir: ir };
   } catch {
@@ -130,6 +148,7 @@ function getCompilingNow() { return _compilingNow; }
 function getRetryAfterSeconds() { return RETRY_AFTER_SECONDS; }
 
 module.exports = {
+  validateCachedIr:    validateCachedIr,
   tryReadDiskCache:    tryReadDiskCache,
   writeDiskCache:      writeDiskCache,
   acquireCompileSlot:  acquireCompileSlot,

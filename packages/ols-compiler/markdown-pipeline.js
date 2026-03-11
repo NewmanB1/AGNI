@@ -16,6 +16,15 @@ async function _buildProcessor() {
   const rehypeSanitize  = (await import('rehype-sanitize')).default;
   const rehypeStringify = (await import('rehype-stringify')).default;
 
+  // P0 #6: Restrict href/src to allowlist (https, mailto) to prevent XSS and data: exhaustion
+  const sanitizeSchema = {
+    protocols: {
+      href: ['https', 'mailto'],
+      cite: ['https'],
+      src: ['https']
+    }
+  };
+
   const processor = unified()
     .use(remarkParse)
     .use(remarkMath)
@@ -26,7 +35,7 @@ async function _buildProcessor() {
       throwOnError: false,
       errorColor: '#ff6b35'
     })
-    .use(rehypeSanitize)
+    .use(rehypeSanitize, sanitizeSchema)
     .use(rehypeStringify);
 
   log.info('Markdown processor ready');
