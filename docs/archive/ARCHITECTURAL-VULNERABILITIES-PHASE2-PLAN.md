@@ -125,6 +125,8 @@ This document extends the Phase 1 remediation (`ARCHITECTURAL-VULNERABILITIES-RE
 
 **Location:** `packages/agni-utils/crypto.js`, `packages/agni-runtime/integrity/integrity.js`.
 
+**Status (mitigated):** v2.2 narrow scope signs canonicalJSON(LESSON_DATA) only — placeholder no longer used. Pragmatic mitigations: removed dead SIG_PLACEHOLDER; added canonical-json-contract test; docs updated to v2.2. **Deferred:** Binary-blob signing requires structural changes (fetchable lesson script, offline handling) and is documented as a future enhancement for environments where fetchable resources exist. See ARCHITECTURE.md §5.
+
 ---
 
 ### 12. Device ID Trust Boundary

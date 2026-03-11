@@ -375,7 +375,7 @@ Lessons reference specs: `type: "pendulum"`, `params: { length: 120 }`. `svg-sta
 
 ### Integrity Verification
 
-`integrity.js` (loaded via factory-loader): `verifyIntegrity()` reads `OLS_SIGNATURE`, `OLS_PUBLIC_KEY`, `OLS_INTENDED_OWNER`. Rebuilds hash of full lesson script + NUL + deviceId. Verifies Ed25519. Uses SubtleCrypto when available, TweetNaCl fallback for legacy WebKit.
+`integrity.js` (loaded via factory-loader): `verifyIntegrity()` reads `OLS_SIGNATURE`, `OLS_PUBLIC_KEY`, `OLS_INTENDED_OWNER`. Builds hash from canonicalJSON(LESSON_DATA) + NUL + deviceId (v2.2). Verifies Ed25519. Uses SubtleCrypto when available, TweetNaCl fallback for legacy WebKit.
 
 ---
 
@@ -394,7 +394,7 @@ All parsing via `@agni/utils/yaml-safe` or `@ols/compiler` `safeYamlLoad`.
 ### Device Binding (Signed Lease)
 
 1. **Request:** With auth, device sends session token (cookie or Bearer). Hub validates → pseudoId.
-2. **Binding:** `Hash(Content + NUL + pseudoId)` where Content = full lesson script (signature placeholder replaced).
+2. **Binding:** `Hash(Content + NUL + pseudoId)` where Content = canonicalJSON(LESSON_DATA) (v2.2 narrow scope).
 3. **Signing:** Ed25519 with hub private key.
 4. **Injection:** OLS_SIGNATURE, OLS_PUBLIC_KEY, OLS_INTENDED_OWNER in globals.
 

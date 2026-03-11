@@ -189,7 +189,7 @@ Because resources are delivered separately, they cannot be included in the lesso
 
 ### 6.2 What Is Signed
 
-**Content** = full lesson script block (nonce bootstrap + factory-loader + `LESSON_DATA` IR + integrity globals + player.js), not just IR JSON. The hub binds content to device UUID: `Hash(Content + NUL + UUID)` signed with hub private key.
+**Content** = canonicalJSON(LESSON_DATA) + NUL + deviceId (v2.2 narrow scope). The hub binds lesson IR to device UUID: `Hash(Content)` signed with hub private key.
 
 The HTML wrapper, `<style>` block, and external factory files (shared-runtime, integrity.js, etc.) are **not** signed — they must be served from trusted paths.
 

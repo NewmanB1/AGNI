@@ -54,9 +54,6 @@
 
 'use strict';
 
-/** Placeholder for signature value when computing the binding hash. Must match integrity.js. */
-const SIG_PLACEHOLDER = '__OLS_SIG_PLACEHOLDER__';
-
 const crypto = require('crypto');
 const fs     = require('fs');
 const { createLogger } = require('./logger');
@@ -196,4 +193,4 @@ function getPublicKeySpki(keyPath) {
 }
 
 
-module.exports = { signContent, signManifestPayload, canonicalJSON, getPublicKeySpki, computeSRI, SIG_PLACEHOLDER };
+module.exports = { signContent, signManifestPayload, canonicalJSON, getPublicKeySpki, computeSRI };

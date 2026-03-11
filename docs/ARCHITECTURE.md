@@ -308,7 +308,7 @@ Resources (SVG factories, stylesheets, media libraries, shared scripts) are cach
 
 | Bundle | Contents | Delivery | Integrity |
 |--------|----------|----------|-----------|
-| **Lesson bundle** | HTML document, inline lesson script (nonce + factory-loader + LESSON_DATA + globals + player), optional co-delivered assets | Per-lesson, on-demand or precached | Ed25519 signature over full lesson script block (see §5) |
+| **Lesson bundle** | HTML document, inline lesson script (nonce + factory-loader + LESSON_DATA + globals + player), optional co-delivered assets | Per-lesson, on-demand or precached | Ed25519 signature over canonicalJSON(LESSON_DATA) + deviceId (see §5) |
 | **Resource bundle** | Factories (`shared-runtime.js`, `integrity.js`, etc.), styles (`style.css`), KaTeX CSS, SVG factories, media (JPEG library, etc.) | Pre-cached; fetched via factory-loader | SRI (sha384 per factory in manifest); factory-loader verifies before execution |
 
 The lesson bundle is the unit of lesson delivery. The resource bundle is shared across lessons and must be served from trusted paths. Because resources are delivered separately, they require their own integrity mechanism — not part of the lesson signature. See `docs/playbooks/village-security.md` §6 for integrity scope.
@@ -324,7 +324,7 @@ We enforce a "Digital Chain of Custody" to limit the spread of corrupted or unve
 We move from a "Public Flyer" model to a "Personalized Ticket" model.
 
 1. **Request:** When auth is enabled, the student device sends a session token (cookie or Bearer). The Hub validates it and extracts the pseudoId. When auth is disabled, the Hub serves **unsigned** lessons (no signing, no device binding).
-2. **Binding:** Hub compiles the lesson and calculates `Hash(Content + pseudoId)`. *Content* is the **full lesson script** (IR + factory-loader + player), with a placeholder replacing the signature value before hashing. This ensures integrity of the entire executable artifact, not just the IR. See `utils/crypto.js`, `lessonAssembly`, and `integrity/integrity.js`.
+2. **Binding:** Hub compiles the lesson and calculates `Hash(Content + pseudoId)`. *Content* is `canonicalJSON(LESSON_DATA)` + NUL + deviceId (narrow scope v2.2) — the lesson IR only, not the full script. See `utils/crypto.js`, `lessonAssembly`, and `integrity/integrity.js`.
 3. **Signing:** Hub signs the hash with its Private Authority Key.
 4. **Injection:** The signature and intended owner (pseudoId) are hardcoded into the compiled artifact.
 
@@ -366,6 +366,10 @@ To prevent students from claiming another student's identity (pseudoId), the Hub
 - **Session IP binding:** When a session is created (verify-pin or claim), the client IP is stored. On lesson delivery, the Hub rejects the session if the request IP differs, mitigating token theft between devices on the same network.
 
 **Implementation:** `packages/agni-services/accounts.js` (createStudentSession, validateStudentSession), `packages/agni-hub/hub-transform.js` (_getRequestCompileOptions, _assembleHtml), `packages/agni-utils/http-helpers.js` (extractStudentSessionToken).
+
+### 5.4 Future enhancements (deferred)
+
+**Binary-blob signing (P2-11):** The v2.2 narrow scope signs canonicalJSON(LESSON_DATA), which works for PWA and offline. A more robust approach would sign the raw bytes of the delivered artifact; verification would fetch those bytes and hash them. This would require structural changes (e.g., a fetchable lesson script resource) and careful handling for offline/file-based loading. Documented as a future enhancement for environments where fetchable resources exist.
 
 ---
 
@@ -592,7 +596,7 @@ prescribing specific lesson content.
 | **DAG validation** | Cycles make affected lessons ineligible. Theta gracefully degrades (prunes cycle, logs error). `AGNI_STRICT_SKILL_GRAPH=1` restores strict throw. | Run `npm run verify:skill-dag` before deployment. |
 | **HTML scrape fallback** | *(Resolved)* Theta previously fell back to HTML scraping when no IR sidecar existed. | Removed. Theta now refuses to index lessons without IR (single source of truth). |
 | **Device UUID trust** | When auth enabled: Hub binds content to *authenticated* pseudoId (PIN or transfer-token). Without auth: unsigned lessons served. | See §5.3. Provides integrity + anti-copy + ownership binding when PIN/session and `AGNI_PRIVATE_KEY_PATH` are configured. |
-| **Signature scope** | *(Resolved v2.1)* Content = full lesson script (IR + factory-loader + player), with signature placeholder. Covers entire executable artifact. | See `utils/crypto.js`, `lessonAssembly`, `integrity/integrity.js`. Lessons signed with pre-v2.1 (IR-only) must be re-signed. |
+| **Signature scope** | *(v2.2)* Content = canonicalJSON(LESSON_DATA) + NUL + deviceId. Protects lesson IR and device watermark. HTML wrapper and factories are not signed; SRI covers factories. | See `utils/crypto.js`, `lessonAssembly`, `integrity/integrity.js`. |
 | **Cached assets** | Factories (`shared-runtime.js`, `svg-stage.js`, etc.) are not per-lesson signed. | SRI hashes (sha384) are injected into LESSON_DATA at compile time; factory-loader verifies each fetch before execution. MitM on factory fetch fails SRI. Lesson signature protects the integrity hashes (they are in the signed script). |
 | **Federation merge** | Sneakernet loop (A→B→C→A) could double-count observations and poison posteriors. | `federation.js` uses contentHash for exact-duplicate dedup; **hubId + exportSequence** with `hubHighWater` per hub prevents re-merging same hub's exports. Requires unique `AGNI_HUB_ID` per hub. |
 | **LMS migration** | State migrated on load. Power loss during migration could corrupt state. | Atomic write: write to `.tmp`, fsync file, rename, then fsync parent directory (ext4/SD). See `packages/agni-engine/index.js` `saveState` and `packages/agni-utils/json-store.js`. |
