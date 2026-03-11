@@ -58,7 +58,7 @@ Runs on the Raspberry Pi server. Node 14+.
 **Hub time (Pi without RTC):** Raspberry Pi has no hardware clock. On boot without network, the system clock may be epoch (1970). To avoid telemetry corruption (`AGNI_SENTRY_MIN_VALID_YEAR` rejects writes when year < 2020), set the clock via:
 - USB sync: include `syncTimestamp` in the inbound payload; run sync with `AGNI_SYNC_SET_CLOCK=1` to set `date` from the payload (Linux only; requires appropriate permissions).
 - Manual: `sudo date -s "2024-01-15 12:00:00"` after boot.
-- See `docs/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md` for time-skew details.
+- See `docs/archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md` for time-skew details.
 
 **Sessions / JWT:** Auth tokens use `exp` timestamps. If the hub clock is wrong (e.g. epoch), tokens may be rejected or behave unexpectedly. Ensure the Pi clock is set before relying on session auth.
 

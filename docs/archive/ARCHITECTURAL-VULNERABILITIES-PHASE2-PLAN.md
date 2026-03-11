@@ -2,7 +2,7 @@
 
 # Architectural Vulnerabilities — Phase 2 Plan
 
-This document extends the Phase 1 remediation (`ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`) with 28 additional issues identified in deep architectural analysis. Prioritized for implementation.
+This document extends the Phase 1 remediation (`ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`, in archive) with 28 additional issues identified in deep architectural analysis. Prioritized for implementation.
 
 ---
 
@@ -300,7 +300,7 @@ This document extends the Phase 1 remediation (`ARCHITECTURAL-VULNERABILITIES-RE
 
 ## References
 
-- Phase 1: `ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`
+- Phase 1: `ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md` (same archive)
 - Status: `ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md`
 - hub-transform: `packages/agni-hub/hub-transform.js`
 - yaml-safe: `packages/agni-utils/yaml-safe.js`

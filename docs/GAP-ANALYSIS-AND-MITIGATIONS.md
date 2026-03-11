@@ -18,7 +18,7 @@ Expands on `docs/ARCHITECTURE.md` Appendix: Known Gaps with actionable proposals
 
 **Gap (was):** Cycles made lessons ineligible; theta threw at startup, bricking the hub.
 
-**Current state:** **Resolved.** Theta gracefully degrades: prunes cycle nodes, excludes affected lessons, logs error. Hub stays up. Set `AGNI_STRICT_SKILL_GRAPH=1` for strict mode (throw). `verify:skill-dag` in `verify:all`; `scripts/check-skill-dag.js` validates. See `docs/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`.
+**Current state:** **Resolved.** Theta gracefully degrades: prunes cycle nodes, excludes affected lessons, logs error. Hub stays up. Set `AGNI_STRICT_SKILL_GRAPH=1` for strict mode (throw). `verify:skill-dag` in `verify:all`; `scripts/check-skill-dag.js` validates. See `docs/archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`.
 
 ---
 

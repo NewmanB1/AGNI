@@ -1,3 +1,5 @@
+> **Issues moved to:** [UNRESOLVED-ISSUES-MASTER-LIST.md](../UNRESOLVED-ISSUES-MASTER-LIST.md)
+
 # Architectural Vulnerabilities — Remediation Plan
 
 This document describes a plan to address seven verified architectural vulnerabilities in AGNI. Each section includes the issue, proposed fix, implementation approach, and verification strategy.

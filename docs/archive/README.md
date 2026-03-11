@@ -43,6 +43,7 @@ This directory holds **completed** or **superseded** planning documents. They ar
 | `RUNTIME-IMPROVEMENT-PLAN.md` | Runtime (player, sensors) improvements |
 | `RUNTIME-MANIFEST-IMPROVEMENT-PLAN.md` | runtimeManifest.js DRY refactor, API cleanup, CI guards (all Done) |
 | `sensor-toolkit-improvement-plan.md` | Sensor toolkit enhancements: orientation, shake, Phyphox sound, fallback (all Done) |
+| `ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md` | Phase 1: seven architectural vulnerabilities (all Done) |
 | `ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN.md` | Phase 2: 28 additional vulns (P2-1–28); some Open, see master list |
 | `SERVICES-IMPROVEMENT-PLAN.md` | Services layer improvements |
 | `SVG-TOOLS-IMPROVEMENT-PLAN.md` | SVG factory and tools |
