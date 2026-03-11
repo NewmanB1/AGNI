@@ -139,7 +139,7 @@ The following remediations address edge-case vulnerabilities identified during d
 ## References
 
 - `docs/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md` — Full specification
-- `docs/ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN.md` — Phase 2 (28 items) and implementation status
+- `docs/archive/ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN.md` — Phase 2 (28 items) and implementation status
 - `docs/ARCHITECTURAL-AUDIT-FINDINGS.md` — Audit findings (spec.type, graph clamp, PWA handshake, supply chain)
 - `docs/ARCHITECTURE-DETAILED.md` — Implementation details
 - `docs/RUN-ENVIRONMENTS.md` — Hardware and environment constraints

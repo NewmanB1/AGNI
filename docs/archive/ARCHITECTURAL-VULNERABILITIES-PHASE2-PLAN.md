@@ -1,3 +1,5 @@
+> **Issues moved to:** [UNRESOLVED-ISSUES-MASTER-LIST.md](../UNRESOLVED-ISSUES-MASTER-LIST.md)
+
 # Architectural Vulnerabilities — Phase 2 Plan
 
 This document extends the Phase 1 remediation (`ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`) with 28 additional issues identified in deep architectural analysis. Prioritized for implementation.
