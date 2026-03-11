@@ -1,3 +1,5 @@
+> **Issues moved to:** [UNRESOLVED-ISSUES-MASTER-LIST.md](../UNRESOLVED-ISSUES-MASTER-LIST.md)
+
 # Architectural Audit Findings
 
 Audit of three items from the Phase 2 plan: `spec.type` whitelist (SVG registry), graph weight clamping, and PWA/factory load order. Conducted as part of architectural vulnerability remediation.
