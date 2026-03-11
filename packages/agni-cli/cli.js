@@ -70,8 +70,8 @@ async function run() {
 
   // ── Analyze lesson (static analysis) ─────────────────────────────────────
   if (firstArg === 'analyze') {
-    var analyzeInput = args.filter(function (a) { return !a.startsWith('-'); })[1];
-    var curriculumPath = null;
+    const analyzeInput = args.filter(function (a) { return !a.startsWith('-'); })[1];
+    let curriculumPath = null;
     args.forEach(function (a) {
       if (a.startsWith('--curriculum=')) curriculumPath = a.split('=')[1];
     });

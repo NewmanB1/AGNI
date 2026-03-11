@@ -12,9 +12,9 @@
  *   // issues: Array<{ severity: 'error'|'warning', step?: string, message: string }>
  */
 
-var { createLogger } = require('@agni/utils/logger');
-var log = createLogger('lesson-validator');
-var plugins = require('@agni/plugins');
+const { createLogger } = require('@agni/utils/logger');
+const log = createLogger('lesson-validator');
+const plugins = require('@agni/plugins');
 
 // ── Known runtime constants (read from plugin registry) ─────────────────────
 
@@ -38,10 +38,10 @@ const VALID_DIRECTIVES = /^(skip_to|skip|redirect|hint):/;
 // ── Threshold grammar validator ─────────────────────────────────────────────
 
 function validateThreshold(threshold, stepId) {
-  var issues = [];
+  const issues = [];
   if (typeof threshold !== 'string' || !threshold.trim()) return issues;
 
-  var raw = threshold.trim();
+  const raw = threshold.trim();
 
   if (/\bOR\b/i.test(raw)) {
     issues.push({ severity: 'error', step: stepId,
@@ -56,13 +56,13 @@ function validateThreshold(threshold, stepId) {
       message: 'Threshold uses NOT — negation is not supported: "' + raw + '"' });
   }
 
-  var conditions = raw.split(/\bAND\b/);
-  for (var i = 0; i < conditions.length; i++) {
-    var cond = conditions[i].trim();
+  const conditions = raw.split(/\bAND\b/);
+  for (let i = 0; i < conditions.length; i++) {
+    const cond = conditions[i].trim();
     if (!cond) continue;
 
-    var parts = cond.split(/\s+/);
-    var subject = parts[0];
+    const parts = cond.split(/\s+/);
+    const subject = parts[0];
 
     if (!subject) continue;
 
@@ -99,8 +99,8 @@ function validateThreshold(threshold, stepId) {
     }
   }
 
-  var steadyCount = (raw.match(/\bsteady\b/gi) || []).length;
-  var freefallCount = (raw.match(/\bfreefall\b/gi) || []).length;
+  const steadyCount = (raw.match(/\bsteady\b/gi) || []).length;
+  const freefallCount = (raw.match(/\bfreefall\b/gi) || []).length;
   if (steadyCount > 1) {
     issues.push({ severity: 'warning', step: stepId,
       message: 'Multiple "steady" conditions — only the rightmost gets duration coupling' });
@@ -116,7 +116,7 @@ function validateThreshold(threshold, stepId) {
 // ── SVG spec validator ──────────────────────────────────────────────────────
 
 function validateSvgSpec(spec, stepId) {
-  var issues = [];
+  let issues = [];
   if (!spec || typeof spec !== 'object') return issues;
 
   if (spec.compose) {
@@ -125,9 +125,9 @@ function validateSvgSpec(spec, stepId) {
         message: 'compose svg_spec has no layers array' });
       return issues;
     }
-    for (var li = 0; li < spec.layers.length; li++) {
-      var layer = spec.layers[li];
-      var layerLabel = stepId + '.layers[' + li + ']';
+    for (let li = 0; li < spec.layers.length; li++) {
+      const layer = spec.layers[li];
+      const layerLabel = stepId + '.layers[' + li + ']';
       if (!layer.factory) {
         issues.push({ severity: 'error', step: layerLabel,
           message: 'Compose layer missing factory name' });
@@ -148,7 +148,7 @@ function validateSvgSpec(spec, stepId) {
 }
 
 function validateSingleFactory(factoryName, opts, label) {
-  var issues = [];
+  const issues = [];
 
   if (!VALID_FACTORIES.has(factoryName)) {
     issues.push({ severity: 'error', step: label,
@@ -157,10 +157,10 @@ function validateSingleFactory(factoryName, opts, label) {
     return issues;
   }
 
-  var allowed = FACTORY_OPTS[factoryName];
+  const allowed = FACTORY_OPTS[factoryName];
   if (allowed) {
-    var keys = Object.keys(opts);
-    for (var k = 0; k < keys.length; k++) {
+    const keys = Object.keys(opts);
+    for (let k = 0; k < keys.length; k++) {
       if (!allowed.has(keys[k])) {
         issues.push({ severity: 'error', step: label,
           message: 'SVG factory "' + factoryName + '" does not accept opt "' + keys[k] +
@@ -169,7 +169,7 @@ function validateSingleFactory(factoryName, opts, label) {
     }
   }
 
-  for (var sk of SENSOR_CAPABLE_OPTS) {
+  for (const sk of SENSOR_CAPABLE_OPTS) {
     if (opts[sk] && typeof opts[sk] === 'string' && !KNOWN_SENSORS.has(opts[sk])) {
       issues.push({ severity: 'warning', step: label,
         message: 'SVG sensor binding "' + sk + ': ' + opts[sk] +
@@ -197,8 +197,8 @@ function validateSingleFactory(factoryName, opts, label) {
 // ── Step-level validation ───────────────────────────────────────────────────
 
 function validateStep(step, stepIndex, allStepIds) {
-  var issues = [];
-  var stepId = step.id || ('step[' + stepIndex + ']');
+  let issues = [];
+  const stepId = step.id || ('step[' + stepIndex + ']');
 
   if (!step.id) {
     issues.push({ severity: 'error', step: stepId,
@@ -213,8 +213,8 @@ function validateStep(step, stepIndex, allStepIds) {
         Array.from(VALID_STEP_TYPES).join(', ') });
   }
 
-  var keys = Object.keys(step);
-  for (var k = 0; k < keys.length; k++) {
+  const keys = Object.keys(step);
+  for (let k = 0; k < keys.length; k++) {
     if (!VALID_STEP_FIELDS.has(keys[k])) {
       issues.push({ severity: 'error', step: stepId,
         message: 'Unknown step field "' + keys[k] + '" — runtime will ignore or reject this. ' +
@@ -287,7 +287,7 @@ function validateStep(step, stepIndex, allStepIds) {
     validateDirectiveTarget(step.on_success, stepId, 'on_success', allStepIds, issues);
   }
 
-  var svgSpec = step.svg_spec || step.spec;
+  const svgSpec = step.svg_spec || step.spec;
   if (svgSpec) {
     issues = issues.concat(validateSvgSpec(svgSpec, stepId));
   }
@@ -297,9 +297,9 @@ function validateStep(step, stepIndex, allStepIds) {
 
 function validateDirectiveTarget(directive, stepId, fieldName, allStepIds, issues) {
   if (typeof directive !== 'string') return;
-  var match = directive.match(/^(?:skip_to|redirect):(.+)$/);
+  const match = directive.match(/^(?:skip_to|redirect):(.+)$/);
   if (match) {
-    var targetId = match[1];
+    const targetId = match[1];
     if (!allStepIds.has(targetId)) {
       issues.push({ severity: 'error', step: stepId,
         message: fieldName + ' references step "' + targetId + '" which does not exist' });
@@ -310,7 +310,7 @@ function validateDirectiveTarget(directive, stepId, fieldName, allStepIds, issue
 // ── Gate validation ─────────────────────────────────────────────────────────
 
 function validateGate(gate) {
-  var issues = [];
+  const issues = [];
   if (!gate || typeof gate !== 'object') return issues;
 
   if (gate.type && !VALID_GATE_TYPES.has(gate.type)) {
@@ -327,7 +327,7 @@ function validateGate(gate) {
 // ── Top-level lesson validation ─────────────────────────────────────────────
 
 function validateLesson(lesson) {
-  var issues = [];
+  let issues = [];
   if (!lesson || typeof lesson !== 'object') {
     issues.push({ severity: 'error', message: 'Lesson data is not an object' });
     return issues;
@@ -338,14 +338,14 @@ function validateLesson(lesson) {
     return issues;
   }
 
-  var allStepIds = new Set();
-  for (var s = 0; s < lesson.steps.length; s++) {
+  const allStepIds = new Set();
+  for (let s = 0; s < lesson.steps.length; s++) {
     if (lesson.steps[s].id) allStepIds.add(lesson.steps[s].id);
   }
 
-  var seenIds = new Set();
-  for (var i = 0; i < lesson.steps.length; i++) {
-    var step = lesson.steps[i];
+  const seenIds = new Set();
+  for (let i = 0; i < lesson.steps.length; i++) {
+    const step = lesson.steps[i];
     if (step.id && seenIds.has(step.id)) {
       issues.push({ severity: 'error', step: step.id,
         message: 'Duplicate step ID "' + step.id + '"' });
@@ -358,7 +358,7 @@ function validateLesson(lesson) {
     issues = issues.concat(validateGate(lesson.gate));
   }
 
-  var meta = lesson.meta;
+  const meta = lesson.meta;
   if (meta && typeof meta === 'object') {
     if (meta.utu && typeof meta.utu === 'object') {
       if (meta.utu.protocol != null && (meta.utu.protocol < 1 || meta.utu.protocol > 5)) {
@@ -371,15 +371,15 @@ function validateLesson(lesson) {
       }
     }
     if (meta.declared_features && typeof meta.declared_features === 'object') {
-      var df = meta.declared_features;
-      var validBlooms = ['remember','understand','apply','analyze','evaluate','create'];
+      const df = meta.declared_features;
+      const validBlooms = ['remember','understand','apply','analyze','evaluate','create'];
       if (df.blooms_level && validBlooms.indexOf(df.blooms_level) === -1) {
         issues.push({ severity: 'error', step: 'meta.declared_features',
           message: 'Invalid blooms_level "' + df.blooms_level + '". Valid: ' + validBlooms.join(', ') });
       }
-      var validVark = ['visual','auditory','read_write','kinesthetic'];
-      var varkArr = Array.isArray(df.vark) ? df.vark : (df.vark ? [df.vark] : []);
-      for (var v = 0; v < varkArr.length; v++) {
+      const validVark = ['visual','auditory','read_write','kinesthetic'];
+      const varkArr = Array.isArray(df.vark) ? df.vark : (df.vark ? [df.vark] : []);
+      for (let v = 0; v < varkArr.length; v++) {
         if (validVark.indexOf(varkArr[v]) === -1) {
           issues.push({ severity: 'error', step: 'meta.declared_features',
             message: 'Invalid VARK modality "' + varkArr[v] + '". Valid: ' + validVark.join(', ') });
@@ -394,21 +394,21 @@ function validateLesson(lesson) {
 // ── CLI entry point ─────────────────────────────────────────────────────────
 
 if (require.main === module) {
-  var fs = require('fs');
-  var path = require('path');
-  var filePath = process.argv[2];
+  const fs = require('fs');
+  const path = require('path');
+  const filePath = process.argv[2];
 
   if (!filePath) {
     log.error('Usage: node lesson-validator.js <lesson.yaml|lesson.json>');
     process.exit(1);
   }
 
-  var raw = fs.readFileSync(path.resolve(filePath), 'utf8');
-  var data;
+  const raw = fs.readFileSync(path.resolve(filePath), 'utf8');
+  let data;
 
   if (/\.ya?ml$/i.test(filePath)) {
     try {
-      var safeYamlLoad = require('@agni/utils/yaml-safe').safeYamlLoad;
+      const safeYamlLoad = require('@agni/utils/yaml-safe').safeYamlLoad;
       data = safeYamlLoad(raw);
     } catch (e) {
       log.error('YAML parse error: ' + e.message);
@@ -418,15 +418,15 @@ if (require.main === module) {
     data = JSON.parse(raw);
   }
 
-  var results = validateLesson(data);
+  const results = validateLesson(data);
 
   if (results.length === 0) {
     log.info('Lesson is runtime-compatible. No issues found.');
     process.exit(0);
   }
 
-  var errors = results.filter(function (r) { return r.severity === 'error'; });
-  var warnings = results.filter(function (r) { return r.severity === 'warning'; });
+  const errors = results.filter(function (r) { return r.severity === 'error'; });
+  const warnings = results.filter(function (r) { return r.severity === 'warning'; });
 
   if (errors.length) {
     log.error(errors.length + ' error(s):');

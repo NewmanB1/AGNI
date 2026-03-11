@@ -15,7 +15,7 @@ const compiler = require('../compiler/build-lesson-ir');
 const buildLessonIR = compiler.buildLessonIR;
 const buildLessonSidecar = compiler.buildLessonSidecar;
 
-var DEFAULT_YAML_MAX_BYTES = DEFAULT_MAX_BYTES;
+const DEFAULT_YAML_MAX_BYTES = DEFAULT_MAX_BYTES;
 
 function safeYamlLoad(str, opts) {
   return safeYamlLoadUtil(str, opts);
@@ -33,7 +33,7 @@ function parseLessonFromString(rawYaml, opts) {
     return { error: 'Raw YAML must be a string' };
   }
   try {
-    var maxBytes = opts.maxBytes;
+    let maxBytes = opts.maxBytes;
     if (maxBytes == null) {
       try {
         maxBytes = require('@agni/utils/env-config').yamlMaxBytes;
@@ -41,7 +41,7 @@ function parseLessonFromString(rawYaml, opts) {
         maxBytes = DEFAULT_YAML_MAX_BYTES;
       }
     }
-    var lessonData = safeYamlLoad(rawYaml.trim(), { maxBytes: maxBytes });
+    const lessonData = safeYamlLoad(rawYaml.trim(), { maxBytes: maxBytes });
     return { lessonData: lessonData };
   } catch (err) {
     return { error: (err && err.message) ? err.message : String(err) };
@@ -49,8 +49,8 @@ function parseLessonFromString(rawYaml, opts) {
 }
 
 function parseLessonYaml(inputPath) {
-  var stat = fs.statSync(inputPath);
-  var maxBytes;
+  const stat = fs.statSync(inputPath);
+  let maxBytes;
   try {
     maxBytes = require('@agni/utils/env-config').yamlMaxBytes;
   } catch (_) {
@@ -59,8 +59,8 @@ function parseLessonYaml(inputPath) {
   if (stat.size > maxBytes) {
     throw new Error('YAML file exceeds max size (' + stat.size + ' > ' + maxBytes + ')');
   }
-  var raw = fs.readFileSync(inputPath, 'utf8');
-  var lessonData = safeYamlLoad(raw, { maxBytes: maxBytes });
+  const raw = fs.readFileSync(inputPath, 'utf8');
+  const lessonData = safeYamlLoad(raw, { maxBytes: maxBytes });
   return { lessonData: lessonData, raw: raw };
 }
 

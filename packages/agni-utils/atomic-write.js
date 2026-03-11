@@ -16,10 +16,10 @@ const path = require('path');
  * @param {string} data
  */
 function atomicWriteSync(filePath, data) {
-  var dir = path.dirname(filePath);
+  const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  var tmpPath = filePath + '.tmp';
-  var fd = fs.openSync(tmpPath, 'w');
+  const tmpPath = filePath + '.tmp';
+  const fd = fs.openSync(tmpPath, 'w');
   try {
     fs.writeFileSync(fd, data, 'utf8');
     fs.fsyncSync(fd);
@@ -28,7 +28,7 @@ function atomicWriteSync(filePath, data) {
   }
   fs.renameSync(tmpPath, filePath);
   try {
-    var parentFd = fs.openSync(dir, 'r');
+    const parentFd = fs.openSync(dir, 'r');
     try { fs.fsyncSync(parentFd); } finally { fs.closeSync(parentFd); }
   } catch (e) { /* non-fatal */ }
 }
@@ -40,10 +40,10 @@ function atomicWriteSync(filePath, data) {
  * @returns {Promise<void>}
  */
 async function atomicWrite(filePath, data) {
-  var dir = path.dirname(filePath);
+  const dir = path.dirname(filePath);
   await fsp.mkdir(dir, { recursive: true });
-  var tmpPath = filePath + '.tmp';
-  var fd = await fsp.open(tmpPath, 'w');
+  const tmpPath = filePath + '.tmp';
+  const fd = await fsp.open(tmpPath, 'w');
   try {
     await fd.writeFile(data, 'utf8');
     await fd.sync();
@@ -52,7 +52,7 @@ async function atomicWrite(filePath, data) {
   }
   await fsp.rename(tmpPath, filePath);
   try {
-    var parentFd = await fsp.open(dir, 'r');
+    const parentFd = await fsp.open(dir, 'r');
     try { await parentFd.sync(); } finally { await parentFd.close(); }
   } catch (e) { /* non-fatal */ }
 }

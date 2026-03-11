@@ -21,12 +21,12 @@ function updateSchedule(existing, quality) {
   quality = Math.max(0, Math.min(5, Math.round(quality)));
 
   // Ease factor adjustment per SM-2 formula
-  var ef = existing.easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+  let ef = existing.easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
   if (ef < 1.3) ef = 1.3;
   if (ef > 3.0) ef = 3.0;
 
-  var interval;
-  var rep;
+  let interval;
+  let rep;
 
   if (quality < 3) {
     // Failed: reset repetition count, restart at 1-day interval

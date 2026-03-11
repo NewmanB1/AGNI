@@ -19,24 +19,24 @@
 
 'use strict';
 
-var math       = require('./math');
-var embeddings = require('./embeddings');
-var log        = require('@agni/utils/logger').createLogger('bandit');
+const math       = require('./math');
+const embeddings = require('./embeddings');
+const log        = require('@agni/utils/logger').createLogger('bandit');
 
 // ── Tuneable constants ────────────────────────────────────────────────────────
 
 /** Diagonal scale applied to the identity prior when A is freshly initialized.
  *  A small value (<<1) produces a weak prior that is quickly overwritten by
  *  observations. 0.01 works well for embedding dims in the 16–64 range. */
-var PRIOR_REGULARIZATION = 0.01;
+const PRIOR_REGULARIZATION = 0.01;
 
 /** Diagonal jitter added to A before retrying a failed Cholesky inversion.
  *  JITTER_LIGHT tried first to minimize mean bias (A+εI)⁻¹b vs A⁻¹b.
  *  JITTER used if light jitter still fails. If both fail, fall back to b.
  *  Both must be > math.CHOLESKY_EPSILON for jitter retry to succeed
  *  (strictly greater to avoid boundary fragility if CHOLESKY_EPSILON is ever increased). */
-var JITTER_LIGHT = 1e-9;
-var JITTER = 1e-5;
+const JITTER_LIGHT = 1e-9;
+const JITTER = 1e-5;
 
 
 // ── Feature vector ────────────────────────────────────────────────────────────
@@ -93,8 +93,8 @@ function assertFeatureDimInvariant(state) {
     throw new Error('[BANDIT] state.bandit missing — cannot run bandit operations.');
   }
   assertEmbeddingDimValid(state);
-  var embeddingDim = state.embedding.dim;
-  var expectedFeatureDim = embeddingDim * 2;
+  const embeddingDim = state.embedding.dim;
+  const expectedFeatureDim = embeddingDim * 2;
   if (state.bandit.featureDim !== expectedFeatureDim) {
     throw new Error(
       '[BANDIT] featureDim invariant violated: state.bandit.featureDim=' + state.bandit.featureDim +
@@ -122,7 +122,7 @@ function assertFeatureDimInvariant(state) {
  */
 function ensureBanditInitialized(state) {
   assertFeatureDimInvariant(state);
-  var expectedFeatureDim = state.bandit.featureDim;
+  const expectedFeatureDim = state.bandit.featureDim;
 
   if (!state.bandit.A || state.bandit.A.length !== expectedFeatureDim ||
       !state.bandit.A[0] || state.bandit.A[0].length !== expectedFeatureDim) {
@@ -152,23 +152,23 @@ function ensureBanditInitialized(state) {
 function sampleTheta(state) {
   ensureBanditInitialized(state);
 
-  var A = state.bandit.A;
-  var b = state.bandit.b;
-  var n = A.length;
-  var L, mean;
+  const A = state.bandit.A;
+  const b = state.bandit.b;
+  const n = A.length;
+  let L, mean;
 
   function solveAndSample(mat) {
     L = math.cholesky(mat);
     mean = math.backSub(L, math.forwardSub(L, b));
-    var z = [];
-    for (var j = 0; j < n; j++) z.push(math.randn());
-    var noise = math.backSub(L, z);
+    const z = [];
+    for (let j = 0; j < n; j++) z.push(math.randn());
+    const noise = math.backSub(L, z);
     return math.addVec(mean, noise);
   }
 
   function jitteredMatrix(eps) {
-    var Ac = new Array(n);
-    for (var i = 0; i < n; i++) {
+    const Ac = new Array(n);
+    for (let i = 0; i < n; i++) {
       Ac[i] = A[i].slice();
       Ac[i][i] += eps;
     }
@@ -213,8 +213,8 @@ function sampleTheta(state) {
 function selectLesson(state, studentId, opts) {
   ensureBanditInitialized(state);
 
-  var readOnly = opts && opts.readOnly;
-  var eligibleLessonIds = opts && opts.eligibleLessonIds;
+  const readOnly = opts && opts.readOnly;
+  const eligibleLessonIds = opts && opts.eligibleLessonIds;
 
   // Cold-start safety (Bug 11): when b=0, theta is pure noise. Without eligibleLessonIds,
   // we would score all lessons and pick arbitrarily. Warn and return null.
@@ -222,34 +222,34 @@ function selectLesson(state, studentId, opts) {
     log.warn('selectLesson: cold-start with no eligibleLessonIds — returning null (pass theta-filtered candidates)');
     return null;
   }
-  var studentVec = readOnly
+  const studentVec = readOnly
     ? embeddings.getStudentVector(state, studentId)
     : embeddings.ensureStudentVector(state, studentId);
   if (readOnly && !studentVec) {
     throw new Error('[BANDIT] selectLesson(readOnly): student ' + studentId + ' has no embedding');
   }
 
-  var theta = sampleTheta(state);
-  var lessons = state.embedding.lessons;
-  var candidateIds = Array.isArray(eligibleLessonIds)
+  const theta = sampleTheta(state);
+  const lessons = state.embedding.lessons;
+  const candidateIds = Array.isArray(eligibleLessonIds)
     ? eligibleLessonIds
     : Object.keys(lessons);
-  var bestId = null;
-  var bestScore = -Infinity;
+  let bestId = null;
+  let bestScore = -Infinity;
 
   candidateIds.forEach(function (lessonId) {
-    var lessonVec = readOnly
+    const lessonVec = readOnly
       ? embeddings.getLessonVector(state, lessonId)
       : embeddings.ensureLessonVector(state, lessonId);
     if (!lessonVec) {
       if (readOnly) return;
       throw new Error('[BANDIT] ensureLessonVector returned null for ' + lessonId + ' — unexpected');
     }
-    var x = banditFeature(studentVec, lessonVec);
+    const x = banditFeature(studentVec, lessonVec);
     if (x.length !== state.bandit.featureDim) {
       throw new Error('[BANDIT] Feature vector length mismatch in selectLesson for ' + lessonId);
     }
-    var score = math.dot(theta, x);
+    const score = math.dot(theta, x);
     if (score > bestScore) {
       bestScore = score;
       bestId = lessonId;
@@ -273,29 +273,29 @@ function updateBandit(state, studentId, lessonId, gain) {
   }
   ensureBanditInitialized(state);
 
-  var studentVec = embeddings.ensureStudentVector(state, studentId);
-  var lessonVec  = embeddings.ensureLessonVector(state, lessonId);
-  var x = banditFeature(studentVec, lessonVec);
+  const studentVec = embeddings.ensureStudentVector(state, studentId);
+  const lessonVec  = embeddings.ensureLessonVector(state, lessonId);
+  const x = banditFeature(studentVec, lessonVec);
 
   if (x.length !== state.bandit.featureDim) {
     throw new Error('[BANDIT] Feature vector length mismatch in updateBandit for ' + lessonId);
   }
 
-  var A = state.bandit.A;
-  var b = state.bandit.b;
-  var gamma = state.bandit.forgetting;
+  const A = state.bandit.A;
+  const b = state.bandit.b;
+  const gamma = state.bandit.forgetting;
 
   if (typeof gamma !== 'number' || !isFinite(gamma) || gamma < 0.9 || gamma > 1) {
     throw new Error('[BANDIT] forgetting must be a finite number in [0.9,1], got: ' + gamma);
   }
 
   // A ← γA + x xᵀ  (atomic: apply full update or reject entirely)
-  var outerXX = math.outer(x, x);
-  var Anew = [];
+  const outerXX = math.outer(x, x);
+  const Anew = [];
   for (var i = 0; i < A.length; i++) {
     Anew[i] = [];
     for (var j = 0; j < A[i].length; j++) {
-      var aVal = gamma * A[i][j] + outerXX[i][j];
+      const aVal = gamma * A[i][j] + outerXX[i][j];
       if (!isFinite(aVal)) {
         throw new Error('[BANDIT] updateBandit: overflow in A[' + i + '][' + j + '] (gamma*A + outer) — reject observation');
       }
@@ -304,9 +304,9 @@ function updateBandit(state, studentId, lessonId, gain) {
   }
 
   // b ← γb + x · gain
-  var bnew = [];
+  const bnew = [];
   for (var k = 0; k < b.length; k++) {
-    var bVal = gamma * b[k] + x[k] * gain;
+    const bVal = gamma * b[k] + x[k] * gain;
     if (!isFinite(bVal)) {
       throw new Error('[BANDIT] updateBandit: overflow in b[' + k + '] — reject observation');
     }

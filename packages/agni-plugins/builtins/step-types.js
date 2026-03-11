@@ -3,9 +3,9 @@
 // Built-in step type descriptors.
 // To add a new step type, add ONE entry here and write the renderer.
 
-var reg = require('../registry');
+const reg = require('../registry');
 
-var COMMON_FIELDS = [
+const COMMON_FIELDS = [
   'id', 'type', 'content', 'feedback', 'expected_duration', 'max_attempts',
   'weight', 'on_fail', 'on_success', 'audio_description', 'condition', 'next_if', 'svg_spec', 'spec'
 ];

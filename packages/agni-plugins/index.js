@@ -10,7 +10,7 @@
 // To add a new step type:     require('@agni/plugins').registerStepType({ ... })
 // To add a new sensor:        require('@agni/plugins').registerSensor({ ... })
 
-var store = require('./registry');
+const store = require('./registry');
 
 // ── Load builtins (populates the registry) ──────────────────────────────────
 
@@ -31,7 +31,7 @@ function getFactoryIds() {
 }
 
 function getFactoryOpts() {
-  var map = {};
+  const map = {};
   store._factories.forEach(function (f) {
     if (f.opts) map[f.id] = new Set(f.opts);
   });
@@ -39,7 +39,7 @@ function getFactoryOpts() {
 }
 
 function getFactoryCategories() {
-  var cats = [], seen = {};
+  const cats = [], seen = {};
   store._factories.forEach(function (f) {
     if (f.category && !seen[f.category]) { cats.push(f.category); seen[f.category] = true; }
   });
@@ -54,7 +54,7 @@ function getStepType(type) {
 }
 
 function getValidStepFields() {
-  var fields = new Set();
+  const fields = new Set();
   store._stepTypes.forEach(function (s) {
     if (s.fields) s.fields.forEach(function (f) { fields.add(f); });
   });
@@ -69,9 +69,9 @@ function getSensor(id) {
 }
 
 function getSensorGroups() {
-  var groups = [], groupMap = {};
+  const groups = [], groupMap = {};
   store._sensors.forEach(function (s) {
-    var g = s.group || 'Other';
+    const g = s.group || 'Other';
     if (!groupMap[g]) { groupMap[g] = { label: g, sensors: [] }; groups.push(groupMap[g]); }
     groupMap[g].sensors.push(s);
   });

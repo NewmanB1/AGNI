@@ -6,26 +6,26 @@
  *
  * OLS lessons must not use YAML anchors or aliases. See docs/ARCHITECTURE.md.
  */
-var yaml = require('js-yaml');
+const yaml = require('js-yaml');
 
 // Prevent anchor/alias DoS (billion laughs).
 // Anchors: &id at line-start only (block) or after [ { , (flow).
 // Aliases: *id after [ or , followed by structural char — excludes Markdown *italic*.
-var UNSAFE_ANCHOR = /(?:^[\s]*|[\n\[,])\s*&[a-zA-Z0-9_-]+/m;
-var UNSAFE_ALIAS = /[\[,]\s*\*[a-zA-Z0-9_-]+(?=[\s,\]}\n]|$)/;
+const UNSAFE_ANCHOR = /(?:^[\s]*|[\n[,])\s*&[a-zA-Z0-9_-]+/m;
+const UNSAFE_ALIAS = /[[,]\s*\*[a-zA-Z0-9_-]+(?=[\s,\]}\n]|$)/;
 
-var DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
-var DEFAULT_MAX_DEPTH = 50;
-var DEFAULT_MAX_KEYS = 10000;
-var DEFAULT_MAX_STEPS = 500;
+const DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
+const DEFAULT_MAX_DEPTH = 50;
+const DEFAULT_MAX_KEYS = 10000;
+const DEFAULT_MAX_STEPS = 500;
 
-var UNSAFE_KEYS = { '__proto__': 1, constructor: 1, prototype: 1 };
+const UNSAFE_KEYS = { '__proto__': 1, constructor: 1, prototype: 1 };
 
 function hasUnsafeKeys(obj, depth, maxDepth) {
   if (depth > maxDepth) return false;
   if (obj === null || typeof obj !== 'object') return false;
-  var keys = Object.keys(obj);
-  for (var i = 0; i < keys.length; i++) {
+  const keys = Object.keys(obj);
+  for (let i = 0; i < keys.length; i++) {
     if (UNSAFE_KEYS[keys[i]]) return true;
     if (hasUnsafeKeys(obj[keys[i]], depth + 1, maxDepth)) return true;
   }
@@ -35,9 +35,9 @@ function hasUnsafeKeys(obj, depth, maxDepth) {
 function depthOf(obj, depth, maxDepth, maxKeys) {
   if (depth > maxDepth) return true;
   if (obj === null || typeof obj !== 'object') return false;
-  var keys = Object.keys(obj);
+  const keys = Object.keys(obj);
   if (keys.length > maxKeys) return true;
-  for (var i = 0; i < keys.length; i++) {
+  for (let i = 0; i < keys.length; i++) {
     if (depthOf(obj[keys[i]], depth + 1, maxDepth, maxKeys)) return true;
   }
   return false;
@@ -53,21 +53,21 @@ function depthOf(obj, depth, maxDepth, maxKeys) {
  */
 function safeYamlLoad(str, opts) {
   opts = opts || {};
-  var maxBytes = (opts.maxBytes != null) ? opts.maxBytes : DEFAULT_MAX_BYTES;
-  var maxDepth = (opts.maxDepth != null) ? opts.maxDepth : DEFAULT_MAX_DEPTH;
-  var maxKeys = (opts.maxKeys != null) ? opts.maxKeys : DEFAULT_MAX_KEYS;
-  var maxSteps = (opts.maxSteps != null) ? opts.maxSteps : DEFAULT_MAX_STEPS;
-  var byteLen = (typeof Buffer !== 'undefined') ? Buffer.byteLength(str, 'utf8') : str.length;
+  const maxBytes = (opts.maxBytes != null) ? opts.maxBytes : DEFAULT_MAX_BYTES;
+  const maxDepth = (opts.maxDepth != null) ? opts.maxDepth : DEFAULT_MAX_DEPTH;
+  const maxKeys = (opts.maxKeys != null) ? opts.maxKeys : DEFAULT_MAX_KEYS;
+  const maxSteps = (opts.maxSteps != null) ? opts.maxSteps : DEFAULT_MAX_STEPS;
+  const byteLen = (typeof Buffer !== 'undefined') ? Buffer.byteLength(str, 'utf8') : str.length;
   if (byteLen > maxBytes) {
     throw new Error('YAML exceeds max size (' + byteLen + ' > ' + maxBytes + ')');
   }
-  var anchorHit = (str.indexOf('&') !== -1) ? UNSAFE_ANCHOR.test(str) : false;
-  var aliasHit = (str.indexOf('*') !== -1) ? UNSAFE_ALIAS.test(str) : false;
+  const anchorHit = (str.indexOf('&') !== -1) ? UNSAFE_ANCHOR.test(str) : false;
+  const aliasHit = (str.indexOf('*') !== -1) ? UNSAFE_ALIAS.test(str) : false;
   if (anchorHit || aliasHit) {
     throw new Error('YAML anchors/aliases are not allowed (DoS risk)');
   }
-  var loadOpts = { schema: yaml.JSON_SCHEMA, maxAliasCount: 50 };
-  var parsed;
+  const loadOpts = { schema: yaml.JSON_SCHEMA, maxAliasCount: 50 };
+  let parsed;
   try {
     parsed = yaml.load(str, loadOpts);
   } catch (e) {
@@ -79,12 +79,12 @@ function safeYamlLoad(str, opts) {
   if (depthOf(parsed, 0, maxDepth, maxKeys)) {
     throw new Error('YAML nesting or key count exceeds safe limits (DoS risk)');
   }
-  var steps = parsed && parsed.steps;
+  const steps = parsed && parsed.steps;
   if (Array.isArray(steps) && steps.length > maxSteps) {
     throw new Error('YAML steps count exceeds max (' + steps.length + ' > ' + maxSteps + ')');
   }
   if (parsed && typeof parsed.steps === 'object' && !Array.isArray(parsed.steps)) {
-    var stepKeys = Object.keys(parsed.steps);
+    const stepKeys = Object.keys(parsed.steps);
     if (stepKeys.length > maxSteps) {
       throw new Error('YAML steps count exceeds max (' + stepKeys.length + ' > ' + maxSteps + ')');
     }

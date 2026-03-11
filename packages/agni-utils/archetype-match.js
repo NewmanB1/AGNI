@@ -38,8 +38,8 @@ let _archetypeMap = null;
 
 function _loadArchetypes() {
   if (_archetypes) return _archetypes;
-  var dataPath = path.join(envConfig.dataDir, 'archetypes.json');
-  var data = require(dataPath);
+  const dataPath = path.join(envConfig.dataDir, 'archetypes.json');
+  const data = require(dataPath);
   _archetypes = data.archetypes;
   _archetypeMap = {};
   _archetypes.forEach(function (a) { _archetypeMap[a.id] = a; });
@@ -57,11 +57,11 @@ function getAllArchetypes() {
 
 function _varkCosine(a, b) {
   if (!a || !b) return 0;
-  var dims = ['visual', 'auditory', 'readWrite', 'kinesthetic'];
-  var dot = 0, magA = 0, magB = 0;
-  for (var i = 0; i < dims.length; i++) {
-    var av = a[dims[i]] || 0;
-    var bv = b[dims[i]] || 0;
+  const dims = ['visual', 'auditory', 'readWrite', 'kinesthetic'];
+  let dot = 0, magA = 0, magB = 0;
+  for (let i = 0; i < dims.length; i++) {
+    const av = a[dims[i]] || 0;
+    const bv = b[dims[i]] || 0;
     dot  += av * bv;
     magA += av * av;
     magB += bv * bv;
@@ -73,10 +73,10 @@ function _varkCosine(a, b) {
 function _bloomsProximity(lessonBlooms, archetypeBlooms) {
   if (!lessonBlooms || !archetypeBlooms || archetypeBlooms.length === 0) return 0;
 
-  var label = typeof lessonBlooms === 'string'
+  let label = typeof lessonBlooms === 'string'
     ? lessonBlooms.toLowerCase()
     : null;
-  var level = typeof lessonBlooms === 'number' ? lessonBlooms : null;
+  const level = typeof lessonBlooms === 'number' ? lessonBlooms : null;
 
   if (!label && level !== null) {
     label = BLOOMS_ORDER[level - 1] || null;
@@ -85,15 +85,15 @@ function _bloomsProximity(lessonBlooms, archetypeBlooms) {
 
   if (archetypeBlooms.indexOf(label) !== -1) return 1.0;
 
-  var lessonIdx = BLOOMS_ORDER.indexOf(label);
+  const lessonIdx = BLOOMS_ORDER.indexOf(label);
   if (lessonIdx === -1) return 0;
 
-  var bestProximity = 0;
-  for (var i = 0; i < archetypeBlooms.length; i++) {
-    var archIdx = BLOOMS_ORDER.indexOf(archetypeBlooms[i]);
+  let bestProximity = 0;
+  for (let i = 0; i < archetypeBlooms.length; i++) {
+    const archIdx = BLOOMS_ORDER.indexOf(archetypeBlooms[i]);
     if (archIdx === -1) continue;
-    var distance = Math.abs(lessonIdx - archIdx);
-    var proximity = distance === 1 ? 0.5 : (distance === 2 ? 0.15 : 0);
+    const distance = Math.abs(lessonIdx - archIdx);
+    const proximity = distance === 1 ? 0.5 : (distance === 2 ? 0.15 : 0);
     if (proximity > bestProximity) bestProximity = proximity;
   }
   return bestProximity;
@@ -102,11 +102,11 @@ function _bloomsProximity(lessonBlooms, archetypeBlooms) {
 function _teachingModeScore(lessonMode, archetypeModes) {
   if (!lessonMode || !archetypeModes || archetypeModes.length === 0) return 0;
 
-  var mode = lessonMode.toLowerCase();
+  const mode = lessonMode.toLowerCase();
   if (archetypeModes.indexOf(mode) !== -1) return 1.0;
 
-  var related = RELATED_MODES[mode] || [];
-  for (var i = 0; i < related.length; i++) {
+  const related = RELATED_MODES[mode] || [];
+  for (let i = 0; i < related.length; i++) {
     if (archetypeModes.indexOf(related[i].mode) !== -1) {
       return related[i].credit;
     }
@@ -115,13 +115,13 @@ function _teachingModeScore(lessonMode, archetypeModes) {
 }
 
 function computeFitScore(features, archetype) {
-  var score = 0;
+  let score = 0;
 
   if (features.band != null) {
     if (features.band >= archetype.bandRange[0] && features.band <= archetype.bandRange[1]) {
       score += WEIGHTS.band;
     } else {
-      var distToRange = Math.min(
+      const distToRange = Math.min(
         Math.abs(features.band - archetype.bandRange[0]),
         Math.abs(features.band - archetype.bandRange[1])
       );
@@ -133,36 +133,36 @@ function computeFitScore(features, archetype) {
     if (archetype.protocols.indexOf(features.protocol) !== -1) {
       score += WEIGHTS.protocol;
     } else {
-      var minDist = Infinity;
-      for (var i = 0; i < archetype.protocols.length; i++) {
-        var d = Math.abs(features.protocol - archetype.protocols[i]);
+      let minDist = Infinity;
+      for (let i = 0; i < archetype.protocols.length; i++) {
+        const d = Math.abs(features.protocol - archetype.protocols[i]);
         if (d < minDist) minDist = d;
       }
       if (minDist === 1) score += WEIGHTS.protocol * 0.3;
     }
   }
 
-  var bloomsScore = _bloomsProximity(
+  const bloomsScore = _bloomsProximity(
     features.bloomsLabel || features.bloomsCeiling,
     archetype.blooms
   );
   score += WEIGHTS.blooms * bloomsScore;
 
-  var varkScore = _varkCosine(features.vark, archetype.modalityWeighting);
+  const varkScore = _varkCosine(features.vark, archetype.modalityWeighting);
   score += WEIGHTS.vark * varkScore;
 
-  var modeSource = features.teachingMode || features.teachingStyle || features.dominantTeachingStyle;
-  var modeScore = _teachingModeScore(modeSource, archetype.teachingModes);
+  const modeSource = features.teachingMode || features.teachingStyle || features.dominantTeachingStyle;
+  const modeScore = _teachingModeScore(modeSource, archetype.teachingModes);
   score += WEIGHTS.teachingMode * modeScore;
 
   return Math.round(score * 1000) / 1000;
 }
 
 function extractLessonFeatures(lesson) {
-  var meta = lesson.meta || lesson;
-  var utu = meta.utu || lesson.utu || {};
-  var declared = (meta.declared_features) || {};
-  var inferred = lesson.inferredFeatures || {};
+  const meta = lesson.meta || lesson;
+  const utu = meta.utu || lesson.utu || {};
+  const declared = (meta.declared_features) || {};
+  const inferred = lesson.inferredFeatures || {};
 
   return {
     band:     utu.band || null,
@@ -186,11 +186,11 @@ function extractLessonFeatures(lesson) {
 }
 
 function findBestArchetype(lesson) {
-  var archetypes = _loadArchetypes();
-  var features = extractLessonFeatures(lesson);
+  const archetypes = _loadArchetypes();
+  const features = extractLessonFeatures(lesson);
 
-  var scored = archetypes.map(function (arch) {
-    var fit = computeFitScore(features, arch);
+  const scored = archetypes.map(function (arch) {
+    const fit = computeFitScore(features, arch);
     return {
       id:        arch.id,
       name:      arch.name,
@@ -201,7 +201,7 @@ function findBestArchetype(lesson) {
 
   scored.sort(function (a, b) { return b.coherence - a.coherence; });
 
-  var best = scored[0] || null;
+  const best = scored[0] || null;
   return {
     archetype:  best ? getArchetypeById(best.id) : null,
     coherence:  best ? best.coherence : 0,
@@ -211,8 +211,8 @@ function findBestArchetype(lesson) {
 }
 
 function validateCoherence(lesson) {
-  var result = findBestArchetype(lesson);
-  var warnings = [];
+  const result = findBestArchetype(lesson);
+  const warnings = [];
 
   if (result.coherence < 0.30) {
     warnings.push(
@@ -228,10 +228,10 @@ function validateCoherence(lesson) {
     );
   }
 
-  var features = extractLessonFeatures(lesson);
-  var arch = result.archetype;
+  const features = extractLessonFeatures(lesson);
+  const arch = result.archetype;
   if (arch && features.band != null) {
-    var bandOk = features.band >= arch.bandRange[0] && features.band <= arch.bandRange[1];
+    const bandOk = features.band >= arch.bandRange[0] && features.band <= arch.bandRange[1];
     if (!bandOk) {
       warnings.push(
         'UTU Band ' + features.band + ' is outside the expected range [' +
@@ -249,9 +249,9 @@ function validateCoherence(lesson) {
     }
   }
 
-  var modeSource = features.teachingMode || features.teachingStyle || features.dominantTeachingStyle;
+  const modeSource = features.teachingMode || features.teachingStyle || features.dominantTeachingStyle;
   if (arch && modeSource) {
-    var modeScore = _teachingModeScore(modeSource, arch.teachingModes);
+    const modeScore = _teachingModeScore(modeSource, arch.teachingModes);
     if (modeScore === 0) {
       warnings.push(
         'Teaching mode "' + modeSource + '" is not aligned with archetype "' + arch.id +
@@ -268,18 +268,18 @@ function validateCoherence(lesson) {
 }
 
 function getDesignHints(archetypeId) {
-  var arch = getArchetypeById(archetypeId);
+  const arch = getArchetypeById(archetypeId);
   return arch ? arch.designHints : null;
 }
 
 function getStepPattern(archetypeId) {
-  var arch = getArchetypeById(archetypeId);
+  const arch = getArchetypeById(archetypeId);
   return arch ? arch.stepPattern : null;
 }
 
 function filterArchetypes(opts) {
   opts = opts || {};
-  var archetypes = _loadArchetypes();
+  const archetypes = _loadArchetypes();
 
   return archetypes.filter(function (arch) {
     if (opts.band != null) {

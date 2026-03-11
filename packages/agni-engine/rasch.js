@@ -11,17 +11,17 @@
 
 'use strict';
 
-var log = require('@agni/utils/logger').createLogger('rasch');
+const log = require('@agni/utils/logger').createLogger('rasch');
 
 /** Numerically stable logistic: 1/(1+e^(-x)). Avoids overflow for large |x|. */
 function logistic(x) {
   if (x >= 0) return 1 / (1 + Math.exp(-x));
-  var e = Math.exp(x);
+  const e = Math.exp(x);
   return e / (1 + e);
 }
 
 /** Max Newton step magnitude. Single-step approximation diverges on extreme inputs. */
-var MAX_STEP = 1;
+const MAX_STEP = 1;
 
 /**
  * Update student ability using approximate Newton-Raphson (MAP estimate).
@@ -47,7 +47,7 @@ function updateAbility(state, studentId, probeResults) {
     throw new Error('[RASCH] studentId must be a non-empty string, got: ' + (studentId === undefined ? 'undefined' : studentId === null ? 'null' : typeof studentId));
   }
 
-  var student = state.rasch.students[studentId];
+  let student = state.rasch.students[studentId];
   if (!student) {
     student = { ability: 0, variance: 1 };
     state.rasch.students[studentId] = student;
@@ -60,28 +60,28 @@ function updateAbility(state, studentId, probeResults) {
     student.variance = 1;
   }
 
-  var grad = 0;
-  var hessFromData = 0;
-  var seenProbeIds = {};
+  let grad = 0;
+  let hessFromData = 0;
+  const seenProbeIds = {};
 
-  for (var i = 0; i < probeResults.length; i++) {
-    var entry = probeResults[i];
+  for (let i = 0; i < probeResults.length; i++) {
+    const entry = probeResults[i];
     if (!entry || typeof entry !== 'object') {
       throw new Error('[RASCH] probeResults[' + i + '] must be an object, got: ' + (entry === null ? 'null' : entry === undefined ? 'undefined' : typeof entry));
     }
-    var probeId = entry.probeId;
-    var correct = entry.correct;
+    const probeId = entry.probeId;
+    const correct = entry.correct;
     if (seenProbeIds[probeId]) continue;
     seenProbeIds[probeId] = true;
-    var probe   = state.rasch.probes && state.rasch.probes[probeId];
+    const probe   = state.rasch.probes && state.rasch.probes[probeId];
     if (!probe) continue;
 
-    var diff = probe.difficulty;
+    const diff = probe.difficulty;
     if (typeof diff !== 'number' || !isFinite(diff)) continue;
 
-    var logit = student.ability - diff;
-    var prob  = logistic(logit);
-    var y     = correct ? 1 : 0;
+    const logit = student.ability - diff;
+    const prob  = logistic(logit);
+    const y     = correct ? 1 : 0;
 
     grad += y - prob;
     hessFromData += prob * (1 - prob);
@@ -92,18 +92,18 @@ function updateAbility(state, studentId, probeResults) {
     return 0;
   }
 
-  var hess = hessFromData + 1e-5;
+  const hess = hessFromData + 1e-5;
 
-  var step = grad / hess;
+  let step = grad / hess;
   if (!isFinite(step)) step = 0;
   step = Math.max(-MAX_STEP, Math.min(MAX_STEP, step));
 
-  var priorPrecision = 1 / student.variance;
-  var posteriorPrecision = priorPrecision + hessFromData;
-  var newVariance = 1 / (posteriorPrecision < 1e-8 ? 1e-8 : posteriorPrecision);
+  const priorPrecision = 1 / student.variance;
+  const posteriorPrecision = priorPrecision + hessFromData;
+  let newVariance = 1 / (posteriorPrecision < 1e-8 ? 1e-8 : posteriorPrecision);
   if (!isFinite(newVariance)) newVariance = 1;
 
-  var abilityBefore = student.ability;
+  const abilityBefore = student.ability;
   student.ability = Math.max(-10, Math.min(10, student.ability + step));
   student.variance = newVariance;
 

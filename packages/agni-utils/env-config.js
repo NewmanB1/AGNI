@@ -41,7 +41,7 @@ function validRange(value, min, max, name) {
 }
 
 /** Safe root for USB sync paths. Any usbPath must resolve under this to prevent arbitrary write. */
-var USB_SAFE_ROOT = path.resolve('/mnt/usb');
+const USB_SAFE_ROOT = path.resolve('/mnt/usb');
 
 /**
  * Validate that a path is under the USB safe root (/mnt/usb).
@@ -54,7 +54,7 @@ var USB_SAFE_ROOT = path.resolve('/mnt/usb');
  */
 function validUsbPath(p, name) {
   if (!p || typeof p !== 'string' || p.trim() === '') return p;
-  var resolved = path.resolve(p);
+  let resolved = path.resolve(p);
   if (fs.existsSync(resolved)) {
     try {
       resolved = fs.realpathSync(resolved);
@@ -64,7 +64,7 @@ function validUsbPath(p, name) {
       );
     }
   }
-  var root = path.resolve(USB_SAFE_ROOT);
+  let root = path.resolve(USB_SAFE_ROOT);
   if (fs.existsSync(root)) {
     try {
       root = fs.realpathSync(root);

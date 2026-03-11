@@ -9,18 +9,18 @@
 
 'use strict';
 
-var crypto = require('crypto');
-var math = require('./math');
-var thompson = require('./thompson');
+const crypto = require('crypto');
+const math = require('./math');
+const thompson = require('./thompson');
 
 /** Max embeddingDim (matches thompson/embeddings). Prevents OOM from corrupt summaries. */
-var MAX_EMBEDDING_DIM = 1024;
+const MAX_EMBEDDING_DIM = 1024;
 
 /** Clamp remote mean components to mitigate federation poisoning. */
-var MEAN_CLIP = 10;
+const MEAN_CLIP = 10;
 
 /** Max seenSyncIds to retain (prevents unbounded growth). Eviction is FIFO — oldest dropped. */
-var MAX_SEEN_SYNC_IDS = 500;
+const MAX_SEEN_SYNC_IDS = 500;
 
 /**
  * Content hash for sync deduplication. Deterministic — same summary yields same syncId.
@@ -30,7 +30,7 @@ var MAX_SEEN_SYNC_IDS = 500;
  * for identical summaries on heterogeneous deployments.
  */
 function contentHash(summary) {
-  var payload = JSON.stringify({
+  const payload = JSON.stringify({
     embeddingDim: summary.embeddingDim,
     mean: summary.mean,
     precision: summary.precision,
@@ -60,7 +60,7 @@ function validateMean(vec, label, expectedLen) {
   if (vec.length !== expectedLen) {
     throw new Error('[FEDERATION] ' + label + '.mean length mismatch: got ' + vec.length + ', expected ' + expectedLen);
   }
-  for (var k = 0; k < vec.length; k++) {
+  for (let k = 0; k < vec.length; k++) {
     if (typeof vec[k] !== 'number' || !Number.isFinite(vec[k])) {
       throw new Error('[FEDERATION] ' + label + '.mean has non-finite value at index ' + k);
     }
@@ -74,11 +74,11 @@ function validatePrecision(prec, label, expectedDim) {
       '[FEDERATION] ' + label + '.precision must be array of length ' + expectedDim + ' (embeddingDim*2)'
     );
   }
-  for (var i = 0; i < prec.length; i++) {
+  for (let i = 0; i < prec.length; i++) {
     if (!Array.isArray(prec[i]) || prec[i].length !== expectedDim) {
       throw new Error('[FEDERATION] ' + label + '.precision is jagged at row ' + i + ' (expected ' + expectedDim + ' cols)');
     }
-    for (var j = 0; j < prec[i].length; j++) {
+    for (let j = 0; j < prec[i].length; j++) {
       if (typeof prec[i][j] !== 'number' || !Number.isFinite(prec[i][j])) {
         throw new Error('[FEDERATION] ' + label + '.precision has non-finite value at [' + i + '][' + j + ']');
       }
@@ -113,30 +113,30 @@ function getBanditSummary(state) {
     throw new Error('[FEDERATION] getBanditSummary: state and state.bandit must be non-null');
   }
   thompson.assertFeatureDimInvariant(state);
-  var expectedFeatureDim = state.embedding.dim * 2;
-  var n = state.bandit.observationCount;
+  const expectedFeatureDim = state.embedding.dim * 2;
+  const n = state.bandit.observationCount;
   validSampleSize(n, 'observationCount');
   if (n > 0) {
     // Do not call ensureBanditInitialized — it may reset A and export prior as posterior
-    var A = state.bandit.A;
-    var b = state.bandit.b;
+    const A = state.bandit.A;
+    const b = state.bandit.b;
     if (!Array.isArray(A) || A.length !== expectedFeatureDim ||
         !Array.isArray(b) || b.length !== expectedFeatureDim) {
       throw new Error(
         '[FEDERATION] observationCount > 0 but bandit A/b missing or wrong size — state inconsistent'
       );
     }
-    for (var ri = 0; ri < A.length; ri++) {
+    for (let ri = 0; ri < A.length; ri++) {
       if (!Array.isArray(A[ri]) || A[ri].length !== expectedFeatureDim) {
         throw new Error('[FEDERATION] bandit A is jagged at row ' + ri + ' — state inconsistent');
       }
-      for (var cj = 0; cj < A[ri].length; cj++) {
+      for (let cj = 0; cj < A[ri].length; cj++) {
         if (typeof A[ri][cj] !== 'number' || !Number.isFinite(A[ri][cj])) {
           throw new Error('[FEDERATION] bandit A has non-finite value at [' + ri + '][' + cj + '] — state inconsistent');
         }
       }
     }
-    for (var bi = 0; bi < b.length; bi++) {
+    for (let bi = 0; bi < b.length; bi++) {
       if (typeof b[bi] !== 'number' || !Number.isFinite(b[bi])) {
         throw new Error('[FEDERATION] bandit b has non-finite value at [' + bi + '] — state inconsistent');
       }
@@ -145,7 +145,7 @@ function getBanditSummary(state) {
     thompson.ensureBanditInitialized(state);
   }
   // Cholesky solve A*mean = b → mean = A⁻¹b (O(n²)), avoid O(n³) invertSPD
-  var L;
+  let L;
   try {
     L = math.cholesky(state.bandit.A);
   } catch (e) {
@@ -154,7 +154,7 @@ function getBanditSummary(state) {
       'Original: ' + (e && e.message ? e.message : String(e))
     );
   }
-  var mean = math.backSub(L, math.forwardSub(L, state.bandit.b));
+  const mean = math.backSub(L, math.forwardSub(L, state.bandit.b));
   return {
     embeddingDim:   state.embedding.dim,  // Contract: federating hubs must use same value
     mean:           mean,
@@ -172,8 +172,8 @@ function getBanditSummary(state) {
  * @param {{ hubId: string, exportSequence: number }} [opts]  for sneakernet loop prevention
  */
 function addSyncId(summary, opts) {
-  var syncId = contentHash(summary);
-  var out = {
+  const syncId = contentHash(summary);
+  const out = {
     embeddingDim:     summary.embeddingDim,
     mean:             summary.mean.slice(),
     precision:        copyMat(summary.precision),
@@ -236,7 +236,7 @@ function mergeBanditSummaries(local, remote) {
     );
   }
 
-  var expectedFeatureDim = local.embeddingDim * 2;
+  const expectedFeatureDim = local.embeddingDim * 2;
   validateMean(local.mean, 'local', expectedFeatureDim);
   validateMean(remote.mean, 'remote', expectedFeatureDim);
   validatePrecision(local.precision, 'local', expectedFeatureDim);
@@ -245,17 +245,17 @@ function mergeBanditSummaries(local, remote) {
   validSampleSize(remote.sampleSize, 'remote');
 
   // Clip remote mean to mitigate federation poisoning (malicious hub submitting extreme posteriors)
-  var remoteMeanClipped = remote.mean.map(function (v) {
+  const remoteMeanClipped = remote.mean.map(function (v) {
     return Math.max(-MEAN_CLIP, Math.min(MEAN_CLIP, v));
   });
 
-  var totalN = local.sampleSize + remote.sampleSize;
+  const totalN = local.sampleSize + remote.sampleSize;
 
-  var pv = Math.max(local.posteriorVersion || 1, remote.posteriorVersion || 1);
+  const pv = Math.max(local.posteriorVersion || 1, remote.posteriorVersion || 1);
 
   // Guard: both zero — return neutral summary
   if (totalN === 0) {
-    var featDim = local.embeddingDim * 2;
+    const featDim = local.embeddingDim * 2;
     return {
       embeddingDim:     local.embeddingDim,
       mean:             math.zeros(featDim),
@@ -289,16 +289,16 @@ function mergeBanditSummaries(local, remote) {
   }
 
   // Standard Bayesian merge: P_merged = P_local + P_remote (independent posteriors)
-  var mergedPrec = math.symmetrize(math.addMat(local.precision, remote.precision));  // Fix float asymmetry from JSON round-trip
+  const mergedPrec = math.symmetrize(math.addMat(local.precision, remote.precision));  // Fix float asymmetry from JSON round-trip
 
   // Precision-weighted mean: μ = P_merged⁻¹ (P_local·μ_local + P_remote·μ_remote)
   // Use clipped remote mean to mitigate federation poisoning
   // Cholesky solve (O(n²)) instead of invertSPD (O(n³)) — same optimization as getBanditSummary
-  var weightedSum = math.addVec(
+  const weightedSum = math.addVec(
     math.matVec(local.precision,  local.mean),
     math.matVec(remote.precision, remoteMeanClipped)
   );
-  var L_merged;
+  let L_merged;
   try {
     L_merged = math.cholesky(mergedPrec);
   } catch (e) {
@@ -307,7 +307,7 @@ function mergeBanditSummaries(local, remote) {
       'Original: ' + (e && e.message ? e.message : String(e))
     );
   }
-  var mergedMean = math.backSub(L_merged, math.forwardSub(L_merged, weightedSum));
+  let mergedMean = math.backSub(L_merged, math.forwardSub(L_merged, weightedSum));
   mergedMean = mergedMean.map(function (v) {
     return Math.max(-MEAN_CLIP, Math.min(MEAN_CLIP, v));
   });

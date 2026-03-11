@@ -6,7 +6,7 @@
 // To add a new factory, add ONE entry here and write the implementation.
 // The validator, portal, and browser registry all read from this file.
 
-var reg = require('../registry');
+const reg = require('../registry');
 
 // ── Static factories (svg-factories.js) ─────────────────────────────────────
 

@@ -93,7 +93,7 @@ function importCatalog(imported, strategy) {
     case 'merge':
       ids = [...new Set((current.lessonIds || []).concat(imported.lessonIds))];
       break;
-    case 'add-only':
+    case 'add-only': {
       const existing = new Set(current.lessonIds || []);
       ids = current.lessonIds ? [...current.lessonIds] : [];
       imported.lessonIds.forEach(function (id) {
@@ -103,6 +103,7 @@ function importCatalog(imported, strategy) {
         }
       });
       break;
+    }
     default:
       return { ok: false, error: 'strategy must be replace, merge, or add-only' };
   }

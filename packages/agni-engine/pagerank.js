@@ -24,15 +24,15 @@
 
 'use strict';
 
-var DAMPING = 0.85;
-var MAX_ITERATIONS = 100;
-var CONVERGENCE_THRESHOLD = 1e-6;
+const DAMPING = 0.85;
+const MAX_ITERATIONS = 100;
+const CONVERGENCE_THRESHOLD = 1e-6;
 
 // ── PageRank cache ───────────────────────────────────────────────────────────
 // Recomputing PageRank on every selectBestLesson call is wasteful when the
 // graph hasn't changed. We cache results and invalidate when the observation
 // count crosses a threshold delta.
-var _cache = {
+const _cache = {
   curriculumRanks: null,
   transitionRanks: null,
   _currGraph: null,
@@ -58,8 +58,8 @@ function invalidateCache() {
  * @returns {boolean}
  */
 function isCacheStale(state) {
-  var obsCount = state.bandit ? state.bandit.observationCount : 0;
-  var probeCount = state.rasch ? Object.keys(state.rasch.probes).length : 0;
+  const obsCount = state.bandit ? state.bandit.observationCount : 0;
+  const probeCount = state.rasch ? Object.keys(state.rasch.probes).length : 0;
 
   if (_cache.curriculumRanks === null) return true;
   if (probeCount !== _cache.lastProbeCount) return true;
@@ -84,43 +84,43 @@ function isCacheStale(state) {
  * @returns {{ nodes: string[], edges: Object.<string, string[]> }}
  */
 function buildCurriculumGraph(probes, ontologyMap) {
-  var nodes = Object.keys(probes);
-  var edges = /** @type {Record<string, string[]>} */ ({});
-  for (var i = 0; i < nodes.length; i++) edges[nodes[i]] = [];
+  const nodes = Object.keys(probes);
+  const edges = /** @type {Record<string, string[]>} */ ({});
+  for (let i = 0; i < nodes.length; i++) edges[nodes[i]] = [];
 
   if (ontologyMap) {
-    var providersBySkill = {};
-    var requirersBySkill = {};
+    const providersBySkill = {};
+    const requirersBySkill = {};
 
-    for (var n = 0; n < nodes.length; n++) {
-      var nid = nodes[n];
-      var ont = ontologyMap[nid];
+    for (let n = 0; n < nodes.length; n++) {
+      const nid = nodes[n];
+      const ont = ontologyMap[nid];
       if (!ont) continue;
 
-      var provides = ont.provides || [];
-      for (var p = 0; p < provides.length; p++) {
-        var prov = provides[p];
-        var sk = typeof prov === 'string' ? prov : (/** @type {{ skill?: string }} */ (prov).skill || String(prov));
+      const provides = ont.provides || [];
+      for (let p = 0; p < provides.length; p++) {
+        const prov = provides[p];
+        const sk = typeof prov === 'string' ? prov : (/** @type {{ skill?: string }} */ (prov).skill || String(prov));
         if (!providersBySkill[sk]) providersBySkill[sk] = [];
         providersBySkill[sk].push(nid);
       }
 
-      var requires = ont.requires || [];
-      for (var r = 0; r < requires.length; r++) {
-        var req = requires[r];
-        var rsk = typeof req === 'string' ? req : (/** @type {{ skill?: string }} */ (req).skill || String(req));
+      const requires = ont.requires || [];
+      for (let r = 0; r < requires.length; r++) {
+        const req = requires[r];
+        const rsk = typeof req === 'string' ? req : (/** @type {{ skill?: string }} */ (req).skill || String(req));
         if (!requirersBySkill[rsk]) requirersBySkill[rsk] = [];
         requirersBySkill[rsk].push(nid);
       }
     }
 
-    var skills = Object.keys(providersBySkill);
-    for (var si = 0; si < skills.length; si++) {
-      var skill = skills[si];
-      var providers = providersBySkill[skill] || [];
-      var requirers = requirersBySkill[skill] || [];
-      for (var pi = 0; pi < providers.length; pi++) {
-        for (var ri = 0; ri < requirers.length; ri++) {
+    const skills = Object.keys(providersBySkill);
+    for (let si = 0; si < skills.length; si++) {
+      const skill = skills[si];
+      const providers = providersBySkill[skill] || [];
+      const requirers = requirersBySkill[skill] || [];
+      for (let pi = 0; pi < providers.length; pi++) {
+        for (let ri = 0; ri < requirers.length; ri++) {
           if (providers[pi] !== requirers[ri]) {
             if (!edges[providers[pi]]) edges[providers[pi]] = [];
             edges[providers[pi]].push(requirers[ri]);
@@ -129,20 +129,20 @@ function buildCurriculumGraph(probes, ontologyMap) {
       }
     }
   } else {
-    var lessonsBySkill = {};
-    for (var j = 0; j < nodes.length; j++) {
-      var lid = nodes[j];
-      var sk2 = probes[lid].skill;
+    const lessonsBySkill = {};
+    for (let j = 0; j < nodes.length; j++) {
+      const lid = nodes[j];
+      const sk2 = probes[lid].skill;
       if (!sk2) continue;
       if (!lessonsBySkill[sk2]) lessonsBySkill[sk2] = [];
       lessonsBySkill[sk2].push(lid);
     }
 
-    var skillGroups = Object.keys(lessonsBySkill);
-    for (var g = 0; g < skillGroups.length; g++) {
-      var group = lessonsBySkill[skillGroups[g]];
-      for (var a = 0; a < group.length; a++) {
-        for (var b = a + 1; b < group.length; b++) {
+    const skillGroups = Object.keys(lessonsBySkill);
+    for (let g = 0; g < skillGroups.length; g++) {
+      const group = lessonsBySkill[skillGroups[g]];
+      for (let a = 0; a < group.length; a++) {
+        for (let b = a + 1; b < group.length; b++) {
           if (!edges[group[a]]) edges[group[a]] = [];
           if (!edges[group[b]]) edges[group[b]] = [];
           edges[group[a]].push(group[b]);
@@ -167,28 +167,28 @@ function buildCurriculumGraph(probes, ontologyMap) {
  */
 function buildTransitionGraph(transitions, opts) {
   opts = opts || {};
-  var qualityWeighted = opts.qualityWeighted || false;
+  const qualityWeighted = opts.qualityWeighted || false;
 
-  var nodeSet = /** @type {Record<string, boolean>} */ ({});
-  var edges = /** @type {Record<string, string[]>} */ ({});
-  var weights = /** @type {Record<string, Record<string, number>>} */ ({});
+  const nodeSet = /** @type {Record<string, boolean>} */ ({});
+  const edges = /** @type {Record<string, string[]>} */ ({});
+  const weights = /** @type {Record<string, Record<string, number>>} */ ({});
 
-  var fromIds = Object.keys(transitions);
-  for (var i = 0; i < fromIds.length; i++) {
-    var from = fromIds[i];
+  const fromIds = Object.keys(transitions);
+  for (let i = 0; i < fromIds.length; i++) {
+    const from = fromIds[i];
     nodeSet[from] = true;
     if (!edges[from]) edges[from] = [];
     if (!weights[from]) weights[from] = {};
 
-    var toIds = Object.keys(transitions[from]);
-    for (var j = 0; j < toIds.length; j++) {
-      var to = toIds[j];
-      var t = transitions[from][to];
+    const toIds = Object.keys(transitions[from]);
+    for (let j = 0; j < toIds.length; j++) {
+      const to = toIds[j];
+      const t = transitions[from][to];
       nodeSet[to] = true;
       edges[from].push(to);
 
       if (qualityWeighted) {
-        var gainFactor = Math.max(t.avgGain || 0, 0.01);
+        const gainFactor = Math.max(t.avgGain || 0, 0.01);
         weights[from][to] = t.count * gainFactor;
       } else {
         weights[from][to] = t.count;
@@ -215,63 +215,63 @@ function buildTransitionGraph(transitions, opts) {
  */
 function computePageRank(nodes, edges, weights, opts) {
   opts = opts || {};
-  var d = opts.damping !== undefined ? opts.damping : DAMPING;
-  var maxIter = opts.maxIter || MAX_ITERATIONS;
-  var tol = opts.tolerance || CONVERGENCE_THRESHOLD;
+  const d = opts.damping !== undefined ? opts.damping : DAMPING;
+  const maxIter = opts.maxIter || MAX_ITERATIONS;
+  const tol = opts.tolerance || CONVERGENCE_THRESHOLD;
 
-  var N = nodes.length;
+  const N = nodes.length;
   if (N === 0) return {};
 
-  var nodeIndex = {};
-  for (var i = 0; i < N; i++) nodeIndex[nodes[i]] = i;
+  const nodeIndex = {};
+  for (let i = 0; i < N; i++) nodeIndex[nodes[i]] = i;
 
-  var rank = new Array(N);
-  var init = 1.0 / N;
-  for (var r = 0; r < N; r++) rank[r] = init;
+  let rank = new Array(N);
+  const init = 1.0 / N;
+  for (let r = 0; r < N; r++) rank[r] = init;
 
-  for (var iter = 0; iter < maxIter; iter++) {
-    var newRank = new Array(N);
-    for (var nr = 0; nr < N; nr++) newRank[nr] = (1 - d) / N;
+  for (let iter = 0; iter < maxIter; iter++) {
+    const newRank = new Array(N);
+    for (let nr = 0; nr < N; nr++) newRank[nr] = (1 - d) / N;
 
-    for (var s = 0; s < N; s++) {
-      var src = nodes[s];
-      var outs = edges[src] || [];
+    for (let s = 0; s < N; s++) {
+      const src = nodes[s];
+      const outs = edges[src] || [];
       if (outs.length === 0) {
-        var share = d * rank[s] / N;
-        for (var dn = 0; dn < N; dn++) newRank[dn] += share;
+        const share = d * rank[s] / N;
+        for (let dn = 0; dn < N; dn++) newRank[dn] += share;
         continue;
       }
 
       if (weights && weights[src]) {
-        var totalW = 0;
-        for (var wi = 0; wi < outs.length; wi++) {
+        let totalW = 0;
+        for (let wi = 0; wi < outs.length; wi++) {
           totalW += (weights[src][outs[wi]] || 1);
         }
-        for (var we = 0; we < outs.length; we++) {
-          var dst = outs[we];
-          var dstIdx = nodeIndex[dst];
+        for (let we = 0; we < outs.length; we++) {
+          const dst = outs[we];
+          const dstIdx = nodeIndex[dst];
           if (dstIdx === undefined) continue;
-          var w = (weights[src][dst] || 1) / totalW;
+          const w = (weights[src][dst] || 1) / totalW;
           newRank[dstIdx] += d * rank[s] * w;
         }
       } else {
-        var outW = d * rank[s] / outs.length;
-        for (var e = 0; e < outs.length; e++) {
-          var dIdx = nodeIndex[outs[e]];
+        const outW = d * rank[s] / outs.length;
+        for (let e = 0; e < outs.length; e++) {
+          const dIdx = nodeIndex[outs[e]];
           if (dIdx === undefined) continue;
           newRank[dIdx] += outW;
         }
       }
     }
 
-    var diff = 0;
-    for (var c = 0; c < N; c++) diff += Math.abs(newRank[c] - rank[c]);
+    let diff = 0;
+    for (let c = 0; c < N; c++) diff += Math.abs(newRank[c] - rank[c]);
     rank = newRank;
     if (diff < tol) break;
   }
 
-  var result = /** @type {Record<string, number>} */ ({});
-  for (var f = 0; f < N; f++) result[nodes[f]] = rank[f];
+  const result = /** @type {Record<string, number>} */ ({});
+  for (let f = 0; f < N; f++) result[nodes[f]] = rank[f];
   return result;
 }
 
@@ -294,74 +294,74 @@ function computePageRank(nodes, edges, weights, opts) {
  */
 function personalizedPageRank(nodes, edges, targetNodes, weights, opts) {
   opts = opts || {};
-  var d = opts.damping !== undefined ? opts.damping : DAMPING;
-  var maxIter = opts.maxIter || MAX_ITERATIONS;
-  var tol = opts.tolerance || CONVERGENCE_THRESHOLD;
+  const d = opts.damping !== undefined ? opts.damping : DAMPING;
+  const maxIter = opts.maxIter || MAX_ITERATIONS;
+  const tol = opts.tolerance || CONVERGENCE_THRESHOLD;
 
-  var N = nodes.length;
+  const N = nodes.length;
   if (N === 0) return {};
 
-  var nodeIndex = {};
-  for (var i = 0; i < N; i++) nodeIndex[nodes[i]] = i;
+  const nodeIndex = {};
+  for (let i = 0; i < N; i++) nodeIndex[nodes[i]] = i;
 
-  var teleport = new Array(N);
-  for (var t = 0; t < N; t++) teleport[t] = 0;
+  const teleport = new Array(N);
+  for (let t = 0; t < N; t++) teleport[t] = 0;
 
   if (targetNodes.length > 0) {
-    var tw = 1.0 / targetNodes.length;
-    for (var ti = 0; ti < targetNodes.length; ti++) {
-      var tidx = nodeIndex[targetNodes[ti]];
+    const tw = 1.0 / targetNodes.length;
+    for (let ti = 0; ti < targetNodes.length; ti++) {
+      const tidx = nodeIndex[targetNodes[ti]];
       if (tidx !== undefined) teleport[tidx] = tw;
     }
   } else {
-    for (var u = 0; u < N; u++) teleport[u] = 1.0 / N;
+    for (let u = 0; u < N; u++) teleport[u] = 1.0 / N;
   }
 
-  var rank = new Array(N);
-  for (var r = 0; r < N; r++) rank[r] = teleport[r] || 1.0 / N;
+  let rank = new Array(N);
+  for (let r = 0; r < N; r++) rank[r] = teleport[r] || 1.0 / N;
 
-  for (var iter = 0; iter < maxIter; iter++) {
-    var newRank = new Array(N);
-    for (var nr = 0; nr < N; nr++) newRank[nr] = (1 - d) * teleport[nr];
+  for (let iter = 0; iter < maxIter; iter++) {
+    const newRank = new Array(N);
+    for (let nr = 0; nr < N; nr++) newRank[nr] = (1 - d) * teleport[nr];
 
-    for (var s = 0; s < N; s++) {
-      var src = nodes[s];
-      var outs = edges[src] || [];
+    for (let s = 0; s < N; s++) {
+      const src = nodes[s];
+      const outs = edges[src] || [];
       if (outs.length === 0) {
-        for (var dn = 0; dn < N; dn++) newRank[dn] += d * rank[s] * teleport[dn];
+        for (let dn = 0; dn < N; dn++) newRank[dn] += d * rank[s] * teleport[dn];
         continue;
       }
 
       if (weights && weights[src]) {
-        var totalW = 0;
-        for (var wi = 0; wi < outs.length; wi++) {
+        let totalW = 0;
+        for (let wi = 0; wi < outs.length; wi++) {
           totalW += (weights[src][outs[wi]] || 1);
         }
-        for (var we = 0; we < outs.length; we++) {
-          var dst = outs[we];
-          var dstIdx = nodeIndex[dst];
+        for (let we = 0; we < outs.length; we++) {
+          const dst = outs[we];
+          const dstIdx = nodeIndex[dst];
           if (dstIdx === undefined) continue;
-          var w = (weights[src][dst] || 1) / totalW;
+          const w = (weights[src][dst] || 1) / totalW;
           newRank[dstIdx] += d * rank[s] * w;
         }
       } else {
-        var outW = d * rank[s] / outs.length;
-        for (var e = 0; e < outs.length; e++) {
-          var dIdx = nodeIndex[outs[e]];
+        const outW = d * rank[s] / outs.length;
+        for (let e = 0; e < outs.length; e++) {
+          const dIdx = nodeIndex[outs[e]];
           if (dIdx === undefined) continue;
           newRank[dIdx] += outW;
         }
       }
     }
 
-    var diff = 0;
-    for (var c = 0; c < N; c++) diff += Math.abs(newRank[c] - rank[c]);
+    let diff = 0;
+    for (let c = 0; c < N; c++) diff += Math.abs(newRank[c] - rank[c]);
     rank = newRank;
     if (diff < tol) break;
   }
 
-  var result = /** @type {Record<string, number>} */ ({});
-  for (var f = 0; f < N; f++) result[nodes[f]] = rank[f];
+  const result = /** @type {Record<string, number>} */ ({});
+  for (let f = 0; f < N; f++) result[nodes[f]] = rank[f];
   return result;
 }
 
@@ -380,18 +380,18 @@ function personalizedPageRank(nodes, edges, targetNodes, weights, opts) {
  * @returns {Object.<string, { curriculumRank: number, transitionRank: number, personalizedRank: number, combinedScore: number }>}
  */
 function scoreCandidates(state, studentId, candidates, ontologyMap) {
-  var currRanks;
-  var transRanks;
+  let currRanks;
+  let transRanks;
 
   if (isCacheStale(state)) {
-    var currGraph = buildCurriculumGraph(state.rasch.probes, ontologyMap);
+    const currGraph = buildCurriculumGraph(state.rasch.probes, ontologyMap);
     currRanks = computePageRank(currGraph.nodes, currGraph.edges);
     _cache.curriculumRanks = currRanks;
     _cache._currGraph = currGraph;
 
     transRanks = {};
     if (state.markov && state.markov.transitions) {
-      var transGraph = buildTransitionGraph(state.markov.transitions, { qualityWeighted: true });
+      const transGraph = buildTransitionGraph(state.markov.transitions, { qualityWeighted: true });
       if (transGraph.nodes.length > 0) {
         transRanks = computePageRank(transGraph.nodes, transGraph.edges, transGraph.weights);
       }
@@ -406,19 +406,19 @@ function scoreCandidates(state, studentId, candidates, ontologyMap) {
   }
 
   // Personalized PageRank is always per-student so it can't be cached globally
-  var gapLessons = findSkillGapLessons(state, studentId, candidates);
-  var persRanks = {};
-  var currGraph2 = _cache._currGraph;
+  const gapLessons = findSkillGapLessons(state, studentId, candidates);
+  let persRanks = {};
+  const currGraph2 = _cache._currGraph;
   if (gapLessons.length > 0 && currGraph2 && currGraph2.nodes.length > 0) {
     persRanks = personalizedPageRank(currGraph2.nodes, currGraph2.edges, gapLessons);
   }
 
-  var scores = /** @type {Record<string, { curriculumRank: number, transitionRank: number, personalizedRank: number, combinedScore: number }>} */ ({});
-  for (var i = 0; i < candidates.length; i++) {
-    var cid = candidates[i];
-    var cr = currRanks[cid] || 0;
-    var tr = transRanks[cid] || 0;
-    var pr = persRanks[cid] || 0;
+  const scores = /** @type {Record<string, { curriculumRank: number, transitionRank: number, personalizedRank: number, combinedScore: number }>} */ ({});
+  for (let i = 0; i < candidates.length; i++) {
+    const cid = candidates[i];
+    const cr = currRanks[cid] || 0;
+    const tr = transRanks[cid] || 0;
+    const pr = persRanks[cid] || 0;
 
     scores[cid] = {
       curriculumRank: cr,
@@ -444,13 +444,13 @@ function scoreCandidates(state, studentId, candidates, ontologyMap) {
  * @returns {string[]}
  */
 function findSkillGapLessons(state, studentId, candidates) {
-  var student = state.rasch.students[studentId];
-  var ability = student ? student.ability : 0;
+  const student = state.rasch.students[studentId];
+  const ability = student ? student.ability : 0;
 
-  var gapLessons = [];
-  for (var i = 0; i < candidates.length; i++) {
-    var cid = candidates[i];
-    var probe = state.rasch.probes[cid];
+  const gapLessons = [];
+  for (let i = 0; i < candidates.length; i++) {
+    const cid = candidates[i];
+    const probe = state.rasch.probes[cid];
     if (!probe) continue;
 
     if (probe.difficulty >= ability - 0.5) {
@@ -466,18 +466,18 @@ function findSkillGapLessons(state, studentId, candidates) {
  * Returns 0 if all values are equal or the map is empty.
  */
 function normalize(value, scores) {
-  var keys = Object.keys(scores);
+  const keys = Object.keys(scores);
   if (keys.length === 0) return 0;
 
-  var min = Infinity;
-  var max = -Infinity;
-  for (var i = 0; i < keys.length; i++) {
-    var v = scores[keys[i]];
+  let min = Infinity;
+  let max = -Infinity;
+  for (let i = 0; i < keys.length; i++) {
+    const v = scores[keys[i]];
     if (v < min) min = v;
     if (v > max) max = v;
   }
 
-  var range = max - min;
+  const range = max - min;
   if (range < 1e-12) return 0;
   return (value - min) / range;
 }
@@ -493,7 +493,7 @@ function normalize(value, scores) {
  */
 function stationaryDistribution(state) {
   if (!state.markov || !state.markov.transitions) return {};
-  var graph = buildTransitionGraph(state.markov.transitions);
+  const graph = buildTransitionGraph(state.markov.transitions);
   if (graph.nodes.length === 0) return {};
 
   // Stationary distribution of a Markov chain is the PageRank with damping=1
@@ -512,24 +512,24 @@ function stationaryDistribution(state) {
  */
 function identifyFlowBottlenecks(state, topK) {
   topK = topK || 10;
-  var dist = stationaryDistribution(state);
+  const dist = stationaryDistribution(state);
   if (Object.keys(dist).length === 0) return [];
 
-  var transitions = (state.markov && state.markov.transitions) ? state.markov.transitions : {};
-  var results = [];
+  const transitions = (state.markov && state.markov.transitions) ? state.markov.transitions : {};
+  const results = [];
 
-  var lessonIds = Object.keys(dist);
-  for (var i = 0; i < lessonIds.length; i++) {
-    var lid = lessonIds[i];
-    var edges = transitions[lid] || {};
-    var outKeys = Object.keys(edges);
-    var outDegree = outKeys.length;
+  const lessonIds = Object.keys(dist);
+  for (let i = 0; i < lessonIds.length; i++) {
+    const lid = lessonIds[i];
+    const edges = transitions[lid] || {};
+    const outKeys = Object.keys(edges);
+    const outDegree = outKeys.length;
 
-    var totalGain = 0;
-    for (var j = 0; j < outKeys.length; j++) {
+    let totalGain = 0;
+    for (let j = 0; j < outKeys.length; j++) {
       totalGain += edges[outKeys[j]].avgGain || 0;
     }
-    var avgOutGain = outDegree > 0 ? totalGain / outDegree : 0;
+    const avgOutGain = outDegree > 0 ? totalGain / outDegree : 0;
 
     results.push({
       lessonId: lid,
@@ -541,8 +541,8 @@ function identifyFlowBottlenecks(state, topK) {
 
   // High stationary probability + low out-degree + low gain = bottleneck
   results.sort(function (a, b) {
-    var scoreA = a.stationaryProb / (a.outDegree + 1) / (Math.abs(a.avgOutGain) + 0.1);
-    var scoreB = b.stationaryProb / (b.outDegree + 1) / (Math.abs(b.avgOutGain) + 0.1);
+    const scoreA = a.stationaryProb / (a.outDegree + 1) / (Math.abs(a.avgOutGain) + 0.1);
+    const scoreB = b.stationaryProb / (b.outDegree + 1) / (Math.abs(b.avgOutGain) + 0.1);
     return scoreB - scoreA;
   });
 

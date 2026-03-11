@@ -10,7 +10,7 @@
 
 'use strict';
 
-var math = require('./math');
+const math = require('./math');
 
 /** @param {import('../types').LMSState} state */
 function assertEmbeddingDimValid(state) {
@@ -37,8 +37,8 @@ function assertVectorLengthMatchesDim(state, vector, label) {
  * @returns {number[]|undefined}
  */
 function getStudentVector(state, studentId) {
-  var rec = state.embedding.students[studentId];
-  var vec = rec && Array.isArray(rec.vector) ? rec.vector : undefined;
+  const rec = state.embedding.students[studentId];
+  const vec = rec && Array.isArray(rec.vector) ? rec.vector : undefined;
   if (vec) assertVectorLengthMatchesDim(state, vec, 'student');
   return vec;
 }
@@ -51,8 +51,8 @@ function getStudentVector(state, studentId) {
  * @returns {number[]|undefined}
  */
 function getLessonVector(state, lessonId) {
-  var rec = state.embedding.lessons[lessonId];
-  var vec = rec && Array.isArray(rec.vector) ? rec.vector : undefined;
+  const rec = state.embedding.lessons[lessonId];
+  const vec = rec && Array.isArray(rec.vector) ? rec.vector : undefined;
   if (vec) assertVectorLengthMatchesDim(state, vec, 'lesson');
   return vec;
 }
@@ -78,7 +78,7 @@ function ensureStudentVector(state, studentId) {
       })
     };
   }
-  var vec = state.embedding.students[studentId].vector;
+  const vec = state.embedding.students[studentId].vector;
   assertVectorLengthMatchesDim(state, vec, 'student');
   return vec;
 }
@@ -104,7 +104,7 @@ function ensureLessonVector(state, lessonId) {
       })
     };
   }
-  var vec = state.embedding.lessons[lessonId].vector;
+  const vec = state.embedding.lessons[lessonId].vector;
   assertVectorLengthMatchesDim(state, vec, 'lesson');
   return vec;
 }
@@ -151,8 +151,8 @@ function updateEmbedding(state, studentId, lessonId, gain) {
   if (typeof gain !== 'number' || !isFinite(gain)) {
     throw new Error('[EMBEDDING] gain must be a finite number, got: ' + gain);
   }
-  var z = ensureStudentVector(state, studentId);
-  var w = ensureLessonVector(state, lessonId);
+  const z = ensureStudentVector(state, studentId);
+  const w = ensureLessonVector(state, lessonId);
 
   // Bug 3: reject corrupted vectors from state file; no silent propagation of NaN
   for (var i = 0; i < z.length; i++) {
@@ -168,9 +168,9 @@ function updateEmbedding(state, studentId, lessonId, gain) {
 
   // Note: state.bandit.forgetting is separate; hub config uses single "forgetting" key.
   // Migrations must populate both state.embedding.forgetting and state.bandit.forgetting.
-  var gamma = state.embedding.forgetting;
-  var lr    = state.embedding.lr;
-  var reg   = state.embedding.reg;
+  const gamma = state.embedding.forgetting;
+  const lr    = state.embedding.lr;
+  const reg   = state.embedding.reg;
 
   if (typeof gamma !== 'number' || !isFinite(gamma) || gamma < 0.9 || gamma > 1) {
     throw new Error('[EMBEDDING] forgetting must be a finite number in [0.9,1], got: ' + gamma);
@@ -182,30 +182,30 @@ function updateEmbedding(state, studentId, lessonId, gain) {
     throw new Error('[EMBEDDING] reg must be a non-negative finite number, got: ' + reg);
   }
 
-  var dotZW = math.dot(z, w);
-  var err   = gain - dotZW;
+  const dotZW = math.dot(z, w);
+  const err   = gain - dotZW;
 
   // Bug 2: value cap scaled to gain range; gradient clipping avoids saturation oscillation.
   // Rasch gain (ability delta) is typically in [-2, 2]. Cap components at 2 so max
   // dot(z,w) ≈ dim*4; prevents err = gain - 800 when both vectors hit ±10.
-  var MAG_CAP = 2;
+  const MAG_CAP = 2;
   // Per-step delta clamp prevents single-update explosion; avoids oscillation at cap.
-  var MAX_DELTA = 0.5;
+  const MAX_DELTA = 0.5;
 
   // Bug 3: compute into temps; reject atomically if any overflow (no partial revert)
-  var zNew = [];
-  var wNew = [];
+  const zNew = [];
+  const wNew = [];
   for (var k = 0; k < z.length; k++) {
-    var zk = z[k];
-    var wk = w[k];
-    var newZk = gamma * zk + lr * (err * wk - reg * zk);
-    var newWk = gamma * wk + lr * (err * zk - reg * wk);
+    const zk = z[k];
+    const wk = w[k];
+    const newZk = gamma * zk + lr * (err * wk - reg * zk);
+    const newWk = gamma * wk + lr * (err * zk - reg * wk);
     if (!isFinite(newZk) || !isFinite(newWk)) {
       throw new Error('[EMBEDDING] update produced non-finite value at k=' + k + ' — reject observation');
     }
 
-    var deltaZk = newZk - zk;
-    var deltaWk = newWk - wk;
+    let deltaZk = newZk - zk;
+    let deltaWk = newWk - wk;
     deltaZk = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, deltaZk));
     deltaWk = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, deltaWk));
 

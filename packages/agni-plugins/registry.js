@@ -2,9 +2,9 @@
 
 // Internal registry store — shared between index.js and builtins.
 
-var _factories = [];
-var _stepTypes = [];
-var _sensors   = [];
+const _factories = [];
+const _stepTypes = [];
+const _sensors   = [];
 
 function registerFactory(descriptor) {
   if (!descriptor || !descriptor.id) throw new Error('[plugins] factory descriptor must have an id');

@@ -46,7 +46,7 @@ function writeIfNewer(sourceMtimeMs, destPath, content) {
  * @returns {boolean} true if copied, false if skipped
  */
 function copyIfNewer(sourcePath, destPath) {
-  var sourceMtime = fs.statSync(sourcePath).mtimeMs;
+  const sourceMtime = fs.statSync(sourcePath).mtimeMs;
   if (fs.existsSync(destPath) && sourceMtime <= fs.statSync(destPath).mtimeMs) return false;
   fs.writeFileSync(destPath, fs.readFileSync(sourcePath, 'utf8'));
   return true;

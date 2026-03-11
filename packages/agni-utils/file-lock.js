@@ -24,7 +24,7 @@ function lockPath(filePath) {
 
 function isStale(lockFile) {
   try {
-    var stat = fs.statSync(lockFile);
+    const stat = fs.statSync(lockFile);
     return (Date.now() - stat.mtimeMs) > STALE_TIMEOUT_MS;
   } catch (_e) {
     return false;
@@ -32,10 +32,10 @@ function isStale(lockFile) {
 }
 
 function acquireSync(filePath) {
-  var lp = lockPath(filePath);
-  var content = JSON.stringify({ pid: process.pid, ts: Date.now() });
+  const lp = lockPath(filePath);
+  const content = JSON.stringify({ pid: process.pid, ts: Date.now() });
 
-  for (var attempt = 0; attempt < MAX_RETRIES; attempt++) {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       fs.writeFileSync(lp, content, { flag: 'wx' });
       return true;
@@ -46,9 +46,9 @@ function acquireSync(filePath) {
         try { fs.unlinkSync(lp); } catch (_e) { /* race ok */ }
         continue;
       }
-      var wait = RETRY_INTERVAL_MS + Math.floor(Math.random() * RETRY_INTERVAL_MS);
-      try { var _b = new Int32Array(new SharedArrayBuffer(4)); Atomics.wait(_b, 0, 0, wait); }
-      catch (_e2) { var _end = Date.now() + wait; while (Date.now() < _end) { /* fallback */ } }
+      const wait = RETRY_INTERVAL_MS + Math.floor(Math.random() * RETRY_INTERVAL_MS);
+      try { const _b = new Int32Array(new SharedArrayBuffer(4)); Atomics.wait(_b, 0, 0, wait); }
+      catch (_e2) { const _end = Date.now() + wait; while (Date.now() < _end) { /* fallback */ } }
     }
   }
   throw new Error('Could not acquire lock after ' + MAX_RETRIES + ' attempts: ' + lp);
@@ -72,10 +72,10 @@ function sleep(ms) {
 }
 
 async function acquire(filePath) {
-  var lp = lockPath(filePath);
-  var content = JSON.stringify({ pid: process.pid, ts: Date.now() });
+  const lp = lockPath(filePath);
+  const content = JSON.stringify({ pid: process.pid, ts: Date.now() });
 
-  for (var attempt = 0; attempt < MAX_RETRIES; attempt++) {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       fs.writeFileSync(lp, content, { flag: 'wx' });
       return true;

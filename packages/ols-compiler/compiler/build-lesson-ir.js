@@ -48,14 +48,14 @@ async function buildLessonIR(lessonData, options) {
             .replace(/\n/g, '<br>');
         }
       }
-      var out = Object.assign({}, step, { htmlContent: htmlContent });
-      var spec = step.svg_spec || step.spec;
+      const out = Object.assign({}, step, { htmlContent: htmlContent });
+      const spec = step.svg_spec || step.spec;
       if (spec && spec.opts && typeof spec.opts === 'object') {
         NUMERIC_PARAM_KEYS.forEach(function (key) {
           if (!(key in spec.opts)) return;
-          var v = spec.opts[key];
+          const v = spec.opts[key];
           if (v !== null && v !== undefined && typeof v !== 'number' && typeof v !== 'boolean') {
-            var n = parseFloat(v);
+            const n = parseFloat(v);
             if (isNaN(n)) {
               log.warn('AUDIT-E1: svg_spec opts.' + key + ' non-numeric (may crash runtime)', {
                 stepId: step.id, value: v
@@ -78,8 +78,8 @@ async function buildLessonIR(lessonData, options) {
     );
   }
 
-  var ontology = lessonData.ontology || {};
-  var normalizedOntology = {
+  const ontology = lessonData.ontology || {};
+  const normalizedOntology = {
     requires: (ontology.requires || []).map(function (r) {
       return typeof r === 'string' ? { skill: r } : r;
     }),
@@ -104,7 +104,7 @@ async function buildLessonIR(lessonData, options) {
 }
 
 /** Fields excluded from IR hash to keep it deterministic across builds. */
-var IR_HASH_EXCLUDE = ['_compiledAt', '_devMode', 'content_hash', 'parent_hash', 'uri', 'chain'];
+const IR_HASH_EXCLUDE = ['_compiledAt', '_devMode', 'content_hash', 'parent_hash', 'uri', 'chain'];
 
 /**
  * Canonicalize an object for hashing. Sorts keys, excludes volatile fields.
@@ -118,7 +118,7 @@ function canonicalizeForHash(obj, excludeKeys) {
   if (Array.isArray(obj)) {
     return '[' + obj.map(function (v) { return canonicalizeForHash(v, excludeKeys); }).join(',') + ']';
   }
-  var keys = Object.keys(obj)
+  const keys = Object.keys(obj)
     .filter(function (k) { return excludeKeys.indexOf(k) < 0; })
     .sort();
   return '{' + keys.map(function (k) {
@@ -133,8 +133,8 @@ function canonicalizeForHash(obj, excludeKeys) {
  * @returns {string} sha256:hex (64 chars after prefix)
  */
 function computeLessonIRHash(ir) {
-  var canonical = canonicalizeForHash(ir, IR_HASH_EXCLUDE);
-  var hash = crypto.createHash('sha256').update(canonical, 'utf8').digest('hex');
+  const canonical = canonicalizeForHash(ir, IR_HASH_EXCLUDE);
+  const hash = crypto.createHash('sha256').update(canonical, 'utf8').digest('hex');
   return 'sha256:' + hash;
 }
 

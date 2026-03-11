@@ -258,7 +258,7 @@ function inferFeatures(lessonData) {
     ? lessonData.difficulty
     : Math.max(1, Math.min(5, blooms.bloomsCeiling));
 
-  var features = {
+  const features = {
     flags: {
       has_equations:       caps.hasEquations,
       equation_types:      eqTypes,
@@ -279,9 +279,9 @@ function inferFeatures(lessonData) {
     difficulty:       difficulty
   };
 
-  var metadataSource = lessonData.metadata_source || 'inferred';
-  var featureSources = {};
-  var confidence = {};
+  let metadataSource = lessonData.metadata_source || 'inferred';
+  const featureSources = {};
+  const confidence = {};
 
   confidence.blooms = _computeConfidence(blooms.matchDensity);
   confidence.vark = _computeConfidence(vark.matchDensity);
@@ -291,21 +291,21 @@ function inferFeatures(lessonData) {
   featureSources.vark = 'inferred';
   featureSources.teachingStyle = 'inferred';
 
-  var declared = meta.declared_features;
+  const declared = meta.declared_features;
   if (declared && typeof declared === 'object') {
     metadataSource = 'mixed';
 
     if (declared.blooms_level) {
       features.bloomsLabel = declared.blooms_level;
-      var bloomsMap = { remember: 1, understand: 2, apply: 3, analyze: 4, evaluate: 5, create: 6 };
-      var normalised = String(declared.blooms_level).toLowerCase();
+      const bloomsMap = { remember: 1, understand: 2, apply: 3, analyze: 4, evaluate: 5, create: 6 };
+      const normalised = String(declared.blooms_level).toLowerCase();
       if (bloomsMap[normalised]) features.bloomsCeiling = bloomsMap[normalised];
       featureSources.blooms = 'declared';
       confidence.blooms = 1.0;
     }
 
     if (declared.vark) {
-      var declaredVark = Array.isArray(declared.vark) ? declared.vark : [declared.vark];
+      const declaredVark = Array.isArray(declared.vark) ? declared.vark : [declared.vark];
       features.vark = Object.assign({}, vark, { dominant: declaredVark });
       featureSources.vark = 'declared';
       confidence.vark = 1.0;

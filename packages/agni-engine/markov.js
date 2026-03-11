@@ -31,12 +31,12 @@
 //   cooldowns:   { "<studentId>": { "<lessonId>": { observationIndex, gain } } }
 // }
 
-var MAX_HISTORY = 10;
-var MAX_TRANSITION_SOURCES = 300;
-var MAX_BIGRAM_SOURCES = 200;
-var FORGETTING = 0.995;
-var COOLDOWN_WINDOW = 5;
-var DROPOUT_THRESHOLD_RATIO = 0.3;
+const MAX_HISTORY = 10;
+const MAX_TRANSITION_SOURCES = 300;
+const MAX_BIGRAM_SOURCES = 200;
+const FORGETTING = 0.995;
+const COOLDOWN_WINDOW = 5;
+const DROPOUT_THRESHOLD_RATIO = 0.3;
 
 /** Unambiguous bigram key; avoids collisions when lesson IDs contain separator chars. */
 function bigramKey(prev2, prev1) {
@@ -65,9 +65,9 @@ function ensureMarkovState(state) {
  * @returns {number}
  */
 function totalEdgeCount(edges) {
-  var keys = Object.keys(edges);
-  var sum = 0;
-  for (var i = 0; i < keys.length; i++) {
+  const keys = Object.keys(edges);
+  let sum = 0;
+  for (let i = 0; i < keys.length; i++) {
     sum += (edges[keys[i]].count || 0);
   }
   return sum;
@@ -79,12 +79,12 @@ function totalEdgeCount(edges) {
  * @param {number} maxSources
  */
 function evictLeastSource(container, maxSources) {
-  var keys = Object.keys(container);
+  const keys = Object.keys(container);
   if (keys.length <= maxSources) return;
 
-  var candidates = [];
-  for (var i = 0; i < keys.length; i++) {
-    var k = keys[i];
+  const candidates = [];
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
     candidates.push({ key: k, total: totalEdgeCount(container[k]) });
   }
   candidates.sort(function (a, b) {
@@ -92,8 +92,8 @@ function evictLeastSource(container, maxSources) {
     return keys.indexOf(a.key) - keys.indexOf(b.key);
   });
 
-  var toRemove = keys.length - maxSources;
-  for (var j = 0; j < toRemove; j++) {
+  const toRemove = keys.length - maxSources;
+  for (let j = 0; j < toRemove; j++) {
     delete container[candidates[j].key];
   }
 }
@@ -105,7 +105,7 @@ function evictLeastSource(container, maxSources) {
  * @param {number} gain    observed ability delta
  */
 function updateEdge(edges, toId, gain) {
-  var edge = edges[toId];
+  let edge = edges[toId];
   if (!edge) {
     edge = { count: 0, totalGain: 0, avgGain: 0 };
     edges[toId] = edge;
@@ -135,7 +135,7 @@ function recordTransition(state, studentId, lessonId, gain) {
   }
   ensureMarkovState(state);
 
-  var history = state.markov.studentHistory[studentId];
+  let history = state.markov.studentHistory[studentId];
   if (!history) {
     history = [];
     state.markov.studentHistory[studentId] = history;
@@ -143,7 +143,7 @@ function recordTransition(state, studentId, lessonId, gain) {
 
   // ── First-order transition ────────────────────────────────────────────
   if (history.length > 0) {
-    var prev = history[history.length - 1];
+    const prev = history[history.length - 1];
     if (!state.markov.transitions[prev]) {
       state.markov.transitions[prev] = {};
     }
@@ -159,9 +159,9 @@ function recordTransition(state, studentId, lessonId, gain) {
 
   // ── Second-order (bigram) transition ──────────────────────────────────
   if (history.length >= 2) {
-    var prev2 = history[history.length - 2];
-    var prev1 = history[history.length - 1];
-    var bk = bigramKey(prev2, prev1);
+    const prev2 = history[history.length - 2];
+    const prev1 = history[history.length - 1];
+    const bk = bigramKey(prev2, prev1);
     if (!state.markov.bigrams[bk]) {
       state.markov.bigrams[bk] = {};
     }
@@ -170,7 +170,7 @@ function recordTransition(state, studentId, lessonId, gain) {
   }
 
   // ── Cooldown tracking (sequence-based for time-skew resilience) ───────
-  var obsIndex = (state.markov._obsIndex[studentId] || 0) + 1;
+  const obsIndex = (state.markov._obsIndex[studentId] || 0) + 1;
   state.markov._obsIndex[studentId] = obsIndex;
 
   if (!state.markov.cooldowns[studentId]) {
@@ -182,12 +182,12 @@ function recordTransition(state, studentId, lessonId, gain) {
   };
 
   // Evict old cooldowns by sequence (keep entries within COOLDOWN_WINDOW * 2 observations)
-  var cd = state.markov.cooldowns[studentId];
-  var cdKeys = Object.keys(cd);
-  var cutoff = obsIndex - COOLDOWN_WINDOW * 2;
-  for (var ci = 0; ci < cdKeys.length; ci++) {
-    var ent = cd[cdKeys[ci]];
-    var idx = ent && typeof ent.observationIndex === 'number' ? ent.observationIndex : 0;
+  const cd = state.markov.cooldowns[studentId];
+  const cdKeys = Object.keys(cd);
+  const cutoff = obsIndex - COOLDOWN_WINDOW * 2;
+  for (let ci = 0; ci < cdKeys.length; ci++) {
+    const ent = cd[cdKeys[ci]];
+    const idx = ent && typeof ent.observationIndex === 'number' ? ent.observationIndex : 0;
     if (idx < cutoff) delete cd[cdKeys[ci]];
   }
 
@@ -210,10 +210,10 @@ function recordDropout(state, studentId) {
     throw new Error('[MARKOV] studentId must be a non-empty string, got: ' + (studentId === undefined ? 'undefined' : studentId === null ? 'null' : typeof studentId));
   }
   ensureMarkovState(state);
-  var history = state.markov.studentHistory[studentId];
+  const history = state.markov.studentHistory[studentId];
   if (!history || history.length === 0) return;
 
-  var lastLesson = history[history.length - 1];
+  const lastLesson = history[history.length - 1];
   if (!state.markov.dropouts[lastLesson]) {
     state.markov.dropouts[lastLesson] = { count: 0, totalContinuations: 0 };
   }
@@ -232,19 +232,19 @@ function recordDropout(state, studentId) {
  */
 function getTransitionProbabilities(state, fromLessonId) {
   ensureMarkovState(state);
-  var edges = state.markov.transitions[fromLessonId];
+  const edges = state.markov.transitions[fromLessonId];
   if (!edges) return {};
 
-  var totalCount = 0;
-  var keys = Object.keys(edges);
-  for (var i = 0; i < keys.length; i++) {
+  let totalCount = 0;
+  const keys = Object.keys(edges);
+  for (let i = 0; i < keys.length; i++) {
     totalCount += edges[keys[i]].count;
   }
   if (totalCount === 0) return /** @type {Record<string, number>} */ ({});
 
   /** @type {Record<string, number>} */
-  var probs = {};
-  for (var j = 0; j < keys.length; j++) {
+  const probs = {};
+  for (let j = 0; j < keys.length; j++) {
     probs[keys[j]] = edges[keys[j]].count / totalCount;
   }
   return probs;
@@ -270,58 +270,58 @@ function getTransitionProbabilities(state, fromLessonId) {
 function scoreCandidate(state, studentId, candidateId) {
   ensureMarkovState(state);
 
-  var history = state.markov.studentHistory[studentId];
+  const history = state.markov.studentHistory[studentId];
   if (!history || history.length === 0) {
     return { transitionProb: 0, transitionQuality: 0, bigramProb: 0, bigramQuality: 0, dropoutPenalty: 0, cooldownPenalty: 0 };
   }
 
-  var RECENCY_DECAY = 0.7;
+  const RECENCY_DECAY = 0.7;
 
   // ── First-order scoring ───────────────────────────────────────────────
-  var totalWeight = 0;
-  var weightedProb = 0;
-  var weightedGain = 0;
+  let totalWeight = 0;
+  let weightedProb = 0;
+  let weightedGain = 0;
 
-  for (var i = history.length - 1; i >= 0; i--) {
-    var stepsBack = history.length - 1 - i;
-    var recencyWeight = Math.pow(RECENCY_DECAY, stepsBack);
-    var fromLesson = history[i];
+  for (let i = history.length - 1; i >= 0; i--) {
+    const stepsBack = history.length - 1 - i;
+    const recencyWeight = Math.pow(RECENCY_DECAY, stepsBack);
+    const fromLesson = history[i];
 
-    var edges = state.markov.transitions[fromLesson];
+    const edges = state.markov.transitions[fromLesson];
     if (!edges || !edges[candidateId]) continue;
 
-    var edge = edges[candidateId];
-    var totalFromCount = 0;
-    var fromKeys = Object.keys(edges);
-    for (var k = 0; k < fromKeys.length; k++) {
+    const edge = edges[candidateId];
+    let totalFromCount = 0;
+    const fromKeys = Object.keys(edges);
+    for (let k = 0; k < fromKeys.length; k++) {
       totalFromCount += edges[fromKeys[k]].count;
     }
 
     if (totalFromCount > 0) {
-      var prob = edge.count / totalFromCount;
+      const prob = edge.count / totalFromCount;
       weightedProb += recencyWeight * prob;
       weightedGain += recencyWeight * edge.avgGain;
       totalWeight += recencyWeight;
     }
   }
 
-  var firstOrderProb = totalWeight > 0 ? weightedProb / totalWeight : 0;
-  var firstOrderQuality = totalWeight > 0 ? weightedGain / totalWeight : 0;
+  const firstOrderProb = totalWeight > 0 ? weightedProb / totalWeight : 0;
+  const firstOrderQuality = totalWeight > 0 ? weightedGain / totalWeight : 0;
 
   // ── Second-order (bigram) scoring ─────────────────────────────────────
-  var bigramProb = 0;
-  var bigramQuality = 0;
+  let bigramProb = 0;
+  let bigramQuality = 0;
 
   if (history.length >= 2) {
-    var prev2 = history[history.length - 2];
-    var prev1 = history[history.length - 1];
-    var bigramEdges = state.markov.bigrams[bigramKey(prev2, prev1)];
+    const prev2 = history[history.length - 2];
+    const prev1 = history[history.length - 1];
+    const bigramEdges = state.markov.bigrams[bigramKey(prev2, prev1)];
 
     if (bigramEdges && bigramEdges[candidateId]) {
-      var bEdge = bigramEdges[candidateId];
-      var bigramTotal = 0;
-      var bKeys = Object.keys(bigramEdges);
-      for (var bi = 0; bi < bKeys.length; bi++) {
+      const bEdge = bigramEdges[candidateId];
+      let bigramTotal = 0;
+      const bKeys = Object.keys(bigramEdges);
+      for (let bi = 0; bi < bKeys.length; bi++) {
         bigramTotal += bigramEdges[bKeys[bi]].count;
       }
       if (bigramTotal > 0) {
@@ -332,24 +332,24 @@ function scoreCandidate(state, studentId, candidateId) {
   }
 
   // ── Dropout penalty ───────────────────────────────────────────────────
-  var dropoutPenalty = 0;
-  var dropoutData = state.markov.dropouts[candidateId];
-  var totalReached = dropoutData
+  let dropoutPenalty = 0;
+  const dropoutData = state.markov.dropouts[candidateId];
+  const totalReached = dropoutData
     ? (dropoutData.totalContinuations != null ? dropoutData.totalContinuations + dropoutData.count : dropoutData.totalStudents)
     : 0;
   if (dropoutData && totalReached > 5) {
-    var dropoutRate = dropoutData.count / totalReached;
+    const dropoutRate = dropoutData.count / totalReached;
     if (dropoutRate > DROPOUT_THRESHOLD_RATIO) {
       dropoutPenalty = (dropoutRate - DROPOUT_THRESHOLD_RATIO) * 2;
     }
   }
 
   // ── Cooldown penalty ──────────────────────────────────────────────────
-  var cooldownPenalty = 0;
-  var studentCooldowns = state.markov.cooldowns[studentId];
+  let cooldownPenalty = 0;
+  const studentCooldowns = state.markov.cooldowns[studentId];
   if (studentCooldowns && studentCooldowns[candidateId]) {
-    var cd = studentCooldowns[candidateId];
-    var recentHistory = history.slice(-COOLDOWN_WINDOW);
+    const cd = studentCooldowns[candidateId];
+    const recentHistory = history.slice(-COOLDOWN_WINDOW);
     if (recentHistory.indexOf(candidateId) !== -1) {
       cooldownPenalty = 0.5;
       if (cd.gain < 0) {
@@ -398,9 +398,9 @@ function getTransitions(state, lessonId) {
  */
 function getDropoutRate(state, lessonId) {
   ensureMarkovState(state);
-  var d = state.markov.dropouts[lessonId];
+  const d = state.markov.dropouts[lessonId];
   if (!d) return null;
-  var totalReached = d.totalContinuations != null ? d.totalContinuations + d.count : d.totalStudents;
+  const totalReached = d.totalContinuations != null ? d.totalContinuations + d.count : d.totalStudents;
   if (totalReached === 0) return null;
   return {
     rate: d.count / totalReached,
@@ -421,14 +421,14 @@ function findBottlenecks(state, minSample) {
   ensureMarkovState(state);
   minSample = minSample || 5;
 
-  var bottlenecks = [];
-  var dropoutKeys = Object.keys(state.markov.dropouts);
-  for (var i = 0; i < dropoutKeys.length; i++) {
-    var lid = dropoutKeys[i];
-    var d = state.markov.dropouts[lid];
-    var totalReached = d.totalContinuations != null ? d.totalContinuations + d.count : d.totalStudents;
+  const bottlenecks = [];
+  const dropoutKeys = Object.keys(state.markov.dropouts);
+  for (let i = 0; i < dropoutKeys.length; i++) {
+    const lid = dropoutKeys[i];
+    const d = state.markov.dropouts[lid];
+    const totalReached = d.totalContinuations != null ? d.totalContinuations + d.count : d.totalStudents;
     if (totalReached < minSample) continue;
-    var rate = d.count / totalReached;
+    const rate = d.count / totalReached;
     if (rate > DROPOUT_THRESHOLD_RATIO) {
       bottlenecks.push({
         lessonId: lid,
@@ -453,23 +453,23 @@ function findBottlenecks(state, minSample) {
 function exportTransitionTable(state) {
   ensureMarkovState(state);
   /** @type {Record<string, Record<string, { prob: number; avgGain: number }>>} */
-  var table = {};
-  var fromIds = Object.keys(state.markov.transitions);
+  const table = {};
+  const fromIds = Object.keys(state.markov.transitions);
 
-  for (var i = 0; i < fromIds.length; i++) {
-    var from = fromIds[i];
-    var edges = state.markov.transitions[from];
-    var toIds = Object.keys(edges);
+  for (let i = 0; i < fromIds.length; i++) {
+    const from = fromIds[i];
+    const edges = state.markov.transitions[from];
+    const toIds = Object.keys(edges);
 
-    var totalCount = 0;
-    for (var j = 0; j < toIds.length; j++) {
+    let totalCount = 0;
+    for (let j = 0; j < toIds.length; j++) {
       totalCount += edges[toIds[j]].count;
     }
     if (totalCount === 0) continue;
 
     table[from] = {};
-    for (var k = 0; k < toIds.length; k++) {
-      var to = toIds[k];
+    for (let k = 0; k < toIds.length; k++) {
+      const to = toIds[k];
       table[from][to] = {
         prob: parseFloat((edges[to].count / totalCount).toFixed(4)),
         avgGain: parseFloat(edges[to].avgGain.toFixed(4))
@@ -489,14 +489,14 @@ function exportTransitionTable(state) {
  */
 function checkCooldown(state, studentId, candidateId) {
   ensureMarkovState(state);
-  var history = state.markov.studentHistory[studentId] || [];
-  var recent = history.slice(-COOLDOWN_WINDOW);
+  const history = state.markov.studentHistory[studentId] || [];
+  const recent = history.slice(-COOLDOWN_WINDOW);
 
   if (recent.indexOf(candidateId) === -1) {
     return { onCooldown: false, wasFailed: false };
   }
 
-  var cd = (state.markov.cooldowns[studentId] || {})[candidateId];
+  const cd = (state.markov.cooldowns[studentId] || {})[candidateId];
   return {
     onCooldown: true,
     wasFailed: cd ? cd.gain < 0 : false

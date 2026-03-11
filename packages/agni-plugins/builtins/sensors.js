@@ -3,7 +3,7 @@
 // Built-in sensor descriptors.
 // To add a new sensor, add ONE entry here and wire the adapter.
 
-var reg = require('../registry');
+const reg = require('../registry');
 
 // ── Accelerometer (DeviceMotion — linear) ───────────────────────────────────
 

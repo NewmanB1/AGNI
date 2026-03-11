@@ -9,8 +9,8 @@
 
 'use strict';
 
-var envConfig = require('@agni/utils/env-config');
-var math = require('./math');
+const envConfig = require('@agni/utils/env-config');
+const math = require('./math');
 
 /**
  * Ensure a plain object; return {} if missing or not an object.
@@ -30,7 +30,7 @@ function ensureObject(o) {
  * @returns {number}
  */
 function ensureNumber(v, def, bounds) {
-  var n = (typeof v === 'number' && !isNaN(v) && isFinite(v)) ? v : def;
+  let n = (typeof v === 'number' && !isNaN(v) && isFinite(v)) ? v : def;
   if (bounds) {
     if (bounds.min != null && n < bounds.min) n = bounds.min;
     if (bounds.max != null && n > bounds.max) n = bounds.max;
@@ -48,18 +48,18 @@ function ensureNumber(v, def, bounds) {
  */
 function migrateLMSState(raw, opts) {
   opts = opts || {};
-  var dim = opts.embeddingDim != null ? opts.embeddingDim : envConfig.embeddingDim;
-  var migrated = false;
+  const dim = opts.embeddingDim != null ? opts.embeddingDim : envConfig.embeddingDim;
+  let migrated = false;
 
-  var root = ensureObject(raw);
-  var rasch = ensureObject(root.rasch);
-  var embedding = ensureObject(root.embedding);
-  var bandit = ensureObject(root.bandit);
+  const root = ensureObject(raw);
+  const rasch = ensureObject(root.rasch);
+  const embedding = ensureObject(root.embedding);
+  const bandit = ensureObject(root.bandit);
 
   // ── Rasch ─────────────────────────────────────────────────────────────────
-  var students = ensureObject(rasch.students);
-  var probes = ensureObject(rasch.probes);
-  var globalAnchor = ensureObject(rasch.globalAnchor);
+  const students = ensureObject(rasch.students);
+  const probes = ensureObject(rasch.probes);
+  const globalAnchor = ensureObject(rasch.globalAnchor);
   if (globalAnchor.meanAbility === undefined || typeof globalAnchor.meanAbility !== 'number') {
     globalAnchor.meanAbility = 0;
     migrated = true;
@@ -71,7 +71,7 @@ function migrateLMSState(raw, opts) {
 
   // Normalize Rasch student entries: { ability, variance }
   Object.keys(students).forEach(function (id) {
-    var s = ensureObject(students[id]);
+    const s = ensureObject(students[id]);
     if (typeof s.ability !== 'number') { s.ability = 0; migrated = true; }
     if (typeof s.variance !== 'number') { s.variance = 1; migrated = true; }
     students[id] = s;
@@ -79,42 +79,42 @@ function migrateLMSState(raw, opts) {
 
   // Normalize probes: { difficulty, skill }
   Object.keys(probes).forEach(function (id) {
-    var p = ensureObject(probes[id]);
+    const p = ensureObject(probes[id]);
     if (typeof p.difficulty !== 'number') { p.difficulty = 0; migrated = true; }
     if (typeof p.skill !== 'string') { p.skill = ''; migrated = true; }
     probes[id] = p;
   });
 
-  var raschState = {
+  const raschState = {
     students: students,
     probes: probes,
     globalAnchor: { meanAbility: globalAnchor.meanAbility, stdAbility: globalAnchor.stdAbility }
   };
 
   // ── Embedding ─────────────────────────────────────────────────────────────
-  var embDim = ensureNumber(embedding.dim, dim, { min: 4, max: 1024 });
+  const embDim = ensureNumber(embedding.dim, dim, { min: 4, max: 1024 });
   if (embedding.dim !== embDim) migrated = true;
-  var embLr = ensureNumber(embedding.lr, envConfig.embeddingLr, { min: 1e-6, max: 0.1 });
+  const embLr = ensureNumber(embedding.lr, envConfig.embeddingLr, { min: 1e-6, max: 0.1 });
   if (embedding.lr !== embLr) migrated = true;
-  var embReg = ensureNumber(embedding.reg, envConfig.embeddingReg, { min: 0, max: 1 });
+  const embReg = ensureNumber(embedding.reg, envConfig.embeddingReg, { min: 0, max: 1 });
   if (embedding.reg !== embReg) migrated = true;
-  var embForgetting = ensureNumber(embedding.forgetting, envConfig.forgetting, { min: 0.9, max: 1 });
+  const embForgetting = ensureNumber(embedding.forgetting, envConfig.forgetting, { min: 0.9, max: 1 });
   if (embedding.forgetting !== embForgetting) migrated = true;
 
-  var embStudents = ensureObject(embedding.students);
-  var embLessons = ensureObject(embedding.lessons);
+  const embStudents = ensureObject(embedding.students);
+  const embLessons = ensureObject(embedding.lessons);
 
   // Ensure embedding entity vectors are arrays of numbers; delete invalid so
   // ensureStudentVector/ensureLessonVector will re-initialize on next access
   function normalizeEmbeddingEntities(entities) {
     Object.keys(entities).forEach(function (id) {
-      var e = entities[id];
+      const e = entities[id];
       if (e == null || typeof e !== 'object') {
         delete entities[id];
         migrated = true;
         return;
       }
-      var vec = Array.isArray(e.vector) ? e.vector : null;
+      let vec = Array.isArray(e.vector) ? e.vector : null;
       if (vec && !vec.every(function (x) { return typeof x === 'number'; })) vec = null;
       if (vec && vec.length !== embDim) vec = null;
       if (vec == null) {
@@ -131,7 +131,7 @@ function migrateLMSState(raw, opts) {
   normalizeEmbeddingEntities(embStudents);
   normalizeEmbeddingEntities(embLessons);
 
-  var embeddingState = {
+  const embeddingState = {
     dim: embDim,
     lr: embLr,
     reg: embReg,
@@ -141,23 +141,23 @@ function migrateLMSState(raw, opts) {
   };
 
   // ── Bandit ─────────────────────────────────────────────────────────────────
-  var featureDim = embDim * 2;
-  var banditFeatureDim = ensureNumber(bandit.featureDim, featureDim, { min: 1, max: 512 });
+  const featureDim = embDim * 2;
+  let banditFeatureDim = ensureNumber(bandit.featureDim, featureDim, { min: 1, max: 512 });
   if (banditFeatureDim !== featureDim) {
     banditFeatureDim = featureDim;
     migrated = true;
   }
-  var observationCount = ensureNumber(bandit.observationCount, 0, { min: 0 });
+  let observationCount = ensureNumber(bandit.observationCount, 0, { min: 0 });
   if (!math.isNonNegativeInteger(observationCount)) {
     observationCount = Math.floor(observationCount);
     if (observationCount < 0) observationCount = 0;
     migrated = true;
   }
-  var banditForgetting = ensureNumber(bandit.forgetting, envConfig.forgetting, { min: 0.9, max: 1 });
+  const banditForgetting = ensureNumber(bandit.forgetting, envConfig.forgetting, { min: 0.9, max: 1 });
   if (bandit.forgetting !== banditForgetting) migrated = true;
 
-  var A = Array.isArray(bandit.A) ? bandit.A : [];
-  var b = Array.isArray(bandit.b) ? bandit.b : [];
+  let A = Array.isArray(bandit.A) ? bandit.A : [];
+  let b = Array.isArray(bandit.b) ? bandit.b : [];
   if (A.length !== featureDim) {
     A = [];
     migrated = true;
@@ -170,7 +170,7 @@ function migrateLMSState(raw, opts) {
         break;
       }
       // Check for NaN/Infinity in matrix values
-      for (var ci = 0; ci < A[ri].length; ci++) {
+      for (let ci = 0; ci < A[ri].length; ci++) {
         if (typeof A[ri][ci] !== 'number' || !isFinite(A[ri][ci])) {
           A = [];
           migrated = true;
@@ -182,7 +182,7 @@ function migrateLMSState(raw, opts) {
     // Validate symmetry (BUG 4: catch corrupted state at load time)
     if (A.length === featureDim) {
       for (ri = 0; ri < A.length; ri++) {
-        for (var cj = ri + 1; cj < A[ri].length; cj++) {
+        for (let cj = ri + 1; cj < A[ri].length; cj++) {
           if (Math.abs(A[ri][cj] - A[cj][ri]) > math.CHOLESKY_SYMMETRY_TOL) {
             A = [];
             migrated = true;
@@ -205,24 +205,24 @@ function migrateLMSState(raw, opts) {
     }
   }
 
-  var rawSeenSyncIds = Array.isArray(bandit.seenSyncIds) ? bandit.seenSyncIds : [];
-  var seenSyncIds = rawSeenSyncIds.filter(function (id) { return typeof id === 'string'; });
+  const rawSeenSyncIds = Array.isArray(bandit.seenSyncIds) ? bandit.seenSyncIds : [];
+  let seenSyncIds = rawSeenSyncIds.filter(function (id) { return typeof id === 'string'; });
   if (seenSyncIds.length !== rawSeenSyncIds.length) migrated = true;
   if (seenSyncIds.length > 500) {
     seenSyncIds = seenSyncIds.slice(-500);  // FIFO: keep 500 most recent
     migrated = true;
   }
 
-  var exportSequence = ensureNumber(bandit.exportSequence, 0, { min: 0 });
-  var rawHubHighWater = ensureObject(bandit.hubHighWater);
-  var hubHighWater = {};
+  const exportSequence = ensureNumber(bandit.exportSequence, 0, { min: 0 });
+  const rawHubHighWater = ensureObject(bandit.hubHighWater);
+  const hubHighWater = {};
   Object.keys(rawHubHighWater).forEach(function (k) {
-    var v = rawHubHighWater[k];
+    const v = rawHubHighWater[k];
     if (typeof v === 'number' && !isNaN(v) && v >= 0) hubHighWater[k] = v;
     else migrated = true;
   });
 
-  var banditState = {
+  const banditState = {
     A: A,
     b: b,
     featureDim: featureDim,
@@ -234,15 +234,15 @@ function migrateLMSState(raw, opts) {
   };
 
   // ── Markov ────────────────────────────────────────────────────────────────
-  var markov = ensureObject(root.markov);
-  var markovTransitions = ensureObject(markov.transitions);
-  var markovHistory = ensureObject(markov.studentHistory);
-  var markovBigrams = ensureObject(markov.bigrams);
-  var markovDropouts = ensureObject(markov.dropouts);
-  var markovCooldowns = ensureObject(markov.cooldowns);
+  const markov = ensureObject(root.markov);
+  const markovTransitions = ensureObject(markov.transitions);
+  const markovHistory = ensureObject(markov.studentHistory);
+  const markovBigrams = ensureObject(markov.bigrams);
+  const markovDropouts = ensureObject(markov.dropouts);
+  const markovCooldowns = ensureObject(markov.cooldowns);
 
   Object.keys(markovHistory).forEach(function (sid) {
-    var arr = Array.isArray(markovHistory[sid]) ? /** @type {Array} */ (markovHistory[sid]) : [];
+    const arr = Array.isArray(markovHistory[sid]) ? /** @type {Array} */ (markovHistory[sid]) : [];
     if (!Array.isArray(markovHistory[sid])) {
       markovHistory[sid] = arr;
       migrated = true;
@@ -253,28 +253,28 @@ function migrateLMSState(raw, opts) {
     }
   });
 
-  var MAX_TRANSITION_SOURCES = 300;
-  var MAX_BIGRAM_SOURCES = 200;
-  var transKeys = Object.keys(markovTransitions);
+  const MAX_TRANSITION_SOURCES = 300;
+  const MAX_BIGRAM_SOURCES = 200;
+  const transKeys = Object.keys(markovTransitions);
   if (transKeys.length > MAX_TRANSITION_SOURCES) {
-    var transTotals = transKeys.map(function (k) {
-      var es = /** @type {Record<string, { count?: number }>} */ (markovTransitions[k]);
-      var t = 0;
-      for (var tk in es) if (Object.prototype.hasOwnProperty.call(es, tk)) t += (es[tk].count || 0);
+    const transTotals = transKeys.map(function (k) {
+      const es = /** @type {Record<string, { count?: number }>} */ (markovTransitions[k]);
+      let t = 0;
+      for (const tk in es) if (Object.prototype.hasOwnProperty.call(es, tk)) t += (es[tk].count || 0);
       return { key: k, total: t };
     });
     transTotals.sort(function (a, b) { return a.total - b.total; });
-    for (var ti = 0; ti < transKeys.length - MAX_TRANSITION_SOURCES; ti++) {
+    for (let ti = 0; ti < transKeys.length - MAX_TRANSITION_SOURCES; ti++) {
       delete markovTransitions[transTotals[ti].key];
       migrated = true;
     }
   }
-  var bigramKeys = Object.keys(markovBigrams);
+  const bigramKeys = Object.keys(markovBigrams);
   if (bigramKeys.length > MAX_BIGRAM_SOURCES) {
-    var bigramTotals = bigramKeys.map(function (k) {
-      var es = /** @type {Record<string, { count?: number }>} */ (markovBigrams[k]);
-      var t = 0;
-      for (var bk in es) if (Object.prototype.hasOwnProperty.call(es, bk)) t += (es[bk].count || 0);
+    const bigramTotals = bigramKeys.map(function (k) {
+      const es = /** @type {Record<string, { count?: number }>} */ (markovBigrams[k]);
+      let t = 0;
+      for (const bk in es) if (Object.prototype.hasOwnProperty.call(es, bk)) t += (es[bk].count || 0);
       return { key: k, total: t };
     });
     bigramTotals.sort(function (a, b) { return a.total - b.total; });
@@ -284,7 +284,7 @@ function migrateLMSState(raw, opts) {
     }
   }
 
-  var markovState = {
+  const markovState = {
     transitions: markovTransitions,
     studentHistory: markovHistory,
     bigrams: markovBigrams,
@@ -292,7 +292,7 @@ function migrateLMSState(raw, opts) {
     cooldowns: markovCooldowns
   };
 
-  var state = {
+  const state = {
     rasch: raschState,
     embedding: embeddingState,
     bandit: banditState,
@@ -325,7 +325,7 @@ function migrateLMSState(raw, opts) {
  */
 function looksLikeLMSState(raw) {
   if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return false;
-  var o = raw;
+  const o = raw;
   return 'rasch' in o && 'embedding' in o && 'bandit' in o;
 }
 

@@ -51,26 +51,28 @@ for (const file of FACTORY_LOAD_ORDER) {
 }
 if (!sectionFailed) pass('All FACTORY_LOAD_ORDER files are in FACTORY_PATH_MAP');
 
-// 3. Parse hub ALLOWED_FACTORY_FILES and ensure FACTORY_LOAD_ORDER files are allowed
-const hubPath = path.join(ROOT, 'packages', 'agni-hub', 'hub-transform.js');
-const hubSrc = fs.readFileSync(hubPath, 'utf8');
-const allowedMatch = hubSrc.match(/ALLOWED_FACTORY_FILES\s*=\s*new\s+Set\(\[([\s\S]*?)\]\s*\)/);
-if (!allowedMatch) {
-  fail('Could not parse ALLOWED_FACTORY_FILES in packages/agni-hub/hub-transform.js');
-} else {
-  const block = allowedMatch[1];
-  const allowedFiles = (block.match(/'([^']+)'|"([^"]+)"/g) || []).map(function (m) {
-    return m.replace(/^['"]|['"]$/g, '');
-  });
-  const allowedSet = new Set(allowedFiles);
-  sectionFailed = false;
-  for (const file of FACTORY_LOAD_ORDER) {
-    if (!allowedSet.has(file)) {
-      fail('FACTORY_LOAD_ORDER includes ' + file + ' but it is not in hub ALLOWED_FACTORY_FILES');
-      sectionFailed = true;
+// 3. Ensure FACTORY_LOAD_ORDER files are in hub ALLOWED_FACTORY_FILES
+const hubConstantsPath = path.join(ROOT, 'packages', 'agni-hub', 'hub-transform', 'constants.js');
+let hubConstants;
+try {
+  hubConstants = require(hubConstantsPath);
+} catch (e) {
+  fail('Could not load hub-transform/constants.js: ' + e.message);
+}
+if (hubConstants) {
+  const allowedSet = hubConstants.ALLOWED_FACTORY_FILES;
+  if (!allowedSet || typeof allowedSet.has !== 'function') {
+    fail('hub-transform/constants.js does not export ALLOWED_FACTORY_FILES Set');
+  } else {
+    sectionFailed = false;
+    for (const file of FACTORY_LOAD_ORDER) {
+      if (!allowedSet.has(file)) {
+        fail('FACTORY_LOAD_ORDER includes ' + file + ' but it is not in hub ALLOWED_FACTORY_FILES');
+        sectionFailed = true;
+      }
     }
+    if (!sectionFailed) pass('All FACTORY_LOAD_ORDER files are in hub ALLOWED_FACTORY_FILES');
   }
-  if (!sectionFailed) pass('All FACTORY_LOAD_ORDER files are in hub ALLOWED_FACTORY_FILES');
 }
 
 if (failed) {

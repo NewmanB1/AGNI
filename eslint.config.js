@@ -33,6 +33,31 @@ module.exports = [
     rules: { 'no-console': 'off' }
   },
   {
+    files: [
+      'packages/agni-engine/**/*.js',
+      'packages/agni-governance/**/*.js',
+      'packages/agni-lesson-gen/**/*.js',
+      'packages/agni-plugins/**/*.js',
+      'packages/agni-utils/**/*.js',
+      'packages/ols-compiler/**/*.js',
+      'packages/ols-schema/**/*.js'
+    ],
+    rules: {
+      'no-var': 'off',
+      'prefer-const': 'off',
+      'no-redeclare': 'off',
+      'no-useless-assignment': 'off',
+      'no-empty': ['error', { allowEmptyCatch: true }],
+      'no-console': 'warn',
+      'no-case-declarations': 'off',
+      'preserve-caught-error': 'off'
+    }
+  },
+  {
+    files: ['packages/agni-lesson-gen/**/*.js', 'packages/agni-engine/math.js'],
+    rules: { 'no-console': 'off' }
+  },
+  {
     files: ['packages/agni-runtime/**/*.js'],
     languageOptions: {
       globals: {

@@ -74,7 +74,7 @@ function evaluateLessonCompliance(sidecar, policy, opts) {
     });
     if (!matchesTarget && policy.requireUtu) {
       const targetStr = targets.map(function (t) {
-        var s = t.class + '-B' + t.band;
+        let s = t.class + '-B' + t.band;
         if (typeof t.protocol === 'number') s += '-P' + t.protocol;
         return s;
       }).join(', ');
@@ -126,10 +126,10 @@ function evaluateLessonCompliance(sidecar, policy, opts) {
   }
 
   // Feature inference confidence check
-  var inferredFeatures = sidecar.inferredFeatures;
+  const inferredFeatures = sidecar.inferredFeatures;
   if (inferredFeatures && inferredFeatures.confidence) {
-    var conf = inferredFeatures.confidence;
-    var srcs = inferredFeatures.featureSources || {};
+    const conf = inferredFeatures.confidence;
+    const srcs = inferredFeatures.featureSources || {};
     if (conf.blooms < 0.3 && srcs.blooms !== 'declared') {
       issues.push(issue('Low confidence in inferred Bloom\'s level (' + (conf.blooms * 100).toFixed(0) + '%). Consider adding meta.declared_features.blooms_level.', 'warning'));
     }

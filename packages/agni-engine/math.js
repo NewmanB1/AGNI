@@ -27,10 +27,10 @@
 
 /** Minimum diagonal for Cholesky. Below this, sqrt(diag) and divisions blow up (NaN-poison Thompson).
  *  JITTER in thompson.js must be > CHOLESKY_EPSILON for jitter retry to succeed. */
-var CHOLESKY_EPSILON = 1e-10;
+const CHOLESKY_EPSILON = 1e-10;
 
 /** Symmetry tolerance for Cholesky. Tight enough to catch merge bugs; federation must call symmetrize() before Cholesky. */
-var CHOLESKY_SYMMETRY_TOL = 1e-12;
+const CHOLESKY_SYMMETRY_TOL = 1e-12;
 
 /**
  * ES5-safe zero-filled array of length n. Always allocates fresh — never cached or shared.
@@ -40,8 +40,8 @@ var CHOLESKY_SYMMETRY_TOL = 1e-12;
  * @returns {number[]}
  */
 function zeros(n) {
-  var arr = new Array(n);
-  for (var k = 0; k < n; k++) arr[k] = 0;
+  const arr = new Array(n);
+  for (let k = 0; k < n; k++) arr[k] = 0;
   return arr;
 }
 
@@ -64,7 +64,7 @@ function isPositiveInteger(x) {
  * @throws {Error}
  */
 function assertEmbeddingDim(x, prefix) {
-  var p = (typeof prefix === 'string' && prefix) ? prefix + ' ' : '';
+  const p = (typeof prefix === 'string' && prefix) ? prefix + ' ' : '';
   if (!isPositiveInteger(x) || x > 1024) {
     throw new Error(
       p + 'embedding.dim invalid: must be integer in [1,1024], got ' +
@@ -75,8 +75,8 @@ function assertEmbeddingDim(x, prefix) {
 
 /** Inner dot product (no validation). Call only after inputs are validated. */
 function dotInner(a, b) {
-  var sum = 0;
-  for (var i = 0; i < a.length; i++) {
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) {
     sum += a[i] * b[i];
   }
   return sum;
@@ -94,7 +94,7 @@ function dot(a, b) {
   if (a.length !== b.length) {
     throw new Error('[MATH] dot: vector length mismatch (' + a.length + ' vs ' + b.length + ')');
   }
-  for (var i = 0; i < a.length; i++) {
+  for (let i = 0; i < a.length; i++) {
     if (typeof a[i] !== 'number' || !isFinite(a[i])) {
       throw new Error('[MATH] dot: non-finite element at first vector index ' + i);
     }
@@ -117,7 +117,7 @@ function addVec(a, b) {
   if (a.length !== b.length) {
     throw new Error('[MATH] addVec: vector length mismatch (' + a.length + ' vs ' + b.length + ')');
   }
-  var i;
+  let i;
   for (i = 0; i < a.length; i++) {
     if (typeof a[i] !== 'number' || !isFinite(a[i])) {
       throw new Error('[MATH] addVec: non-finite element at first vector index ' + i);
@@ -145,7 +145,7 @@ function scaleVec(v, s) {
   if (typeof s !== 'number' || !isFinite(s)) {
     throw new Error('[MATH] scaleVec: scalar must be finite number');
   }
-  for (var i = 0; i < v.length; i++) {
+  for (let i = 0; i < v.length; i++) {
     if (typeof v[i] !== 'number' || !isFinite(v[i])) {
       throw new Error('[MATH] scaleVec: non-finite element at index ' + i);
     }
@@ -162,12 +162,12 @@ function scaleVec(v, s) {
 function outer(a, b) {
   if (a == null) throw new Error('[MATH] outer: first argument is null or undefined');
   if (b == null) throw new Error('[MATH] outer: second argument is null or undefined');
-  for (var i = 0; i < a.length; i++) {
+  for (let i = 0; i < a.length; i++) {
     if (typeof a[i] !== 'number' || !isFinite(a[i])) {
       throw new Error('[MATH] outer: non-finite element at first vector index ' + i);
     }
   }
-  for (var j = 0; j < b.length; j++) {
+  for (let j = 0; j < b.length; j++) {
     if (typeof b[j] !== 'number' || !isFinite(b[j])) {
       throw new Error('[MATH] outer: non-finite element at second vector index ' + j);
     }
@@ -186,13 +186,13 @@ function outer(a, b) {
 function addMat(A, B) {
   if (A == null) throw new Error('[MATH] addMat: first argument is null or undefined');
   if (B == null) throw new Error('[MATH] addMat: second argument is null or undefined');
-  var rows = A.length;
+  const rows = A.length;
   if (rows !== B.length) {
     throw new Error('[MATH] addMat: dimension mismatch (' + rows + 'x? vs ' + B.length + 'x?)');
   }
   if (rows === 0) return [];
-  var cols;
-  for (var i = 0; i < rows; i++) {
+  let cols;
+  for (let i = 0; i < rows; i++) {
     if (!A[i] || !Array.isArray(A[i])) {
       throw new Error('[MATH] addMat: row ' + i + ' of A must be array');
     }
@@ -205,10 +205,10 @@ function addMat(A, B) {
         throw new Error('[MATH] addMat: dimension mismatch (' + rows + 'x' + cols + ' vs ' + rows + 'x' + B[0].length + ')');
       }
     } else if (A[i].length !== cols || B[i].length !== cols) {
-      var which = (A[i].length !== cols) ? 'A' : 'B';
+      const which = (A[i].length !== cols) ? 'A' : 'B';
       throw new Error('[MATH] addMat: jagged matrix ' + which + ' at row ' + i);
     }
-    for (var c = 0; c < cols; c++) {
+    for (let c = 0; c < cols; c++) {
       if (typeof A[i][c] !== 'number' || !isFinite(A[i][c])) {
         throw new Error('[MATH] addMat: non-finite element at A[' + i + '][' + c + ']');
       }
@@ -238,15 +238,15 @@ function scaleMat(A, s) {
     if (!A[0] || !Array.isArray(A[0])) {
       throw new Error('[MATH] scaleMat: first row must be array');
     }
-    var cols = A[0].length;
-    for (var i = 0; i < A.length; i++) {
+    const cols = A[0].length;
+    for (let i = 0; i < A.length; i++) {
       if (!A[i] || !Array.isArray(A[i])) {
         throw new Error('[MATH] scaleMat: row ' + i + ' must be array');
       }
       if (A[i].length !== cols) {
         throw new Error('[MATH] scaleMat: jagged matrix at row ' + i);
       }
-      for (var j = 0; j < cols; j++) {
+      for (let j = 0; j < cols; j++) {
         if (typeof A[i][j] !== 'number' || !isFinite(A[i][j])) {
           throw new Error('[MATH] scaleMat: non-finite element at row ' + i + ', col ' + j);
         }
@@ -274,24 +274,24 @@ function matVec(A, x) {
   if (!A[0] || !Array.isArray(A[0])) {
     throw new Error('[MATH] matVec: first row must be array');
   }
-  var cols = A[0].length;
+  const cols = A[0].length;
   if (cols !== x.length) {
     throw new Error('[MATH] matVec: dimension mismatch (cols=' + cols + ' vs vec=' + x.length + ')');
   }
-  for (var i = 0; i < A.length; i++) {
+  for (let i = 0; i < A.length; i++) {
     if (!A[i] || !Array.isArray(A[i])) {
       throw new Error('[MATH] matVec: row ' + i + ' must be array');
     }
     if (A[i].length !== cols) {
       throw new Error('[MATH] matVec: jagged matrix at row ' + i);
     }
-    for (var c = 0; c < cols; c++) {
+    for (let c = 0; c < cols; c++) {
       if (typeof A[i][c] !== 'number' || !isFinite(A[i][c])) {
         throw new Error('[MATH] matVec: non-finite element at row ' + i + ', col ' + c);
       }
     }
   }
-  for (var xi = 0; xi < x.length; xi++) {
+  for (let xi = 0; xi < x.length; xi++) {
     if (typeof x[xi] !== 'number' || !isFinite(x[xi])) {
       throw new Error('[MATH] matVec: non-finite element in vector at index ' + xi);
     }
@@ -309,8 +309,8 @@ function identity(n) {
   if (!isPositiveInteger(n)) {
     throw new Error('[MATH] identity: n must be positive integer, got ' + n);
   }
-  var I = new Array(n);
-  for (var i = 0; i < n; i++) {
+  const I = new Array(n);
+  for (let i = 0; i < n; i++) {
     I[i] = zeros(n);
     I[i][i] = 1;
   }
@@ -325,11 +325,11 @@ function identity(n) {
  */
 function cholesky(A) {
   if (A == null) throw new Error('[MATH] cholesky: matrix is null or undefined');
-  var n = A.length;
+  const n = A.length;
   if (n === 0) {
     throw new Error('[MATH] cholesky: empty matrix not supported (zero-dim invalid)');
   }
-  var i, j, k, sum, diag, aij, aji;
+  let i, j, k, sum, diag, aij, aji;
   for (i = 0; i < n; i++) {
     if (!A[i] || !Array.isArray(A[i])) {
       throw new Error('[MATH] cholesky: row ' + i + ' must be array');
@@ -357,7 +357,7 @@ function cholesky(A) {
       }
     }
   }
-  var L = new Array(n);
+  const L = new Array(n);
   for (i = 0; i < n; i++) {
     L[i] = zeros(n);
   }
@@ -391,15 +391,15 @@ function cholesky(A) {
 function forwardSub(L, b) {
   if (L == null) throw new Error('[MATH] forwardSub: L is null or undefined');
   if (b == null) throw new Error('[MATH] forwardSub: RHS vector is null or undefined');
-  var n = L.length;
-  for (var ri = 0; ri < n; ri++) {
+  const n = L.length;
+  for (let ri = 0; ri < n; ri++) {
     if (!L[ri] || !Array.isArray(L[ri])) {
       throw new Error('[MATH] forwardSub: row ' + ri + ' of L must be array');
     }
     if (L[ri].length !== n) {
       throw new Error('[MATH] forwardSub: L must be square matrix (got row ' + ri + ' with length ' + L[ri].length + ')');
     }
-    for (var ci = 0; ci < n; ci++) {
+    for (let ci = 0; ci < n; ci++) {
       if (typeof L[ri][ci] !== 'number' || !isFinite(L[ri][ci])) {
         throw new Error('[MATH] forwardSub: non-finite element at L[' + ri + '][' + ci + ']');
       }
@@ -408,18 +408,18 @@ function forwardSub(L, b) {
   if (b.length !== n) {
     throw new Error('[MATH] forwardSub: dimension mismatch (L is ' + n + 'x' + n + ', b.length=' + b.length + ')');
   }
-  for (var bi = 0; bi < n; bi++) {
+  for (let bi = 0; bi < n; bi++) {
     if (typeof b[bi] !== 'number' || !isFinite(b[bi])) {
       throw new Error('[MATH] forwardSub: non-finite RHS element at index ' + bi);
     }
   }
-  var y = zeros(n);
+  const y = zeros(n);
   return forwardSubInner(L, b, n, y);
 }
 
 /** Inner forward substitution (no validation). Call only after L and b are validated. */
 function forwardSubInner(L, b, n, y) {
-  var i, j, sum;
+  let i, j, sum;
   for (i = 0; i < n; i++) {
     sum = 0;
     for (j = 0; j < i; j++) sum += L[i][j] * y[j];
@@ -440,15 +440,15 @@ function forwardSubInner(L, b, n, y) {
 function backSub(L, y) {
   if (L == null) throw new Error('[MATH] backSub: L is null or undefined');
   if (y == null) throw new Error('[MATH] backSub: RHS vector is null or undefined');
-  var n = L.length;
-  for (var ri = 0; ri < n; ri++) {
+  const n = L.length;
+  for (let ri = 0; ri < n; ri++) {
     if (!L[ri] || !Array.isArray(L[ri])) {
       throw new Error('[MATH] backSub: row ' + ri + ' of L must be array');
     }
     if (L[ri].length !== n) {
       throw new Error('[MATH] backSub: L must be square matrix (got row ' + ri + ' with length ' + L[ri].length + ')');
     }
-    for (var ci = 0; ci < n; ci++) {
+    for (let ci = 0; ci < n; ci++) {
       if (typeof L[ri][ci] !== 'number' || !isFinite(L[ri][ci])) {
         throw new Error('[MATH] backSub: non-finite element at L[' + ri + '][' + ci + ']');
       }
@@ -457,18 +457,18 @@ function backSub(L, y) {
   if (y.length !== n) {
     throw new Error('[MATH] backSub: dimension mismatch (L is ' + n + 'x' + n + ', y.length=' + y.length + ')');
   }
-  for (var yi = 0; yi < n; yi++) {
+  for (let yi = 0; yi < n; yi++) {
     if (typeof y[yi] !== 'number' || !isFinite(y[yi])) {
       throw new Error('[MATH] backSub: non-finite RHS element at index ' + yi);
     }
   }
-  var x = zeros(n);
+  const x = zeros(n);
   return backSubInner(L, y, n, x);
 }
 
 /** Inner back substitution (no validation). Call only after L and y are validated. */
 function backSubInner(L, y, n, x) {
-  var i, j, sum;
+  let i, j, sum;
   for (i = n - 1; i >= 0; i--) {
     sum = 0;
     /* Lᵀ x = y: read column j of L (L[j][i]) for the transpose, not row */
@@ -488,7 +488,7 @@ function backSubInner(L, y, n, x) {
  */
 function symmetrizeInPlace(A) {
   if (A == null) throw new Error('[MATH] symmetrize: matrix is null or undefined');
-  var n = A.length;
+  const n = A.length;
   for (var i = 0; i < n; i++) {
     if (!A[i] || !Array.isArray(A[i])) {
       throw new Error('[MATH] symmetrize: row ' + i + ' must be array');
@@ -496,15 +496,15 @@ function symmetrizeInPlace(A) {
     if (A[i].length !== n) {
       throw new Error('[MATH] symmetrize: matrix must be square (got row ' + i + ' with length ' + A[i].length + ')');
     }
-    for (var c = 0; c < n; c++) {
+    for (let c = 0; c < n; c++) {
       if (typeof A[i][c] !== 'number' || !isFinite(A[i][c])) {
         throw new Error('[MATH] symmetrize: non-finite element at [' + i + '][' + c + ']');
       }
     }
   }
   for (i = 0; i < n; i++) {
-    for (var j = 0; j < i; j++) {
-      var v = (A[i][j] + A[j][i]) * 0.5;
+    for (let j = 0; j < i; j++) {
+      const v = (A[i][j] + A[j][i]) * 0.5;
       A[i][j] = A[j][i] = v;
     }
   }
@@ -519,8 +519,8 @@ function symmetrizeInPlace(A) {
  */
 function symmetrize(A) {
   if (A == null) throw new Error('[MATH] symmetrize: matrix is null or undefined');
-  var copy = [];
-  for (var r = 0; r < A.length; r++) {
+  const copy = [];
+  for (let r = 0; r < A.length; r++) {
     copy[r] = A[r].slice();
   }
   return symmetrizeInPlace(copy);
@@ -535,16 +535,16 @@ function symmetrize(A) {
  */
 function invertSPD(A) {
   if (A == null) throw new Error('[MATH] invertSPD: matrix is null or undefined');
-  var n = A.length;
+  const n = A.length;
   if (n === 0) {
     throw new Error('[MATH] invertSPD: empty matrix not supported (zero-dim invalid)');
   }
   if (!A[0] || !Array.isArray(A[0]) || A[0].length !== n) {
     throw new Error('[MATH] invertSPD: matrix must be square (got ' + n + 'x' + (A[0] ? A[0].length : '?') + ')');
   }
-  var L = cholesky(A);
-  var inv = new Array(n);
-  var i, j, e, y, x;
+  const L = cholesky(A);
+  const inv = new Array(n);
+  let i, j, e, y, x;
   for (i = 0; i < n; i++) {
     inv[i] = zeros(n);
   }
@@ -563,7 +563,7 @@ function invertSPD(A) {
 }
 
 /** Cached sin sample from previous Box–Muller; halves entropy use on headless Pi. */
-var _randnCache = null;
+let _randnCache = null;
 
 /** Reset randn cache. Call before mocking Math.random or between tests. See randn() JSDoc for test-pollution details. Not part of public API. */
 function _randnClearCache() {
@@ -571,7 +571,7 @@ function _randnClearCache() {
 }
 
 /** Minimum value for Box-Muller inputs. Rejects subnormals that would produce Infinity via log/sqrt. */
-var RANDN_MIN = 1e-300;
+const RANDN_MIN = 1e-300;
 
 /**
  * Gaussian random variable (Box–Muller). Caches second sample to avoid discarding entropy.
@@ -592,13 +592,13 @@ var RANDN_MIN = 1e-300;
  * @returns {number}
  */
 function randn() {
-  var u, v, r, theta;
+  let u, v, r, theta;
   if (_randnCache !== null) {
-    var out = _randnCache;
+    const out = _randnCache;
     _randnCache = null;
     return out;
   }
-  for (var retries = 0; retries < 8; retries++) {
+  for (let retries = 0; retries < 8; retries++) {
     u = Math.random();
     v = Math.random();
     if (u < RANDN_MIN || v < RANDN_MIN) {

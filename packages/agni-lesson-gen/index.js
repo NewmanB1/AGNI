@@ -152,9 +152,9 @@ function mergeYamlFragments(fragments) {
     }
     if (frag.ontology) {
       if (Array.isArray(frag.ontology.requires))
-        merged.ontology.requires = frag.ontology.requires;
+        {merged.ontology.requires = frag.ontology.requires;}
       if (Array.isArray(frag.ontology.provides))
-        merged.ontology.provides = frag.ontology.provides;
+        {merged.ontology.provides = frag.ontology.provides;}
     }
     if (frag.gate) merged.gate = frag.gate;
     if (frag.fork) merged.fork = frag.fork;
@@ -276,7 +276,7 @@ async function generateLesson(skillDescription, opts) {
   }
 
   let issues = validateLesson(lesson);
-  let errs = issues.filter(function (i) { return i.severity === 'error'; });
+  const errs = issues.filter(function (i) { return i.severity === 'error'; });
   const warns = issues.filter(function (i) { return i.severity === 'warning'; });
 
   if (errs.length && maxRetries > 0) {

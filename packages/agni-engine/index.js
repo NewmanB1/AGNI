@@ -31,23 +31,23 @@
 
 'use strict';
 
-var fs         = require('fs');
-var path       = require('path');
-var envConfig  = require('@agni/utils/env-config');
-var log        = require('@agni/utils/logger').createLogger('lms');
-var rasch       = require('./rasch');
-var embeddings  = require('./embeddings');
-var thompson    = require('./thompson');
-var federation  = require('./federation');
-var math        = require('./math');
-var migrations  = require('./migrations');
-var markov      = require('./markov');
-var pagerank    = require('./pagerank');
+const fs         = require('fs');
+const path       = require('path');
+const envConfig  = require('@agni/utils/env-config');
+const log        = require('@agni/utils/logger').createLogger('lms');
+const rasch       = require('./rasch');
+const embeddings  = require('./embeddings');
+const thompson    = require('./thompson');
+const federation  = require('./federation');
+const math        = require('./math');
+const migrations  = require('./migrations');
+const markov      = require('./markov');
+const pagerank    = require('./pagerank');
 
 // ── Paths (from centralized config) ──────────────────────────────────────────
-var DATA_DIR       = envConfig.dataDir;
-var STATE_PATH     = path.join(DATA_DIR, 'lms_state.json');
-var STATE_TMP_PATH = STATE_PATH + '.tmp';
+const DATA_DIR       = envConfig.dataDir;
+const STATE_PATH     = path.join(DATA_DIR, 'lms_state.json');
+const STATE_TMP_PATH = STATE_PATH + '.tmp';
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -61,7 +61,7 @@ var STATE_TMP_PATH = STATE_PATH + '.tmp';
  * @returns {import('../types').LMSState}
  */
 function buildDefaultState() {
-  var dim = envConfig.embeddingDim;
+  const dim = envConfig.embeddingDim;
   return {
     rasch: {
       students:     {},
@@ -109,10 +109,10 @@ function loadState() {
   }
 
   try {
-    var raw   = fs.readFileSync(STATE_PATH, 'utf8');
-    var parsed = JSON.parse(raw);
-    var migratedResult = migrations.migrateLMSState(parsed, { embeddingDim: envConfig.embeddingDim });
-    var state = migratedResult.state;
+    const raw   = fs.readFileSync(STATE_PATH, 'utf8');
+    const parsed = JSON.parse(raw);
+    const migratedResult = migrations.migrateLMSState(parsed, { embeddingDim: envConfig.embeddingDim });
+    const state = migratedResult.state;
     if (migratedResult.migrated) {
       log.info('State repaired (schema migration applied) — saving');
       saveStateSync(state);
@@ -123,7 +123,7 @@ function loadState() {
       'observations:', state.bandit.observationCount);
     return state;
   } catch (err) {
-    var msg = err instanceof Error ? err.message : String(err);
+    const msg = err instanceof Error ? err.message : String(err);
     log.error('Failed to parse state file:', msg,
       '— starting fresh. Corrupted file preserved at:', STATE_PATH + '.bak');
     try { fs.copyFileSync(STATE_PATH, STATE_PATH + '.bak'); } catch (_) {}
@@ -131,7 +131,7 @@ function loadState() {
   }
 }
 
-var fsp = fs.promises;
+const fsp = fs.promises;
 
 /**
  * Persist LMSState to disk atomically (async, Pi-friendly).
@@ -143,8 +143,8 @@ var fsp = fs.promises;
 async function saveState(state) {
   try {
     await fsp.mkdir(DATA_DIR, { recursive: true });
-    var data = JSON.stringify(state, null, 2);
-    var fd = await fsp.open(STATE_TMP_PATH, 'w');
+    const data = JSON.stringify(state, null, 2);
+    const fd = await fsp.open(STATE_TMP_PATH, 'w');
     try {
       await fd.writeFile(data);
       await fd.sync();
@@ -154,11 +154,11 @@ async function saveState(state) {
     await fsp.rename(STATE_TMP_PATH, STATE_PATH);
     // Ensure rename is durable: fsync parent directory (ext4/SD cards).
     try {
-      var parentFd = await fsp.open(DATA_DIR, 'r');
+      const parentFd = await fsp.open(DATA_DIR, 'r');
       try { await parentFd.sync(); } finally { await parentFd.close(); }
     } catch (e) { /* non-fatal */ }
   } catch (err) {
-    var msg = err instanceof Error ? err.message : String(err);
+    const msg = err instanceof Error ? err.message : String(err);
     log.error('Failed to save state:', msg);
     throw err;
   }
@@ -172,8 +172,8 @@ async function saveState(state) {
 function saveStateSync(state) {
   try {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    var data = JSON.stringify(state, null, 2);
-    var fd = fs.openSync(STATE_TMP_PATH, 'w');
+    const data = JSON.stringify(state, null, 2);
+    const fd = fs.openSync(STATE_TMP_PATH, 'w');
     try {
       fs.writeSync(fd, data);
       fs.fsyncSync(fd);
@@ -182,18 +182,18 @@ function saveStateSync(state) {
     }
     fs.renameSync(STATE_TMP_PATH, STATE_PATH);
     try {
-      var parentFd = fs.openSync(DATA_DIR, 'r');
+      const parentFd = fs.openSync(DATA_DIR, 'r');
       try { fs.fsyncSync(parentFd); } finally { fs.closeSync(parentFd); }
     } catch (e) { /* non-fatal */ }
   } catch (err) {
-    var msg = err instanceof Error ? err.message : String(err);
+    const msg = err instanceof Error ? err.message : String(err);
     log.error('Failed to save state:', msg);
     throw err;
   }
 }
 
 // ── Module-level state (loaded once at require() time) ────────────────────────
-var _state = loadState();
+let _state = loadState();
 thompson.ensureBanditInitialized(_state);
 
 
@@ -219,13 +219,13 @@ function seedLesson(lessonId, difficulty, skill) {
 
   if (!_state.rasch.probes[lessonId]) {
     // Clamp difficulty to [1,5] to avoid NaN/Infinity from bad inferredFeatures
-    var d = typeof difficulty === 'number' && Number.isFinite(difficulty)
+    const d = typeof difficulty === 'number' && Number.isFinite(difficulty)
       ? Math.max(1, Math.min(5, difficulty)) : 3;
     if (difficulty !== d) {
       log.warn('AUDIT-D1: difficulty out of range, clamped', { lessonId, original: difficulty, clamped: d });
     }
     // Map 1–5 difficulty to logit scale: difficulty 3 = 0 logits (average)
-    var logitDifficulty = (d - 3) * 1;  // [1,5] → [−2,+2]
+    const logitDifficulty = (d - 3) * 1;  // [1,5] → [−2,+2]
     _state.rasch.probes[lessonId] = {
       difficulty: logitDifficulty,
       skill:      skill
@@ -240,13 +240,13 @@ function seedLesson(lessonId, difficulty, skill) {
  * @param {{ lessonId: string, difficulty: number, skill: string }[]} lessons
  */
 async function seedLessons(lessons) {
-  var maxLes = envConfig.maxLessons;
-  var seeded = 0;
-  for (var i = 0; i < lessons.length; i++) {
-    var entry  = lessons[i];
-    var wasNew = !_state.embedding.lessons[entry.lessonId];
+  const maxLes = envConfig.maxLessons;
+  let seeded = 0;
+  for (let i = 0; i < lessons.length; i++) {
+    const entry  = lessons[i];
+    const wasNew = !_state.embedding.lessons[entry.lessonId];
     if (wasNew && maxLes > 0) {
-      var nLes = Object.keys(_state.embedding.lessons).length;
+      const nLes = Object.keys(_state.embedding.lessons).length;
       if (nLes >= maxLes) {
         log.warn('seedLessons: maxLessons limit reached, skipping remaining lessons', { maxLessons: maxLes });
         break;
@@ -270,8 +270,8 @@ async function seedLessons(lessons) {
 // These control how much influence the new signals have relative to the
 // Thompson Sampling bandit. They are intentionally conservative so the
 // bandit remains the primary selector and these act as tie-breakers.
-var MARKOV_TRANSITION_WEIGHT  = envConfig.markovWeight;
-var PAGERANK_WEIGHT           = envConfig.pagerankWeight;
+const MARKOV_TRANSITION_WEIGHT  = envConfig.markovWeight;
+const PAGERANK_WEIGHT           = envConfig.pagerankWeight;
 
 /**
  * Select the best lesson for a student from a theta-eligible candidate set.
@@ -300,15 +300,15 @@ var PAGERANK_WEIGHT           = envConfig.pagerankWeight;
 function selectBestLesson(studentId, candidates, ontologyMap) {
   if (!candidates || candidates.length === 0) return null;
 
-  var topK = envConfig.topKCandidates;
-  var capped = candidates.length > topK ? candidates.slice(0, topK) : candidates;
+  const topK = envConfig.topKCandidates;
+  const capped = candidates.length > topK ? candidates.slice(0, topK) : candidates;
 
-  var fullLessons     = _state.embedding.lessons;
-  var filteredLessons = {};
+  const fullLessons     = _state.embedding.lessons;
+  const filteredLessons = {};
 
-  var maxLes = envConfig.maxLessons;
-  for (var i = 0; i < capped.length; i++) {
-    var id = capped[i];
+  const maxLes = envConfig.maxLessons;
+  for (let i = 0; i < capped.length; i++) {
+    const id = capped[i];
     if (fullLessons[id]) {
       filteredLessons[id] = fullLessons[id];
     } else if (maxLes > 0 && Object.keys(fullLessons).length >= maxLes) {
@@ -324,17 +324,17 @@ function selectBestLesson(studentId, candidates, ontologyMap) {
   // embedding.lessons and embedding.students, so the module-level _state is
   // never mutated. Shallow-copy students so ensureStudentVector writes only
   // to the scoring copy, not live state (avoids ghost vectors and unpersisted mutations).
-  var scoringEmbedding = Object.assign({}, _state.embedding, {
+  const scoringEmbedding = Object.assign({}, _state.embedding, {
     lessons:  filteredLessons,
     students: Object.assign({}, _state.embedding.students)
   });
-  var scoringState = Object.assign({}, _state, { embedding: scoringEmbedding });
+  const scoringState = Object.assign({}, _state, { embedding: scoringEmbedding });
 
-  var thetaSample = sampleThetaForScoring(scoringState);
-  var maxStu = envConfig.maxStudents;
-  var studentVec;
+  const thetaSample = sampleThetaForScoring(scoringState);
+  const maxStu = envConfig.maxStudents;
+  let studentVec;
   if (maxStu > 0 && !scoringState.embedding.students[studentId]) {
-    var nStu = Object.keys(_state.embedding.students).length;
+    const nStu = Object.keys(_state.embedding.students).length;
     if (nStu >= maxStu) {
       studentVec = math.zeros(scoringState.embedding.dim);
     } else {
@@ -344,22 +344,22 @@ function selectBestLesson(studentId, candidates, ontologyMap) {
     studentVec = embeddings.ensureStudentVector(scoringState, studentId);
   }
 
-  var thompsonScores = {};
-  for (var ti = 0; ti < capped.length; ti++) {
-    var cid = capped[ti];
-    var lessonVec = embeddings.ensureLessonVector(scoringState, cid);
-    var x = studentVec.concat(lessonVec);
+  const thompsonScores = {};
+  for (let ti = 0; ti < capped.length; ti++) {
+    const cid = capped[ti];
+    const lessonVec = embeddings.ensureLessonVector(scoringState, cid);
+    const x = studentVec.concat(lessonVec);
     thompsonScores[cid] = math.dot(thetaSample, x);
   }
 
   // ── Markov transition scores (with bigrams, dropout, cooldown) ──────
-  var markovScores = {};
-  for (var mi = 0; mi < capped.length; mi++) {
+  const markovScores = {};
+  for (let mi = 0; mi < capped.length; mi++) {
     markovScores[capped[mi]] = markov.scoreCandidate(_state, studentId, capped[mi]);
   }
 
   // ── PageRank scores (cached, quality-weighted) ─────────────────────
-  var pagerankScores = {};
+  let pagerankScores = {};
   try {
     pagerankScores = pagerank.scoreCandidates(_state, studentId, capped, ontologyMap);
   } catch (err) {
@@ -367,27 +367,27 @@ function selectBestLesson(studentId, candidates, ontologyMap) {
   }
 
   // ── Composite scoring ──────────────────────────────────────────────────
-  var bestId = null;
-  var bestScore = -Infinity;
-  var BIGRAM_WEIGHT = 0.10;
-  var DROPOUT_PENALTY_WEIGHT = 0.20;
-  var COOLDOWN_PENALTY_WEIGHT = 0.30;
+  let bestId = null;
+  let bestScore = -Infinity;
+  const BIGRAM_WEIGHT = 0.10;
+  const DROPOUT_PENALTY_WEIGHT = 0.20;
+  const COOLDOWN_PENALTY_WEIGHT = 0.30;
 
-  for (var ci = 0; ci < capped.length; ci++) {
-    var lid = capped[ci];
+  for (let ci = 0; ci < capped.length; ci++) {
+    const lid = capped[ci];
 
-    var ts = thompsonScores[lid] || 0;
-    var ms = markovScores[lid] || {
+    const ts = thompsonScores[lid] || 0;
+    const ms = markovScores[lid] || {
       transitionProb: 0, transitionQuality: 0,
       bigramProb: 0, bigramQuality: 0,
       dropoutPenalty: 0, cooldownPenalty: 0
     };
-    var ps = pagerankScores[lid] || { combinedScore: 0 };
+    const ps = pagerankScores[lid] || { combinedScore: 0 };
 
-    var firstOrderSignal = ms.transitionProb + ms.transitionQuality;
-    var bigramSignal = ms.bigramProb + ms.bigramQuality;
+    const firstOrderSignal = ms.transitionProb + ms.transitionQuality;
+    const bigramSignal = ms.bigramProb + ms.bigramQuality;
 
-    var composite = ts
+    const composite = ts
       + MARKOV_TRANSITION_WEIGHT * firstOrderSignal
       + BIGRAM_WEIGHT * bigramSignal
       + PAGERANK_WEIGHT * ps.combinedScore
@@ -416,14 +416,14 @@ function explainSelection(studentId, candidates, ontologyMap) {
     return { selected: null, ability: getStudentAbility(studentId), breakdown: {} };
   }
 
-  var topK = envConfig.topKCandidates;
-  var capped = candidates.length > topK ? candidates.slice(0, topK) : candidates;
-  var fullLessons = _state.embedding.lessons;
-  var filteredLessons = {};
-  var maxLes = envConfig.maxLessons;
+  const topK = envConfig.topKCandidates;
+  const capped = candidates.length > topK ? candidates.slice(0, topK) : candidates;
+  const fullLessons = _state.embedding.lessons;
+  const filteredLessons = {};
+  const maxLes = envConfig.maxLessons;
 
-  for (var i = 0; i < capped.length; i++) {
-    var id = capped[i];
+  for (let i = 0; i < capped.length; i++) {
+    const id = capped[i];
     if (fullLessons[id]) {
       filteredLessons[id] = fullLessons[id];
     } else if (maxLes > 0 && Object.keys(fullLessons).length >= maxLes) {
@@ -434,63 +434,63 @@ function explainSelection(studentId, candidates, ontologyMap) {
     }
   }
 
-  var scoringEmbedding = Object.assign({}, _state.embedding, {
+  const scoringEmbedding = Object.assign({}, _state.embedding, {
     lessons:  filteredLessons,
     students: Object.assign({}, _state.embedding.students)
   });
-  var scoringState = Object.assign({}, _state, { embedding: scoringEmbedding });
+  const scoringState = Object.assign({}, _state, { embedding: scoringEmbedding });
 
-  var thetaSample = sampleThetaForScoring(scoringState);
-  var maxStu = envConfig.maxStudents;
-  var studentVec;
+  const thetaSample = sampleThetaForScoring(scoringState);
+  const maxStu = envConfig.maxStudents;
+  let studentVec;
   if (maxStu > 0 && !scoringState.embedding.students[studentId]) {
-    var nStu = Object.keys(_state.embedding.students).length;
+    const nStu = Object.keys(_state.embedding.students).length;
     studentVec = nStu >= maxStu ? math.zeros(scoringState.embedding.dim) : embeddings.ensureStudentVector(scoringState, studentId);
   } else {
     studentVec = embeddings.ensureStudentVector(scoringState, studentId);
   }
 
-  var thompsonScores = {};
-  for (var ti = 0; ti < capped.length; ti++) {
-    var cid = capped[ti];
-    var lessonVec = embeddings.ensureLessonVector(scoringState, cid);
+  const thompsonScores = {};
+  for (let ti = 0; ti < capped.length; ti++) {
+    const cid = capped[ti];
+    const lessonVec = embeddings.ensureLessonVector(scoringState, cid);
     thompsonScores[cid] = math.dot(thetaSample, studentVec.concat(lessonVec));
   }
 
-  var markovScores = {};
-  for (var mi = 0; mi < capped.length; mi++) {
+  const markovScores = {};
+  for (let mi = 0; mi < capped.length; mi++) {
     markovScores[capped[mi]] = markov.scoreCandidate(_state, studentId, capped[mi]);
   }
 
-  var pagerankScores = {};
+  let pagerankScores = {};
   try {
     pagerankScores = pagerank.scoreCandidates(_state, studentId, capped, ontologyMap);
   } catch (err) {
     log.warn('PageRank scoring failed in explain', { error: err.message || String(err) });
   }
 
-  var BIGRAM_WEIGHT = 0.10;
-  var DROPOUT_PENALTY_WEIGHT = 0.20;
-  var COOLDOWN_PENALTY_WEIGHT = 0.30;
+  const BIGRAM_WEIGHT = 0.10;
+  const DROPOUT_PENALTY_WEIGHT = 0.20;
+  const COOLDOWN_PENALTY_WEIGHT = 0.30;
 
-  var breakdown = /** @type {Record<string, unknown>} */ ({});
-  var bestId = null;
-  var bestScore = -Infinity;
+  const breakdown = /** @type {Record<string, unknown>} */ ({});
+  let bestId = null;
+  let bestScore = -Infinity;
 
-  for (var ci = 0; ci < capped.length; ci++) {
-    var lid = capped[ci];
-    var ts = thompsonScores[lid] || 0;
-    var ms = markovScores[lid] || {
+  for (let ci = 0; ci < capped.length; ci++) {
+    const lid = capped[ci];
+    const ts = thompsonScores[lid] || 0;
+    const ms = markovScores[lid] || {
       transitionProb: 0, transitionQuality: 0,
       bigramProb: 0, bigramQuality: 0,
       dropoutPenalty: 0, cooldownPenalty: 0
     };
-    var ps = pagerankScores[lid] || { combinedScore: 0 };
+    const ps = pagerankScores[lid] || { combinedScore: 0 };
 
-    var firstOrderSignal = ms.transitionProb + ms.transitionQuality;
-    var bigramSignal = ms.bigramProb + ms.bigramQuality;
+    const firstOrderSignal = ms.transitionProb + ms.transitionQuality;
+    const bigramSignal = ms.bigramProb + ms.bigramQuality;
 
-    var composite = ts
+    const composite = ts
       + MARKOV_TRANSITION_WEIGHT * firstOrderSignal
       + BIGRAM_WEIGHT * bigramSignal
       + PAGERANK_WEIGHT * (ps.combinedScore || 0)
@@ -525,11 +525,11 @@ function explainSelection(studentId, candidates, ontologyMap) {
  * @returns {number[]}
  */
 function sampleThetaForScoring(state) {
-  var L = math.cholesky(state.bandit.A);
-  var mean = math.backSub(L, math.forwardSub(L, state.bandit.b));
-  var z = [];
-  for (var i = 0; i < mean.length; i++) z.push(math.randn());
-  var noise = math.backSub(L, z);
+  const L = math.cholesky(state.bandit.A);
+  const mean = math.backSub(L, math.forwardSub(L, state.bandit.b));
+  const z = [];
+  for (let i = 0; i < mean.length; i++) z.push(math.randn());
+  const noise = math.backSub(L, z);
   return math.addVec(mean, noise);
 }
 
@@ -539,12 +539,12 @@ function sampleThetaForScoring(state) {
  * @param {import('../types').LMSState} state
  */
 function assertBanditAFinite(state) {
-  var A = state.bandit && state.bandit.A;
+  const A = state.bandit && state.bandit.A;
   if (!A || !Array.isArray(A)) return;
-  for (var i = 0; i < A.length; i++) {
-    var row = A[i];
+  for (let i = 0; i < A.length; i++) {
+    const row = A[i];
     if (!Array.isArray(row)) continue;
-    for (var j = 0; j < row.length; j++) {
+    for (let j = 0; j < row.length; j++) {
       if (typeof row[j] !== 'number' || !isFinite(row[j])) {
         throw new Error('[ENGINE] bandit.A has non-finite entry at [' + i + '][' + j + '] — state may be corrupt');
       }
@@ -563,9 +563,9 @@ function assertBanditAFinite(state) {
  */
 function applyObservation(state, observation) {
   assertBanditAFinite(state);
-  var next = JSON.parse(JSON.stringify(state));
+  const next = JSON.parse(JSON.stringify(state));
   thompson.assertEmbeddingDimValid(next);
-  var gain = rasch.updateAbility(next, observation.studentId, observation.probeResults);
+  const gain = rasch.updateAbility(next, observation.studentId, observation.probeResults);
   embeddings.updateEmbedding(next, observation.studentId, observation.lessonId, gain);
   thompson.updateBandit(next, observation.studentId, observation.lessonId, gain);
   markov.recordTransition(next, observation.studentId, observation.lessonId, gain);
@@ -581,19 +581,19 @@ function applyObservation(state, observation) {
  * @param {{ probeId: string, correct: boolean }[]} probeResults
  */
 async function recordObservation(studentId, lessonId, probeResults) {
-  var maxStu = envConfig.maxStudents;
-  var maxLes = envConfig.maxLessons;
+  const maxStu = envConfig.maxStudents;
+  const maxLes = envConfig.maxLessons;
   if (maxStu > 0) {
-    var nStu = Object.keys(_state.rasch.students).length;
-    var isNewStudent = !_state.rasch.students[studentId];
+    const nStu = Object.keys(_state.rasch.students).length;
+    const isNewStudent = !_state.rasch.students[studentId];
     if (isNewStudent && nStu >= maxStu) {
       log.warn('recordObservation rejected: maxStudents limit reached', { maxStudents: maxStu, current: nStu });
       throw new Error('[ENGINE] maxStudents limit reached (' + maxStu + '). Cannot add new student.');
     }
   }
   if (maxLes > 0) {
-    var nLes = Object.keys(_state.embedding.lessons).length;
-    var isNewLesson = !_state.embedding.lessons[lessonId];
+    const nLes = Object.keys(_state.embedding.lessons).length;
+    const isNewLesson = !_state.embedding.lessons[lessonId];
     if (isNewLesson && nLes >= maxLes) {
       log.warn('recordObservation rejected: maxLessons limit reached', { maxLessons: maxLes, current: nLes });
       throw new Error('[ENGINE] maxLessons limit reached (' + maxLes + '). Cannot add new lesson.');
@@ -622,9 +622,9 @@ function getStudentAbility(studentId) {
  */
 function exportBanditSummary() {
   try {
-    var summary = federation.getBanditSummary(_state);
-    var seq = (_state.bandit.exportSequence = (_state.bandit.exportSequence || 0) + 1);
-    var hubId = envConfig.hubId || 'hub-local';
+    const summary = federation.getBanditSummary(_state);
+    const seq = (_state.bandit.exportSequence = (_state.bandit.exportSequence || 0) + 1);
+    const hubId = envConfig.hubId || 'hub-local';
     return federation.addSyncId(summary, { hubId: hubId, exportSequence: seq });
   } catch (err) {
     log.error('exportBanditSummary failed:', err.message);
@@ -652,24 +652,24 @@ async function mergeRemoteSummary(remote) {
       'Federating hubs must use identical AGNI_EMBEDDING_DIM.'
     );
   }
-  var seenSyncIds = _state.bandit.seenSyncIds;
+  let seenSyncIds = _state.bandit.seenSyncIds;
   if (!Array.isArray(seenSyncIds)) {
     seenSyncIds = [];
     _state.bandit.seenSyncIds = seenSyncIds;
   }
-  var syncId = remote.syncId || federation.contentHash(remote);
+  const syncId = remote.syncId || federation.contentHash(remote);
   if (seenSyncIds.indexOf(syncId) >= 0) {
     log.info('Remote summary already merged (syncId seen) — skipping duplicate');
     return;
   }
 
-  var hubHighWater = _state.bandit.hubHighWater;
+  let hubHighWater = _state.bandit.hubHighWater;
   if (!hubHighWater || typeof hubHighWater !== 'object') {
     hubHighWater = {};
     _state.bandit.hubHighWater = hubHighWater;
   }
   if (typeof remote.hubId === 'string' && typeof remote.exportSequence === 'number') {
-    var last = hubHighWater[remote.hubId];
+    const last = hubHighWater[remote.hubId];
     if (typeof last === 'number' && remote.exportSequence <= last) {
       log.info('Remote summary from hub already merged up to this sequence — skipping', {
         hubId: remote.hubId,
@@ -679,8 +679,8 @@ async function mergeRemoteSummary(remote) {
       return;
     }
   }
-  var local  = federation.getBanditSummary(_state);
-  var merged = federation.mergeBanditSummaries(local, remote);
+  const local  = federation.getBanditSummary(_state);
+  const merged = federation.mergeBanditSummaries(local, remote);
   _state.bandit.A                = merged.precision;
   _state.bandit.b                = math.matVec(merged.precision, merged.mean);
   _state.bandit.observationCount = merged.sampleSize;
@@ -689,7 +689,7 @@ async function mergeRemoteSummary(remote) {
     _state.bandit.seenSyncIds = seenSyncIds.slice(-federation.MAX_SEEN_SYNC_IDS);
   }
   if (typeof remote.hubId === 'string' && typeof remote.exportSequence === 'number') {
-    var cur = hubHighWater[remote.hubId];
+    const cur = hubHighWater[remote.hubId];
     if (typeof cur !== 'number' || remote.exportSequence > cur) {
       hubHighWater[remote.hubId] = remote.exportSequence;
     }
@@ -714,7 +714,7 @@ function reloadState() {
  * @returns {object}
  */
 function getStatus() {
-  var markovState = _state.markov || { transitions: {}, studentHistory: {} };
+  const markovState = _state.markov || { transitions: {}, studentHistory: {} };
   return {
     students:       Object.keys(_state.rasch.students).length,
     lessons:        Object.keys(_state.embedding.lessons).length,

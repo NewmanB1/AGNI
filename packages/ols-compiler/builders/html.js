@@ -73,23 +73,23 @@ async function buildHtml(lessonData, options) {
   });
 
   factoryFilesToCopy.forEach(function (filename) {
-    var srcPath = resolveFactoryPath(runtimeDir, filename);
+    let srcPath = resolveFactoryPath(runtimeDir, filename);
     if (!fs.existsSync(srcPath)) srcPath = path.join(runtimeDir, filename);
     if (fs.existsSync(srcPath)) {
-      var destPath = path.join(factoriesDir, filename);
+      const destPath = path.join(factoriesDir, filename);
       if (copyIfNewer(srcPath, destPath)) {
         log.info('Factory written: ' + destPath);
       }
     }
   });
 
-  var pkgVersion = require(path.join(__dirname, '../../../package.json')).version;
-  var RUNTIME_VERSION = pkgVersion;
+  const pkgVersion = require(path.join(__dirname, '../../../package.json')).version;
+  const RUNTIME_VERSION = pkgVersion;
 
   const factoryDeps = factoryFilesToCopy.map(function (file) {
     const dep = { file: file, version: RUNTIME_VERSION };
     try {
-      var srcPath = resolveFactoryPath(runtimeDir, file);
+      let srcPath = resolveFactoryPath(runtimeDir, file);
       if (!fs.existsSync(srcPath)) srcPath = path.join(runtimeDir, file);
       if (fs.existsSync(srcPath)) {
         dep.integrity = computeSRI(fs.readFileSync(srcPath, 'utf8'));

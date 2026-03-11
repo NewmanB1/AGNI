@@ -49,20 +49,20 @@ function aggregateCohortCoverage(lessonIndex, masterySummary, policy) {
 
   // Dedupe UTU skills per bucket using Set
   Object.keys(byUtu).forEach(function (k) {
-    var seen = {};
-    var deduped = [];
-    var arr = byUtu[k].skills;
-    for (var i = 0; i < arr.length; i++) {
+    const seen = {};
+    const deduped = [];
+    const arr = byUtu[k].skills;
+    for (let i = 0; i < arr.length; i++) {
       if (!seen[arr[i]]) { seen[arr[i]] = true; deduped.push(arr[i]); }
     }
     byUtu[k].skills = deduped;
   });
 
   // Pre-compute per-student mastered skill sets (single pass)
-  var studentMasteredSkills = {};
+  const studentMasteredSkills = {};
   studentIds.forEach(function (pseudoId) {
-    var skills = students[pseudoId] || {};
-    var mastered = {};
+    const skills = students[pseudoId] || {};
+    const mastered = {};
     Object.keys(skills).forEach(function (skillId) {
       if ((skills[skillId] || 0) >= MASTERY_THRESHOLD) {
         mastered[skillId] = true;
@@ -74,10 +74,10 @@ function aggregateCohortCoverage(lessonIndex, masterySummary, policy) {
 
   // For each UTU bucket, count students who have mastered at least one skill in that bucket
   Object.keys(byUtu).forEach(function (utuKey) {
-    var skillList = byUtu[utuKey].skills;
+    const skillList = byUtu[utuKey].skills;
     studentIds.forEach(function (pseudoId) {
-      var mastered = studentMasteredSkills[pseudoId];
-      for (var i = 0; i < skillList.length; i++) {
+      const mastered = studentMasteredSkills[pseudoId];
+      for (let i = 0; i < skillList.length; i++) {
         if (mastered[skillList[i]]) {
           byUtu[utuKey].studentMasteryCount += 1;
           break;
