@@ -156,6 +156,102 @@ describe('validateSemantics', () => {
     const result = lessonSchema.validateSemantics(lesson);
     assert.ok(!result.warnings.some(w => /on_fail.*unknown/.test(w)));
   });
+
+  it('requires fill_blank steps to have non-empty blanks', () => {
+    const lesson = minimalLesson({
+      steps: [{ id: 'f1', type: 'fill_blank', content: 'The ___ is blue.', blanks: [] }]
+    });
+    const result = lessonSchema.validateSemantics(lesson);
+    assert.ok(result.errors.some(e => /fill_blank.*blanks/.test(e)));
+  });
+
+  it('requires fill_blank blanks to have answer', () => {
+    const lesson = minimalLesson({
+      steps: [{ id: 'f1', type: 'fill_blank', content: 'The ___ is blue.', blanks: [{}] }]
+    });
+    const result = lessonSchema.validateSemantics(lesson);
+    assert.ok(result.errors.some(e => /blanks.*answer/.test(e)));
+  });
+
+  it('accepts valid fill_blank', () => {
+    const lesson = minimalLesson({
+      steps: [{ id: 'f1', type: 'fill_blank', content: 'The ___ is blue.', blanks: [{ answer: 'sky' }] }]
+    });
+    const result = lessonSchema.validateSemantics(lesson);
+    assert.ok(!result.errors.some(e => /fill_blank|blanks/.test(e)));
+  });
+
+  it('requires matching steps to have non-empty pairs', () => {
+    const lesson = minimalLesson({
+      steps: [{ id: 'm1', type: 'matching', content: 'Match.', pairs: [] }]
+    });
+    const result = lessonSchema.validateSemantics(lesson);
+    assert.ok(result.errors.some(e => /matching.*pairs/.test(e)));
+  });
+
+  it('requires matching pairs to have left and right', () => {
+    const lesson = minimalLesson({
+      steps: [{ id: 'm1', type: 'matching', content: 'Match.', pairs: [{ left: 'A' }] }]
+    });
+    const result = lessonSchema.validateSemantics(lesson);
+    assert.ok(result.errors.some(e => /pairs.*left.*right/.test(e)));
+  });
+
+  it('accepts valid matching', () => {
+    const lesson = minimalLesson({
+      steps: [{ id: 'm1', type: 'matching', content: 'Match.', pairs: [{ left: 'A', right: '1' }] }]
+    });
+    const result = lessonSchema.validateSemantics(lesson);
+    assert.ok(!result.errors.some(e => /matching|pairs/.test(e)));
+  });
+
+  it('requires ordering steps to have items and correct_order', () => {
+    const lesson = minimalLesson({
+      steps: [{ id: 'o1', type: 'ordering', content: 'Order.', items: ['A', 'B'], correct_order: [0] }]
+    });
+    const result = lessonSchema.validateSemantics(lesson);
+    assert.ok(result.errors.some(e => /ordering.*correct_order/.test(e)));
+  });
+
+  it('rejects ordering with invalid correct_order indices', () => {
+    const lesson = minimalLesson({
+      steps: [{ id: 'o1', type: 'ordering', content: 'Order.', items: ['A', 'B'], correct_order: [0, 5] }]
+    });
+    const result = lessonSchema.validateSemantics(lesson);
+    assert.ok(result.errors.some(e => /correct_order.*index/.test(e)));
+  });
+
+  it('rejects ordering with duplicate correct_order indices', () => {
+    const lesson = minimalLesson({
+      steps: [{ id: 'o1', type: 'ordering', content: 'Order.', items: ['A', 'B', 'C'], correct_order: [0, 1, 1] }]
+    });
+    const result = lessonSchema.validateSemantics(lesson);
+    assert.ok(result.errors.some(e => /repeat indices/.test(e)));
+  });
+
+  it('accepts valid ordering', () => {
+    const lesson = minimalLesson({
+      steps: [{ id: 'o1', type: 'ordering', content: 'Order.', items: ['A', 'B', 'C'], correct_order: [2, 0, 1] }]
+    });
+    const result = lessonSchema.validateSemantics(lesson);
+    assert.ok(!result.errors.some(e => /ordering|correct_order/.test(e)));
+  });
+
+  it('requires hardware_trigger to have threshold', () => {
+    const lesson = minimalLesson({
+      steps: [{ id: 'h1', type: 'hardware_trigger', sensor: 'accelerometer' }]
+    });
+    const result = lessonSchema.validateSemantics(lesson);
+    assert.ok(result.errors.some(e => /hardware_trigger.*threshold/.test(e)));
+  });
+
+  it('accepts hardware_trigger with threshold', () => {
+    const lesson = minimalLesson({
+      steps: [{ id: 'h1', type: 'hardware_trigger', sensor: 'accelerometer', threshold: 'accel.total > 2.5g' }]
+    });
+    const result = lessonSchema.validateSemantics(lesson);
+    assert.ok(!result.errors.some(e => /hardware_trigger.*threshold/.test(e)));
+  });
 });
 
 // ── validateLessonData (full pipeline) ───────────────────────────────────────

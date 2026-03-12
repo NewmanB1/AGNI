@@ -155,8 +155,64 @@ function validateSemantics(lessonData) {
       }
     }
 
-    if (step.type === 'hardware_trigger' && !step.sensor) {
-      warnings.push(label + ': hardware_trigger step has no sensor field');
+    if (step.type === 'fill_blank') {
+      if (!Array.isArray(step.blanks) || step.blanks.length < 1) {
+        errors.push(label + ': fill_blank steps require non-empty blanks array');
+      } else {
+        step.blanks.forEach(function (b, bi) {
+          if (!b || typeof b !== 'object' || typeof b.answer !== 'string') {
+            errors.push(label + ': blanks[' + bi + '] must have answer string');
+          }
+        });
+      }
+    }
+
+    if (step.type === 'matching') {
+      if (!Array.isArray(step.pairs) || step.pairs.length < 1) {
+        errors.push(label + ': matching steps require non-empty pairs array');
+      } else {
+        step.pairs.forEach(function (p, pi) {
+          if (!p || typeof p !== 'object' || typeof p.left !== 'string' || typeof p.right !== 'string') {
+            errors.push(label + ': pairs[' + pi + '] must have left and right strings');
+          }
+        });
+      }
+    }
+
+    if (step.type === 'ordering') {
+      if (!Array.isArray(step.items) || step.items.length < 1) {
+        errors.push(label + ': ordering steps require non-empty items array');
+      }
+      if (!Array.isArray(step.correct_order) || step.correct_order.length !== (step.items && step.items.length || 0)) {
+        errors.push(label + ': ordering steps require correct_order array matching items length');
+      } else if (Array.isArray(step.items)) {
+        const n = step.items.length;
+        let validIndices = true;
+        step.correct_order.forEach(function (idx, i) {
+          if (typeof idx !== 'number' || idx < 0 || idx >= n || idx !== Math.floor(idx)) {
+            errors.push(label + ': correct_order[' + i + '] must be valid index 0–' + (n - 1));
+            validIndices = false;
+          }
+        });
+        if (validIndices) {
+          const seen = {};
+          step.correct_order.forEach(function (idx) {
+            seen[idx] = (seen[idx] || 0) + 1;
+          });
+          if (Object.keys(seen).some(function (k) { return seen[k] > 1; })) {
+            errors.push(label + ': correct_order must not repeat indices');
+          }
+        }
+      }
+    }
+
+    if (step.type === 'hardware_trigger') {
+      if (!step.threshold) {
+        errors.push(label + ': hardware_trigger steps require threshold (sensor expression)');
+      }
+      if (!step.sensor) {
+        warnings.push(label + ': hardware_trigger step has no sensor field');
+      }
     }
 
     if (step.type === 'svg') {
