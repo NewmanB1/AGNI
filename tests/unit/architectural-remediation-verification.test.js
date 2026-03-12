@@ -225,6 +225,36 @@ describe('Phase 2 P0 #2: cache IR validation (force recompile on invalid)', func
   });
 });
 
+// ── P2-27: Memory budget (LRU by bytes) ───────────────────────────────────────
+
+describe('P2-27: Memory budget (LRU by bytes)', function () {
+  it('cache exports byte-based eviction and computeEntryBytes', function () {
+    const cache = require('@agni/hub/hub-transform/cache');
+    assert.strictEqual(typeof cache.computeEntryBytes, 'function');
+    assert.strictEqual(typeof cache.ensureRoomFor, 'function');
+    assert.strictEqual(typeof cache.getMaxCacheBytes, 'function');
+    const ir = { meta: { title: 'T' }, steps: [{ id: 's1', type: 'instruction' }], inferredFeatures: {} };
+    const sidecar = { slug: 't', meta: {} };
+    const bytes = cache.computeEntryBytes(ir, sidecar);
+    assert.ok(bytes > 0, 'computeEntryBytes must return positive bytes for valid ir+sidecar');
+  });
+
+  it('hub-transform cache implements byte-budget eviction when AGNI_CACHE_MAX_BYTES set', function () {
+    const cachePath = path.join(__dirname, '../../packages/agni-hub/hub-transform/cache.js');
+    const content = fs.readFileSync(cachePath, 'utf8');
+    assert.ok(/MAX_CACHE_BYTES\s*>\s*0/.test(content), 'cache must branch on MAX_CACHE_BYTES when evicting');
+    assert.ok(/budgetAfter\s*>\s*MAX_CACHE_BYTES/.test(content), 'ensureRoomFor must evict when over byte budget');
+  });
+
+  it('hub-config.pi.json sets cacheMaxBytes for Pi OOM mitigation', function () {
+    const configPath = path.join(__dirname, '../../data/hub-config.pi.json');
+    const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    assert.ok(typeof cfg.cacheMaxBytes === 'number' && cfg.cacheMaxBytes > 0,
+      'Pi config must set cacheMaxBytes (e.g. 26214400) for byte-based LRU');
+    assert.ok(cfg.cacheMaxBytes >= 26214400, 'Pi cacheMaxBytes should be at least 25 MB');
+  });
+});
+
 // ── #7: Pi config concurrency ────────────────────────────────────────────────
 
 describe('architectural remediation #7: Pi config and OOM mitigation', function () {

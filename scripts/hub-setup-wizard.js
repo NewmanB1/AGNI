@@ -33,7 +33,8 @@ async function run() {
   const minLocalSample = await prompt(rl, 'Min local sample size (AGNI_MIN_LOCAL_SAMPLE)', '40');
   const minLocalEdges = await prompt(rl, 'Min local edges (AGNI_MIN_LOCAL_EDGES)', '5');
   const yamlDir = await prompt(rl, 'YAML directory (AGNI_YAML_DIR)', '');
-  const cacheMax = await prompt(rl, 'Lesson cache max (AGNI_CACHE_MAX)', '100');
+  const cacheMax = await prompt(rl, 'Lesson cache max entries (AGNI_CACHE_MAX, 0 to skip)', '100');
+  const cacheMaxBytes = await prompt(rl, 'Lesson cache max bytes (AGNI_CACHE_MAX_BYTES, Pi: 26214400=25MB, 0=use count)', '0');
 
   rl.close();
 
@@ -46,6 +47,7 @@ async function run() {
   if (minLocalEdges) config.minLocalEdges = parseInt(minLocalEdges, 10) || 5;
   if (yamlDir) config.yamlDir = yamlDir;
   if (cacheMax) config.cacheMax = parseInt(cacheMax, 10) || 100;
+  if (cacheMaxBytes) config.cacheMaxBytes = parseInt(cacheMaxBytes, 10) || 0;
 
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -66,6 +68,7 @@ async function run() {
   if (config.minLocalEdges != null) lines.push('AGNI_MIN_LOCAL_EDGES=' + config.minLocalEdges);
   if (config.yamlDir) lines.push('AGNI_YAML_DIR=' + config.yamlDir);
   if (config.cacheMax != null) lines.push('AGNI_CACHE_MAX=' + config.cacheMax);
+  if (config.cacheMaxBytes != null && config.cacheMaxBytes > 0) lines.push('AGNI_CACHE_MAX_BYTES=' + config.cacheMaxBytes);
   if (lines.length > 0) {
     fs.writeFileSync(envPath, lines.join('\n') + '\n');
     console.log('✓ Wrote', envPath);
