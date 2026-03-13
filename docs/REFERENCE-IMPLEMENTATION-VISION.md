@@ -2,6 +2,10 @@
 
 This document describes the **reference implementation** direction for AGNI: a **schema-based**, and where it helps **functional**, design so the codebase can serve as the reference implementation of the Open Lesson Standard (OLS). The refactor is incremental; §4.1 and §4.2 record progress and the boundary between pure core and edges.
 
+**R10 status:** The reference implementation refactor (ROADMAP R10) is **Done**. Schema-based validation, pure pipelines, and documented boundaries are in place per §4.1. Incremental improvements continue when touching code; no big-bang rewrite remains.
+
+**Y9 status (Reference implementation compliance):** **Done**. CI enforces `npm run validate`, `npm run test`, `npm run test:graph`, and `verify:all`; these are required for "OLS 1.0 compliant." See §4.3 below.
+
 ---
 
 ## 1. Goal
@@ -75,9 +79,9 @@ This document describes the **reference implementation** direction for AGNI: a *
 |------|------|--------|
 | **Schema-based** | OLS, graph_weights, governance-policy validated by schema | Done: lessonSchema uses ols.schema.json (Ajv); policy and graph_weights have schemas and validators |
 | **Compiler pipeline** | Pure rawYaml to parse to validate to buildIR; I/O at edges | Done: runCompilePipeline(rawYaml) is pure; CLI/hub do file I/O outside |
-| **Governance** | Policy schema + pure (policy, sidecar) to ComplianceResult | Done: governance-policy.schema.json; policy.js validates; compliance is pure |
+| **Governance** | Policy schema + pure (policy, sidecar) to ComplianceResult | Done: governance-policy.schema.json; policy.js validates; evaluateLessonCompliance is pure |
 | **Theta** | Pure (index, graph, student) to ordered lessons | Done: computeLessonOrder, applyRecommendationOverride |
-| **LMS engi                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      ne** | Pure (state, observation) to newState; persistence at edge | Done: applyObservation(state, observation); recordObservation = load then apply then save |
+| **LMS engine** | Pure (state, observation) to newState; persistence at edge | Done: applyObservation(state, observation); recordObservation = load then apply then save |
 | **Types** | Types aligned with schemas; optional codegen | Done: index.d.ts, LMSObservation; codegen:validate-schemas; **schema-driven codegen** (codegen:types from ols, graph-weights, governance-policy schemas); GovernancePolicy, OlsLessonInput, GraphWeights from generated |
 | **Reference boundaries** | Document pure core vs edges | Done: see section 4.2 below |
 
@@ -88,7 +92,7 @@ This document describes the **reference implementation** direction for AGNI: a *
 **Pure core (reference behaviour, testable without I/O):**
 
 - **Compiler:** parseLessonFromString, validateLessonData, buildLessonIR, buildLessonSidecar, runCompilePipeline(rawYaml). Builders take IR and options; I/O is inside builders, input is from the pure pipeline.
-- **Governance:** validatePolicy(policy), checkCompliance(policy, sidecar).
+- **Governance:** validatePolicy(policy), evaluateLessonCompliance(sidecar, policy).
 - **Theta:** computeLessonOrder(...), applyRecommendationOverride(orderedLessons, overrideLessonId).
 - **LMS engine:** applyObservation(state, observation) returns newState. Thompson selectLesson(state, studentId). Federation mergeBanditSummaries(local, remote).
 
@@ -100,6 +104,23 @@ This document describes the **reference implementation** direction for AGNI: a *
 - **Runtime (player):** DOM, sensors, device binding; contract with lesson (steps, gates) is defined by schema/IR.
 
 When adding or changing behaviour, keep logic in the pure core and reserve edges for I/O and wiring.
+
+---
+
+## 4.3 Reference implementation compliance (Y9)
+
+To claim "OLS 1.0 compliant," the following must pass:
+
+| Check | Command | Purpose |
+|-------|---------|---------|
+| Lesson validation | `npm run validate` | OLS schema, threshold syntax, step semantics |
+| Unit + integration + contract tests | `npm run test:coverage`, `test:integration`, `test:contract` | Core behaviour |
+| Graph verification | `npm run test:graph` | Theta/MLC ordering consistency |
+| Full verification | `npm run verify:all` | Structural guards (schemas, ES5, canonical imports, etc.) |
+| Schema validation | `node scripts/validate-schemas.js` | Lessons, fixtures, data files vs schemas |
+| Lesson build | Build all lessons | Compilation succeeds |
+
+CI (`.github/workflows/validate.yml`) runs all of these on push and PR. A passing CI run means the reference implementation is compliant.
 
 ---
 

@@ -89,4 +89,4 @@ This document outlines the strategic plan to launch the Open Lesson Standard (OL
 *   **The Editor:** A drag-and-drop GUI that generates valid OLS YAML.
 *   **The Plugins:** Official plugins for Moodle, Kolibri, and Canvas.
 *   **The Mesh:** Enabling Village Hubs to sync `graph_weights.json` via LoRa to share cultural adaptations between villages. See **`docs/playbooks/mesh-lora.md`** for design and implementation phases.
-*   **Reference implementation refactor:** Move toward a schema-based, functionally styled design so AGNI is a true reference implementation of OLS (schemas as source of truth, pure pipelines where it helps, side effects at the edges). See **`docs/REFERENCE-IMPLEMENTATION-VISION.md`**.
+*   **Reference implementation refactor (R10 — Done):** Schema-based design, pure pipelines (compiler, theta, LMS, governance), and documented pure-core vs edges are in place. See **`docs/REFERENCE-IMPLEMENTATION-VISION.md`** §4.1–4.2.

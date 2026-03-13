@@ -61,6 +61,8 @@ jobs:
         run: npm run test:contract
       - name: Run graph verification tests
         run: npm run test:graph
+      - name: Validate all OLS lessons (schema, threshold syntax, semantics)
+        run: npm run validate
       - name: Run full verification suite (core, runtime, hub, services, governance)
         run: npm run verify:all
       - name: Validate OLS lessons and data files

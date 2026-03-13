@@ -249,7 +249,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | R7 | Future: The Editor (drag-and-drop GUI) | **Open** |
 | R8 | Future: Plugins for Moodle, Kolibri, Canvas | **Open** |
 | R9 | Future: The Mesh (graph_weights sync via LoRa) | **Done** — design + impl ([playbooks/mesh-lora.md](playbooks/mesh-lora.md)); UDP sim; run `node hub-tools/mesh.js` or `sync.js --transport=lora` |
-| R10 | Future: Reference implementation refactor | **Open** |
+| R10 | Future: Reference implementation refactor | **Done** — schema-based, pure pipelines, documented boundaries; see REFERENCE-IMPLEMENTATION-VISION.md §4.1–4.2 |
 
 ---
 
@@ -265,7 +265,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | Y6 | E9: YAML round-trip | **Open** |
 | Y7 | Freeze OLS schema | **Open** |
 | Y8 | Document breaking vs additive | **Open** |
-| Y9 | Reference implementation compliance | **Open** |
+| Y9 | Reference implementation compliance | **Done** — CI enforces validate, test, test:graph, verify:all; see REFERENCE-IMPLEMENTATION-VISION.md §4.3 |
 | Y10 | Changelog | Deferred |
 
 ---
@@ -320,7 +320,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | **P1 (High)** | 0 | All Done (forwardSub, addVec, sparse, yaml-safe 2-5) |
 | **P2 (Medium)** | 6 | LEN-001 #2, #4; P2-17; svg-stage 3-3, 3-10, 3-11, 3-14 |
 | **P3 (Low)** | 12+ | LEN-001 #5, #8, #10; svg-stage 3-1; E2.1–E2.3; audit items |
-| **Roadmap / Launch** | 15+ | ROADMAP, YEAR2-PREP, LAUNCH-AND-COMMUNITY unchecked |
+| **Roadmap / Launch** | 13+ | ROADMAP (R10 Done), YEAR2-PREP (Y9 Done), LAUNCH-AND-COMMUNITY unchecked |
 | **TypeScript** | ~30 | CHECK-JS-FINISH-PLAN per-file fixes |
 
 ---
