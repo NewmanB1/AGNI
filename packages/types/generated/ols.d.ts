@@ -4,6 +4,92 @@
  */
 
 /**
+ * Step discriminated by type. Each step type has required fields and allowed properties enforced by its schema.
+ */
+export type Step =
+  | StepInstruction
+  | StepHardwareTrigger
+  | StepQuiz
+  | StepFillBlank
+  | StepMatching
+  | StepOrdering
+  | StepCompletion;
+export type StepInstruction = StepCommonProps & {
+  type: "instruction";
+  [k: string]: unknown;
+};
+export type StepHardwareTrigger = StepCommonProps & {
+  type: "hardware_trigger";
+  sensor?: string;
+  threshold: string;
+  sensor_optional?: boolean;
+  [k: string]: unknown;
+};
+export type StepQuiz = StepCommonProps & {
+  type: "quiz";
+  /**
+   * @minItems 2
+   */
+  answer_options: [string, string, ...string[]];
+  correct_index: number;
+  [k: string]: unknown;
+};
+export type StepFillBlank = StepCommonProps & {
+  type: "fill_blank";
+  /**
+   * @minItems 1
+   */
+  blanks: [
+    {
+      answer: string;
+      accept?: string[];
+    },
+    ...{
+      answer: string;
+      accept?: string[];
+    }[]
+  ];
+  [k: string]: unknown;
+};
+export type StepMatching = StepCommonProps & {
+  type: "matching";
+  /**
+   * @minItems 2
+   */
+  pairs: [
+    {
+      left: string;
+      right: string;
+    },
+    {
+      left: string;
+      right: string;
+    },
+    ...{
+      left: string;
+      right: string;
+    }[]
+  ];
+  [k: string]: unknown;
+};
+export type StepOrdering = StepCommonProps & {
+  type: "ordering";
+  /**
+   * @minItems 2
+   */
+  items: [string, string, ...string[]];
+  /**
+   * @minItems 2
+   */
+  correct_order: [number, number, ...number[]];
+  [k: string]: unknown;
+};
+export type StepCompletion = StepCommonProps & {
+  type: "completion";
+  [k: string]: unknown;
+};
+
+/**
  * A standard for offline, sensor-rich interactive lessons. Supports forking, adaptive reordering (θ), learner pacing metrics, fill-in-the-blank / matching / ordering assessments, and author-declared feature overrides. Metadata complies with Dublin Core (DC) and LRMI/Schema.org.
  */
 export interface AGNIOpenLessonStandardV18 {
@@ -196,21 +282,15 @@ export interface GateLogic {
    */
   retry_delay?: string;
 }
-export interface Step {
+export interface StepCommonProps {
   /**
    * Unique step identifier within this lesson. Used by θ for reordering and by forks for change tracking.
    */
-  id: string;
-  /**
-   * instruction: text/content; hardware_trigger: sensor gate; quiz: MCQ with answers; fill_blank: cloze with ___ placeholders; matching: pair left↔right items; ordering: arrange items in sequence; completion: lesson-complete screen.
-   */
-  type: "instruction" | "hardware_trigger" | "quiz" | "fill_blank" | "matching" | "ordering" | "completion";
+  id?: string;
+  type?: string;
   content?: string;
   sensor?: string;
   threshold?: string;
-  /**
-   * If true, when sensors are unavailable (e.g. desktop, permission denied), show a tap-to-continue fallback instead of waiting indefinitely.
-   */
   sensor_optional?: boolean;
   /**
    * Feedback text (string) or per-outcome feedback object with 'correct' and 'incorrect' messages.
@@ -222,138 +302,120 @@ export interface Step {
         incorrect?: string;
       };
   /**
-   * Optional haptic feedback pattern. Alternative to embedding in feedback string. Runtime prefers this when present.
+   * Optional haptic feedback pattern. Alternative to embedding in feedback string.
    */
   feedback_pattern?: "vibration:short" | "vibration:success_pattern";
   answer_options?: string[];
   correct_index?: number;
-  /**
-   * For fill_blank steps: one entry per ___ placeholder in content. Each blank defines the correct answer and optional accepted alternatives.
-   */
   blanks?: {
-    /**
-     * Canonical correct answer.
-     */
-    answer: string;
-    /**
-     * Additional accepted spellings/variants (case-insensitive match at runtime).
-     */
+    answer?: string;
     accept?: string[];
+    [k: string]: unknown;
   }[];
-  /**
-   * For matching steps: each pair links a left term to a right term. The player shuffles the right column.
-   */
   pairs?: {
-    /**
-     * Left-column item (displayed in order).
-     */
-    left: string;
-    /**
-     * Right-column item (shuffled for the student).
-     */
-    right: string;
+    left?: string;
+    right?: string;
+    [k: string]: unknown;
   }[];
-  /**
-   * For ordering steps: list of items to arrange. The player shuffles them; the student drags them into the correct sequence.
-   */
   items?: string[];
-  /**
-   * For ordering steps: zero-based indices defining the correct arrangement of 'items'. E.g. [0,1,2] means items are already in correct order.
-   */
   correct_order?: number[];
   /**
-   * How long this step should take for an on-pace learner (ISO 8601 duration). θ compares actual vs. expected to detect struggling or excelling.
+   * How long this step should take for an on-pace learner (ISO 8601 duration).
    */
   expected_duration?: string;
-  /**
-   * Maximum attempts for quiz, fill_blank, matching, or ordering steps before marking as failed. Default varies by type.
-   */
   max_attempts?: number;
-  /**
-   * Importance of this step to the lesson's learning objective (0.0–1.0). A core concept quiz might be 0.9; a calibration step might be 0.2.
-   */
   weight?: number;
-  /**
-   * Action when max_attempts is exhausted. Can be a redirect (e.g., 'redirect:step_id'), a hint, or 'skip'.
-   */
   on_fail?: string;
-  /**
-   * Action on successful completion. Can skip ahead (e.g., 'skip_to:step_id') for excelling learners.
-   */
   on_success?: string;
-  /**
-   * Author-provided narration text for this step. When present, the audio-first mode speaks this instead of extracting text from HTML content. Essential for SVG-heavy or visual steps where the rendered text alone is insufficient for blind or illiterate learners.
-   */
   audio_description?: string;
-  /**
-   * Conditional expression for whether this step should be shown. Used for adaptive paths.
-   */
   condition?: string;
-  /**
-   * Conditional next step override. Format: 'condition -> step_id'.
-   */
   next_if?: string;
+  svg_spec?: SvgSpec;
+  spec?: SvgSpec1;
+}
+/**
+ * SVGFactory visual specification. Rendered by the player via svg-registry.js.
+ */
+export interface SvgSpec {
+  factory?:
+    | "venn"
+    | "barGraph"
+    | "pieChart"
+    | "numberLine"
+    | "balanceScale"
+    | "clockFace"
+    | "flowMap"
+    | "polygon"
+    | "axis"
+    | "tree"
+    | "numberLineDynamic"
+    | "clockFaceDynamic"
+    | "timeGraph"
+    | "arrowMap"
+    | "gauge"
+    | "polygonDynamic"
+    | "cartesianGrid"
+    | "unitCircle";
+  opts?: {
+    [k: string]: unknown;
+  };
+  description?: string;
+  compose?: boolean;
   /**
-   * SVGFactory visual specification. Rendered by the player via svg-registry.js. Can be a single factory (factory + opts) or a compose layer (compose: true + layers[]).
+   * @maxItems 32
    */
-  svg_spec?: {
-    /**
-     * Registered factory name: venn, barGraph, pieChart, numberLine, balanceScale, clockFace, flowMap, polygon, axis, tree, numberLineDynamic, clockFaceDynamic, timeGraph, arrowMap, gauge, polygonDynamic, cartesianGrid, unitCircle.
-     */
-    factory?:
-      | "venn"
-      | "barGraph"
-      | "pieChart"
-      | "numberLine"
-      | "balanceScale"
-      | "clockFace"
-      | "flowMap"
-      | "polygon"
-      | "axis"
-      | "tree"
-      | "numberLineDynamic"
-      | "clockFaceDynamic"
-      | "timeGraph"
-      | "arrowMap"
-      | "gauge"
-      | "polygonDynamic"
-      | "cartesianGrid"
-      | "unitCircle";
-    /**
-     * Factory-specific options. See svg-registry.js for valid keys per factory. Limited to 64 keys to prevent DoS.
-     */
+  layers?: {
+    factory?: string;
     opts?: {
       [k: string]: unknown;
     };
-    /**
-     * Alt-text description of this visual for screen readers and auto-narration mode. Spoken aloud when the SVG is rendered.
-     */
-    description?: string;
-    /**
-     * If true, layers[] is used instead of factory/opts.
-     */
-    compose?: boolean;
-    /**
-     * Array of factory layers when compose is true. Limited to 32 layers to prevent memory DoS.
-     *
-     * @maxItems 32
-     */
-    layers?: {
-      factory?: string;
-      opts?: {
-        [k: string]: unknown;
-      };
-      name?: string;
-      [k: string]: unknown;
-    }[];
-    /**
-     * Viewport width override (shared across layers in compose mode).
-     */
-    w?: number;
-    /**
-     * Viewport height override.
-     */
-    h?: number;
+    name?: string;
+    [k: string]: unknown;
+  }[];
+  w?: number;
+  h?: number;
+  [k: string]: unknown;
+}
+/**
+ * SVGFactory visual specification. Rendered by the player via svg-registry.js.
+ */
+export interface SvgSpec1 {
+  factory?:
+    | "venn"
+    | "barGraph"
+    | "pieChart"
+    | "numberLine"
+    | "balanceScale"
+    | "clockFace"
+    | "flowMap"
+    | "polygon"
+    | "axis"
+    | "tree"
+    | "numberLineDynamic"
+    | "clockFaceDynamic"
+    | "timeGraph"
+    | "arrowMap"
+    | "gauge"
+    | "polygonDynamic"
+    | "cartesianGrid"
+    | "unitCircle";
+  opts?: {
     [k: string]: unknown;
   };
+  description?: string;
+  compose?: boolean;
+  /**
+   * @maxItems 32
+   */
+  layers?: {
+    factory?: string;
+    opts?: {
+      [k: string]: unknown;
+    };
+    name?: string;
+    [k: string]: unknown;
+  }[];
+  w?: number;
+  h?: number;
+  [k: string]: unknown;
 }
