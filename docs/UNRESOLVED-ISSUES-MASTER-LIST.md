@@ -92,8 +92,8 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | 3 | cholesky `\|\| 0` masks NaN; misleading "not SPD" error | P0 | Done |
 | 4 | Symmetry check O(n²) on every invertSPD | P2 | **Open** |
 | 5 | Cholesky square check separate pass | P3 | **Open** |
-| 6 | outer() reuses loop var i | P3 | **Open** |
-| 7 | addMat row 0 validated twice | P3 | **Open** |
+| 6 | outer() reuses loop var i | P3 | Done |
+| 7 | addMat row 0 validated twice | P3 | Done |
 | 8 | matVec/addMat validation inconsistency | P3 | **Open** |
 | 9 | forwardSub/backSub don't validate L | P1 | Done |
 | 10 | identity(0) / federation zero-dim path | P3 | **Open** |

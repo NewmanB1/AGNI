@@ -181,12 +181,13 @@ function scaleVec(v, s) {
 function outer(a, b) {
   if (a == null) throw new Error('[MATH] outer: first argument is null or undefined');
   if (b == null) throw new Error('[MATH] outer: second argument is null or undefined');
-  for (let i = 0; i < a.length; i++) {
+  var i, j;
+  for (i = 0; i < a.length; i++) {
     if (typeof a[i] !== 'number' || !isFinite(a[i])) {
       throw new Error('[MATH] outer: non-finite element at first vector index ' + i);
     }
   }
-  for (let j = 0; j < b.length; j++) {
+  for (j = 0; j < b.length; j++) {
     if (typeof b[j] !== 'number' || !isFinite(b[j])) {
       throw new Error('[MATH] outer: non-finite element at second vector index ' + j);
     }
@@ -210,26 +211,33 @@ function addMat(A, B) {
     throw new Error('[MATH] addMat: dimension mismatch (' + rows + 'x? vs ' + B.length + 'x?)');
   }
   if (rows === 0) return [];
-  let cols;
-  for (let i = 0; i < rows; i++) {
+  if (!A[0] || !Array.isArray(A[0])) {
+    throw new Error('[MATH] addMat: row 0 of A must be array');
+  }
+  if (!B[0] || !Array.isArray(B[0])) {
+    throw new Error('[MATH] addMat: row 0 of B must be array');
+  }
+  var cols = A[0].length;
+  if (cols !== B[0].length) {
+    throw new Error('[MATH] addMat: dimension mismatch (' + rows + 'x' + cols + ' vs ' + rows + 'x' + B[0].length + ')');
+  }
+  var i, c, ac, bc;
+  for (i = 1; i < rows; i++) {
     if (!A[i] || !Array.isArray(A[i])) {
       throw new Error('[MATH] addMat: row ' + i + ' of A must be array');
     }
     if (!B[i] || !Array.isArray(B[i])) {
       throw new Error('[MATH] addMat: row ' + i + ' of B must be array');
     }
-    if (i === 0) {
-      cols = A[0].length;
-      if (cols !== B[0].length) {
-        throw new Error('[MATH] addMat: dimension mismatch (' + rows + 'x' + cols + ' vs ' + rows + 'x' + B[0].length + ')');
-      }
-    } else if (A[i].length !== cols || B[i].length !== cols) {
-      const which = (A[i].length !== cols) ? 'A' : 'B';
+    if (A[i].length !== cols || B[i].length !== cols) {
+      var which = (A[i].length !== cols) ? 'A' : 'B';
       throw new Error('[MATH] addMat: jagged matrix ' + which + ' at row ' + i);
     }
-    for (var c = 0; c < cols; c++) {
-      var ac = Number(A[i][c]);
-      var bc = Number(B[i][c]);
+  }
+  for (i = 0; i < rows; i++) {
+    for (c = 0; c < cols; c++) {
+      ac = Number(A[i][c]);
+      bc = Number(B[i][c]);
       if (!isFinite(ac) || !isFinite(bc)) {
         throw new Error('[MATH] addMat: element at [' + i + '][' + c + '] cannot be coerced to finite number');
       }

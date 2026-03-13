@@ -55,8 +55,8 @@ Address 18 identified bugs, logic errors, edge cases, and unsafe assumptions in 
 | ID | Bug | Fix |
 |----|-----|-----|
 | 5 | Cholesky square check separate pass | Merge into factorization loop |
-| 6 | outer() reuses loop var i | `for (var j = 0; ...)` or declare at top |
-| 7 | addMat row 0 validated twice | Loop start at i = 1 |
+| 6 | outer() reuses loop var i | Done — var i, j at top; separate loop vars |
+| 7 | addMat row 0 validated twice | Done — row 0 validated once, loop from i=1 |
 | 8 | matVec/addMat validation inconsistency | Document or align |
 | 10 | identity(0) / federation zero-dim path | Reject n=0 or handle at merge boundary |
 | 17 | invertSPD diagonal not symmetrized | Optional symmetrization |
