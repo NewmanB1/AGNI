@@ -6,11 +6,7 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 
-const DATA_DIR = path.join(__dirname, '..', '..', 'data');
-const FLAGS_PATH = path.join(DATA_DIR, 'feature-flags.json');
 const HUB_KEY = 'integration-test-hub-key';
-const CREATORS_PATH = path.join(DATA_DIR, 'creator-accounts.json');
-const SESSIONS_PATH = path.join(DATA_DIR, 'sessions.json');
 
 function makeRequest(method, baseUrl, urlPath, body, headers) {
   const url = new URL(urlPath, baseUrl);
@@ -45,15 +41,8 @@ const put = (base, p, b, h) => makeRequest('PUT', base, p, b, h);
 
 describe('Feature flags integration', () => {
   let server, baseUrl, adminToken;
-  let originalFlags, originalCreators, originalSessions;
 
   before(async () => {
-    originalFlags = fs.existsSync(FLAGS_PATH) ? fs.readFileSync(FLAGS_PATH, 'utf8') : null;
-    originalCreators = fs.existsSync(CREATORS_PATH) ? fs.readFileSync(CREATORS_PATH, 'utf8') : null;
-    originalSessions = fs.existsSync(SESSIONS_PATH) ? fs.readFileSync(SESSIONS_PATH, 'utf8') : null;
-
-    fs.writeFileSync(FLAGS_PATH, JSON.stringify({ flags: {} }));
-
     process.env.AGNI_HUB_API_KEY = HUB_KEY;
     const theta = require('@agni/hub').theta;
     const accountsService = require('@agni/hub').accounts;
@@ -74,12 +63,6 @@ describe('Feature flags integration', () => {
 
   after(() => {
     if (server) server.close();
-    if (originalFlags !== null) fs.writeFileSync(FLAGS_PATH, originalFlags);
-    else fs.writeFileSync(FLAGS_PATH, JSON.stringify({ flags: {} }, null, 2));
-    if (originalCreators !== null) fs.writeFileSync(CREATORS_PATH, originalCreators);
-    else if (fs.existsSync(CREATORS_PATH)) fs.unlinkSync(CREATORS_PATH);
-    if (originalSessions !== null) fs.writeFileSync(SESSIONS_PATH, originalSessions);
-    else if (fs.existsSync(SESSIONS_PATH)) fs.unlinkSync(SESSIONS_PATH);
   });
 
   function authHeaders() {

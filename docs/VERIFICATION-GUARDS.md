@@ -50,6 +50,7 @@ E2E runs in a separate job.
 | Fix | Test location | Fails if reverted |
 |-----|---------------|-------------------|
 | LEN-001 #1 randn PRNG fallback | regressions.test.js MATH-3 | ✓ |
+| LEN-001 #2 randn cache (1 PRNG pair per 2 samples) | math.test.js randn LEN-001 #2 | ✓ |
 | LEN-001 #3 cholesky NaN/Inf | regressions.test.js MATH-1b, math.test.js | ✓ |
 | LEN-001 #9 forwardSub/backSub L validation | math.test.js LEN-001 #9, regressions MATH-4 | ✓ |
 | LEN-001 #14 addVec/addMat coercion | math.test.js LEN-001 #14 | ✓ |

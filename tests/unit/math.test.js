@@ -592,4 +592,20 @@ describe('randn', () => {
       Math.random = origRandom;
     }
   });
+
+  it('uses 1 PRNG pair per 2 samples — cache avoids discarding sin (LEN-001 #2)', () => {
+    math._randnClearCache();
+    var prngCalls = 0;
+    const origRandom = Math.random;
+    Math.random = function () {
+      prngCalls++;
+      return 0.5;
+    };
+    try {
+      for (var i = 0; i < 4; i++) math.randn();
+      assert.equal(prngCalls, 4, '4 randn calls should use 4 PRNG values (2 pairs), not 8 — sin sample cached');
+    } finally {
+      Math.random = origRandom;
+    }
+  });
 });

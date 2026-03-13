@@ -562,19 +562,57 @@ function explainSelection(studentId, candidates, ontologyMap) {
   };
 }
 
+/** Jitter for near-singular bandit A (matches thompson.js). Must be > CHOLESKY_EPSILON. */
+const JITTER_LIGHT = 1e-9;
+const JITTER = 1e-5;
+
 /**
  * Sample a θ vector from the Thompson posterior for composite scoring.
  * Extracted so selectBestLesson can score all candidates against one sample.
+ * Retries with diagonal jitter when A is near-singular (cold start, collinear observations).
  * @param {import('../types').LMSState} state
  * @returns {number[]}
  */
 function sampleThetaForScoring(state) {
-  const L = math.cholesky(state.bandit.A);
-  const mean = math.backSub(L, math.forwardSub(L, state.bandit.b));
-  const z = [];
-  for (let i = 0; i < mean.length; i++) z.push(math.randn());
-  const noise = math.backSub(L, z);
-  return math.addVec(mean, noise);
+  const A = state.bandit.A;
+  const b = state.bandit.b;
+  const n = A.length;
+
+  function solveAndSample(mat) {
+    const L = math.cholesky(mat);
+    const mean = math.backSub(L, math.forwardSub(L, b));
+    const z = [];
+    for (let i = 0; i < mean.length; i++) z.push(math.randn());
+    const noise = math.backSub(L, z);
+    return math.addVec(mean, noise);
+  }
+
+  function jitteredMatrix(eps) {
+    const Ac = new Array(n);
+    for (let i = 0; i < n; i++) {
+      Ac[i] = A[i].slice();
+      Ac[i][i] += eps;
+    }
+    return Ac;
+  }
+
+  try {
+    return solveAndSample(A);
+  } catch (_e) {
+    try {
+      return solveAndSample(jitteredMatrix(JITTER_LIGHT));
+    } catch (_e2) {
+      try {
+        return solveAndSample(jitteredMatrix(JITTER));
+      } catch (_e3) {
+        log.warn(
+          'sampleThetaForScoring: Cholesky failed after jitter — returning zero vector. ' +
+          'Bandit A may be singular; selection will rely on Markov/PageRank only.'
+        );
+        return math.scaleVec(b, 0);
+      }
+    }
+  }
 }
 
 /**

@@ -45,7 +45,7 @@ Address 18 identified bugs, logic errors, edge cases, and unsafe assumptions in 
 
 | ID | Bug | Fix | Regression |
 |----|-----|-----|------------|
-| 2 | randn discards sin sample; 2× PRNG/transcendentals per sample | Document (Option A) or makeRandnStream (Option B) | Documented or stream test |
+| 2 | randn discards sin sample; 2× PRNG/transcendentals per sample | Cache sin sample (already implemented); regress test | Done — math.test.js LEN-001 #2 |
 | 4 | Symmetry check O(n²) on every invertSPD | Move to load/migrations; or AGNI_MATH_STRICT gate | — |
 | 12 | scaleMat O(n²) sparse check in updateBandit hot path | Move to load/migrations | — |
 | 16 | scaleVec/matVec no array type check | Array.isArray guard; [MATH] error | Done — already present |
@@ -93,6 +93,7 @@ Per `.cursor/rules/sprint-verification.md`, each fix must have a test that fails
 | ID | Proof |
 |----|-------|
 | 1 | `tests/unit/regressions.test.js` → MATH-3: randn returns 0 on PRNG exhaustion |
+| 2 | `tests/unit/math.test.js` → randn: uses 1 PRNG pair per 2 samples (LEN-001 #2) |
 | 3 | `tests/unit/regressions.test.js` → MATH-1b: cholesky throws non-numeric for NaN/Inf; `tests/unit/math.test.js` → LEN-001 #3 |
 | 13 | `tests/unit/math.test.js` → LEN-001 bug 13: accepts post-federation float asymmetry |
 | 9 | `tests/unit/math.test.js` → LEN-001 #9: forwardSub/backSub throw for non-array, empty L; `regressions.test.js` → MATH-4 |

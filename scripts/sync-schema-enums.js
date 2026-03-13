@@ -20,18 +20,26 @@ var schema = JSON.parse(raw);
 var dirty = false;
 
 // ── Step types ──────────────────────────────────────────────────────────────
+// Step type enum lives in stepCommonProps (referenced by all step variants).
 
 var stepEnum = Array.from(plugins.getValidStepTypes());
-var stepDef = schema.definitions.step.properties.type;
-if (JSON.stringify(stepDef.enum) !== JSON.stringify(stepEnum)) {
-  stepDef.enum = stepEnum;
-  dirty = true;
+var stepCommonProps = schema.definitions && schema.definitions.stepCommonProps;
+var stepTypeDef = stepCommonProps && stepCommonProps.properties && stepCommonProps.properties.type;
+if (stepTypeDef) {
+  if (JSON.stringify(stepTypeDef.enum || null) !== JSON.stringify(stepEnum)) {
+    stepTypeDef.enum = stepEnum;
+    dirty = true;
+  }
+} else {
+  console.error('sync-schema-enums: definitions.stepCommonProps.properties.type not found');
+  process.exit(1);
 }
 
 // ── Factory names ───────────────────────────────────────────────────────────
+// Factory enum lives in definitions.svgSpec.properties.factory.
 
 var factoryEnum = Array.from(plugins.getFactoryIds());
-var svgSpec = schema.definitions.step.properties.svg_spec;
+var svgSpec = schema.definitions && schema.definitions.svgSpec;
 if (svgSpec && svgSpec.properties && svgSpec.properties.factory) {
   var fProp = svgSpec.properties.factory;
   if (JSON.stringify(fProp.enum) !== JSON.stringify(factoryEnum)) {

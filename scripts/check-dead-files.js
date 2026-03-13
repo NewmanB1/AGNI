@@ -23,6 +23,7 @@ const ENTRY_POINTS = new Set([
   normalize('hub-tools/theta.js'),
   normalize('hub-tools/sentry.js'),
   normalize('hub-tools/sync.js'),
+  normalize('hub-tools/mesh.js'),
   normalize('server/hub-transform.js'),
   normalize('packages/agni-hub/sw.js'),
   normalize('packages/agni-hub/pwa/shared.js'),

@@ -148,8 +148,9 @@ const config = {
   logLevel:           strVal('AGNI_LOG_LEVEL', 'info'),
   logMaxBytes:        Math.max(65536, intVal('AGNI_LOG_MAX_BYTES', 5242880)),
 
-  /** Hub API key for device auth. Empty = 503 on protected endpoints. */
-  hubApiKey:          strVal('AGNI_HUB_API_KEY', ''),
+  /** Hub API key for device auth. Empty = 503 on protected endpoints.
+   *  Read dynamically so tests can set AGNI_HUB_API_KEY per suite without require cache reset. */
+  get hubApiKey() { return strVal('AGNI_HUB_API_KEY', ''); },
   /** Set 1 or true to allow sync to set system clock from syncTimestamp (Linux only). */
   syncSetClock:       (function () { var v = strVal('AGNI_SYNC_SET_CLOCK', '0'); return v === '1' || String(v).toLowerCase() === 'true'; })(),
   /** Mesh transport: stub, udp, or lora. */

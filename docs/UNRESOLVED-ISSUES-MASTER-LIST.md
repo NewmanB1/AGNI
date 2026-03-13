@@ -88,7 +88,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | ID | Bug | Priority | Status |
 |----|-----|----------|--------|
 | 1 | randn() throws on PRNG failure → crash in selectBestLesson | P0 | Done |
-| 2 | randn discards sin sample; 2× PRNG/transcendentals per sample | P2 | **Open** |
+| 2 | randn discards sin sample; 2× PRNG/transcendentals per sample | P2 | Done |
 | 3 | cholesky `\|\| 0` masks NaN; misleading "not SPD" error | P0 | Done |
 | 4 | Symmetry check O(n²) on every invertSPD | P2 | Done |
 | 5 | Cholesky square check separate pass | P3 | **Open** |
@@ -325,7 +325,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 |----------|-------|----------|
 | **P0 (Critical)** | 0 | All Done (randn, cholesky NaN, federation symmetry) |
 | **P1 (High)** | 0 | All Done (forwardSub, addVec, sparse, yaml-safe 2-5) |
-| **P2 (Medium)** | 5 | LEN-001 #2; P2-17; svg-stage 3-3, 3-10, 3-11, 3-14 |
+| **P2 (Medium)** | 4 | P2-17; svg-stage 3-3, 3-10, 3-11, 3-14 |
 | **P3 (Low)** | 12+ | LEN-001 #5, #8; svg-stage 3-1; E2.1–E2.3; audit items |
 | **Roadmap / Launch** | 12+ | ROADMAP (R7, R9, R10 Done; R8 Design), YEAR2-PREP (Y9 Done), LAUNCH-AND-COMMUNITY unchecked |
 | **TypeScript** | ~30 | CHECK-JS-FINISH-PLAN per-file fixes |
