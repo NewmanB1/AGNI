@@ -1,9 +1,14 @@
 // @ts-nocheck — bindSensor callback type, Function vs specific signature
 // packages/agni-runtime/rendering/svg-stage.js
-// AGNI SVG Stage System  v1.8.0
+// AGNI SVG Stage System  v1.8.1
 //
 // Owns a single SVG viewport, manages named layers, drives the RAF animation
 // loop, and wires sensor subscriptions to update callbacks.
+//
+// Changes from v1.8.0 (P2-23 memory leak fix):
+//   - destroy(): clear _layers map to release DOM references.
+//   - RAF loop: check _destroyed before each tick callback (handlers cannot run
+//     after synchronous destroy from within a callback).
 //
 // Changes from v1.7.0:
 //   - bindSensor() now stores the unsubscribe closure returned by
@@ -89,9 +94,10 @@
       var dt = (now - _lastTime)  / 1000;
       _lastTime = now;
 
-      _tickHandlers.forEach(function (h) {
-        try { h.fn(t, dt); } catch (e) { console.error('[STAGE] tick error:', e); }
-      });
+      for (var i = 0; i < _tickHandlers.length; i++) {
+        if (_destroyed) return;
+        try { _tickHandlers[i].fn(t, dt); } catch (e) { console.error('[STAGE] tick error:', e); }
+      }
 
       _rafId = requestAnimationFrame(_rafLoop);
     }
@@ -254,6 +260,9 @@
         });
         _sensorUnsubs = [];
 
+        // Clear layers map to release DOM references (P2-23 memory leak fix)
+        _layers = {};
+
         // Clear SVG DOM (removeChild preserves any external listeners)
         while (container.firstChild) container.removeChild(container.firstChild);
 
@@ -271,6 +280,6 @@
 
   if (global.AGNI_SHARED) global.AGNI_SHARED.svg = global.AGNI_SVG;
 
-  if (global.DEV_MODE) console.log('[SVG-STAGE] v1.8.0 loaded');
+  if (global.DEV_MODE) console.log('[SVG-STAGE] v1.8.1 loaded');
 
 }(window));
