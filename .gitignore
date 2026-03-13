@@ -13,6 +13,10 @@ data/creator-accounts.json
 data/sessions.json
 data/student-accounts.json
 
+# Backup files
+*.bak
+data/*.bak
+
 # Runtime state files (created at first run; must not be tracked)
 data/groups.json
 data/mastery-summary.json
