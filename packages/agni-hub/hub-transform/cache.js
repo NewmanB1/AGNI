@@ -10,6 +10,7 @@
  */
 
 const fs   = require('fs');
+const os   = require('os');
 const path = require('path');
 
 const envConfig = require('@agni/utils/env-config');
@@ -24,7 +25,14 @@ let _cacheSize = 0;
 let _cacheBytes = 0;
 const MAX_CACHE_ENTRIES = parseInt(process.env.AGNI_CACHE_MAX || '100', 10);
 const MAX_CACHE_BYTES = parseInt(process.env.AGNI_CACHE_MAX_BYTES || '0', 10);
-const MAX_CONCURRENT_COMPILES = parseInt(process.env.AGNI_COMPILE_CONCURRENCY || '3', 10);
+/** P2-28: Default concurrency uses min(cores-2, 2) to avoid event-loop starvation. Explicit env/config overrides. */
+function getDefaultCompileConcurrency() {
+  var cpus = (os.cpus && os.cpus()) ? os.cpus().length : 2;
+  return Math.min(Math.max(1, cpus - 2), 2);
+}
+var _defaultConcurrency = String(getDefaultCompileConcurrency());
+var _parsed = parseInt(process.env.AGNI_COMPILE_CONCURRENCY || _defaultConcurrency, 10);
+const MAX_CONCURRENT_COMPILES = (isNaN(_parsed) || _parsed < 1) ? 1 : _parsed;
 let _compileSlots = MAX_CONCURRENT_COMPILES;
 const _compileQueue = [];
 const _compilingNow = {};
@@ -194,6 +202,7 @@ function getMaxCacheEntries() { return MAX_CACHE_ENTRIES; }
 function getMaxCacheBytes() { return MAX_CACHE_BYTES; }
 function getCompilingNow() { return _compilingNow; }
 function getRetryAfterSeconds() { return RETRY_AFTER_SECONDS; }
+function getMaxConcurrentCompiles() { return MAX_CONCURRENT_COMPILES; }
 
 module.exports = {
   validateCachedIr:     validateCachedIr,
@@ -212,6 +221,7 @@ module.exports = {
   getCacheBytes:        getCacheBytes,
   getMaxCacheEntries:   getMaxCacheEntries,
   getMaxCacheBytes:     getMaxCacheBytes,
-  getCompilingNow:      getCompilingNow,
-  getRetryAfterSeconds: getRetryAfterSeconds
+  getCompilingNow:         getCompilingNow,
+  getRetryAfterSeconds:    getRetryAfterSeconds,
+  getMaxConcurrentCompiles: getMaxConcurrentCompiles
 };

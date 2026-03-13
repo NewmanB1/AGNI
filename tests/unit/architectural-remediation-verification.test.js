@@ -379,4 +379,22 @@ describe('architectural remediation #7: Pi config and OOM mitigation', function 
     const startHub = pkg.scripts['start:hub'] || '';
     assert.ok(/max-old-space-size|512/.test(startHub), 'start:hub should set heap limit for Pi');
   });
+
+  it('P2-28: default compile concurrency uses min(cores-2, 2) when env unset', function () {
+    var cachePath = path.join(__dirname, '../../packages/agni-hub/hub-transform/cache.js');
+    var saved = process.env.AGNI_COMPILE_CONCURRENCY;
+    delete process.env.AGNI_COMPILE_CONCURRENCY;
+    delete require.cache[require.resolve('../../packages/agni-hub/hub-transform/cache')];
+    try {
+      var cache = require('../../packages/agni-hub/hub-transform/cache');
+      var max = cache.getMaxConcurrentCompiles();
+      var cpus = require('os').cpus().length;
+      var expected = Math.min(Math.max(1, cpus - 2), 2);
+      assert.ok(max >= 1 && max <= 2, 'default concurrency must be 1 or 2 (got ' + max + ')');
+      assert.strictEqual(max, expected, 'expected min(cores-2, 2) = ' + expected + ' for ' + cpus + ' cores');
+    } finally {
+      if (saved !== undefined) process.env.AGNI_COMPILE_CONCURRENCY = saved;
+      delete require.cache[require.resolve('../../packages/agni-hub/hub-transform/cache')];
+    }
+  });
 });
