@@ -273,6 +273,9 @@ function scaleMat(A, s) {
 function matVec(A, x) {
   if (A == null) throw new Error('[MATH] matVec: matrix is null or undefined');
   if (x == null) throw new Error('[MATH] matVec: vector is null or undefined');
+  if (!Array.isArray(A)) {
+    throw new Error('[MATH] matVec: matrix must be array');
+  }
   if (!Array.isArray(x)) {
     throw new Error('[MATH] matVec: vector must be array');
   }

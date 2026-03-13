@@ -242,6 +242,16 @@ describe('matVec', () => {
     assert.throws(() => math.matVec([[1]], undefined), /null or undefined/);
   });
 
+  it('throws [MATH] for non-array matrix (LEN-001 #16)', () => {
+    const arrayLike = { 0: [1, 0], 1: [0, 1], length: 2 };
+    assert.throws(() => math.matVec(arrayLike, [1, 2]), /matVec.*matrix must be array/);
+  });
+
+  it('throws [MATH] for non-array vector (LEN-001 #16)', () => {
+    const arrayLike = { 0: 1, 1: 2, length: 2 };
+    assert.throws(() => math.matVec([[1, 0], [0, 1]], arrayLike), /matVec.*vector must be array/);
+  });
+
   it('throws for non-finite element in matrix or vector', () => {
     assert.throws(() => math.matVec([[1, NaN], [3, 4]], [1, 2]), /matVec.*non-finite/);
     assert.throws(() => math.matVec([[1, 2], [3, 4]], [1, 'x']), /matVec.*non-finite/);
