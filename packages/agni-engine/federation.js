@@ -257,8 +257,14 @@ function mergeBanditSummaries(local, remote) {
   const pv = Math.max(local.posteriorVersion || 1, remote.posteriorVersion || 1);
 
   // Guard: both zero — return neutral summary
+  // LEN-001 #10: featDim >= 2 (embeddingDim validated >= 1 above); explicit guard for zero-dim path
   if (totalN === 0) {
     const featDim = local.embeddingDim * 2;
+    if (featDim < 2) {
+      throw new Error(
+        '[FEDERATION] zero featureDim (embeddingDim*2=' + featDim + ') invalid — embeddingDim must be >= 1'
+      );
+    }
     return {
       embeddingDim:     local.embeddingDim,
       mean:             math.zeros(featDim),

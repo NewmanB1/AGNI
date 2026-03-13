@@ -96,7 +96,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | 7 | addMat row 0 validated twice | P3 | Done |
 | 8 | matVec/addMat validation inconsistency | P3 | **Open** |
 | 9 | forwardSub/backSub don't validate L | P1 | Done |
-| 10 | identity(0) / federation zero-dim path | P3 | **Open** |
+| 10 | identity(0) / federation zero-dim path | P3 | Done |
 | 11 | dot() naive summation FP error | P4 (no action) | — |
 | 12 | scaleMat O(n²) sparse check in updateBandit hot path | P2 | Done |
 | 13 | Symmetry tolerance 1e-12 too tight post-federation | P0 | Done |
@@ -326,7 +326,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | **P0 (Critical)** | 0 | All Done (randn, cholesky NaN, federation symmetry) |
 | **P1 (High)** | 0 | All Done (forwardSub, addVec, sparse, yaml-safe 2-5) |
 | **P2 (Medium)** | 6 | LEN-001 #2, #4; P2-17; svg-stage 3-3, 3-10, 3-11, 3-14 |
-| **P3 (Low)** | 12+ | LEN-001 #5, #8, #10; svg-stage 3-1; E2.1–E2.3; audit items |
+| **P3 (Low)** | 12+ | LEN-001 #5, #8; svg-stage 3-1; E2.1–E2.3; audit items |
 | **Roadmap / Launch** | 12+ | ROADMAP (R7, R10 Done), YEAR2-PREP (Y9 Done), LAUNCH-AND-COMMUNITY unchecked |
 | **TypeScript** | ~30 | CHECK-JS-FINISH-PLAN per-file fixes |
 

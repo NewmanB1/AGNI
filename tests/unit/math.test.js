@@ -304,8 +304,9 @@ describe('identity', () => {
     assert.throws(() => math.identity(2.5), /identity.*positive integer/);
   });
 
-  it('throws for n=0 (zero-dim invalid, wrong embeddingDim would not throw otherwise)', () => {
-    assert.throws(() => math.identity(0), /identity.*positive integer/);
+  it('throws for n=0 with zero-dim message (LEN-001 #10)', () => {
+    assert.throws(() => math.identity(0), /identity.*n=0 invalid.*zero-dim/);
+    assert.throws(() => math.identity(0), /embeddingDim\/featureDim/);
   });
 });
 

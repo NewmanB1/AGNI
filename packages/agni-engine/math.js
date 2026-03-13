@@ -339,11 +339,17 @@ function matVec(A, x) {
 
 /**
  * Generate an identity matrix of size n.
+ * LEN-001 #10: n=0 is invalid — zero-dim matrix breaks cholesky/invertSPD and federation.
+ * If you hit this from bandit or federation code, check embeddingDim/featureDim (must be >= 1).
+ *
  * @param {number} n
  * @returns {number[][]}
  */
 function identity(n) {
   if (n == null) throw new Error('[MATH] identity: n is null or undefined');
+  if (n === 0) {
+    throw new Error('[MATH] identity: n=0 invalid (zero-dim). Check embeddingDim/featureDim in bandit or federation state.');
+  }
   if (!isPositiveInteger(n)) {
     throw new Error('[MATH] identity: n must be positive integer, got ' + n);
   }

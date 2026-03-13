@@ -58,7 +58,7 @@ Address 18 identified bugs, logic errors, edge cases, and unsafe assumptions in 
 | 6 | outer() reuses loop var i | Done — var i, j at top; separate loop vars |
 | 7 | addMat row 0 validated twice | Done — row 0 validated once, loop from i=1 |
 | 8 | matVec/addMat validation inconsistency | Document or align |
-| 10 | identity(0) / federation zero-dim path | Reject n=0 or handle at merge boundary |
+| 10 | identity(0) / federation zero-dim path | Done — identity throws explicit n=0 msg; federation guards featDim>=2 |
 | 17 | invertSPD diagonal not symmetrized | Optional symmetrization |
 | 18 | randn can return Infinity for tiny u | JSDoc; optional clamp |
 
@@ -99,6 +99,7 @@ Per `.cursor/rules/sprint-verification.md`, each fix must have a test that fails
 | 14 | `tests/unit/math.test.js` → LEN-001 #14: addVec(["1"],[2]) returns [3] |
 | 15 | `tests/unit/math.test.js` → LEN-001 #15: dot/addVec/scaleVec/outer throw for sparse |
 | 16 | `tests/unit/math.test.js` → LEN-001 #16: scaleVec/matVec throw for non-array |
+| 10 | `tests/unit/math.test.js` → identity throws for n=0 with zero-dim msg; `tests/unit/engine-federation.test.js` → LEN-001 #10: throws on embeddingDim=0 |
 
 **CI:** All run via `npm run test:coverage` (tests/unit/*.test.js) in `.github/workflows/validate.yml`.
 

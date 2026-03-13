@@ -230,6 +230,20 @@ describe('mergeBanditSummaries', () => {
     assert.throws(() => mergeBanditSummaries(valid, big), /\[FEDERATION\].*embeddingDim.*1024/);
   });
 
+  it('LEN-001 #10: throws on embeddingDim=0 (zero-dim path)', () => {
+    const valid = makeSummary(4, 5);
+    const zeroDim = {
+      embeddingDim: 0,
+      mean: [],
+      precision: [],
+      sampleSize: 0
+    };
+    assert.throws(
+      () => mergeBanditSummaries(zeroDim, zeroDim),
+      /\[FEDERATION\].*embeddingDim.*positive integer|embeddingDim.*>= 1/
+    );
+  });
+
   it('E2: throws clear error on null mean', () => {
     const valid = makeSummary(4, 5);
     const bad = makeSummary(4, 5);
