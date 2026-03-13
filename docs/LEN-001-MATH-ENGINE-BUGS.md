@@ -86,6 +86,24 @@ Address 18 identified bugs, logic errors, edge cases, and unsafe assumptions in 
 
 ---
 
+## Proof / Regression Guards
+
+Per `.cursor/rules/sprint-verification.md`, each fix must have a test that fails before and passes after.
+
+| ID | Proof |
+|----|-------|
+| 1 | `tests/unit/regressions.test.js` → MATH-3: randn returns 0 on PRNG exhaustion |
+| 3 | `tests/unit/regressions.test.js` → MATH-1b: cholesky throws non-numeric for NaN/Inf; `tests/unit/math.test.js` → LEN-001 #3 |
+| 13 | `tests/unit/math.test.js` → LEN-001 bug 13: accepts post-federation float asymmetry |
+| 9 | `tests/unit/math.test.js` → LEN-001 #9: forwardSub/backSub throw for non-array, empty L; `regressions.test.js` → MATH-4 |
+| 14 | `tests/unit/math.test.js` → LEN-001 #14: addVec(["1"],[2]) returns [3] |
+| 15 | `tests/unit/math.test.js` → LEN-001 #15: dot/addVec/scaleVec/outer throw for sparse |
+| 16 | `tests/unit/math.test.js` → LEN-001 #16: scaleVec/matVec throw for non-array |
+
+**CI:** All run via `npm run test:coverage` (tests/unit/*.test.js) in `.github/workflows/validate.yml`.
+
+---
+
 ## References
 
 - Consolidated bug list: `docs/playbooks/math-remediation-plan.md`

@@ -45,6 +45,21 @@ This document describes the structure of automated guards against regression. Ru
 
 E2E runs in a separate job.
 
+## Regression Test Coverage (key fixes)
+
+| Fix | Test location | Fails if reverted |
+|-----|---------------|-------------------|
+| LEN-001 #1 randn PRNG fallback | regressions.test.js MATH-3 | ✓ |
+| LEN-001 #3 cholesky NaN/Inf | regressions.test.js MATH-1b, math.test.js | ✓ |
+| LEN-001 #9 forwardSub/backSub L validation | math.test.js LEN-001 #9, regressions MATH-4 | ✓ |
+| LEN-001 #14 addVec/addMat coercion | math.test.js LEN-001 #14 | ✓ |
+| LEN-001 #15 sparse (dot/addVec/scaleVec/outer) | math.test.js LEN-001 #15 | ✓ |
+| LEN-001 #16 scaleVec/matVec Array.isArray | math.test.js LEN-001 #16 | ✓ |
+| yaml-safe 2-5 Date/binary/omap | regressions.test.js YAML-SAFE 2-5, yaml-safe.test.js | ✓ |
+| svg-stage 3-2 RAF after destroy | Code guard only (svg-stage.js lines 90, 98) | — |
+
+---
+
 ## Adding a New Guard
 
 1. Create a script in `scripts/check-*.js` or a regression test in `tests/unit/*.test.js`.

@@ -1832,6 +1832,36 @@ describe('AUDIT-DOCS: Node version docs consistent (hub Node 14+)', () => {
 // MATH: packages/agni-engine/math.js remediation (docs/playbooks/math-remediation-plan.md)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+describe('YAML-SAFE 2-5: JSON_SCHEMA rejects !!timestamp/!!binary; date-like stays string', () => {
+  const { safeYamlLoad } = require('@agni/utils/yaml-safe');
+
+  it('rejects !!timestamp', () => {
+    assert.throws(() => safeYamlLoad('d: !!timestamp 2023-01-15'), /parse failed|unknown tag/);
+  });
+
+  it('rejects !!binary', () => {
+    assert.throws(() => safeYamlLoad('data: !!binary SGVsbG8='), /parse failed|unknown tag/);
+  });
+
+  it('keeps date-like values as strings', () => {
+    var r = safeYamlLoad('a: 1\nd: 2023-01-15');
+    assert.strictEqual(typeof r.d, 'string');
+    assert.strictEqual(r.d, '2023-01-15');
+  });
+});
+
+describe('MATH-1b: LEN-001 #3 cholesky throws non-numeric for NaN/Inf (not misleading SPD)', () => {
+  const math = require('@agni/engine/math');
+
+  it('throws non-numeric diagonal for Infinity', () => {
+    assert.throws(() => math.cholesky([[Infinity, 1], [1, 1]]), /non-numeric diagonal/);
+  });
+
+  it('throws non-numeric entry for NaN', () => {
+    assert.throws(() => math.cholesky([[1, NaN], [NaN, 1]]), /non-numeric/);
+  });
+});
+
 describe('MATH-1: cholesky rejects null, non-square, and non-symmetric input', () => {
   const math = require('@agni/engine/math');
 

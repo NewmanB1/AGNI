@@ -120,7 +120,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | 2-9 | yaml-safe: Stack trace leakage | Low | Done |
 | 2-10 | yaml-safe: Regex DoS on pathological strings | Medium | Done |
 | 3-1 | svg-stage: NodeList.forEach ES5 inconsistency | Low | **Open** (document only) |
-| 3-2 | svg-stage: RAF tick handlers after destroy | Low | **Open** |
+| 3-2 | svg-stage: RAF tick handlers after destroy | Low | Done |
 | 3-3 | svg-stage: Tick handler ID not unique | Low | **Open** |
 | 3-4 | svg-stage: Layer ID injection | Medium | Done |
 | 3-5 | svg-stage: container.innerHTML destroys listeners | Medium | Done |
@@ -318,7 +318,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 |----------|-------|----------|
 | **P0 (Critical)** | 0 | All Done (randn, cholesky NaN, federation symmetry) |
 | **P1 (High)** | 0 | All Done (forwardSub, addVec, sparse, yaml-safe 2-5) |
-| **P2 (Medium)** | 7 | LEN-001 #2, #4; P2-17; svg-stage 3-2, 3-3, 3-10, 3-11, 3-14 |
+| **P2 (Medium)** | 6 | LEN-001 #2, #4; P2-17; svg-stage 3-3, 3-10, 3-11, 3-14 |
 | **P3 (Low)** | 12+ | LEN-001 #5, #8, #10; svg-stage 3-1; E2.1–E2.3; audit items |
 | **Roadmap / Launch** | 15+ | ROADMAP, YEAR2-PREP, LAUNCH-AND-COMMUNITY unchecked |
 | **TypeScript** | ~30 | CHECK-JS-FINISH-PLAN per-file fixes |

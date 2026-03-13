@@ -42,7 +42,7 @@ module.exports = hub.hubTransform || hub;
 | # | Issue | Risk | Fix |
 |---|-------|------|-----|
 | 1 | NodeList.forEach ES5 inconsistency | Low | `Object.keys(attrs)` is fine; document only |
-| 2 | RAF: tick handlers may run one frame after destroy | Low | Add `if (_destroyed) return` before dispatch (already at top; keep before each callback) |
+| 2 | RAF: tick handlers may run one frame after destroy | Low | **Done** — _rafLoop checks _destroyed at top and before each callback |
 | 3 | Tick handler ID: `Date.now() + Math.random()` not unique | Low | Use monotonic counter |
 | 4 | Layer ID injection (`name` with `"`, `>`, `<`) | Medium | Sanitize: `name.replace(/[^\w-]/g, '_')` |
 | 5 | `container.innerHTML = ''` destroys listeners | Medium | Use `while(container.firstChild) container.removeChild(container.firstChild)` |
@@ -75,6 +75,7 @@ module.exports = hub.hubTransform || hub;
 | innerHTML → removeChild (svg-stage) | **Done** — destroy + init |
 | unsub type check, subscribeToSensor guard | **Done** |
 | destroy() double-call guard | **Done** — if (_destroyed) return |
+| RAF tick handlers after destroy (3-2) | **Done** — _rafLoop checks _destroyed at top and before each callback (no automated test; code guard in svg-stage.js) |
 | lastSensorValues.get guard | **Done** — typeof shared.lastSensorValues.get === 'function' |
 | Safer shim (hub-transform) | **Done** — hub.hubTransform \|\| hub |
 
