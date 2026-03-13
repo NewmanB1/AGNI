@@ -7,6 +7,7 @@ module.exports = {
   theta:          require('./theta'),
   sentry:         require('./sentry'),
   sync:           require('./sync'),
+  mesh:           require('./mesh'),
   shared:         require('./shared'),
   hubTransform:   require('./hub-transform'),
   accounts:       require('@agni/services/accounts'),

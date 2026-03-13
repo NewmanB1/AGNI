@@ -139,10 +139,22 @@ These JSON keys in `hub-config.json` map to the env vars below (via `loadHubConf
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AGNI_SYNC_TRANSPORT` | *(empty)* | `starlink`, `usb`, or empty |
+| `AGNI_SYNC_TRANSPORT` | *(empty)* | `starlink`, `usb`, `lora`, or empty |
 | `AGNI_HOME_URL` | *(empty)* | Home server URL (Starlink sync) |
 | `AGNI_USB_PATH` | *(empty)* | Must be under `/mnt/usb` (see usbPath contract) |
 | `AGNI_SYNC_SET_CLOCK` | `0` | Set `1` to allow sync to set system clock from `syncTimestamp` (Linux only) |
+
+### Mesh (LoRa graph_weights sync)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AGNI_MESH_TRANSPORT` | `udp` | `stub`, `udp`, or `lora` |
+| `AGNI_MESH_PORT` | `18471` | UDP port (for `udp` transport) |
+| `AGNI_LORA_SPI_BUS` | `0` | SPI bus (SX1276 HAL) |
+| `AGNI_LORA_SPI_DEVICE` | `0` | SPI device (SX1276 HAL) |
+| `AGNI_LORA_RESET_PIN` | `24` | GPIO reset pin |
+| `AGNI_LORA_DIO0_PIN` | `25` | GPIO DIO0 pin |
+| `AGNI_LORA_FREQUENCY` | `868000000` | Frequency in Hz (868e6, 915e6) |
 
 ### Sentry (Telemetry)
 

@@ -23,7 +23,7 @@ const {
   loadMasterySummaryAsync, loadBaseCostsAsync, loadLessonIndexAsync, loadSchedulesAsync,
   loadCurriculumAsync, loadApprovedCatalogAsync,
   lmsService: lmsEngine, log,
-  GRAPH_WEIGHTS_LOCAL, GRAPH_WEIGHTS_REGIONAL, SKILL_GRAPH_CYCLES,
+  GRAPH_WEIGHTS_LOCAL, GRAPH_WEIGHTS_REGIONAL, GRAPH_WEIGHTS_MESH, SKILL_GRAPH_CYCLES,
   MASTERY_SUMMARY, SCHEDULES, CURRICULUM_GRAPH, APPROVED_CATALOG,
   SERVE_DIR, LESSON_INDEX, PORT,
   MIN_RESIDUAL, MIN_MLC, MASTERY_THRESHOLD, MIN_CONFIDENCE,
@@ -58,6 +58,8 @@ async function getEffectiveGraphWeights() {
   if (useLocal) return local;
   const regional = await loadJSONAsync(GRAPH_WEIGHTS_REGIONAL, null);
   if (regional && regional.edges && regional.edges.length > 0) return regional;
+  const mesh = await loadJSONAsync(GRAPH_WEIGHTS_MESH, null);
+  if (mesh && mesh.edges && mesh.edges.length > 0) return mesh;
   return local;
 }
 

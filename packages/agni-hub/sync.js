@@ -301,6 +301,13 @@ async function runSync() {
     return;
   }
 
+  if (TRANSPORT === 'lora') {
+    log.info('Starting mesh (graph_weights sync via LoRa simulation)');
+    const mesh = require('./mesh');
+    mesh.start({ transport: args['transport'] || 'udp', port: args['port'] });
+    return;
+  }
+
   const { events, files } = loadUnsynced();
   if (!events.length) {
     log.info('No new events to sync');

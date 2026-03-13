@@ -92,6 +92,7 @@ AGNI is an **npm workspaces monorepo**. Each package has its own README with det
 
 - [playbooks/compiler.md](playbooks/compiler.md) — How to modify the YAML-to-IR and IR-to-artifact compiler.
 - [playbooks/federation.md](playbooks/federation.md) — Sync contracts and graph_weights deployment for federation.
+- [playbooks/mesh-lora.md](playbooks/mesh-lora.md) — The Mesh (R9): graph_weights sync via LoRa — design and implementation phases.
 - [playbooks/governance.md](playbooks/governance.md) — How to modify policy-driven compliance and cohort coverage.
 - [playbooks/lms.md](playbooks/lms.md) — How to modify the LMS engine (adaptive selection, Rasch, embeddings, bandit).
 - [playbooks/runtime.md](playbooks/runtime.md) — How to modify the browser-side lesson player, sensors, and SVG system.

@@ -235,7 +235,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | R6 | Day 96-100: Finalize v1.0 Spec | **Open** |
 | R7 | Future: The Editor (drag-and-drop GUI) | **Open** |
 | R8 | Future: Plugins for Moodle, Kolibri, Canvas | **Open** |
-| R9 | Future: The Mesh (graph_weights sync via LoRa) | **Open** |
+| R9 | Future: The Mesh (graph_weights sync via LoRa) | **Done** — design + impl ([playbooks/mesh-lora.md](playbooks/mesh-lora.md)); UDP sim; run `node hub-tools/mesh.js` or `sync.js --transport=lora` |
 | R10 | Future: Reference implementation refactor | **Open** |
 
 ---
@@ -314,4 +314,5 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 
 ## References
 
+- Mesh design (R9): `playbooks/mesh-lora.md`
 - Source documents: `archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`, `archive/ARCHITECTURAL-AUDIT-FINDINGS.md`, `archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md`, `archive/ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN.md`, `AUDIT-HARDENING-PLAN.md`, `LEN-001-MATH-ENGINE-BUGS.md`, `SHIM-AND-CODE-AUDIT-FINDINGS.md`, `archive/GAP-ANALYSIS-AND-MITIGATIONS.md`, `archive/RUNTIME-MANIFEST-IMPROVEMENT-PLAN.md`, `archive/sensor-toolkit-improvement-plan.md`, `archive/OPPORTUNISTIC-PRECACHE-PLAN.md`, `archive/PHASE-3-REMEDIATION-PLAN.md`, `archive/SPRINT-R16-OPEN-BUGS.md`, `ROADMAP.md`, `YEAR2-PREP.md`, `LAUNCH-AND-COMMUNITY.md`, `CHECK-JS-ENABLEMENT-PLAN.md`, `CHECK-JS-FINISH-PLAN.md`

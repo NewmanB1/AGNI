@@ -158,5 +158,6 @@ Merge is **idempotent**: merging the same remote summary twice yields identical 
 ## 7. References
 
 - **Sentry → graph_weights:** `docs/playbooks/sentry.md`
+- **The Mesh (LoRa):** `docs/playbooks/mesh-lora.md` — graph_weights sync via LoRa (R9). Run `npm run mesh` or `sync.js --transport=lora`; UDP simulation by default.
 - **Hub API (theta, LMS, governance):** `docs/api-contract.md`
-- **Graph weights schema:** `schemas/graph_weights.schema.json`
+- **Graph weights schema:** `schemas/graph-weights.schema.json`

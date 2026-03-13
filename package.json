@@ -46,6 +46,9 @@
     "remark-rehype": "^11.1.2",
     "unified": "^11.0.5"
   },
+  "optionalDependencies": {
+    "sx127x-driver": "^0.0.2"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.58.2",
@@ -82,12 +85,14 @@
     "promote:admin": "node scripts/promote-admin.js",
     "validate": "node scripts/validate-all.js",
     "sneakernet": "node scripts/sneakernet.js",
+    "mesh": "node hub-tools/mesh.js",
     "test": "mocha tests/unit/*.test.js",
     "test:unit": "mocha tests/unit/*.test.js",
     "test:watch": "mocha --watch tests/unit/*.test.js",
     "test:coverage": "c8 --lines 85 --reporter=text --reporter=lcov mocha tests/unit/*.test.js",
     "test:contract": "node tests/contract-hub-api.js",
     "test:graph": "node tests/graph-verification-test.js",
+    "test:mesh": "mocha tests/unit/mesh.test.js",
     "test:e2e": "npx playwright test",
     "test:e2e:dev": "cross-env AGNI_HUB_API_KEY=e2e-test-hub-key npx playwright test",
     "test:integration": "mocha tests/integration/*.test.js",
