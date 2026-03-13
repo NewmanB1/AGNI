@@ -22,7 +22,7 @@ const {
   loadJSONAsync, saveJSONAsync, getFileMtimeAsync,
   loadMasterySummaryAsync, loadBaseCostsAsync, loadLessonIndexAsync, loadSchedulesAsync,
   loadCurriculumAsync, loadApprovedCatalogAsync,
-  lmsService: lmsEngine, log,
+  lmsService: lmsEngine, governanceService, log,
   GRAPH_WEIGHTS_LOCAL, GRAPH_WEIGHTS_REGIONAL, GRAPH_WEIGHTS_MESH, SKILL_GRAPH_CYCLES,
   MASTERY_SUMMARY, SCHEDULES, CURRICULUM_GRAPH, APPROVED_CATALOG,
   SERVE_DIR, LESSON_INDEX, PORT,
@@ -337,6 +337,15 @@ async function getLessonsSortedByTheta(pseudoId) {
   if (catalog.lessonIds && catalog.lessonIds.length > 0) {
     const approvedSet = new Set(catalog.lessonIds);
     candidates = candidates.filter(l => approvedSet.has(l.lessonId));
+  }
+  const policy = governanceService.loadPolicy();
+  if (policy && policy.enforceUtuTargets && Array.isArray(policy.utuTargets) && policy.utuTargets.length > 0) {
+    const overrideIds = catalog.utuBandOverrides && typeof catalog.utuBandOverrides === 'object'
+      ? Object.keys(catalog.utuBandOverrides)
+      : [];
+    candidates = candidates.filter(function (l) {
+      return governanceService.lessonPassesUtuTargets(l, policy, { utuBandOverrideLessonIds: overrideIds });
+    });
   }
   const skillGraph = sharedCache.skillGraph || {};
   let results = computeLessonOrder(candidates, skillGraph, baseCosts, graphWeights, masterySummary, pseudoId, scheduledSkills);

@@ -160,6 +160,41 @@ function classifyIssues(issues) {
   return issues.some(function (i) { return i.severity === 'fail'; }) ? 'fail' : 'warning';
 }
 
+/**
+ * Check if a lesson passes UTU target validation for scheduling.
+ * Used by theta when enforceUtuTargets is true. Pure function.
+ *
+ * @param  {object} lesson    Lesson from index { lessonId, utu?, ... }
+ * @param  {object} policy    { enforceUtuTargets?, utuTargets? }
+ * @param  {object} opts      { utuConstants?: object, utuBandOverrideLessonIds?: Set|Array }
+ * @returns {boolean}         True if lesson is eligible for scheduling under UTU band rules
+ */
+function lessonPassesUtuTargets(lesson, policy, opts) {
+  opts = opts || {};
+  if (!policy || !policy.enforceUtuTargets) return true;
+  const targets = policy.utuTargets;
+  if (!Array.isArray(targets) || targets.length === 0) return true;
+
+  const overrideIds = opts.utuBandOverrideLessonIds;
+  if (overrideIds && lesson && lesson.lessonId) {
+    const id = lesson.lessonId;
+    if (overrideIds instanceof Set && overrideIds.has(id)) return true;
+    if (Array.isArray(overrideIds) && overrideIds.indexOf(id) !== -1) return true;
+  }
+
+  const utu = lesson && lesson.utu;
+  if (!utu || !utu.class) return false;
+
+  const matchesTarget = targets.some(function (t) {
+    if (t.class !== utu.class) return false;
+    if (typeof t.band === 'number' && t.band !== utu.band) return false;
+    if (typeof t.protocol === 'number' && t.protocol !== utu.protocol) return false;
+    return true;
+  });
+  return matchesTarget;
+}
+
 module.exports = {
-  evaluateLessonCompliance: evaluateLessonCompliance
+  evaluateLessonCompliance: evaluateLessonCompliance,
+  lessonPassesUtuTargets: lessonPassesUtuTargets
 };

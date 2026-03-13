@@ -11,6 +11,19 @@
       "description": "List of approved lesson identifiers (must exist in lesson index).",
       "items": { "type": "string" }
     },
+    "utuBandOverrides": {
+      "type": "object",
+      "description": "Lesson IDs with explicit UTU band override. When enforceUtuTargets is true, these lessons remain eligible despite band mismatch. Keys: lessonId. Values: { at: ISO8601, reason?: string }.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "at": { "type": "string", "format": "date-time" },
+          "reason": { "type": "string" }
+        },
+        "required": ["at"]
+      }
+    },
     "provenance": {
       "type": "object",
       "description": "Optional provenance when catalog was imported from another authority.",

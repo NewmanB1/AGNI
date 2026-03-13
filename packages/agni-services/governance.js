@@ -34,6 +34,10 @@ function aggregateCohortCoverage(lessonIndex, masterySummary, policy) {
   return governance.aggregateCohortCoverage(lessonIndex, masterySummary, policy || loadPolicy());
 }
 
+function lessonPassesUtuTargets(lesson, policy, opts) {
+  return governance.lessonPassesUtuTargets(lesson, policy || loadPolicy(), opts);
+}
+
 module.exports = {
   loadPolicy,
   savePolicy,
@@ -44,5 +48,6 @@ module.exports = {
   updateCatalog:    governance.updateCatalog,
   importCatalog:    governance.importCatalog,
   saveCatalog:      governance.saveCatalog,
-  validateCatalog:  governance.validateCatalog
+  validateCatalog:      governance.validateCatalog,
+  lessonPassesUtuTargets
 };

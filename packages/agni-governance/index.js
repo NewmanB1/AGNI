@@ -6,6 +6,7 @@
 const policy                  = require('./policy');
 const catalog                 = require('./catalog');
 const evaluateLessonCompliance = require('./evaluateLessonCompliance').evaluateLessonCompliance;
+const lessonPassesUtuTargets   = require('./evaluateLessonCompliance').lessonPassesUtuTargets;
 const aggregateCohortCoverage  = require('./aggregateCohortCoverage');
 
 module.exports = {
@@ -18,6 +19,7 @@ module.exports = {
   importCatalog:             catalog.importCatalog,
   validateCatalog:           catalog.validateCatalog,
   evaluateLessonCompliance:  evaluateLessonCompliance,
+  lessonPassesUtuTargets:    lessonPassesUtuTargets,
   aggregateCohortCoverage:   aggregateCohortCoverage.aggregateCohortCoverage,
   MASTERY_THRESHOLD:         aggregateCohortCoverage.MASTERY_THRESHOLD
 };

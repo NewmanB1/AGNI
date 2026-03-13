@@ -65,6 +65,10 @@
     "failureModeHints": {
       "type": "boolean",
       "description": "Include failure-mode hint when protocol check fails."
+    },
+    "enforceUtuTargets": {
+      "type": "boolean",
+      "description": "When true, theta excludes lessons whose UTU band does not match any utuTargets from scheduling. Override via catalog utuBandOverrides. Default: false (advisory only)."
     }
   }
 }

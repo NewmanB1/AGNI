@@ -106,6 +106,11 @@ export interface GovernanceService {
   importCatalog(items: unknown[]): Promise<{ ok?: boolean; imported?: number }>;
   saveCatalog(catalog: Record<string, unknown>, path?: string): Promise<{ ok?: boolean }>;
   validateCatalog(catalog: Record<string, unknown>): { valid: boolean; errors?: string[] };
+  lessonPassesUtuTargets(
+    lesson: Record<string, unknown>,
+    policy?: GovernancePolicy,
+    opts?: { utuBandOverrideLessonIds?: string[] | Set<string> }
+  ): boolean;
 }
 
 // ─── LMS service (Proxy to @agni/engine) ──────────────────────────────────────

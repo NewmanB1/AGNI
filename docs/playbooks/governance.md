@@ -21,6 +21,13 @@ Use this when changing policy-driven compliance or cohort coverage reporting.
 - Hard-code policy rules in the lesson compiler or theta; keep governance in `packages/agni-governance/` and policy in JSON.
 - Assume lesson index or sidecar have fields that aren’t yet threaded (e.g. `utu`, `teaching_mode` come from sidecar and theta index when built from sidecar).
 
+## UTU band enforcement (P2-17)
+
+When `policy.enforceUtuTargets` is true and `policy.utuTargets` is set, theta excludes lessons whose UTU band does not match any target from scheduling. This prevents wrong-age content delivery.
+
+- **Override:** Add the lesson ID to `approved-catalog.json` → `utuBandOverrides`: `{ "lesson-id": { "at": "2026-03-13T00:00:00.000Z", "reason": "optional" } }`. Lessons in `utuBandOverrides` remain eligible despite band mismatch.
+- **Helper:** `lessonPassesUtuTargets(lesson, policy, opts)` in `evaluateLessonCompliance.js`; opts may include `utuBandOverrideLessonIds` (Set or Array).
+
 ## Types
 
 - `packages/types/index.d.ts`: `GovernancePolicy`, `ComplianceResult`, `CohortCoverageReport`. Sidecar type includes `utu`, `teaching_mode` for compliance.

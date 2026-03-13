@@ -252,6 +252,67 @@ describe('evaluateLessonCompliance', () => {
   });
 });
 
+// ── lessonPassesUtuTargets (P2-17 enforcement) ────────────────────────────────
+
+describe('lessonPassesUtuTargets', () => {
+  it('returns true when policy does not enforce', () => {
+    assert.ok(gov.lessonPassesUtuTargets(
+      { lessonId: 'L1', utu: { class: 'MAC-2', band: 3 } },
+      {}
+    ));
+    assert.ok(gov.lessonPassesUtuTargets(
+      { lessonId: 'L1', utu: { class: 'SCI-1', band: 1 } },
+      { utuTargets: [{ class: 'MAC-2', band: 3 }] }
+    ));
+  });
+
+  it('returns true when lesson UTU matches a target', () => {
+    assert.ok(gov.lessonPassesUtuTargets(
+      { lessonId: 'L1', utu: { class: 'MAC-2', band: 3, protocol: 2 } },
+      { enforceUtuTargets: true, utuTargets: [{ class: 'MAC-2', band: 3 }] }
+    ));
+    assert.ok(gov.lessonPassesUtuTargets(
+      { lessonId: 'L2', utu: { class: 'SCI-1', band: 1 } },
+      { enforceUtuTargets: true, utuTargets: [{ class: 'SCI-1', band: 1 }, { class: 'MAC-2', band: 4 }] }
+    ));
+  });
+
+  it('returns false when lesson UTU does not match and no override', () => {
+    assert.ok(!gov.lessonPassesUtuTargets(
+      { lessonId: 'L1', utu: { class: 'MAC-2', band: 4 } },
+      { enforceUtuTargets: true, utuTargets: [{ class: 'MAC-2', band: 3 }] }
+    ));
+    assert.ok(!gov.lessonPassesUtuTargets(
+      { lessonId: 'L2', utu: { class: 'SCI-1', band: 1 } },
+      { enforceUtuTargets: true, utuTargets: [{ class: 'MAC-2', band: 3 }] }
+    ));
+  });
+
+  it('returns true when lesson is in utuBandOverrideLessonIds', () => {
+    assert.ok(gov.lessonPassesUtuTargets(
+      { lessonId: 'out-of-band-lesson', utu: { class: 'MAC-2', band: 5 } },
+      { enforceUtuTargets: true, utuTargets: [{ class: 'MAC-2', band: 3 }] },
+      { utuBandOverrideLessonIds: ['out-of-band-lesson'] }
+    ));
+    assert.ok(gov.lessonPassesUtuTargets(
+      { lessonId: 'L1', utu: {} },
+      { enforceUtuTargets: true, utuTargets: [{ class: 'MAC-2', band: 3 }] },
+      { utuBandOverrideLessonIds: new Set(['L1']) }
+    ));
+  });
+
+  it('returns false when lesson has no UTU and enforceUtuTargets', () => {
+    assert.ok(!gov.lessonPassesUtuTargets(
+      { lessonId: 'L1' },
+      { enforceUtuTargets: true, utuTargets: [{ class: 'MAC-2', band: 3 }] }
+    ));
+    assert.ok(!gov.lessonPassesUtuTargets(
+      { lessonId: 'L2', utu: {} },
+      { enforceUtuTargets: true, utuTargets: [{ class: 'MAC-2', band: 3 }] }
+    ));
+  });
+});
+
 // ── aggregateCohortCoverage ──────────────────────────────────────────────────
 
 describe('aggregateCohortCoverage', () => {
