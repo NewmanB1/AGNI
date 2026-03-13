@@ -37,7 +37,15 @@ To connect to the hub, set the Hub URL in Settings, or pass `?hub=http://localho
 | `#/author/:slug/edit` | Edit lesson (simplified) |
 | `#/hub`, `#/groups`, etc. | Stub placeholders |
 
+## Lesson Editor (R7)
+
+The Author page includes a form-based lesson editor:
+
+- **New lesson:** `#/author/new` — Create a lesson from scratch (meta, steps, ontology).
+- **Edit lesson:** `#/author/:slug/edit` — Load, edit, and save an existing lesson.
+
+Steps support: instruction, quiz, hardware_trigger, completion. Use **Validate** to check against the OLS schema, **Preview** to build IR, and **Save** to write YAML to the hub's yamlDir (with optional compile-on-save).
+
 ## Notes
 
-- Lesson authoring is simplified; features will be added incrementally.
 - Hash-based routing (`#/path`) works with static file serving.

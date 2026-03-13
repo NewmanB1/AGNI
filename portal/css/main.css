@@ -326,3 +326,17 @@ main {
 label.block { display: block; margin: 1rem 0 0.5rem; }
 .wizard select { max-width: 400px; }
 .success-msg { color: var(--success); margin-top: 1rem; }
+
+/* Lesson editor (R7) */
+#lesson-form section { margin-bottom: 1.5rem; }
+#lesson-form section h2 { margin-bottom: 1rem; font-size: 1.2rem; }
+#lesson-form section > div { margin-bottom: 1rem; }
+#lesson-form label { display: block; margin-bottom: 0.3rem; font-size: 0.9rem; opacity: 0.9; }
+.step-card { margin-bottom: 1rem; }
+.step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.step-actions { display: flex; gap: 0.5rem; }
+.step-actions .btn { padding: 0.3rem 0.6rem; font-size: 0.85rem; }
+.quiz-opt-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; }
+.quiz-opt-row .quiz-option { flex: 1; }
+.step-extra { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+.editor-actions { display: flex; gap: 1rem; margin: 1.5rem 0; align-items: center; flex-wrap: wrap; }

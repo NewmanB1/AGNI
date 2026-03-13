@@ -246,10 +246,17 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | R4 | Day 86-90: Record video "How to Fork and Translate" | **Open** (optional) |
 | R5 | Day 96-100: Research TipTap for WYSIWYG | **Open** |
 | R6 | Day 96-100: Finalize v1.0 Spec | **Open** |
-| R7 | Future: The Editor (drag-and-drop GUI) | **Open** |
+| R7 | Future: The Editor (drag-and-drop GUI) | **Done** — form-based editor in vanilla portal (meta, steps, ontology; Validate/Preview/Save; step reorder) |
 | R8 | Future: Plugins for Moodle, Kolibri, Canvas | **Open** |
 | R9 | Future: The Mesh (graph_weights sync via LoRa) | **Done** — design + impl ([playbooks/mesh-lora.md](playbooks/mesh-lora.md)); UDP sim; run `node hub-tools/mesh.js` or `sync.js --transport=lora` |
 | R10 | Future: Reference implementation refactor | **Done** — schema-based, pure pipelines, documented boundaries; see REFERENCE-IMPLEMENTATION-VISION.md §4.1–4.2 |
+
+**R7 Editor limitations (future improvements):**
+
+- No gate editor (gate is optional; add later if needed)
+- No `fill_blank` / `matching` / `ordering` step types (extensible)
+- No live HTML/Markdown preview pane (Preview only reports success)
+- Move up/down buttons for step reorder; no native drag-and-drop
 
 ---
 
@@ -320,7 +327,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | **P1 (High)** | 0 | All Done (forwardSub, addVec, sparse, yaml-safe 2-5) |
 | **P2 (Medium)** | 6 | LEN-001 #2, #4; P2-17; svg-stage 3-3, 3-10, 3-11, 3-14 |
 | **P3 (Low)** | 12+ | LEN-001 #5, #8, #10; svg-stage 3-1; E2.1–E2.3; audit items |
-| **Roadmap / Launch** | 13+ | ROADMAP (R10 Done), YEAR2-PREP (Y9 Done), LAUNCH-AND-COMMUNITY unchecked |
+| **Roadmap / Launch** | 12+ | ROADMAP (R7, R10 Done), YEAR2-PREP (Y9 Done), LAUNCH-AND-COMMUNITY unchecked |
 | **TypeScript** | ~30 | CHECK-JS-FINISH-PLAN per-file fixes |
 
 ---
