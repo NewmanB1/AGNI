@@ -316,10 +316,10 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 
 | Priority | Count | Examples |
 |----------|-------|----------|
-| **P0 (Critical)** | 3 | Math randn crash, cholesky NaN, federation symmetry |
-| **P1 (High)** | 5 | Math forwardSub, addVec string concat, sparse NaN, yaml-safe JSON_SCHEMA |
-| **P2 (Medium)** | 8 | Phase 2 vulns (P2-17–21, 23), svg-stage RAF/tick, math P2 bugs |
-| **P3 (Low)** | 15+ | Math P3 bugs, C2/D2/E2 audit items, svg-stage low-pri |
+| **P0 (Critical)** | 0 | All Done (randn, cholesky NaN, federation symmetry) |
+| **P1 (High)** | 0 | All Done (forwardSub, addVec, sparse, yaml-safe 2-5) |
+| **P2 (Medium)** | 7 | LEN-001 #2, #4; P2-17; svg-stage 3-2, 3-3, 3-10, 3-11, 3-14 |
+| **P3 (Low)** | 12+ | LEN-001 #5, #8, #10; svg-stage 3-1; E2.1–E2.3; audit items |
 | **Roadmap / Launch** | 15+ | ROADMAP, YEAR2-PREP, LAUNCH-AND-COMMUNITY unchecked |
 | **TypeScript** | ~30 | CHECK-JS-FINISH-PLAN per-file fixes |
 
