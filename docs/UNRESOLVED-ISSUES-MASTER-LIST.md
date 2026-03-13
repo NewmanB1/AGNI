@@ -104,7 +104,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | 15 | dot/addVec/scaleVec NaN for sparse | P1 | **Open** |
 | 16 | scaleVec/matVec no array type check | P2 | **Open** |
 | 17 | invertSPD diagonal not symmetrized | P3 | **Open** |
-| 18 | randn can return Infinity for tiny u | P3 | **Open** |
+| 18 | randn can return Infinity for tiny u | P3 | Done |
 
 ---
 

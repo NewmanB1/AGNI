@@ -576,8 +576,9 @@ function _randnClearCache() {
   _randnCache = null;
 }
 
-/** Minimum value for Box-Muller inputs. Rejects subnormals that would produce Infinity via log/sqrt. */
-const RANDN_MIN = 1e-300;
+/** Minimum value for Box-Muller inputs. Rejects u/v below this so sqrt(-2*ln(u)) stays finite.
+ *  Using 1e-15 (not 1e-300) guarantees r <= ~8.3, preventing Infinity for tiny u (LEN-18). */
+const RANDN_MIN = 1e-15;
 
 /**
  * Gaussian random variable (Box–Muller). Caches second sample to avoid discarding entropy.
@@ -602,7 +603,7 @@ function randn() {
   if (_randnCache !== null) {
     const out = _randnCache;
     _randnCache = null;
-    return out;
+    return isFinite(out) ? out : 0; /* LEN-18: clamp non-finite (should not occur) */
   }
   for (let retries = 0; retries < 8; retries++) {
     u = Math.random();
@@ -624,7 +625,7 @@ function randn() {
       continue;
     }
     _randnCache = sinVal;
-    return cosVal;
+    return isFinite(cosVal) ? cosVal : 0; /* LEN-18: clamp (should not occur) */
   }
   _randnCache = null; /* clear on throw path for consistent post-call state */
   throw new Error('[MATH] randn: PRNG returned near-zero repeatedly — broken runtime');

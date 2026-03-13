@@ -1862,6 +1862,26 @@ describe('MATH-2: randn produces valid N(0,1) samples', () => {
   });
 });
 
+describe('MATH-2b: LEN-18 randn never returns Infinity for tiny u', () => {
+  const math = require('@agni/engine/math');
+
+  it('rejects tiny u and never returns Infinity', () => {
+    math._randnClearCache();
+    const seq = [1e-200, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5];
+    let idx = 0;
+    const origRandom = Math.random;
+    Math.random = function () { return seq[idx++ % seq.length] || 0.5; };
+    try {
+      for (let i = 0; i < 100; i++) {
+        const v = math.randn();
+        assert.ok(isFinite(v), 'randn must never return Infinity or NaN (LEN-18), got ' + v);
+      }
+    } finally {
+      Math.random = origRandom;
+    }
+  });
+});
+
 describe('MATH-3: randn retries on PRNG zero (does not corrupt Thompson sampling)', () => {
   const math = require('@agni/engine/math');
 
