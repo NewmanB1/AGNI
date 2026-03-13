@@ -101,8 +101,8 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | 12 | scaleMat O(n²) sparse check in updateBandit hot path | P2 | Done |
 | 13 | Symmetry tolerance 1e-12 too tight post-federation | P0 | Done |
 | 14 | addVec/addMat `+` concatenates strings | P1 | Done |
-| 15 | dot/addVec/scaleVec NaN for sparse | P1 | **Open** |
-| 16 | scaleVec/matVec no array type check | P2 | **Open** |
+| 15 | dot/addVec/scaleVec NaN for sparse | P1 | Done |
+| 16 | scaleVec/matVec no array type check | P2 | Done |
 | 17 | invertSPD diagonal not symmetrized | P3 | Done |
 | 18 | randn can return Infinity for tiny u | P3 | Done |
 
@@ -115,7 +115,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | 1 | Shim export fragility | Low | Done |
 | 2-1 | yaml-safe: str.length counts UTF-16, not bytes | High | Done |
 | 2-2–4 | yaml-safe: Anchor/alias regex bypasses | High | Done |
-| 2-5 | yaml-safe: JSON_SCHEMA allows Date, binary, omap | Medium | **Open** |
+| 2-5 | yaml-safe: JSON_SCHEMA allows Date, binary, omap | Medium | Done |
 | 2-8 | yaml-safe: Prototype pollution | High | Done |
 | 2-9 | yaml-safe: Stack trace leakage | Low | Done |
 | 2-10 | yaml-safe: Regex DoS on pathological strings | Medium | Done |

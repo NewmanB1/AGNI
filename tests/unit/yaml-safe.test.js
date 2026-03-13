@@ -49,6 +49,23 @@ describe('safeYamlLoad / YAML security', function () {
     );
   });
 
+  it('rejects !!timestamp and !!binary (JSON_SCHEMA unknown tag)', function () {
+    assert.throws(
+      function () { safeYamlLoad('d: !!timestamp 2023-01-15'); },
+      /parse failed|unknown tag/
+    );
+    assert.throws(
+      function () { safeYamlLoad('data: !!binary SGVsbG8='); },
+      /parse failed|unknown tag/
+    );
+  });
+
+  it('LEN 2-5: JSON_SCHEMA keeps date-like values as strings (no Date, binary, omap)', function () {
+    var r = safeYamlLoad('a: 1\nd: 2023-01-15');
+    assert.strictEqual(typeof r.d, 'string', 'date-like stays string');
+    assert.strictEqual(r.d, '2023-01-15');
+  });
+
   it('rejects key explosion in steps (P0 #4)', function () {
     const steps = {};
     for (let i = 0; i < DEFAULT_MAX_STEPS + 10; i++) {

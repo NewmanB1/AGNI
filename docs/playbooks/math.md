@@ -13,6 +13,7 @@ Use this when changing `packages/agni-engine/math.js` — pure linear algebra he
 | Convention | Detail |
 |------------|--------|
 | **dot vs dotInner** | `dot()` is the public API and validates inputs. `dotInner()` is internal and skips validation — use it only when the caller has already validated (e.g. matVec). Avoid double-validation in hot paths. |
+| **Sparse vectors** | dot, addVec, scaleVec, outer require dense vectors (no holes). Sparse arrays fail validation and throw [MATH] (LEN-001 #15). Consistent with scaleMat (AGNI_MATH_STRICT). |
 | **Matrix row validation** | Check `!A[i] || !Array.isArray(A[i])` before accessing `.length` (avoids TypeError on null/non-array). Then check `A[i].length !== cols` for jagged matrices. Use separate error messages: "row X must be array" vs "jagged matrix at row X". |
 | **Purity** | All functions are pure except `randn()` (uses module-level `_randnCache` for Box–Muller two-sample efficiency). No other shared mutable state. |
 | **In-place** | Do not add in-place variants. Callers may pass aliased arrays; implementations must never mutate inputs. |

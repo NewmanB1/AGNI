@@ -58,7 +58,7 @@ describe('dot', () => {
     assert.throws(() => math.dot(undefined, [1, 2]), /null or undefined/);
   });
 
-  it('throws for sparse or non-finite vector', () => {
+  it('LEN-001 #15: throws for sparse vector (consistent with addVec/scaleVec/outer)', () => {
     const sparse = [1, , 3]; // eslint-disable-line no-sparse-arrays -- intentional
     assert.throws(() => math.dot(sparse, [1, 2, 3]), /non-finite/);
     assert.throws(() => math.dot([1, 2, 3], sparse), /non-finite/);
@@ -88,7 +88,7 @@ describe('addVec', () => {
     assert.throws(() => math.addVec([1, 2], undefined), /null or undefined/);
   });
 
-  it('throws for sparse or non-finite vector', () => {
+  it('LEN-001 #15: throws for sparse vector (consistent with dot/scaleVec/outer)', () => {
     const sparse = [1, , 3]; // eslint-disable-line no-sparse-arrays -- intentional
     assert.throws(() => math.addVec(sparse, [1, 2, 3]), /addVec/);
     assert.throws(() => math.addVec([1, 2, 3], sparse), /addVec/);
@@ -122,8 +122,13 @@ describe('scaleVec', () => {
     assert.throws(() => math.scaleVec(null, 2), /null or undefined/);
   });
 
-  it('throws for non-array vector', () => {
+  it('LEN-001 #16: throws [MATH] for non-array vector', () => {
     assert.throws(() => math.scaleVec({ length: 2 }, 2), /scaleVec.*array/);
+  });
+
+  it('LEN-001 #15: throws for sparse vector (consistent with dot/addVec/outer)', () => {
+    const sparse = [1, , 3]; // eslint-disable-line no-sparse-arrays -- intentional
+    assert.throws(() => math.scaleVec(sparse, 2), /scaleVec/);
   });
 
   it('throws for undefined or NaN scalar', () => {
@@ -150,7 +155,7 @@ describe('outer', () => {
     assert.throws(() => math.outer([1, 2], undefined), /null or undefined/);
   });
 
-  it('throws for sparse or non-finite vector', () => {
+  it('LEN-001 #15: throws for sparse vector (consistent with dot/addVec/scaleVec)', () => {
     const sparse = [1, , 3]; // eslint-disable-line no-sparse-arrays -- hole at index 1
     assert.throws(() => math.outer(sparse, [1, 2, 3]), /non-finite/);
     assert.throws(() => math.outer([1, 2], sparse), /non-finite/);

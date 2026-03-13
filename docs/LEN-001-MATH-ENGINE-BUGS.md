@@ -39,7 +39,7 @@ Address 18 identified bugs, logic errors, edge cases, and unsafe assumptions in 
 |----|-----|-----|------------|
 | 9 | forwardSub/backSub don't validate L | Add L null/square check; [MATH] prefix on error | Done — Array.isArray(L), non-empty; forwardSub(null,b) throws [MATH] |
 | 14 | addVec/addMat `+` concatenates strings | Coerce to number or throw on non-numeric | Done — Number() coercion; addVec(["1"],[2]) returns [3] |
-| 15 | dot/addVec/scaleVec NaN for sparse; inconsistent with outer/scaleMat | Sparse checks or document; prefer debug-only for hot path | Sparse input fails fast or documented |
+| 15 | dot/addVec/scaleVec NaN for sparse; inconsistent with outer/scaleMat | Sparse checks or document; prefer debug-only for hot path | Done — all fail fast; JSDoc + DESIGN NOTES document contract |
 
 ### P2 — Medium (performance, robustness)
 
@@ -48,7 +48,7 @@ Address 18 identified bugs, logic errors, edge cases, and unsafe assumptions in 
 | 2 | randn discards sin sample; 2× PRNG/transcendentals per sample | Document (Option A) or makeRandnStream (Option B) | Documented or stream test |
 | 4 | Symmetry check O(n²) on every invertSPD | Move to load/migrations; or AGNI_MATH_STRICT gate | — |
 | 12 | scaleMat O(n²) sparse check in updateBandit hot path | Move to load/migrations | — |
-| 16 | scaleVec/matVec no array type check | Array.isArray guard; [MATH] error | — |
+| 16 | scaleVec/matVec no array type check | Array.isArray guard; [MATH] error | Done — already present |
 
 ### P3 — Low (micro-opt, maintainability)
 

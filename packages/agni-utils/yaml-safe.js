@@ -43,9 +43,25 @@ function depthOf(obj, depth, maxDepth, maxKeys) {
   return false;
 }
 
+/** Reject Date, Buffer, Map, Set — JSON_SCHEMA excludes them, but defense-in-depth (LEN 2-5). */
+function hasUnsafeTypes(obj, depth, maxDepth) {
+  if (depth > maxDepth) return false;
+  if (obj === null) return false;
+  if (typeof obj !== 'object') return false;
+  if (Object.prototype.toString.call(obj) === '[object Date]') return true;
+  if (typeof Buffer !== 'undefined' && Buffer.isBuffer && Buffer.isBuffer(obj)) return true;
+  if (obj instanceof Map || obj instanceof Set) return true;
+  var keys = Object.keys(obj);
+  for (var i = 0; i < keys.length; i++) {
+    if (hasUnsafeTypes(obj[keys[i]], depth + 1, maxDepth)) return true;
+  }
+  return false;
+}
+
 /**
- * Safe YAML load: JSON_SCHEMA (no custom tags/functions), max size, no anchors/aliases,
- * max depth (DoS), max keys (explosion).
+ * Safe YAML load: JSON_SCHEMA (no custom tags — rejects !!timestamp, !!binary, !!omap),
+ * max size, no anchors/aliases, max depth (DoS), max keys (explosion).
+ * Post-parse: rejects Date, Buffer, Map, Set (LEN 2-5 defense-in-depth).
  * @param {string} str - Raw YAML string
  * @param {{ maxBytes?: number, maxDepth?: number, maxKeys?: number, maxSteps?: number }} [opts]
  * @returns {object} Parsed object
@@ -75,6 +91,9 @@ function safeYamlLoad(str, opts) {
   }
   if (parsed && hasUnsafeKeys(parsed, 0, maxDepth)) {
     throw new Error('YAML contains disallowed keys (__proto__, constructor, prototype)');
+  }
+  if (parsed && hasUnsafeTypes(parsed, 0, maxDepth)) {
+    throw new Error('YAML contains disallowed types (Date, Buffer, Map, Set not allowed)');
   }
   if (depthOf(parsed, 0, maxDepth, maxKeys)) {
     throw new Error('YAML nesting or key count exceeds safe limits (DoS risk)');

@@ -15,6 +15,9 @@
 // DESIGN NOTES (contributors):
 // - Internal vs public: dot() is the public API; dotInner() is internal and
 //   skips validation. Use dotInner only after inputs are validated (e.g. matVec).
+// - Sparse vectors: dot, addVec, scaleVec, outer all validate elements; holes
+//   (undefined) fail typeof/number checks and throw [MATH]. Consistent with
+//   scaleMat (AGNI_MATH_STRICT). Vectors must be dense (LEN-001 #15).
 // - Matrix row validation: use !A[i] || !Array.isArray(A[i]) before .length;
 //   then A[i].length !== cols for jagged. Separate errors: "row X must be array"
 //   vs "jagged matrix at row X".
@@ -96,8 +99,9 @@ function dotInner(a, b) {
 
 /**
  * Dot product of two vectors.
- * @param {number[]} a
- * @param {number[]} b
+ * Vectors must be dense (no holes); sparse arrays throw [MATH] (LEN-001 #15).
+ * @param {number[]} a  Dense vector.
+ * @param {number[]} b  Dense vector.
  * @returns {number}
  */
 function dot(a, b) {
@@ -119,8 +123,9 @@ function dot(a, b) {
 
 /**
  * Element-wise vector addition.
- * @param {number[]} a
- * @param {number[]} b
+ * Vectors must be dense (no holes); sparse arrays throw [MATH] (LEN-001 #15).
+ * @param {number[]} a  Dense vector.
+ * @param {number[]} b  Dense vector.
  * @returns {number[]}
  */
 function addVec(a, b) {
@@ -146,8 +151,9 @@ function addVec(a, b) {
 
 /**
  * Scale vector by scalar.
- * @param {number[]} v
- * @param {number}   s
+ * Vector must be dense (no holes); sparse arrays throw [MATH] (LEN-001 #15).
+ * @param {number[]} v  Dense vector.
+ * @param {number}   s  Scalar.
  * @returns {number[]}
  */
 function scaleVec(v, s) {

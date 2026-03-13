@@ -26,7 +26,7 @@ module.exports = hub.hubTransform || hub;
 |---|-------|------|-----|
 | 1 | `str.length` counts UTF-16 code units, not bytes | Multi-byte UTF-8 can exceed memory limits | Use `Buffer.byteLength(str, 'utf8')` |
 | 2–4 | Anchor/alias regex bypasses in edge cases | Billion-laughs DoS | Broader patterns or scan for `&` / `*` before regex |
-| 5 | `JSON_SCHEMA` allows Date, binary, omap | Unexpected types | Consider `FAILSAFE_SCHEMA` + explicit validation |
+| 5 | `JSON_SCHEMA` allows Date, binary, omap | Unexpected types | **Done** — JSON_SCHEMA rejects !!timestamp/!!binary; post-parse hasUnsafeTypes rejects Date/Buffer/Map/Set |
 | 6 | Recursion depth limit | — | **Implemented** in `depthOf()` |
 | 7 | Key count limit | — | **Implemented** in `depthOf()` per object |
 | 8 | Prototype pollution (`__proto__`, `constructor`) | High | Reject keys named `__proto__` or `constructor` post-parse |
@@ -70,6 +70,7 @@ module.exports = hub.hubTransform || hub;
 | Prototype pollution (__proto__, constructor, prototype) | **Done** — hasUnsafeKeys() rejects |
 | Anchor/alias regex DoS short-circuit | **Done** — indexOf before test() |
 | try/catch around yaml.load | **Done** — sanitized error message |
+| Date/binary/omap restriction (yaml-safe #5) | **Done** — JSON_SCHEMA rejects tags; hasUnsafeTypes post-parse |
 | Layer ID sanitization (svg-stage) | **Done** — replace(/[^\w-]/g, '_') |
 | innerHTML → removeChild (svg-stage) | **Done** — destroy + init |
 | unsub type check, subscribeToSensor guard | **Done** |
