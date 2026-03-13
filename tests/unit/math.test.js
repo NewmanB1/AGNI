@@ -199,7 +199,13 @@ describe('scaleMat', () => {
 
   it('throws for sparse/jagged or non-finite matrix', () => {
     const sparseRow = [1, , 3]; // eslint-disable-line no-sparse-arrays -- intentional
-    assert.throws(() => math.scaleMat([sparseRow, [4, 5, 6]], 2), /non-finite/);
+    const prev = process.env.AGNI_MATH_STRICT;
+    process.env.AGNI_MATH_STRICT = '1';
+    try {
+      assert.throws(() => math.scaleMat([sparseRow, [4, 5, 6]], 2), /non-finite/);
+    } finally {
+      process.env.AGNI_MATH_STRICT = prev;
+    }
     assert.throws(() => math.scaleMat([[1, 2], [3, 4, 5]], 2), /jagged/);
   });
 

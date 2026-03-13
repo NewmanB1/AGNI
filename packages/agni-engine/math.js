@@ -224,6 +224,10 @@ function addMat(A, B) {
 
 /**
  * Scale entire matrix by scalar.
+ * Bandit matrices from identity/outer/addMat are dense by construction; loaded state
+ * should be validated at load time. Element validation is gated by AGNI_MATH_STRICT
+ * to avoid O(n²) overhead in updateBandit / federation hot path (LEN-001 bug 12).
+ *
  * @param {number[][]} A
  * @param {number}     s
  * @returns {number[][]}
@@ -233,22 +237,24 @@ function scaleMat(A, s) {
   if (typeof s !== 'number' || !isFinite(s)) {
     throw new Error('[MATH] scaleMat: scalar must be finite number');
   }
+  var strict = process.env.AGNI_MATH_STRICT === '1' || process.env.AGNI_MATH_STRICT === 'true';
   if (A.length > 0) {
-    /* Validate A[0] before A[0].length — otherwise null/non-array yields native TypeError. */
     if (!A[0] || !Array.isArray(A[0])) {
       throw new Error('[MATH] scaleMat: first row must be array');
     }
-    const cols = A[0].length;
-    for (let i = 0; i < A.length; i++) {
+    var cols = A[0].length;
+    for (var i = 0; i < A.length; i++) {
       if (!A[i] || !Array.isArray(A[i])) {
         throw new Error('[MATH] scaleMat: row ' + i + ' must be array');
       }
       if (A[i].length !== cols) {
         throw new Error('[MATH] scaleMat: jagged matrix at row ' + i);
       }
-      for (let j = 0; j < cols; j++) {
-        if (typeof A[i][j] !== 'number' || !isFinite(A[i][j])) {
-          throw new Error('[MATH] scaleMat: non-finite element at row ' + i + ', col ' + j);
+      if (strict) {
+        for (var j = 0; j < cols; j++) {
+          if (typeof A[i][j] !== 'number' || !isFinite(A[i][j])) {
+            throw new Error('[MATH] scaleMat: non-finite element at row ' + i + ', col ' + j);
+          }
         }
       }
     }
