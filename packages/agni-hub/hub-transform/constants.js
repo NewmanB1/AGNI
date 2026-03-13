@@ -4,32 +4,29 @@
  * hub-transform/constants.js
  * Shared constants for lesson serving: factory whitelists, KaTeX files, MIME types.
  * Used by serve-assets, compile, and CI verification (check-factory-order.js).
+ *
+ * ALLOWED_FACTORY_FILES is derived from @agni/utils/runtimeManifest.FACTORY_LOAD_ORDER
+ * plus bootstrap/extra files the hub serves. Add new on-demand factories to runtimeManifest
+ * only; this whitelist updates automatically.
  */
 
-// Whitelist prevents directory traversal. Only files in this set can be served from /factories/.
-const ALLOWED_FACTORY_FILES = new Set([
+const { FACTORY_LOAD_ORDER } = require('@agni/utils/runtimeManifest');
+
+// Bootstrap and extra files the hub serves (not in FACTORY_LOAD_ORDER).
+// polyfills, binary-utils, shared-runtime: loaded before on-demand factories.
+// factory-loader, navigator, edge-theta: loaded by shell/player separately.
+const HUB_EXTRA_FACTORY_FILES = [
   'polyfills.js',
   'binary-utils.js',
   'shared-runtime.js',
-  'a11y.js',
-  'narration.js',
-  'gate-renderer.js',
-  'integrity.js',
-  'checkpoint.js',
-  'frustration.js',
-  'completion.js',
-  'sensor-bridge.js',
-  'svg-stage.js',
-  'svg-helpers.js',
-  'svg-factories.js',
-  'svg-factories-dynamic.js',
-  'svg-factories-geometry.js',
-  'svg-registry.js',
-  'table-renderer.js',
   'factory-loader.js',
   'navigator.js',
   'edge-theta.js'
-]);
+];
+
+// Whitelist prevents directory traversal. Only files in this set can be served from /factories/.
+// Derived from canonical FACTORY_LOAD_ORDER + hub extras.
+const ALLOWED_FACTORY_FILES = new Set([].concat(HUB_EXTRA_FACTORY_FILES, FACTORY_LOAD_ORDER));
 
 const ALLOWED_KATEX_FILES = new Set([
   'katex-core.css',

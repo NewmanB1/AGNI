@@ -1,6 +1,6 @@
 # AGNI Configuration Reference
 
-Single reference for hub configuration: environment variables, defaults, bootstrap order, and `hub-config.json`. The canonical implementation lives in `packages/agni-utils/env-config.js` and `packages/agni-utils/hub-config.js`.
+Single reference for hub configuration: environment variables, defaults, bootstrap order, and `hub-config.json`. The canonical implementation lives in `packages/agni-utils/env-config.js` and `packages/agni-utils/hub-config.js`. For the split between env-config and env-validate (and any range discrepancies), see `docs/ENV-VALIDATION-SPLIT.md`.
 
 ---
 

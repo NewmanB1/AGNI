@@ -24,7 +24,7 @@ Use this when changing how lessons are compiled from YAML to IR or to HTML/nativ
 ## Do not
 
 - Put format-specific logic (e.g. HTML script tags, signing) inside `buildLessonIR.js`. IR is format-agnostic.
-- Change `FACTORY_LOAD_ORDER` or add runtime files without updating `packages/agni-utils/runtimeManifest.js`, `feature-inference.js`, and hub whitelist (`ALLOWED_FACTORY_FILES` in `packages/agni-hub/hub-transform.js`).
+- Change `FACTORY_LOAD_ORDER` or add runtime files without updating `packages/agni-utils/runtimeManifest.js` and `feature-inference.js`. Hub `ALLOWED_FACTORY_FILES` is derived from `FACTORY_LOAD_ORDER` automatically.
 
 ## Types
 
