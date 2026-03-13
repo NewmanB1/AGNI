@@ -54,7 +54,7 @@ module.exports = hub.hubTransform || hub;
 | 11 | PNG export: tainted canvas → silent `''` | Low | Detect taint; return explicit error |
 | 12 | sensorValue Map mid-read race | Low | Rare; acceptable |
 | 13 | destroy() double-call | Low | Add `if (_destroyed) return` at start |
-| 14 | _layers map never cleared | Low | clearLayer clears children; dynamic names accumulate |
+| 14 | _layers map never cleared | Low | **Done** — destroy() clears _layers = {} (P2-23) |
 | 15 | RAF race: quick add/remove tick | Low | Edge case |
 | 16 | Container removed from DOM, RAF continues | Low | Document; optional orphan check |
 
@@ -76,6 +76,7 @@ module.exports = hub.hubTransform || hub;
 | unsub type check, subscribeToSensor guard | **Done** |
 | destroy() double-call guard | **Done** — if (_destroyed) return |
 | RAF tick handlers after destroy (3-2) | **Done** — _rafLoop checks _destroyed at top and before each callback (no automated test; code guard in svg-stage.js) |
+| _layers map cleared on destroy (3-14) | **Done** — destroy() sets _layers = {} to release DOM references |
 | lastSensorValues.get guard | **Done** — typeof shared.lastSensorValues.get === 'function' |
 | Safer shim (hub-transform) | **Done** — hub.hubTransform \|\| hub |
 
