@@ -359,6 +359,11 @@ describe('cholesky', () => {
     assert.throws(() => math.cholesky([[1, NaN], [NaN, 1]]), /non-numeric/);
   });
 
+  it('LEN-001 #3: throws non-numeric (not SPD) for Infinity in input', () => {
+    assert.throws(() => math.cholesky([[Infinity, 1], [1, 1]]), /non-numeric diagonal/);
+    assert.throws(() => math.cholesky([[1, Infinity], [Infinity, 1]]), /non-numeric entry/);
+  });
+
   it('throws for empty matrix', () => {
     assert.throws(() => math.cholesky([]), /cholesky.*empty matrix/);
   });

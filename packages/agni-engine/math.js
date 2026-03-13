@@ -391,12 +391,19 @@ function cholesky(A) {
       }
       if (i === j) {
         diag = A[i][i] - sum;
-        if (diag < CHOLESKY_EPSILON || !isFinite(diag)) {
-          throw new Error('[MATH] cholesky: matrix is not SPD (Cholesky failed at i=' + i + ')');
+        if (typeof diag !== 'number' || !isFinite(diag)) {
+          throw new Error('[MATH] cholesky: non-numeric diagonal at [' + i + '][' + i + '] (Cholesky produced NaN/Inf)');
+        }
+        if (diag < CHOLESKY_EPSILON) {
+          throw new Error('[MATH] cholesky: diagonal at [' + i + '][' + i + '] = ' + diag + ' (matrix is not SPD)');
         }
         L[i][j] = Math.sqrt(diag);
       } else {
-        L[i][j] = (A[i][j] - sum) / L[j][j];
+        var offDiag = (A[i][j] - sum) / L[j][j];
+        if (typeof offDiag !== 'number' || !isFinite(offDiag)) {
+          throw new Error('[MATH] cholesky: non-numeric entry at [' + i + '][' + j + '] (Cholesky produced NaN/Inf)');
+        }
+        L[i][j] = offDiag;
       }
     }
   }

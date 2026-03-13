@@ -89,7 +89,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 |----|-----|----------|--------|
 | 1 | randn() throws on PRNG failure → crash in selectBestLesson | P0 | Done |
 | 2 | randn discards sin sample; 2× PRNG/transcendentals per sample | P2 | **Open** |
-| 3 | cholesky `\|\| 0` masks NaN; misleading "not SPD" error | P0 | **Open** |
+| 3 | cholesky `\|\| 0` masks NaN; misleading "not SPD" error | P0 | Done |
 | 4 | Symmetry check O(n²) on every invertSPD | P2 | **Open** |
 | 5 | Cholesky square check separate pass | P3 | **Open** |
 | 6 | outer() reuses loop var i | P3 | **Open** |
