@@ -7,6 +7,7 @@ This playbook describes how TypeScript types stay aligned with JSON schemas (OLS
 ## 1. Current State
 
 - **Schemas:** `schemas/ols.schema.json`, `schemas/graph-weights.schema.json`, `schemas/governance-policy.schema.json`, `schemas/inferred-features.schema.json`, `schemas/lesson-sidecar.schema.json`, `schemas/lesson-ir.schema.json`
+- **Step spec validation:** OLS uses `oneOf` with type-specific schemas (stepInstruction, stepQuiz, stepHardwareTrigger, etc.) so Ajv enforces required fields per step type (e.g. quiz requires answer_options, correct_index).
 - **Generated types:** `packages/types/generated/` — TypeScript interfaces generated from schemas via `json-schema-to-typescript`
 - **Hand-written types:** `packages/types/index.d.ts` — `LessonOntology` (raw YAML input), LMS state, governance report types. Re-exports generated IR/sidecar types.
 - **Validation:** Compiler and author API use Ajv with schemas at runtime. Types are for compile-time safety.

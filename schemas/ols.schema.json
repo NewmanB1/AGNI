@@ -406,11 +406,19 @@
       }
     },
     "step": {
-      "type": "object",
-      "required": [
-        "id",
-        "type"
+      "oneOf": [
+        { "$ref": "#/definitions/stepInstruction" },
+        { "$ref": "#/definitions/stepHardwareTrigger" },
+        { "$ref": "#/definitions/stepQuiz" },
+        { "$ref": "#/definitions/stepFillBlank" },
+        { "$ref": "#/definitions/stepMatching" },
+        { "$ref": "#/definitions/stepOrdering" },
+        { "$ref": "#/definitions/stepCompletion" }
       ],
+      "description": "Step discriminated by type. Each step type has required fields and allowed properties enforced by its schema."
+    },
+    "stepCommonProps": {
+      "type": "object",
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -418,47 +426,17 @@
           "pattern": "^[a-z0-9_-]+$",
           "description": "Unique step identifier within this lesson. Used by θ for reordering and by forks for change tracking."
         },
-        "type": {
-          "type": "string",
-          "enum": [
-            "instruction",
-            "hardware_trigger",
-            "quiz",
-            "fill_blank",
-            "matching",
-            "ordering",
-            "completion"
-          ],
-          "description": "instruction: text/content; hardware_trigger: sensor gate; quiz: MCQ with answers; fill_blank: cloze with ___ placeholders; matching: pair left↔right items; ordering: arrange items in sequence; completion: lesson-complete screen."
-        },
-        "content": {
-          "type": "string"
-        },
-        "sensor": {
-          "type": "string"
-        },
-        "threshold": {
-          "type": "string"
-        },
-        "sensor_optional": {
-          "type": "boolean",
-          "description": "If true, when sensors are unavailable (e.g. desktop, permission denied), show a tap-to-continue fallback instead of waiting indefinitely."
-        },
+        "type": { "type": "string" },
+        "content": { "type": "string" },
+        "sensor": { "type": "string" },
+        "threshold": { "type": "string" },
+        "sensor_optional": { "type": "boolean" },
         "feedback": {
           "oneOf": [
-            {
-              "type": "string"
-            },
+            { "type": "string" },
             {
               "type": "object",
-              "properties": {
-                "correct": {
-                  "type": "string"
-                },
-                "incorrect": {
-                  "type": "string"
-                }
-              },
+              "properties": { "correct": { "type": "string" }, "incorrect": { "type": "string" } },
               "additionalProperties": false
             }
           ],
@@ -467,190 +445,182 @@
         "feedback_pattern": {
           "type": "string",
           "enum": ["vibration:short", "vibration:success_pattern"],
-          "description": "Optional haptic feedback pattern. Alternative to embedding in feedback string. Runtime prefers this when present."
+          "description": "Optional haptic feedback pattern. Alternative to embedding in feedback string."
         },
-        "answer_options": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "correct_index": {
-          "type": "integer"
-        },
+        "answer_options": { "type": "array", "items": { "type": "string" } },
+        "correct_index": { "type": "integer" },
         "blanks": {
           "type": "array",
-          "description": "For fill_blank steps: one entry per ___ placeholder in content. Each blank defines the correct answer and optional accepted alternatives.",
           "items": {
             "type": "object",
-            "required": [
-              "answer"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "answer": {
-                "type": "string",
-                "description": "Canonical correct answer."
-              },
-              "accept": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "Additional accepted spellings/variants (case-insensitive match at runtime)."
-              }
-            }
+            "properties": { "answer": { "type": "string" }, "accept": { "type": "array", "items": { "type": "string" } } }
           }
         },
         "pairs": {
           "type": "array",
-          "description": "For matching steps: each pair links a left term to a right term. The player shuffles the right column.",
           "items": {
             "type": "object",
-            "required": [
-              "left",
-              "right"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "left": {
-                "type": "string",
-                "description": "Left-column item (displayed in order)."
-              },
-              "right": {
-                "type": "string",
-                "description": "Right-column item (shuffled for the student)."
-              }
-            }
+            "properties": { "left": { "type": "string" }, "right": { "type": "string" } }
           }
         },
-        "items": {
-          "type": "array",
-          "description": "For ordering steps: list of items to arrange. The player shuffles them; the student drags them into the correct sequence.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "correct_order": {
-          "type": "array",
-          "description": "For ordering steps: zero-based indices defining the correct arrangement of 'items'. E.g. [0,1,2] means items are already in correct order.",
-          "items": {
-            "type": "integer",
-            "minimum": 0
-          }
-        },
+        "items": { "type": "array", "items": { "type": "string" } },
+        "correct_order": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
         "expected_duration": {
           "type": "string",
           "pattern": "^P(?!$)(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$",
-          "description": "How long this step should take for an on-pace learner (ISO 8601 duration). θ compares actual vs. expected to detect struggling or excelling."
+          "description": "How long this step should take for an on-pace learner (ISO 8601 duration)."
         },
-        "max_attempts": {
-          "type": "integer",
-          "minimum": 1,
-          "description": "Maximum attempts for quiz, fill_blank, matching, or ordering steps before marking as failed. Default varies by type."
-        },
-        "weight": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1,
-          "description": "Importance of this step to the lesson's learning objective (0.0–1.0). A core concept quiz might be 0.9; a calibration step might be 0.2."
-        },
-        "on_fail": {
+        "max_attempts": { "type": "integer", "minimum": 1 },
+        "weight": { "type": "number", "minimum": 0, "maximum": 1 },
+        "on_fail": { "type": "string" },
+        "on_success": { "type": "string" },
+        "audio_description": { "type": "string" },
+        "condition": { "type": "string" },
+        "next_if": { "type": "string" },
+        "svg_spec": { "$ref": "#/definitions/svgSpec" },
+        "spec": { "$ref": "#/definitions/svgSpec", "description": "Alias for svg_spec used by runtime." }
+      }
+    },
+    "svgSpec": {
+      "type": "object",
+      "description": "SVGFactory visual specification. Rendered by the player via svg-registry.js.",
+      "properties": {
+        "factory": {
           "type": "string",
-          "description": "Action when max_attempts is exhausted. Can be a redirect (e.g., 'redirect:step_id'), a hint, or 'skip'."
+          "enum": [
+            "venn", "barGraph", "pieChart", "numberLine", "balanceScale", "clockFace", "flowMap",
+            "polygon", "axis", "tree", "numberLineDynamic", "clockFaceDynamic", "timeGraph",
+            "arrowMap", "gauge", "polygonDynamic", "cartesianGrid", "unitCircle"
+          ]
         },
-        "on_success": {
-          "type": "string",
-          "description": "Action on successful completion. Can skip ahead (e.g., 'skip_to:step_id') for excelling learners."
+        "opts": { "type": "object", "maxProperties": 64 },
+        "description": { "type": "string" },
+        "compose": { "type": "boolean" },
+        "layers": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "properties": {
+              "factory": { "type": "string" },
+              "opts": { "type": "object", "maxProperties": 64 },
+              "name": { "type": "string" }
+            }
+          }
         },
-        "audio_description": {
-          "type": "string",
-          "description": "Author-provided narration text for this step. When present, the audio-first mode speaks this instead of extracting text from HTML content. Essential for SVG-heavy or visual steps where the rendered text alone is insufficient for blind or illiterate learners."
-        },
-        "condition": {
-          "type": "string",
-          "description": "Conditional expression for whether this step should be shown. Used for adaptive paths."
-        },
-        "next_if": {
-          "type": "string",
-          "description": "Conditional next step override. Format: 'condition -> step_id'."
-        },
-        "svg_spec": {
+        "w": { "type": "integer", "minimum": 1, "maximum": 4096 },
+        "h": { "type": "integer", "minimum": 1, "maximum": 4096 }
+      }
+    },
+    "stepInstruction": {
+      "allOf": [
+        { "$ref": "#/definitions/stepCommonProps" },
+        {
           "type": "object",
-          "description": "SVGFactory visual specification. Rendered by the player via svg-registry.js. Can be a single factory (factory + opts) or a compose layer (compose: true + layers[]).",
+          "required": ["id", "type"],
+          "properties": { "type": { "const": "instruction" } }
+        }
+      ]
+    },
+    "stepHardwareTrigger": {
+      "allOf": [
+        { "$ref": "#/definitions/stepCommonProps" },
+        {
+          "type": "object",
+          "required": ["id", "type", "threshold"],
           "properties": {
-            "factory": {
-              "type": "string",
-              "enum": [
-                "venn",
-                "barGraph",
-                "pieChart",
-                "numberLine",
-                "balanceScale",
-                "clockFace",
-                "flowMap",
-                "polygon",
-                "axis",
-                "tree",
-                "numberLineDynamic",
-                "clockFaceDynamic",
-                "timeGraph",
-                "arrowMap",
-                "gauge",
-                "polygonDynamic",
-                "cartesianGrid",
-                "unitCircle"
-              ],
-              "description": "Registered factory name: venn, barGraph, pieChart, numberLine, balanceScale, clockFace, flowMap, polygon, axis, tree, numberLineDynamic, clockFaceDynamic, timeGraph, arrowMap, gauge, polygonDynamic, cartesianGrid, unitCircle."
-            },
-            "opts": {
-              "type": "object",
-              "maxProperties": 64,
-              "description": "Factory-specific options. See svg-registry.js for valid keys per factory. Limited to 64 keys to prevent DoS."
-            },
-            "description": {
-              "type": "string",
-              "description": "Alt-text description of this visual for screen readers and auto-narration mode. Spoken aloud when the SVG is rendered."
-            },
-            "compose": {
-              "type": "boolean",
-              "description": "If true, layers[] is used instead of factory/opts."
-            },
-            "layers": {
+            "type": { "const": "hardware_trigger" },
+            "sensor": { "type": "string" },
+            "threshold": { "type": "string" },
+            "sensor_optional": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "stepQuiz": {
+      "allOf": [
+        { "$ref": "#/definitions/stepCommonProps" },
+        {
+          "type": "object",
+          "required": ["id", "type", "answer_options", "correct_index"],
+          "properties": {
+            "type": { "const": "quiz" },
+            "answer_options": { "type": "array", "items": { "type": "string" }, "minItems": 2 },
+            "correct_index": { "type": "integer", "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "stepFillBlank": {
+      "allOf": [
+        { "$ref": "#/definitions/stepCommonProps" },
+        {
+          "type": "object",
+          "required": ["id", "type", "blanks"],
+          "properties": {
+            "type": { "const": "fill_blank" },
+            "blanks": {
               "type": "array",
-              "maxItems": 32,
+              "minItems": 1,
               "items": {
                 "type": "object",
+                "required": ["answer"],
+                "additionalProperties": false,
                 "properties": {
-                  "factory": {
-                    "type": "string"
-                  },
-                  "opts": {
-                    "type": "object",
-                    "maxProperties": 64
-                  },
-                  "name": {
-                    "type": "string"
-                  }
+                  "answer": { "type": "string" },
+                  "accept": { "type": "array", "items": { "type": "string" } }
                 }
-              },
-              "description": "Array of factory layers when compose is true. Limited to 32 layers to prevent memory DoS."
-            },
-            "w": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 4096,
-              "description": "Viewport width override (shared across layers in compose mode)."
-            },
-            "h": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 4096,
-              "description": "Viewport height override."
+              }
             }
           }
         }
-      }
+      ]
+    },
+    "stepMatching": {
+      "allOf": [
+        { "$ref": "#/definitions/stepCommonProps" },
+        {
+          "type": "object",
+          "required": ["id", "type", "pairs"],
+          "properties": {
+            "type": { "const": "matching" },
+            "pairs": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "type": "object",
+                "required": ["left", "right"],
+                "additionalProperties": false,
+                "properties": { "left": { "type": "string" }, "right": { "type": "string" } }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "stepOrdering": {
+      "allOf": [
+        { "$ref": "#/definitions/stepCommonProps" },
+        {
+          "type": "object",
+          "required": ["id", "type", "items", "correct_order"],
+          "properties": {
+            "type": { "const": "ordering" },
+            "items": { "type": "array", "items": { "type": "string" }, "minItems": 2 },
+            "correct_order": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "minItems": 2 }
+          }
+        }
+      ]
+    },
+    "stepCompletion": {
+      "allOf": [
+        { "$ref": "#/definitions/stepCommonProps" },
+        {
+          "type": "object",
+          "required": ["id", "type"],
+          "properties": { "type": { "const": "completion" } }
+        }
+      ]
     }
   }
 }
