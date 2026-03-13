@@ -582,7 +582,7 @@ const RANDN_MIN = 1e-300;
 /**
  * Gaussian random variable (Box–Muller). Caches second sample to avoid discarding entropy.
  * Assumes Math.random() ∈ [0,1) per spec. Rejects u or v below RANDN_MIN (subnormals produce
- * log → Infinity → cached bad value).
+ * log → Infinity → cached bad value). Retries if cos/sin sample is non-finite (LEN-001 #18).
  *
  * WARNING — Test pollution: randn uses module-level _randnCache. If one test calls randn()
  * and consumes the cos sample, the sin sample remains in the cache and will be returned as
@@ -615,8 +615,16 @@ function randn() {
     }
     r = Math.sqrt(-2 * Math.log(u));
     theta = 2 * Math.PI * v;
-    _randnCache = r * Math.sin(theta);
-    return r * Math.cos(theta);
+    var cosVal = r * Math.cos(theta);
+    var sinVal = r * Math.sin(theta);
+    if (!isFinite(cosVal) || !isFinite(sinVal)) {
+      if (typeof console !== 'undefined' && console.error) {
+        console.error('[MATH] randn: non-finite sample (u=' + u + '), retry ' + (retries + 1) + '/8');
+      }
+      continue;
+    }
+    _randnCache = sinVal;
+    return cosVal;
   }
   _randnCache = null; /* clear on throw path for consistent post-call state */
   throw new Error('[MATH] randn: PRNG returned near-zero repeatedly — broken runtime');
