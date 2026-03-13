@@ -25,6 +25,18 @@
 
 'use strict';
 
+var _mathStrict;
+function getMathStrict() {
+  if (_mathStrict === undefined) {
+    try {
+      _mathStrict = require('@agni/utils/env-config').mathStrict;
+    } catch (_) {
+      _mathStrict = process.env.AGNI_MATH_STRICT === '1' || process.env.AGNI_MATH_STRICT === 'true';
+    }
+  }
+  return _mathStrict;
+}
+
 /** Minimum diagonal for Cholesky. Below this, sqrt(diag) and divisions blow up (NaN-poison Thompson).
  *  JITTER in thompson.js must be > CHOLESKY_EPSILON for jitter retry to succeed. */
 const CHOLESKY_EPSILON = 1e-10;
@@ -237,7 +249,7 @@ function scaleMat(A, s) {
   if (typeof s !== 'number' || !isFinite(s)) {
     throw new Error('[MATH] scaleMat: scalar must be finite number');
   }
-  var strict = process.env.AGNI_MATH_STRICT === '1' || process.env.AGNI_MATH_STRICT === 'true';
+  var strict = getMathStrict();
   if (A.length > 0) {
     if (!A[0] || !Array.isArray(A[0])) {
       throw new Error('[MATH] scaleMat: first row must be array');

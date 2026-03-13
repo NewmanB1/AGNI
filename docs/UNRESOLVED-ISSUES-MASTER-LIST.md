@@ -160,6 +160,19 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 
 ---
 
+## ENV-VALIDATION-CONSOLIDATION
+
+| ID | Task | Status |
+|----|------|--------|
+| EVC-1 | Shared env-ranges.js for bounds | Done |
+| EVC-2 | Align env-validate to env-config ranges | Done |
+| EVC-3 | Centralize process.env reads in env-config | Done |
+| EVC-4 | hub-config CONFIG_KEYS expansion | Done |
+
+See `docs/ENV-VALIDATION-SPLIT.md`.
+
+---
+
 ## SENSOR-TOOLKIT-IMPROVEMENT-PLAN
 
 | ID | Task | Status |
@@ -315,4 +328,5 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 ## References
 
 - Mesh design (R9): `playbooks/mesh-lora.md`
+- Env validation: `ENV-VALIDATION-SPLIT.md`
 - Source documents: `archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`, `archive/ARCHITECTURAL-AUDIT-FINDINGS.md`, `archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md`, `archive/ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN.md`, `AUDIT-HARDENING-PLAN.md`, `LEN-001-MATH-ENGINE-BUGS.md`, `SHIM-AND-CODE-AUDIT-FINDINGS.md`, `archive/GAP-ANALYSIS-AND-MITIGATIONS.md`, `archive/RUNTIME-MANIFEST-IMPROVEMENT-PLAN.md`, `archive/sensor-toolkit-improvement-plan.md`, `archive/OPPORTUNISTIC-PRECACHE-PLAN.md`, `archive/PHASE-3-REMEDIATION-PLAN.md`, `archive/SPRINT-R16-OPEN-BUGS.md`, `ROADMAP.md`, `YEAR2-PREP.md`, `LAUNCH-AND-COMMUNITY.md`, `CHECK-JS-ENABLEMENT-PLAN.md`, `CHECK-JS-FINISH-PLAN.md`

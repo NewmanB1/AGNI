@@ -28,11 +28,20 @@ const CONFIG_KEYS = [
   ['cacheMax', 'AGNI_CACHE_MAX'],
   ['cacheMaxBytes', 'AGNI_CACHE_MAX_BYTES'],
   ['compileConcurrency', 'AGNI_COMPILE_CONCURRENCY'],
+  ['compileRetryAfter', 'AGNI_COMPILE_RETRY_AFTER'],
   ['hubId', 'AGNI_HUB_ID'],
+  ['hubApiKey', 'AGNI_HUB_API_KEY'],
   ['homeUrl', 'AGNI_HOME_URL'],
   ['usbPath', 'AGNI_USB_PATH'],
   ['sentryPort', 'AGNI_SENTRY_PORT'],
   ['syncTransport', 'AGNI_SYNC_TRANSPORT'],
+  ['syncSetClock', 'AGNI_SYNC_SET_CLOCK'],
+  ['meshTransport', 'AGNI_MESH_TRANSPORT'],
+  ['meshPort', 'AGNI_MESH_PORT'],
+  ['strictSkillGraph', 'AGNI_STRICT_SKILL_GRAPH'],
+  ['precacheHintCount', 'AGNI_PRECACHE_HINT_COUNT'],
+  ['verifyYamlHash', 'AGNI_VERIFY_YAML_HASH'],
+  ['logMaxBytes', 'AGNI_LOG_MAX_BYTES'],
   ['privateKeyPath', 'AGNI_PRIVATE_KEY_PATH']
 ];
 

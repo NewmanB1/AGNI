@@ -1,7 +1,9 @@
 'use strict';
 
+const envConfig = require('@agni/utils/env-config');
+
 function register(router, ctx) {
-  const { lessonChain, authorService, handleJsonBody, requireHubKey, DATA_DIR, path } = ctx;
+  const { lessonChain, authorService, handleJsonBody, requireHubKey } = ctx;
 
   router.get('/api/chain/:slug', requireHubKey(async (req, res, { params, sendResponse }) => {
     const chain = await lessonChain.loadChain(params.slug);
@@ -22,7 +24,7 @@ function register(router, ctx) {
 
   router.get('/api/fork-check', requireHubKey((req, res, { qs, sendResponse }) => {
     if (!qs.slug) return sendResponse(400, { error: 'slug query param required' });
-    const yamlDir = process.env.AGNI_YAML_DIR || path.join(DATA_DIR, 'yaml');
+    const yamlDir = envConfig.yamlDir;
     const loaded = authorService.loadLesson(qs.slug, yamlDir);
     if (loaded.error) return sendResponse(404, { error: loaded.error });
     const meta = loaded.lessonData.meta || loaded.lessonData;

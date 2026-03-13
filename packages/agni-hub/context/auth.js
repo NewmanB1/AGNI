@@ -1,6 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
+const envConfig = require('@agni/utils/env-config');
 const { extractBearerToken, checkAuthRateLimit } = require('@agni/utils/http-helpers');
 const { accountsService } = require('./services');
 
@@ -67,7 +68,7 @@ function roleOnly(allowedRoles, handler) {
 
 function requireHubKey(handler) {
   return (req, res, opts) => {
-    const hubKey = process.env.AGNI_HUB_API_KEY || '';
+    const hubKey = envConfig.hubApiKey || '';
     if (!hubKey) {
       return opts.sendResponse(503, { error: 'Hub API key not configured. Set AGNI_HUB_API_KEY.' });
     }

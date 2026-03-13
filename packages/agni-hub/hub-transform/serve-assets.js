@@ -17,8 +17,8 @@ const ALLOWED_FACTORY_FILES = constants.ALLOWED_FACTORY_FILES;
 const ALLOWED_KATEX_FILES   = constants.ALLOWED_KATEX_FILES;
 const MIME                  = constants.MIME;
 
-const FACTORY_DIR = process.env.AGNI_FACTORY_DIR || require('@agni/runtime').RUNTIME_ROOT;
-const KATEX_DIR   = process.env.AGNI_KATEX_DIR || path.join(__dirname, '../../../data/katex-css');
+const FACTORY_DIR = envConfig.factoryDir;
+const KATEX_DIR   = envConfig.katexDir;
 
 function gzip(buf, cb) {
   zlib.gzip(buf, cb);

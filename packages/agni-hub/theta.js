@@ -134,7 +134,7 @@ async function updateSharedCacheIfNeeded() {
   const cycleSet = cycle && cycle.length > 0 ? new Set(cycle) : null;
 
   if (cycleSet && cycleSet.size > 0) {
-    if (process.env.AGNI_STRICT_SKILL_GRAPH === '1') {
+    if (envConfig.strictSkillGraph) {
       const err = new Error(
         'Fatal: skill graph contains a cycle (AGNI_STRICT_SKILL_GRAPH=1). Cycle: ' + cycle.join(' → ')
       );

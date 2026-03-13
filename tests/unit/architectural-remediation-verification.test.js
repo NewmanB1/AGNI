@@ -271,8 +271,8 @@ describe('architectural remediation #6: time-skew protection', function () {
   it('Sentry rejects writes when system year < MIN_VALID_YEAR', function () {
     const sentryPath = path.join(__dirname, '../../packages/agni-hub/sentry.js');
     const content = fs.readFileSync(sentryPath, 'utf8');
-    const yearMatch = content.match(/MIN_VALID_YEAR\s*=\s*parseInt\([^,]+,\s*10\)/);
-    assert.ok(yearMatch, 'AGNI_SENTRY_MIN_VALID_YEAR / MIN_VALID_YEAR should exist');
+    const yearMatch = content.match(/MIN_VALID_YEAR\s*=\s*(?:envConfig\.sentryMinValidYear|parseInt\([^,]+,\s*10\))/);
+    assert.ok(yearMatch, 'AGNI_SENTRY_MIN_VALID_YEAR / MIN_VALID_YEAR should exist (via envConfig or parseInt)');
     const validMatch = content.match(/getFullYear\(\)\s*>=\s*MIN_VALID_YEAR|year\s*<\s*MIN_VALID_YEAR|isSystemClockValid/);
     assert.ok(validMatch, 'sentry should check system clock validity');
   });

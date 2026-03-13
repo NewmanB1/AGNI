@@ -273,7 +273,7 @@ function importInbound(filePath) {
   }
 
   // 5. Optional: set system clock from sync payload (Pi without RTC)
-  if (process.env.AGNI_SYNC_SET_CLOCK === '1' &&
+  if (envConfig.syncSetClock &&
       typeof incoming.syncTimestamp === 'number' &&
       process.platform === 'linux') {
     try {

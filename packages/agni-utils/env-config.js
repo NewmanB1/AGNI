@@ -6,8 +6,10 @@
  *
  * Pi-friendly: parsed once at require() time, cached for the process lifetime.
  * All other modules import from here instead of parsing process.env inline.
+ * Numeric bounds from env-ranges.js.
  */
 
+var R = require('./env-ranges');
 const fs  = require('fs');
 const path = require('path');
 
@@ -32,7 +34,7 @@ function strVal(key, fallback) {
 
 // Fail fast on invalid values [R10 P5.4]
 function validPort(value, name) {
-  if (value < 1 || value > 65535) throw new Error(name + ' must be 1-65535, got ' + value);
+  if (value < R.PORT_MIN || value > R.PORT_MAX) throw new Error(name + ' must be ' + R.PORT_MIN + '-' + R.PORT_MAX + ', got ' + value);
   return value;
 }
 function validRange(value, min, max, name) {
@@ -80,11 +82,15 @@ function validUsbPath(p, name) {
 
 const DATA_DIR = strVal('AGNI_DATA_DIR', path.join(__dirname, '../../data'));
 
+function getDefaultFactoryDir() {
+  try { return require('@agni/runtime').RUNTIME_ROOT; } catch (_) { return path.join(__dirname, '../agni-runtime'); }
+}
+
 const config = {
   dataDir:            DATA_DIR,
   yamlDir:            strVal('AGNI_YAML_DIR', path.join(DATA_DIR, 'yaml')),
-  factoryDir:         strVal('AGNI_FACTORY_DIR', path.join(__dirname, '../../factories')),
-  katexDir:           strVal('AGNI_KATEX_DIR', path.join(__dirname, '../../katex')),
+  factoryDir:         strVal('AGNI_FACTORY_DIR', getDefaultFactoryDir()),
+  katexDir:           strVal('AGNI_KATEX_DIR', path.join(DATA_DIR, 'katex-css')),
   serveDir:           strVal('AGNI_SERVE_DIR', path.join(__dirname, '../../serve')),
 
   thetaPort:          validPort(intVal('AGNI_THETA_PORT', 8082), 'AGNI_THETA_PORT'),
@@ -102,13 +108,13 @@ const config = {
 
   masteryThreshold:   validRange(floatVal('AGNI_MASTERY_THRESHOLD', 0.6), 0, 1, 'AGNI_MASTERY_THRESHOLD'),
 
-  minLocalSample:     intVal('AGNI_MIN_LOCAL_SAMPLE', 40),
-  minLocalEdges:      intVal('AGNI_MIN_LOCAL_EDGES', 5),
+  minLocalSample:     validRange(intVal('AGNI_MIN_LOCAL_SAMPLE', 40), R.MIN_LOCAL_SAMPLE_MIN, R.MIN_LOCAL_SAMPLE_MAX, 'AGNI_MIN_LOCAL_SAMPLE'),
+  minLocalEdges:      validRange(intVal('AGNI_MIN_LOCAL_EDGES', 5), R.MIN_LOCAL_EDGES_MIN, R.MIN_LOCAL_EDGES_MAX, 'AGNI_MIN_LOCAL_EDGES'),
 
-  embeddingDim:       validRange(intVal('AGNI_EMBEDDING_DIM', 16), 1, 1024, 'AGNI_EMBEDDING_DIM'),
-  forgetting:         validRange(floatVal('AGNI_FORGETTING', 0.98), 0.9, 1, 'AGNI_FORGETTING'),
-  embeddingLr:        floatVal('AGNI_EMBEDDING_LR', 0.01),
-  embeddingReg:       floatVal('AGNI_EMBEDDING_REG', 0.001),
+  embeddingDim:       validRange(intVal('AGNI_EMBEDDING_DIM', 16), R.EMBEDDING_DIM_MIN, R.EMBEDDING_DIM_MAX, 'AGNI_EMBEDDING_DIM'),
+  forgetting:         validRange(floatVal('AGNI_FORGETTING', 0.98), R.FORGETTING_MIN, R.FORGETTING_MAX, 'AGNI_FORGETTING'),
+  embeddingLr:        validRange(floatVal('AGNI_EMBEDDING_LR', 0.01), R.EMBEDDING_LR_MIN, R.EMBEDDING_LR_MAX, 'AGNI_EMBEDDING_LR'),
+  embeddingReg:       validRange(floatVal('AGNI_EMBEDDING_REG', 0.001), R.EMBEDDING_REG_MIN, R.EMBEDDING_REG_MAX, 'AGNI_EMBEDDING_REG'),
 
   syncTransport:      strVal('AGNI_SYNC_TRANSPORT', ''),
   homeUrl:            strVal('AGNI_HOME_URL', ''),
@@ -140,6 +146,40 @@ const config = {
   privateKeyPath:     strVal('AGNI_PRIVATE_KEY_PATH', ''),
 
   logLevel:           strVal('AGNI_LOG_LEVEL', 'info'),
+  logMaxBytes:        Math.max(65536, intVal('AGNI_LOG_MAX_BYTES', 5242880)),
+
+  /** Hub API key for device auth. Empty = 503 on protected endpoints. */
+  hubApiKey:          strVal('AGNI_HUB_API_KEY', ''),
+  /** Set 1 or true to allow sync to set system clock from syncTimestamp (Linux only). */
+  syncSetClock:       (function () { var v = strVal('AGNI_SYNC_SET_CLOCK', '0'); return v === '1' || String(v).toLowerCase() === 'true'; })(),
+  /** Mesh transport: stub, udp, or lora. */
+  meshTransport:      strVal('AGNI_MESH_TRANSPORT', 'udp'),
+  meshPort:           validPort(intVal('AGNI_MESH_PORT', 18471), 'AGNI_MESH_PORT'),
+  loraSpiBus:         intVal('AGNI_LORA_SPI_BUS', 0),
+  loraSpiDevice:      intVal('AGNI_LORA_SPI_DEVICE', 0),
+  loraResetPin:       intVal('AGNI_LORA_RESET_PIN', 24),
+  loraDio0Pin:        intVal('AGNI_LORA_DIO0_PIN', 25),
+  loraFrequency:      intVal('AGNI_LORA_FREQUENCY', 868000000),
+  /** Set 1 or true to throw on skill graph cycles (default: graceful degrade). */
+  strictSkillGraph:   (function () { var v = strVal('AGNI_STRICT_SKILL_GRAPH', ''); return v === '1' || String(v).toLowerCase() === 'true'; })(),
+  /** Hint for opportunistic precache (max slugs in theta response). */
+  precacheHintCount:  Math.max(0, intVal('AGNI_PRECACHE_HINT_COUNT', 5)),
+  /** Set 1 or true to verify YAML content_hash on compile. */
+  verifyYamlHash:     (function () { var v = strVal('AGNI_VERIFY_YAML_HASH', ''); return v === '1' || String(v).toLowerCase() === 'true'; })(),
+  /** Compile cache: max entries when cacheMaxBytes is 0. */
+  cacheMax:           Math.max(1, intVal('AGNI_CACHE_MAX', 100)),
+  /** Compile cache: max bytes (0 = use cacheMax count). */
+  cacheMaxBytes:      Math.max(0, intVal('AGNI_CACHE_MAX_BYTES', 0)),
+  /** Max concurrent compile slots. */
+  compileConcurrency: (function () {
+    var p = intVal('AGNI_COMPILE_CONCURRENCY', -1);
+    if (p >= 1) return p;
+    var cpus = (require('os').cpus && require('os').cpus()) ? require('os').cpus().length : 2;
+    return Math.min(Math.max(1, cpus - 2), 2);
+  })(),
+  compileRetryAfter:  Math.max(1, intVal('AGNI_COMPILE_RETRY_AFTER', 3)),
+  /** Set 1 or true for strict math validation in bandit/LMS. */
+  mathStrict:         (function () { var v = strVal('AGNI_MATH_STRICT', ''); return v === '1' || String(v).toLowerCase() === 'true'; })()
 };
 
 config.USB_SAFE_ROOT = USB_SAFE_ROOT;

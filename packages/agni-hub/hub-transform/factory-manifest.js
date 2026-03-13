@@ -15,7 +15,7 @@ const envConfig = require('@agni/utils/env-config');
 const { resolveFactoryPath } = require('@agni/utils/runtimeManifest');
 const constants = require('./constants');
 
-const FACTORY_DIR = process.env.AGNI_FACTORY_DIR || require('@agni/runtime').RUNTIME_ROOT;
+const FACTORY_DIR = envConfig.factoryDir;
 const ALLOWED_FACTORY_FILES = constants.ALLOWED_FACTORY_FILES;
 const RUNTIME_VERSION = constants.RUNTIME_VERSION;
 

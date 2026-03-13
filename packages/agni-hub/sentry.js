@@ -49,7 +49,7 @@ const FLUSH_RETRY_DELAY_MS = 1000;
 const SHUTDOWN_TIMEOUT_MS = 10000;
 
 // Time-skew protection: Pi without RTC may boot at epoch (1970). Reject writes when year is invalid.
-const MIN_VALID_YEAR = parseInt(process.env.AGNI_SENTRY_MIN_VALID_YEAR || '2020', 10);
+const MIN_VALID_YEAR = envConfig.sentryMinValidYear;
 function isSystemClockValid() {
   return new Date().getFullYear() >= MIN_VALID_YEAR;
 }

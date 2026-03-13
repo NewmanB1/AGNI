@@ -26,8 +26,8 @@ const constants = require('./constants');
 
 const log = createLogger('hub-transform');
 const YAML_DIR  = envConfig.yamlDir;
-const FACTORY_DIR = process.env.AGNI_FACTORY_DIR || require('@agni/runtime').RUNTIME_ROOT;
-const KATEX_DIR  = process.env.AGNI_KATEX_DIR || path.join(path.dirname(path.dirname(__dirname)), '../../data/katex-css');
+const FACTORY_DIR = envConfig.factoryDir;
+const KATEX_DIR   = envConfig.katexDir;
 const RUNTIME_VERSION = constants.RUNTIME_VERSION;
 const BASE_FACTORY_DEPS = constants.BASE_FACTORY_DEPS;
 
@@ -62,7 +62,7 @@ function loadYaml(slug) {
       const raw = fs.readFileSync(yamlPath, 'utf8');
       const lessonData = compilerService.safeYamlLoad(raw, { maxBytes: maxBytes });
       const claimed = (lessonData.meta && lessonData.meta.content_hash) || '';
-      if (claimed && process.env.AGNI_VERIFY_YAML_HASH === '1') {
+      if (claimed && envConfig.verifyYamlHash) {
         const v = lessonChain.verifyContentHash(lessonData);
         if (!v.valid) {
           log.warn('YAML content_hash mismatch', { slug: slug, claimed: v.claimed, computed: v.computed });

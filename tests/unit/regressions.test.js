@@ -268,6 +268,7 @@ describe('AUDIT-6: requireHubKey fails closed when key is not configured', () =>
     const saved = process.env.AGNI_HUB_API_KEY;
     process.env.AGNI_HUB_API_KEY = '';
     try {
+      delete require.cache[require.resolve('@agni/utils/env-config')];
       delete require.cache[require.resolve('../../packages/agni-hub/context/auth')];
       const { requireHubKey } = require('../../packages/agni-hub/context/auth');
       let responseCode = null;
@@ -280,6 +281,7 @@ describe('AUDIT-6: requireHubKey fails closed when key is not configured', () =>
       assert.equal(responseCode, 503, 'requireHubKey should return 503 when key is not configured, got ' + responseCode);
     } finally {
       process.env.AGNI_HUB_API_KEY = saved;
+      delete require.cache[require.resolve('@agni/utils/env-config')];
       delete require.cache[require.resolve('../../packages/agni-hub/context/auth')];
     }
   });

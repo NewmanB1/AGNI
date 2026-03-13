@@ -1,11 +1,13 @@
 'use strict';
 
+var R = require('./env-ranges');
 const { createLogger } = require('./logger');
 const log = createLogger('env');
 
 /**
  * Validate and parse AGNI environment variables at startup.
  * Logs warnings for invalid values and applies safe defaults.
+ * Uses env-ranges.js for bounds; aligned with env-config.
  */
 
 function validateEnv() {
@@ -50,15 +52,15 @@ function validateEnv() {
     }
   }
 
-  intEnv('AGNI_THETA_PORT', 8082, 0, 65535);
-  intEnv('AGNI_SERVE_PORT', 8080, 0, 65535);
-  intEnv('AGNI_SENTRY_PORT', 8081, 0, 65535);
-  intEnv('AGNI_MIN_LOCAL_SAMPLE', 40, 1, 100000);
-  intEnv('AGNI_MIN_LOCAL_EDGES', 5, 1, 100000);
-  intEnv('AGNI_EMBEDDING_DIM', 16, 4, 256);
-  floatEnv('AGNI_FORGETTING', 0.98, 0.9, 1);
-  floatEnv('AGNI_EMBEDDING_LR', 0.01, 0.0001, 1);
-  floatEnv('AGNI_EMBEDDING_REG', 0.001, 0, 1);
+  intEnv('AGNI_THETA_PORT', 8082, R.PORT_MIN, R.PORT_MAX);
+  intEnv('AGNI_SERVE_PORT', 8080, R.PORT_MIN, R.PORT_MAX);
+  intEnv('AGNI_SENTRY_PORT', 8081, R.PORT_MIN, R.PORT_MAX);
+  intEnv('AGNI_MIN_LOCAL_SAMPLE', 40, R.MIN_LOCAL_SAMPLE_MIN, R.MIN_LOCAL_SAMPLE_MAX);
+  intEnv('AGNI_MIN_LOCAL_EDGES', 5, R.MIN_LOCAL_EDGES_MIN, R.MIN_LOCAL_EDGES_MAX);
+  intEnv('AGNI_EMBEDDING_DIM', 16, R.EMBEDDING_DIM_MIN, R.EMBEDDING_DIM_MAX);
+  floatEnv('AGNI_FORGETTING', 0.98, R.FORGETTING_MIN, R.FORGETTING_MAX);
+  floatEnv('AGNI_EMBEDDING_LR', 0.01, R.EMBEDDING_LR_MIN, R.EMBEDDING_LR_MAX);
+  floatEnv('AGNI_EMBEDDING_REG', 0.001, R.EMBEDDING_REG_MIN, R.EMBEDDING_REG_MAX);
   dirEnv('AGNI_DATA_DIR');
   dirEnv('AGNI_YAML_DIR');
   dirEnv('AGNI_SERVE_DIR');

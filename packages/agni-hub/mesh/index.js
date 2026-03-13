@@ -114,16 +114,16 @@ function handleReceived(transport, buf) {
 }
 
 function runMesh(args) {
-  const transportType = args.transport || process.env.AGNI_MESH_TRANSPORT || 'udp';
-  const port = parseInt(args.port || process.env.AGNI_MESH_PORT || '18471', 10);
+  const transportType = args.transport || envConfig.meshTransport;
+  const port = args.port != null ? parseInt(String(args.port), 10) : envConfig.meshPort;
 
-  const transportOpts = { port, log };
+  const transportOpts = { port: port, log: log };
   if (transportType === 'lora') {
-    if (process.env.AGNI_LORA_SPI_BUS !== undefined) transportOpts.spiBus = parseInt(process.env.AGNI_LORA_SPI_BUS, 10);
-    if (process.env.AGNI_LORA_SPI_DEVICE !== undefined) transportOpts.spiDevice = parseInt(process.env.AGNI_LORA_SPI_DEVICE, 10);
-    if (process.env.AGNI_LORA_RESET_PIN !== undefined) transportOpts.resetPin = parseInt(process.env.AGNI_LORA_RESET_PIN, 10);
-    if (process.env.AGNI_LORA_DIO0_PIN !== undefined) transportOpts.dio0Pin = parseInt(process.env.AGNI_LORA_DIO0_PIN, 10);
-    if (process.env.AGNI_LORA_FREQUENCY !== undefined) transportOpts.frequency = parseInt(process.env.AGNI_LORA_FREQUENCY, 10);
+    transportOpts.spiBus = envConfig.loraSpiBus;
+    transportOpts.spiDevice = envConfig.loraSpiDevice;
+    transportOpts.resetPin = envConfig.loraResetPin;
+    transportOpts.dio0Pin = envConfig.loraDio0Pin;
+    transportOpts.frequency = envConfig.loraFrequency;
   }
   const transport = transports.createTransport(transportType, transportOpts);
 

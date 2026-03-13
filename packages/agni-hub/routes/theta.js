@@ -1,5 +1,7 @@
 'use strict';
 
+const envConfig = require('@agni/utils/env-config');
+
 function register(router, ctx) {
   const { loadMasterySummaryAsync, loadLessonIndexAsync, loadOverridesAsync, saveOverridesAsync,
           authorService, handleJsonBody, requireHubKey, adminOnly,
@@ -12,7 +14,7 @@ function register(router, ctx) {
     const overrideLessonId = overrides[qs.pseudoId]?.lessonId || null;
     const effectiveLessons = ctx.applyRecommendationOverride(lessons, overrideLessonId);
     const graphWeights = await ctx.getEffectiveGraphWeights();
-    const precacheN = Math.max(0, parseInt(process.env.AGNI_PRECACHE_HINT_COUNT || '5', 10));
+    const precacheN = envConfig.precacheHintCount;
     const precacheSlugs = effectiveLessons
       .slice(0, precacheN)
       .map(function (l) { return l.slug; })
@@ -46,7 +48,7 @@ function register(router, ctx) {
 
   router.get('/api/lessons', requireHubKey(async (req, res, { qs, sendResponse }) => {
     let index = await loadLessonIndexAsync();
-    const savedSlugs = authorService.listSavedLessons(process.env.AGNI_YAML_DIR || path.join(DATA_DIR, 'yaml'));
+    const savedSlugs = authorService.listSavedLessons(envConfig.yamlDir);
     if (qs.utu) {
       const utuFilter = qs.utu.toLowerCase();
       index = index.filter(l => l.utu && typeof l.utu === 'object' && String(l.utu.class || '').toLowerCase() === utuFilter);

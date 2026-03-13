@@ -9,10 +9,17 @@ const fs = require('fs');
 
 const LEVELS = { debug: 10, info: 20, warn: 30, error: 40 };
 
-let _envLogLevel;
-try { _envLogLevel = require('./env-config').logLevel; } catch (_) { _envLogLevel = process.env.AGNI_LOG_LEVEL || 'info'; }
+var _envLogLevel, _maxLogBytes;
+try {
+  var cfg = require('./env-config');
+  _envLogLevel = cfg.logLevel;
+  _maxLogBytes = cfg.logMaxBytes;
+} catch (_) {
+  _envLogLevel = process.env.AGNI_LOG_LEVEL || 'info';
+  _maxLogBytes = parseInt(process.env.AGNI_LOG_MAX_BYTES || '5242880', 10) || 5242880;
+}
 const MIN_LEVEL = LEVELS[_envLogLevel] || LEVELS.info;
-const MAX_LOG_BYTES = parseInt(process.env.AGNI_LOG_MAX_BYTES || '5242880', 10) || 5242880; // 5MB default
+const MAX_LOG_BYTES = _maxLogBytes;
 
 /**
  * Create a logger instance with a fixed component tag.

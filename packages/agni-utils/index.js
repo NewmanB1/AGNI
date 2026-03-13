@@ -8,6 +8,7 @@
 module.exports = {
   logger:           require('./logger'),
   envConfig:        require('./env-config'),
+  envRanges:        require('./env-ranges'),
   envValidate:      require('./env-validate'),
   hubConfig:        require('./hub-config'),
   jsonStore:        require('./json-store'),
