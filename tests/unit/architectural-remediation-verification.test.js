@@ -120,6 +120,114 @@ describe('architectural remediation #4: sensor event-loop exhaustion', function 
   });
 });
 
+// ── P2-11: Signature placeholder fragility hardening ───────────────────────────
+
+describe('P2-11: signature placeholder fragility (integrity hardening)', function () {
+  const { setupGlobals, teardownGlobals } = require('../helpers/browser-globals');
+  const crypto = require('crypto');
+  const path = require('path');
+
+  before(function () {
+    setupGlobals();
+    global.location = { search: '', hostname: 'test' };
+    global.performance = global.performance || { now: function () { return Date.now(); } };
+    global.LESSON_DATA = {};
+    const { canonicalJSON } = require('@agni/utils/crypto');
+    function base64ToBytes(b64) {
+      const binary = Buffer.from(b64, 'base64').toString('binary');
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+    function concatBytes() {
+      const args = Array.prototype.slice.call(arguments);
+      const total = args.reduce(function (s, a) { return s + a.length; }, 0);
+      const out = new Uint8Array(total);
+      let offset = 0;
+      args.forEach(function (a) {
+        out.set(a, offset);
+        offset += a.length;
+      });
+      return out;
+    }
+    global.AGNI_SHARED = {
+      canonicalJSON: canonicalJSON,
+      base64ToBytes: base64ToBytes,
+      concatBytes: concatBytes
+    };
+    require(path.join(__dirname, '../../packages/agni-runtime/integrity/integrity.js'));
+  });
+
+  after(function () {
+    delete global.OLS_SIGNATURE;
+    delete global.OLS_PUBLIC_KEY;
+    delete global.OLS_INTENDED_OWNER;
+    delete global.location;
+    teardownGlobals();
+  });
+
+  it('rejects placeholder/sentinel values in signature', async function () {
+    const lesson = { meta: { title: 'T' }, steps: [] };
+    // Use placeholder that would pass base64 format check (to test placeholder detection)
+    global.OLS_SIGNATURE = 'REPLACE_ME_REPLACE_ME_REPLACE_ME_REPLACE_ME_REPLACE_ME_REPLACE_ME_REPLACE_ME_REPLACE_ME';
+    global.OLS_PUBLIC_KEY = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+    global.OLS_INTENDED_OWNER = 'device-1';
+
+    const result = await global.AGNI_INTEGRITY.verify(lesson);
+    assert.strictEqual(result, false, 'placeholder signature must fail verification');
+  });
+
+  it('rejects inconsistent state (signature without key)', async function () {
+    const lesson = { meta: { title: 'T' }, steps: [] };
+    const pemPath = path.join(require('os').tmpdir(), 'agni-p2-11-' + Date.now() + '.pem');
+    const { signContent, canonicalJSON } = require('@agni/utils/crypto');
+    const { privateKey, publicKey } = crypto.generateKeyPairSync('ed25519', {
+      publicKeyEncoding: { type: 'spki', format: 'der' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
+    });
+    require('fs').writeFileSync(pemPath, require('crypto').generateKeyPairSync('ed25519', {
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
+    }).privateKey, 'utf8');
+    const sig = signContent(canonicalJSON(lesson), 'dev1', pemPath);
+    try {
+      require('fs').unlinkSync(pemPath);
+    } catch (e) { /* ignore */ }
+
+    global.OLS_SIGNATURE = sig;
+    global.OLS_PUBLIC_KEY = ''; // key absent
+    global.OLS_INTENDED_OWNER = 'dev1';
+
+    const result = await global.AGNI_INTEGRITY.verify(lesson);
+    assert.strictEqual(result, false, 'signature without key must fail (inconsistent state)');
+  });
+
+  it('accepts valid signed lesson', async function () {
+    const lesson = { meta: { title: 'T' }, steps: [] };
+    const tmpDir = path.join(require('os').tmpdir(), 'agni-p2-11-valid-' + Date.now());
+    require('fs').mkdirSync(tmpDir, { recursive: true });
+    const pemPath = path.join(tmpDir, 'key.pem');
+    const { signContent, canonicalJSON, getPublicKeySpki } = require('@agni/utils/crypto');
+    const { privateKey } = crypto.generateKeyPairSync('ed25519', {
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
+    });
+    require('fs').writeFileSync(pemPath, privateKey, 'utf8');
+
+    global.OLS_SIGNATURE = signContent(canonicalJSON(lesson), 'dev1', pemPath);
+    global.OLS_PUBLIC_KEY = getPublicKeySpki(pemPath);
+    global.OLS_INTENDED_OWNER = 'dev1';
+    global.location = { search: '?pseudoId=dev1', hostname: 'test' };
+
+    try {
+      const result = await global.AGNI_INTEGRITY.verify(lesson);
+      assert.strictEqual(result, true, 'valid signed lesson must pass');
+    } finally {
+      try { require('fs').rmSync(tmpDir, { recursive: true, force: true }); } catch (e) { /* ignore */ }
+    }
+  });
+});
+
 // ── #5: Tampered content fails verification ───────────────────────────────────
 
 describe('architectural remediation #5: integrity verification', function () {

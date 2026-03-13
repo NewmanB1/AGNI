@@ -37,7 +37,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | P2-8 | Directory fsync missing | json-store, engine | Done |
 | P2-9 | Service Worker update / version mismatch trap | factory-loader, runtimeManifest, SW | Done |
 | P2-10 | PWA race — factories vs. lesson execution | shell-boot, factory-loader | Done |
-| P2-11 | Signature placeholder fragility | crypto.js, integrity.js | **Open** |
+| P2-11 | Signature placeholder fragility | crypto.js, integrity.js | Done |
 | P2-12 | Device ID trust boundary | Document limitation | Documented |
 | P2-13 | Session token replay risk | Document | Documented |
 | P2-14 | Theta rebuild hazard (partial file) | rebuildLessonIndex | Done |
@@ -305,7 +305,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 |----------|-------|----------|
 | **P0 (Critical)** | 3 | Math randn crash, cholesky NaN, federation symmetry |
 | **P1 (High)** | 5 | Math forwardSub, addVec string concat, sparse NaN, yaml-safe JSON_SCHEMA |
-| **P2 (Medium)** | 11 | Phase 2 vulns (P2-17–23, 28), svg-stage RAF/tick, math P2 bugs |
+| **P2 (Medium)** | 10 | Phase 2 vulns (P2-17–23, 28), svg-stage RAF/tick, math P2 bugs |
 | **P3 (Low)** | 15+ | Math P3 bugs, C2/D2/E2 audit items, svg-stage low-pri |
 | **Roadmap / Launch** | 15+ | ROADMAP, YEAR2-PREP, LAUNCH-AND-COMMUNITY unchecked |
 | **TypeScript** | ~30 | CHECK-JS-FINISH-PLAN per-file fixes |

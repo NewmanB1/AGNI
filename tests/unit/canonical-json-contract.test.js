@@ -83,4 +83,29 @@ describe('canonicalJSON contract (Node ↔ browser integrity signing)', () => {
     assert.ok(out.includes('"steps"'));
     assert.ok(out.includes('"inferredFeatures"'));
   });
+
+  it('shared-runtime canonicalJSON matches Node (P2-11 cross-impl)', () => {
+    const nodeCJ = canonicalJSON;
+    const { setupGlobals, teardownGlobals } = require('../helpers/browser-globals');
+    setupGlobals();
+    global.LESSON_DATA = {};
+    global.performance = global.performance || { now: () => Date.now() };
+    try {
+      require('@agni/runtime/shared-runtime');
+      const browserCJ = global.AGNI_SHARED && global.AGNI_SHARED.canonicalJSON;
+      assert.ok(typeof browserCJ === 'function', 'AGNI_SHARED.canonicalJSON must exist after shared-runtime load');
+      const cases = [
+        { meta: { title: 'T' }, steps: [] },
+        { z: 1, a: 2 },
+        { meta: { title: 'Lesson \u{1F4DA}' } },
+        [1, 2, 3]
+      ];
+      for (let i = 0; i < cases.length; i++) {
+        const c = cases[i];
+        assert.equal(browserCJ(c), nodeCJ(c), 'Node and browser canonicalJSON must match for case ' + i);
+      }
+    } finally {
+      teardownGlobals();
+    }
+  });
 });

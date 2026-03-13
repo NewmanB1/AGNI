@@ -50,6 +50,10 @@
 //   HTML wrapper, factories, and player code are NOT signed (unchanged).
 //   BREAKING: Signatures from v2.1 (full-script scope) will fail verification.
 //   Lessons must be re-signed with hub/CLI after upgrading.
+//
+// P2-11 hardening: integrity.js rejects placeholder/sentinel values, inconsistent
+// signature+key state, invalid base64, and requires canonicalJSON (no JSON.stringify
+// fallback). See packages/agni-runtime/integrity/integrity.js.
 // ─────────────────────────────────────────────────────────────────────────────
 
 'use strict';

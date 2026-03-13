@@ -20,6 +20,10 @@
 // SCOPE (v2.2): Content = canonicalJSON(LESSON_DATA) + NUL + OLS_INTENDED_OWNER.
 // Narrow scope reduces verification time and UI blocking (remediation #5c).
 // Must match @agni/utils/crypto signer; AGNI_SHARED.canonicalJSON must match Node canonicalJSON.
+//
+// P2-11 hardening: Reject placeholder/sentinel values, inconsistent signature+key state,
+// and invalid base64. Require canonicalJSON when verifying signed content (no JSON.stringify
+// fallback — that would break verification determinism).
 (function (global) {
   'use strict';
 
@@ -28,9 +32,36 @@
   function getBase64ToBytes() { return S.base64ToBytes; }
   function getConcatBytes()   { return S.concatBytes; }
 
-  // Content for binding hash: canonical LESSON_DATA (matches signer)
+  // Reject known placeholder/sentinel patterns (P2-11)
+  var PLACEHOLDER_PATTERNS = ['{{', '}}', 'PLACEHOLDER', '__SIGNATURE__', 'CHANGE_ME', 'REPLACE_ME'];
+  function looksLikePlaceholder(str) {
+    if (typeof str !== 'string' || str.length < 2) return false;
+    var s = str.toUpperCase();
+    for (var i = 0; i < PLACEHOLDER_PATTERNS.length; i++) {
+      if (s.indexOf(PLACEHOLDER_PATTERNS[i].toUpperCase()) !== -1) return true;
+    }
+    return false;
+  }
+
+  // Valid base64: A-Za-z0-9+/ with optional trailing = padding. Ed25519 sig = 64 bytes → 88 chars.
+  var BASE64_RE = /^[A-Za-z0-9+/]+=*$/;
+  function isValidBase64(str, minLen) {
+    if (typeof str !== 'string') return false;
+    if (str.length < (minLen || 1)) return false;
+    if (!BASE64_RE.test(str)) return false;
+    var rem = str.length % 4;
+    if (rem === 1) return false;
+    if (rem === 2 && str.indexOf('=') !== -1) return false;
+    if (rem === 3 && str.indexOf('=') !== -1) return false;
+    return true;
+  }
+
+  // Content for binding hash: canonical LESSON_DATA (matches signer).
+  // When verifying signed content we MUST use canonicalJSON; JSON.stringify has
+  // implementation-dependent key order and would break verification.
   function getContentForVerification(lesson) {
-    return (S && S.canonicalJSON) ? S.canonicalJSON(lesson) : JSON.stringify(lesson);
+    if (S && S.canonicalJSON) return S.canonicalJSON(lesson);
+    return null;
   }
 
   // Device pseudoId from URL (?pseudoId=...) — same source as portal/player.
@@ -165,10 +196,35 @@
 
   function _doVerify(lesson) {
     var devMode = isDevMode();
+    var hasSig = !!global.OLS_SIGNATURE;
+    var hasKey = !!global.OLS_PUBLIC_KEY;
 
-    // Unsigned lessons (no signature/key) always pass — common for local dev.
-    if (!global.OLS_SIGNATURE || !global.OLS_PUBLIC_KEY) {
-      return Promise.resolve(true);
+    // Unsigned lessons (both absent) pass — common for local dev.
+    if (!hasSig && !hasKey) return Promise.resolve(true);
+
+    // Inconsistent state: one present without the other (failed injection / malformed artifact).
+    if (hasSig !== hasKey) {
+      console.error('[VERIFY] Inconsistent integrity state: signature and public key must both be present or both absent');
+      return Promise.resolve(false);
+    }
+
+    // P2-11: Reject placeholder/sentinel values (template not filled).
+    if (looksLikePlaceholder(global.OLS_SIGNATURE) || looksLikePlaceholder(global.OLS_PUBLIC_KEY)) {
+      console.error('[VERIFY] Signature or public key contains placeholder/sentinel value');
+      return Promise.resolve(false);
+    }
+
+    // P2-11: Validate base64 format before decode (avoids cryptic atob errors).
+    // Ed25519 signature 64 bytes = 86 chars base64; SPKI key typically 60+ chars.
+    if (!isValidBase64(global.OLS_SIGNATURE, 84) || !isValidBase64(global.OLS_PUBLIC_KEY, 50)) {
+      console.error('[VERIFY] Invalid base64 in signature or public key');
+      return Promise.resolve(false);
+    }
+
+    // canonicalJSON required for verification; fallback would break determinism.
+    if (!getContentForVerification(lesson)) {
+      console.error('[VERIFY] AGNI_SHARED.canonicalJSON required for integrity verification');
+      return Promise.resolve(false);
     }
 
     if (!global.OLS_INTENDED_OWNER) {
