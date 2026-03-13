@@ -192,6 +192,9 @@ function addSyncId(summary, opts) {
 /**
  * Merge two bandit summaries using precision-weighted Bayesian combination.
  *
+ * Idempotent: same (local, remote) yields same merged summary. Deduplication
+ * (syncId, hubHighWater) is handled by mergeRemoteSummary in the engine.
+ *
  * Standard formula for independent Gaussian posteriors:
  *   P_merged = P_local + P_remote
  *   μ_merged = P_merged⁻¹ (P_local·μ_local + P_remote·μ_remote)

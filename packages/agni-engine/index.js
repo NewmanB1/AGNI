@@ -85,6 +85,7 @@ function buildDefaultState() {
       seenSyncIds:      [],
       exportSequence:   0,
       hubHighWater:     {},
+      mergeVersion:     0,
       count:            0,
       totalGain:        0,
       avgGain:          0
@@ -642,6 +643,7 @@ function exportBanditSummary() {
  * invariant: b = A · θ_map (mean of the posterior).
  *
  * @param {import('../types').BanditSummary} remote
+ * @returns {Promise<{ merged: boolean, mergeTimestamp?: number, mergeVersion?: number, reason?: string }>}
  */
 async function mergeRemoteSummary(remote) {
   // Contract: remote must declare embeddingDim and it must match local
@@ -660,7 +662,7 @@ async function mergeRemoteSummary(remote) {
   const syncId = remote.syncId || federation.contentHash(remote);
   if (seenSyncIds.indexOf(syncId) >= 0) {
     log.info('Remote summary already merged (syncId seen) — skipping duplicate');
-    return;
+    return { merged: false, reason: 'syncId_seen' };
   }
 
   let hubHighWater = _state.bandit.hubHighWater;
@@ -676,7 +678,7 @@ async function mergeRemoteSummary(remote) {
         remoteSeq: remote.exportSequence,
         lastMerged: last
       });
-      return;
+      return { merged: false, reason: 'hubHighWater' };
     }
   }
   const local  = federation.getBanditSummary(_state);
@@ -694,9 +696,11 @@ async function mergeRemoteSummary(remote) {
       hubHighWater[remote.hubId] = remote.exportSequence;
     }
   }
-
+  const mergeVersion = (_state.bandit.mergeVersion = (_state.bandit.mergeVersion || 0) + 1);
+  const mergeTimestamp = Date.now();
   await saveState(_state);
-  log.info('Remote summary merged — total observations:', merged.sampleSize);
+  log.info('Remote summary merged — total observations:', merged.sampleSize, 'mergeVersion:', mergeVersion, 'mergeTimestamp:', mergeTimestamp);
+  return { merged: true, mergeTimestamp: mergeTimestamp, mergeVersion: mergeVersion };
 }
 
 /**
@@ -725,7 +729,8 @@ function getStatus() {
     topKCandidates: envConfig.topKCandidates,
     statePath:      STATE_PATH,
     markovEdges:    Object.keys(markovState.transitions).length,
-    trackedPaths:   Object.keys(markovState.studentHistory).length
+    trackedPaths:   Object.keys(markovState.studentHistory).length,
+    mergeVersion:   _state.bandit.mergeVersion || 0
   };
 }
 

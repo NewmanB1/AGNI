@@ -270,4 +270,22 @@ describe('mergeBanditSummaries', () => {
         'Cholesky mean[' + i + ']=' + merged.mean[i] + ' vs invertSPD=' + expectedMean[i]);
     }
   });
+
+  it('AUDIT-C2: mergeBanditSummaries is idempotent — same (local, remote) yields identical merged summary', () => {
+    const a = makeSummary(4, 10);
+    const b = makeSummary(4, 20);
+    const m1 = mergeBanditSummaries(a, b);
+    const m2 = mergeBanditSummaries(a, b);
+    assert.equal(m1.sampleSize, m2.sampleSize);
+    assert.equal(m1.mean.length, m2.mean.length);
+    for (let i = 0; i < m1.mean.length; i++) {
+      assert.ok(Math.abs(m1.mean[i] - m2.mean[i]) < EPSILON, 'mean[' + i + '] must match');
+    }
+    for (let i = 0; i < m1.precision.length; i++) {
+      for (let j = 0; j < m1.precision[i].length; j++) {
+        assert.ok(Math.abs(m1.precision[i][j] - m2.precision[i][j]) < EPSILON,
+          'precision[' + i + '][' + j + '] must match');
+      }
+    }
+  });
 });

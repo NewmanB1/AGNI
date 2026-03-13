@@ -1705,6 +1705,70 @@ describe('AUDIT-D1: seedLesson clamps difficulty to [1,5]', () => {
   });
 });
 
+describe('AUDIT-C2: Federation merge idempotency and versioning', () => {
+  const os = require('os');
+  const fs = require('fs');
+  const path = require('path');
+  const math = require('@agni/engine/math');
+  const federation = require('@agni/engine/federation');
+  let TMP_DIR;
+  let origDataDir;
+
+  before(() => {
+    TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'agni-audit-c2-'));
+    origDataDir = process.env.AGNI_DATA_DIR;
+    process.env.AGNI_DATA_DIR = TMP_DIR;
+  });
+
+  after(() => {
+    process.env.AGNI_DATA_DIR = origDataDir;
+    try { fs.rmSync(TMP_DIR, { recursive: true, force: true }); } catch { /* ignore */ }
+  });
+
+  function reloadEngineWithTestDataDir() {
+    delete require.cache[require.resolve('@agni/utils/env-config')];
+    delete require.cache[require.resolve('@agni/engine')];
+    return require('@agni/engine');
+  }
+
+  it('mergeRemoteSummary returns merged:true, mergeTimestamp, mergeVersion on first merge', async () => {
+    const engine = reloadEngineWithTestDataDir();
+    await engine.seedLessons([{ lessonId: 'C2-L', difficulty: 2, skill: 'c2' }]);
+    const dim = engine.getStatus().embeddingDim;
+    const featureDim = dim * 2;
+    const remote = {
+      embeddingDim: dim,
+      mean: Array(featureDim).fill(0).map((_, i) => i * 0.1),
+      precision: math.scaleMat(math.identity(featureDim), 5),
+      sampleSize: 10
+    };
+    federation.addSyncId(remote);
+    const result = await engine.mergeRemoteSummary(remote);
+    assert.equal(result.merged, true, 'First merge must apply');
+    assert.equal(typeof result.mergeTimestamp, 'number', 'mergeTimestamp must be present');
+    assert.ok(result.mergeVersion >= 1, 'mergeVersion must be >= 1');
+  });
+
+  it('mergeRemoteSummary returns merged:false, reason when duplicate (same summary twice)', async () => {
+    const engine = reloadEngineWithTestDataDir();
+    await engine.seedLessons([{ lessonId: 'C2-L', difficulty: 2, skill: 'c2' }]);
+    const dim = engine.getStatus().embeddingDim;
+    const featureDim = dim * 2;
+    const remote = {
+      embeddingDim: dim,
+      mean: Array(featureDim).fill(0).map((_, i) => i * 0.1),
+      precision: math.scaleMat(math.identity(featureDim), 5),
+      sampleSize: 10
+    };
+    federation.addSyncId(remote);
+    await engine.mergeRemoteSummary(remote);
+    const result2 = await engine.mergeRemoteSummary(remote);
+    assert.equal(result2.merged, false, 'Duplicate merge must skip');
+    assert.ok(result2.reason === 'syncId_seen' || result2.reason === 'hubHighWater',
+      'reason must indicate why skipped, got: ' + result2.reason);
+  });
+});
+
 describe('AUDIT-DOCS: Node version docs consistent (hub Node 14+)', () => {
   it('check-node-version-docs passes — ARCHITECTURE states Node 14+ for hub, no Node < 14 in docs', () => {
     const script = path.resolve(__dirname, '../../scripts/check-node-version-docs.js');

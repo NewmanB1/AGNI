@@ -117,6 +117,8 @@ export interface BanditState {
   exportSequence?: number;
   /** Per-hub high-water mark for federation merge. */
   hubHighWater?: Record<string, number>;
+  /** Monotonic merge counter; incremented on each successful federation merge. (AUDIT-C2.3) */
+  mergeVersion?: number;
   count: number;
   totalGain: number;
   avgGain: number;

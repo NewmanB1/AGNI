@@ -75,12 +75,20 @@ function register(router, ctx) {
   })));
 
   router.post('/api/lms/federation/merge', adminOnly(requireLms((req, res, { sendResponse }) => {
-    handleJsonBody(req, sendResponse, (remote) => {
+    handleJsonBody(req, sendResponse, async (remote) => {
       if (typeof remote.embeddingDim !== 'number' || !remote.mean || !remote.precision || typeof remote.sampleSize !== 'number') {
         return sendResponse(400, { error: 'embeddingDim, mean, precision, sampleSize required; federating hubs must use identical AGNI_EMBEDDING_DIM' });
       }
-      lmsEngine.mergeRemoteSummary(remote);
-      sendResponse(200, { ok: true, status: lmsEngine.getStatus() });
+      const result = await lmsEngine.mergeRemoteSummary(remote);
+      const status = lmsEngine.getStatus();
+      const body = { ok: true, merged: result.merged, status: status };
+      if (result.merged) {
+        body.mergeTimestamp = result.mergeTimestamp;
+        body.mergeVersion = result.mergeVersion;
+      } else if (result.reason) {
+        body.reason = result.reason;
+      }
+      sendResponse(200, body);
     });
   })));
 

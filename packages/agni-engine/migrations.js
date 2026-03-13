@@ -221,6 +221,7 @@ function migrateLMSState(raw, opts) {
     if (typeof v === 'number' && !isNaN(v) && v >= 0) hubHighWater[k] = v;
     else migrated = true;
   });
+  const mergeVersion = ensureNumber(bandit.mergeVersion, 0, { min: 0 });
 
   const banditState = {
     A: A,
@@ -230,7 +231,8 @@ function migrateLMSState(raw, opts) {
     observationCount: observationCount,
     seenSyncIds: seenSyncIds,
     exportSequence: exportSequence,
-    hubHighWater: hubHighWater
+    hubHighWater: hubHighWater,
+    mergeVersion: mergeVersion
   };
 
   // ── Markov ────────────────────────────────────────────────────────────────

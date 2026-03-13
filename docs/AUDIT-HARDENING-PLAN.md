@@ -129,19 +129,20 @@ Plan to address gaps identified in the architecture/audit review. Items are prio
 
 ---
 
-### C2. Federation merge idempotency / versioning (P3)
+### C2. Federation merge idempotency / versioning (P3) — **Done**
 
 **Gap:** Duplicate or out-of-order merges could skew posteriors. Content hash dedup exists but no monotonic version.
 
 | Task | Scope | Deliverable |
 |------|-------|-------------|
-| C2.1 | Document current behavior | contentHash(summary) dedup via syncId; MAX_SEEN_SYNC_IDS eviction; same input = idempotent merge |
-| C2.2 | Optional: add mergeTimestamp to merge API | For debugging; log merge order |
-| C2.3 | Optional: monotonic merge version in state | If future federation protocol needs it |
+| C2.1 | Document current behavior | **Done** — `docs/playbooks/federation.md` §5; contentHash dedup, MAX_SEEN_SYNC_IDS, hubHighWater |
+| C2.2 | Optional: add mergeTimestamp to merge API | **Done** — mergeRemoteSummary returns `{ merged, mergeTimestamp?, mergeVersion? }`; POST response includes them |
+| C2.3 | Optional: monotonic merge version in state | **Done** — `mergeVersion` in bandit state; incremented on each successful merge; migrations support it |
 
 **Proof:**
-- Regression: "AUDIT-C2: merging same summary twice yields identical state" (likely already true)
-- No CI gate needed if behavior is documented
+- Regression: "AUDIT-C2: mergeRemoteSummary returns merged/mergeTimestamp/mergeVersion" — `tests/unit/regressions.test.js`
+- Regression: "AUDIT-C2: mergeBanditSummaries is idempotent" — `tests/unit/engine-federation.test.js`
+- Integration: "R1: mergeRemoteSummary is idempotent" — `tests/integration/select-best-lesson.test.js`
 
 **Dependencies:** None.
 

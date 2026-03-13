@@ -115,7 +115,35 @@ Inbound `graph_weights` should conform to **`schemas/graph_weights.schema.json`*
 
 ---
 
-## 5. Where to Change What
+## 5. Federation Merge Idempotency and Versioning (AUDIT-C2)
+
+Merge is **idempotent**: merging the same remote summary twice yields identical state. Duplicate or out-of-order merges do not skew posteriors.
+
+### 5.1 Deduplication Mechanisms
+
+| Mechanism | Purpose |
+|-----------|---------|
+| **contentHash(s.summary) → syncId** | Deterministic hash of `embeddingDim`, `mean`, `precision`, `sampleSize` (excludes syncId). Same payload → same syncId. |
+| **seenSyncIds** | List of syncIds already merged. If `remote.syncId` (or contentHash of remote) is in seenSyncIds, merge is skipped. |
+| **MAX_SEEN_SYNC_IDS (500)** | FIFO eviction: when list exceeds 500, oldest entries are dropped. |
+| **hubHighWater[hubId]** | Per-hub export sequence. If `remote.exportSequence <= hubHighWater[remote.hubId]`, merge is skipped (sneakernet loop prevention). |
+
+### 5.2 Idempotency Guarantee
+
+- **Same input = same output**: `mergeBanditSummaries(local, remote)` is a pure function; calling it twice with the same `(local, remote)` yields identical merged summary.
+- **mergeRemoteSummary** checks syncId and hubHighWater before applying merge; duplicate syncs return early without mutating state.
+- **Merge version** (`mergeVersion` in bandit state): monotonic counter incremented on each successful merge. Aids debugging and future federation protocol (e.g. causal ordering, conflict resolution).
+
+### 5.3 API Response (POST /api/lms/federation/merge)
+
+- **200 OK** with `{ ok: true, merged: boolean, mergeTimestamp?: number, mergeVersion?: number, status, ... }`.
+- `merged: true` when a merge was applied; `merged: false` when skipped (duplicate or hubHighWater).
+- `mergeTimestamp` (ms since epoch): when merge was applied (for debugging, log merge order).
+- `mergeVersion`: current monotonic merge counter after the request.
+
+---
+
+## 6. Where to Change What
 
 | Goal | File(s) |
 |------|--------|
@@ -127,7 +155,7 @@ Inbound `graph_weights` should conform to **`schemas/graph_weights.schema.json`*
 
 ---
 
-## 6. References
+## 7. References
 
 - **Sentry → graph_weights:** `docs/playbooks/sentry.md`
 - **Hub API (theta, LMS, governance):** `docs/api-contract.md`
