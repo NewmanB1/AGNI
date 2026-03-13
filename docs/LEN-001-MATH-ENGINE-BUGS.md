@@ -29,7 +29,7 @@ Address 18 identified bugs, logic errors, edge cases, and unsafe assumptions in 
 
 | ID | Bug | Fix | Regression |
 |----|-----|-----|------------|
-| 1 | randn() throws on PRNG failure → unhandled crash in selectBestLesson | Log fatal, return 0; do NOT throw | randn returns finite when Math.random mocks 0 |
+| 1 | randn() throws on PRNG failure → unhandled crash in selectBestLesson | Log fatal, return 0; do NOT throw | Done — randn returns 0 when Math.random mocks 0 |
 | 3 | cholesky `\|\| 0` masks NaN; misleading "not SPD" error | Explicit `typeof aij !== 'number'` check; throw non-numeric | cholesky throws "non-numeric" for NaN |
 | 13 | Symmetry tolerance 1e-12 too tight post-federation JSON round-trip | Re-symmetrize merged precision at merge boundary, or relax to 1e-8 | federation merge → selectBestLesson does not throw |
 

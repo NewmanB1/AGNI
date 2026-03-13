@@ -543,12 +543,14 @@ describe('randn', () => {
     assert.ok(Math.abs(variance - 1) < 0.15, 'Variance ' + variance + ' should be near 1');
   });
 
-  it('retries then throws when Math.random returns near-zero repeatedly', () => {
+  it('retries then returns 0 when Math.random returns near-zero repeatedly (LEN-001 #1)', () => {
     math._randnClearCache();
     const origRandom = Math.random;
     Math.random = function () { return 0; };
     try {
-      assert.throws(() => math.randn(), /randn: PRNG returned near-zero repeatedly/);
+      const v = math.randn();
+      assert.ok(isFinite(v), 'randn must return finite on PRNG failure');
+      assert.equal(v, 0, 'randn returns 0 on PRNG exhaustion');
     } finally {
       Math.random = origRandom;
     }

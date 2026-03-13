@@ -30,15 +30,16 @@ Use this when changing `packages/agni-engine/math.js` — pure linear algebra he
 2. If `randn()` throws (e.g. broken PRNG), call `_randnClearCache()` before retrying — the cache survives the throw.
 3. For isolation between tests, call `_randnClearCache()` in a `beforeEach` or at the start of tests that care about `randn` order.
 
-Example:
+Example (LEN-001 #1: randn returns 0 on PRNG failure, does not throw):
 
 ```javascript
-it('retries then throws when Math.random returns zero repeatedly', () => {
+it('returns 0 when Math.random returns zero repeatedly', () => {
   math._randnClearCache();
   const origRandom = Math.random;
   Math.random = function () { return 0; };
   try {
-    assert.throws(() => math.randn(), /randn: PRNG returned zero repeatedly/);
+    const v = math.randn();
+    assert.ok(isFinite(v) && v === 0, 'randn returns 0 on PRNG exhaustion');
   } finally {
     Math.random = origRandom;
   }

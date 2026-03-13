@@ -1884,15 +1884,17 @@ describe('MATH-2b: LEN-18 randn never returns Infinity for tiny u', () => {
   });
 });
 
-describe('MATH-3: randn retries on PRNG zero (does not corrupt Thompson sampling)', () => {
+describe('MATH-3: randn retries on PRNG zero (LEN-001 #1: does not crash selectBestLesson)', () => {
   const math = require('@agni/engine/math');
 
-  it('retries then throws when Math.random returns zero repeatedly', () => {
+  it('returns finite (0) when Math.random returns zero repeatedly', () => {
     math._randnClearCache();
     const origRandom = Math.random;
     Math.random = function () { return 0; };
     try {
-      assert.throws(() => math.randn(), /randn: PRNG returned near-zero repeatedly/);
+      const v = math.randn();
+      assert.ok(isFinite(v), 'randn must return finite on PRNG failure, got ' + v);
+      assert.equal(v, 0, 'randn returns 0 on PRNG exhaustion (LEN-001 #1)');
     } finally {
       Math.random = origRandom;
     }

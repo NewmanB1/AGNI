@@ -608,10 +608,9 @@ const RANDN_MIN = 1e-15;
  * Call math._randnClearCache() before mocking Math.random or between tests that require
  * deterministic randn behavior.
  *
- * If randn throws (e.g. broken PRNG, retry exhaustion), call _randnClearCache() before
- * retrying. The cache is cleared on the throw path, but if the caller catches exceptions
- * from elsewhere in the engine, a prior randn() may have left a cached value; clearing
- * ensures deterministic behavior after recovery.
+ * On PRNG failure (retry exhaustion), randn logs and returns 0 instead of throwing
+ * (LEN-001 #1: avoid crash in selectBestLesson). Call _randnClearCache() before
+ * retrying if you need deterministic behavior after recovery.
  *
  * @returns {number}
  */
@@ -644,8 +643,12 @@ function randn() {
     _randnCache = sinVal;
     return isFinite(cosVal) ? cosVal : 0; /* LEN-18: clamp (should not occur) */
   }
-  _randnCache = null; /* clear on throw path for consistent post-call state */
-  throw new Error('[MATH] randn: PRNG returned near-zero repeatedly — broken runtime');
+  /* LEN-001 #1: do NOT throw — would crash selectBestLesson. Log fatal, return 0. */
+  _randnCache = null;
+  if (typeof console !== 'undefined' && console.error) {
+    console.error('[MATH] randn: PRNG returned near-zero repeatedly — broken runtime; returning 0 to avoid crash');
+  }
+  return 0;
 }
 
 module.exports = {

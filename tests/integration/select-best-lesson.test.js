@@ -180,15 +180,17 @@ describe('selectBestLesson integration', () => {
 
   it('E1: exportBanditSummary throws on invalid state — logs and re-throws (no silent crash)', async () => {
     await engine.seedLessons([{ lessonId: 'E1-L', difficulty: 2, skill: 'e1' }]);
+    await engine.recordObservation('s-e1', 'E1-L', [{ probeId: 'E1-L', correct: true }]);
     const status = engine.getStatus();
     const statePath = status.statePath;
     assert.ok(fs.existsSync(statePath), 'State file must exist');
     const raw = fs.readFileSync(statePath, 'utf8');
     const state = JSON.parse(raw);
-    // Migration repairs NaN observationCount, so use singular A (zero matrix) — cholesky fails
+    assert.ok(state.bandit.observationCount > 0, 'Need observationCount>0 to skip ensureBanditInitialized');
     const dim = state.bandit.A.length;
     state.bandit.A = state.bandit.A.map(() => Array(dim).fill(0));
-    fs.writeFileSync(statePath, JSON.stringify(state), 'utf8');
+    delete state._checksum;  /* omit checksum so loadState skips verification and uses corrupt A */
+    fs.writeFileSync(statePath, JSON.stringify(state, null, 2), 'utf8');
     engine.reloadState();
     assert.throws(
       () => engine.exportBanditSummary(),
