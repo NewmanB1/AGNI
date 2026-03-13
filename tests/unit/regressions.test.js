@@ -1705,6 +1705,48 @@ describe('AUDIT-D1: seedLesson clamps difficulty to [1,5]', () => {
   });
 });
 
+describe('AUDIT-D2: Sneakernet state migration checksum — corrupted state triggers repair', () => {
+  const os = require('os');
+  const fs = require('fs');
+  const path = require('path');
+  let TMP_DIR;
+  let origDataDir;
+
+  before(() => {
+    TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'agni-audit-d2-'));
+    origDataDir = process.env.AGNI_DATA_DIR;
+    process.env.AGNI_DATA_DIR = TMP_DIR;
+  });
+
+  after(() => {
+    process.env.AGNI_DATA_DIR = origDataDir;
+    try { fs.rmSync(TMP_DIR, { recursive: true, force: true }); } catch { /* ignore */ }
+  });
+
+  it('corrupted state file (checksum mismatch) triggers repair path — fresh state, .bak created', () => {
+    const statePath = path.join(TMP_DIR, 'lms_state.json');
+    const corruptState = {
+      rasch: { students: {}, probes: {}, globalAnchor: { meanAbility: 0, stdAbility: 1 } },
+      embedding: { dim: 8, lr: 0.1, reg: 0.01, forgetting: 0.99, students: {}, lessons: {} },
+      bandit: {
+        A: [], b: [], featureDim: 16, forgetting: 0.99, observationCount: 99,
+        seenSyncIds: [], exportSequence: 0, hubHighWater: {}, mergeVersion: 0
+      },
+      markov: { transitions: {}, studentHistory: {}, bigrams: {}, dropouts: {}, cooldowns: {} },
+      _checksum: '0000000000000000000000000000000000000000000000000000000000000000'
+    };
+    fs.writeFileSync(statePath, JSON.stringify(corruptState, null, 2), 'utf8');
+
+    delete require.cache[require.resolve('@agni/utils/env-config')];
+    delete require.cache[require.resolve('@agni/engine')];
+    const engine = require('@agni/engine');
+
+    const status = engine.getStatus();
+    assert.equal(status.observations, 0, 'Corrupt state must be replaced with fresh state (observations=0)');
+    assert.ok(fs.existsSync(statePath + '.bak'), 'Corrupt file must be backed up to .bak');
+  });
+});
+
 describe('AUDIT-C2: Federation merge idempotency and versioning', () => {
   const os = require('os');
   const fs = require('fs');

@@ -25,7 +25,7 @@ async function run() {
     agni deploy setup --wizard # Deployment: hub ID, home URL, ports, USB
     agni sync setup --wizard   # Sync: transport, home URL, USB path
     agni analyze <lesson.yaml> [--curriculum=<path>]  # Lesson static analysis
-    agni lms-repair   # Migrate/repair LMS state file (data/lms-state.json)
+    agni lms-repair   # Migrate/repair LMS state (data/lms_state.json); verifies checksum, runs repair if corrupt
     npm run build   # if using package.json script
 
   Options:
@@ -82,11 +82,12 @@ async function run() {
     return require(path.join(SCRIPTS_ROOT, 'analyze-lesson.js')).run(analyzeInput, { curriculum: curriculumPath });
   }
 
-  // ── LMS repair (Backlog task 7) ──────────────────────────────────────────
+  // ── LMS repair (Backlog task 7, D2) ───────────────────────────────────────
   if (firstArg === 'lms-repair') {
     const engine = require('@agni/engine');
     engine.reloadState();
-    console.log('LMS state reloaded; migration applied if needed. State path: AGNI_DATA_DIR/data/lms-state.json');
+    console.log('LMS state reloaded; migration applied if needed. Checksum verification: state file includes SHA-256 hash; corrupt files are backed up and replaced with fresh state.');
+    console.log('State path: AGNI_DATA_DIR/lms_state.json');
     return;
   }
 

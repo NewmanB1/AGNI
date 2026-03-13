@@ -170,19 +170,18 @@ Plan to address gaps identified in the architecture/audit review. Items are prio
 
 ---
 
-### D2. Sneakernet state migration checksum (P3)
+### D2. Sneakernet state migration checksum (P3) — **Done**
 
 **Gap:** Power loss during migration could corrupt state. Atomic write exists; checksum adds verification.
 
 | Task | Scope | Deliverable |
 |------|-------|-------------|
-| D2.1 | Optional: append content hash to saved state | After JSON.stringify, compute SHA-256 of first 64KB or full; store in companion file or in state as `_checksum` |
-| D2.2 | On load: verify checksum before using | If checksum mismatch, treat as corrupt; run lms-repair |
-| D2.3 | lms-repair: document checksum verification | CLI help text |
+| D2.1 | Optional: append content hash to saved state | ✓ SHA-256 of state payload stored as `_checksum` in JSON; `packages/agni-engine/index.js` |
+| D2.2 | On load: verify checksum before using | ✓ Checksum mismatch → backup to `.bak`, return fresh state |
+| D2.3 | lms-repair: document checksum verification | ✓ CLI help and console output mention checksum verification |
 
 **Proof:**
-- Regression: "AUDIT-D2: corrupted state file triggers repair path"
-- Low priority; atomic write already mitigates most risk
+- Regression: "AUDIT-D2: corrupted state file triggers repair path" — `tests/unit/regressions.test.js`
 
 **Dependencies:** None.
 
@@ -236,7 +235,7 @@ Plan to address gaps identified in the architecture/audit review. Items are prio
 | 3 | A1 (yamlSchemaVersion) | **Done** — schema, IR, sidecar, warn on unknown |
 | 4 | A2 compile-time (E1), D1 (inferredFeatures clamp) | **Done** — NUMERIC_PARAM_KEYS warn; seedLesson clamps |
 | 5 | C1 (SRI) — security improvement | **Done** — SRI in LESSON_DATA, factory-loader verifies |
-| 6 | B2 (SW fallback), C2, D2, E2 | As capacity (A3 resolved) |
+| 6 | B2 (SW fallback), C2, D2 ✓, E2 | D2 done; B2 deferred |
 
 ---
 

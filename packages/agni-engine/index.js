@@ -31,6 +31,7 @@
 
 'use strict';
 
+const crypto     = require('crypto');
 const fs         = require('fs');
 const path       = require('path');
 const envConfig  = require('@agni/utils/env-config');
@@ -48,6 +49,35 @@ const pagerank    = require('./pagerank');
 const DATA_DIR       = envConfig.dataDir;
 const STATE_PATH     = path.join(DATA_DIR, 'lms_state.json');
 const STATE_TMP_PATH = STATE_PATH + '.tmp';
+
+/** Key for optional SHA-256 content checksum (D2. Sneakernet state migration). */
+const CHECKSUM_KEY = '_checksum';
+
+/**
+ * Compute SHA-256 hash of state payload (state without _checksum).
+ * Used to detect power-loss or transfer corruption.
+ * @param {Record<string, unknown>} state  state object (will not be mutated)
+ * @returns {string}  hex-encoded SHA-256 (64 chars)
+ */
+function computeStateChecksum(state) {
+  const copy = Object.assign({}, state);
+  delete copy[CHECKSUM_KEY];
+  const payload = JSON.stringify(copy, null, 2);
+  return crypto.createHash('sha256').update(payload, 'utf8').digest('hex');
+}
+
+/**
+ * Verify stored checksum matches state payload. State must have _checksum removed before passing.
+ * @param {Record<string, unknown>} stateWithoutChecksum
+ * @param {string} storedChecksum
+ * @returns {boolean}
+ */
+function verifyStateChecksum(stateWithoutChecksum, storedChecksum) {
+  const computed = crypto.createHash('sha256')
+    .update(JSON.stringify(stateWithoutChecksum, null, 2), 'utf8')
+    .digest('hex');
+  return computed === storedChecksum;
+}
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -112,6 +142,15 @@ function loadState() {
   try {
     const raw   = fs.readFileSync(STATE_PATH, 'utf8');
     const parsed = JSON.parse(raw);
+    const storedChecksum = parsed[CHECKSUM_KEY];
+    if (storedChecksum && typeof storedChecksum === 'string') {
+      delete parsed[CHECKSUM_KEY];
+      if (!verifyStateChecksum(parsed, storedChecksum)) {
+        log.error('AUDIT-D2: state file checksum mismatch — treating as corrupt. Run lms-repair if needed.');
+        try { fs.copyFileSync(STATE_PATH, STATE_PATH + '.bak'); } catch (_) {}
+        return buildDefaultState();
+      }
+    }
     const migratedResult = migrations.migrateLMSState(parsed, { embeddingDim: envConfig.embeddingDim });
     const state = migratedResult.state;
     if (migratedResult.migrated) {
@@ -144,7 +183,9 @@ const fsp = fs.promises;
 async function saveState(state) {
   try {
     await fsp.mkdir(DATA_DIR, { recursive: true });
-    const data = JSON.stringify(state, null, 2);
+    const stateWithChecksum = Object.assign({}, state);
+    stateWithChecksum[CHECKSUM_KEY] = computeStateChecksum(state);
+    const data = JSON.stringify(stateWithChecksum, null, 2);
     const fd = await fsp.open(STATE_TMP_PATH, 'w');
     try {
       await fd.writeFile(data);
@@ -173,7 +214,9 @@ async function saveState(state) {
 function saveStateSync(state) {
   try {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    const data = JSON.stringify(state, null, 2);
+    const stateWithChecksum = Object.assign({}, state);
+    stateWithChecksum[CHECKSUM_KEY] = computeStateChecksum(state);
+    const data = JSON.stringify(stateWithChecksum, null, 2);
     const fd = fs.openSync(STATE_TMP_PATH, 'w');
     try {
       fs.writeSync(fd, data);
