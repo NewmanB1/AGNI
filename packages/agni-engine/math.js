@@ -508,6 +508,8 @@ function symmetrizeInPlace(A) {
       }
     }
   }
+  /* Off-diagonal: average (i,j) and (j,i). LEN-001 #17: diagonal A[i][i] is a single
+   * value per position (no pair to average); invertSPD computes each inv[i][i] once. */
   for (i = 0; i < n; i++) {
     for (let j = 0; j < i; j++) {
       const v = (A[i][j] + A[j][i]) * 0.5;
