@@ -70,7 +70,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | A2.2 | Runtime: try/catch around fromSpec in player | P1 | Done |
 | A2.3 | Runtime: try/catch in shared-runtime mountStepVisual | P1 | Done |
 | A2.4 | Runtime: try/catch in shell-boot | P1 | Done |
-| A2.5 | Optional: svg-registry.validateSpec(spec) | P1 | **Open** |
+| A2.5 | Optional: svg-registry.validateSpec(spec) | P1 | Done |
 | A3 | HTML scrape fallback hardening | P3 | Resolved |
 | B1.1–B1.4 | Hub-transform standalone bootstrap | P1 | Done |
 | B2 | Service Worker fallback | P2 | Deferred (Android 7 baseline) |

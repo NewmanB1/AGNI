@@ -204,6 +204,55 @@ describe('SVG-TOOLS: DOM-dependent factory and helper tests', () => {
   });
 });
 
+// ── AUDIT-A2.5: validateSpec coerces malformed params ─────────────────────────
+
+describe('AUDIT-A2.5: validateSpec coerces malformed opts; fromSpec does not throw', () => {
+  before(() => {
+    setupGlobals();
+    const r = path.join(runtimeRoot, 'rendering');
+    require(path.join(r, 'svg-helpers.js'));
+    require(path.join(r, 'svg-stage.js'));
+    require(path.join(r, 'svg-factories.js'));
+    require(path.join(r, 'svg-factories-dynamic.js'));
+    require(path.join(r, 'svg-factories-geometry.js'));
+    require(path.join(r, 'svg-registry.js'));
+  });
+  after(() => teardownGlobals());
+
+  it('validateSpec coerces min:"abc" to default; returns sanitized spec', () => {
+    const SVG = globalThis.AGNI_SVG;
+    assert.ok(SVG && SVG.validateSpec, 'AGNI_SVG.validateSpec must exist');
+    const spec = { factory: 'numberLine', opts: { min: 'abc', max: 10 } };
+    const out = SVG.validateSpec(spec);
+    assert.equal(out.factory, 'numberLine');
+    assert.equal(typeof out.opts.min, 'number', 'min must be coerced to number');
+    assert.equal(out.opts.max, 10);
+  });
+
+  it('fromSpec with malformed opts does not throw; renders', () => {
+    const SVG = globalThis.AGNI_SVG;
+    const container = makeElement('div');
+    container.innerHTML = '';
+    assert.doesNotThrow(() => {
+      const handle = SVG.fromSpec(
+        { factory: 'barGraph', opts: { yMax: 'abc', data: [{ label: 'A', value: 5 }], title: 'Test' } },
+        container
+      );
+      assert.ok(handle !== undefined && handle !== null, 'fromSpec must return handle');
+    }, 'fromSpec with malformed opts must not throw');
+    const svg = container._children && container._children[0];
+    assert.ok(svg && (svg._tag === 'svg' || (svg._children && svg._children.length > 0)), 'must produce SVG content');
+  });
+
+  it('validateSpec throws for unknown factory', () => {
+    const SVG = globalThis.AGNI_SVG;
+    assert.throws(
+      () => SVG.validateSpec({ factory: 'nonexistent', opts: {} }),
+      /unknown factory/
+    );
+  });
+});
+
 // ── SVG-TOOLS-P4.1: shell-boot uses svg_spec when available ───────────────────
 
 describe('SVG-TOOLS-P4.1: shell-boot checks svg_spec before legacy svg_type', () => {

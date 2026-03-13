@@ -757,20 +757,117 @@
       return Object.assign({ compose: true }, stageOpts || {}, { layers: layers });
     },
 
+    // ── Validation (A2.5: coerce/clamp numeric params; return sanitized spec) ──
+
+    /**
+     * Validate and sanitize a spec. Coerces numeric params, clamps to min/max.
+     * Returns sanitized spec or throws on irrecoverable error (unknown factory, invalid structure).
+     *
+     * @param {object} spec   { factory, opts } or { compose: true, layers: [...] }
+     * @returns {object}      sanitized spec
+     */
+    validateSpec: function (spec) {
+      if (!spec || typeof spec !== 'object') {
+        throw new Error('validateSpec: spec must be an object');
+      }
+      if (spec.compose) {
+        return Registry.validateComposeSpec(spec);
+      }
+      if (!spec.factory || typeof spec.factory !== 'string') {
+        throw new Error('validateSpec: spec must have factory (string)');
+      }
+      var desc = Registry.get(spec.factory);
+      if (!desc) {
+        throw new Error('validateSpec: unknown factory "' + spec.factory + '"');
+      }
+      var opts = spec.opts && typeof spec.opts === 'object' ? spec.opts : {};
+      var sanitized = Registry.sanitizeOpts(desc, opts);
+      return { factory: spec.factory, opts: sanitized };
+    },
+
+    /**
+     * Sanitize opts against a factory's prop schema. Coerces and clamps primitives.
+     */
+    sanitizeOpts: function (desc, opts) {
+      var out = {};
+      var props = desc.props || [];
+      var defs = desc.previewDefaults || {};
+      for (var i = 0; i < props.length; i++) {
+        var p = props[i];
+        var name = p.name;
+        var val = opts[name];
+        if (val === undefined && defs[name] !== undefined) {
+          val = defs[name];
+        }
+        out[name] = Registry.coerceProp(val, p, defs[name]);
+      }
+      return out;
+    },
+
+    coerceProp: function (val, prop, fallback) {
+      var t = prop.type;
+      var def = prop.default !== undefined ? prop.default : fallback;
+      if (val === undefined || val === null) return def;
+      if (t === TYPES.integer || t === TYPES.float) {
+        var n = Number(val);
+        if (n !== n) return def !== undefined ? def : 0;
+        var min = prop.min;
+        var max = prop.max;
+        if (typeof min === 'number' && n < min) n = min;
+        if (typeof max === 'number' && n > max) n = max;
+        return t === TYPES.integer ? Math.round(n) : n;
+      }
+      if (t === TYPES.boolean) {
+        return val === true || val === 'true' || val === 1;
+      }
+      if (t === TYPES.string || t === TYPES.color) {
+        return String(val);
+      }
+      if (t === TYPES.enum && prop.values && Array.isArray(prop.values)) {
+        if (prop.values.indexOf(val) !== -1) return val;
+        return def !== undefined ? def : prop.values[0];
+      }
+      return val;
+    },
+
+    validateComposeSpec: function (spec) {
+      var layers = spec.layers;
+      if (!Array.isArray(layers)) {
+        throw new Error('validateSpec: compose spec must have layers array');
+      }
+      var out = { compose: true };
+      if (typeof spec.w === 'number') out.w = spec.w;
+      if (typeof spec.h === 'number') out.h = spec.h;
+      if (typeof spec.background === 'string') out.background = spec.background;
+      out.layers = [];
+      for (var i = 0; i < layers.length; i++) {
+        var layer = layers[i];
+        if (!layer || !layer.factory) continue;
+        var layerSanitized = Registry.validateSpec(layer);
+        var merged = {};
+        for (var k in layer) { if (Object.prototype.hasOwnProperty.call(layer, k)) merged[k] = layer[k]; }
+        merged.opts = layerSanitized.opts;
+        out.layers.push(merged);
+      }
+      return out;
+    },
+
     // ── Deserialization (runtime) ─────────────────────────────────────────────
 
     /**
      * Instantiate a single factory from a spec.
+     * Uses validateSpec to coerce malformed params before rendering.
      * Returns { stage, result } — same shape as preview().
      *
      * @param {object}      spec        { factory, opts }
      * @param {HTMLElement} container
      */
     fromSpec: function (spec, container) {
-      if (spec.compose) {
-        return Registry.fromComposeSpec(spec, container);
+      var safe = Registry.validateSpec(spec);
+      if (safe.compose) {
+        return Registry.fromComposeSpec(safe, container);
       }
-      return Registry.preview(spec.factory, container, spec.opts);
+      return Registry.preview(safe.factory, container, safe.opts);
     },
 
     /**
@@ -843,12 +940,13 @@
   };
 
   // ── Attach ──────────────────────────────────────────────────────────────────
-  SVG.registry  = Registry.all;
-  SVG.schema    = Registry.schema;
-  SVG.defaults  = Registry.defaults;
-  SVG.preview   = Registry.preview;
-  SVG.serialize = Registry.serialize;
-  SVG.fromSpec  = Registry.fromSpec;
+  SVG.registry    = Registry.all;
+  SVG.schema      = Registry.schema;
+  SVG.defaults    = Registry.defaults;
+  SVG.preview     = Registry.preview;
+  SVG.serialize   = Registry.serialize;
+  SVG.validateSpec = Registry.validateSpec;
+  SVG.fromSpec    = Registry.fromSpec;
   SVG.update    = Registry.update;
   SVG.Registry  = Registry;   // full API on one object for the WYSIWYG
   SVG.registerFactory = Registry.registerFactory;

@@ -50,7 +50,7 @@ Plan to address gaps identified in the architecture/audit review. Items are prio
 | A2.2 | Runtime: try/catch around fromSpec in player | `packages/agni-runtime/ui/player.js` — wrap `SVG.fromSpec(svgSpec, svgContainer)` in try/catch; on error: log, show fallback placeholder, continue |
 | A2.3 | Runtime: try/catch in shared-runtime mountStepVisual | `packages/agni-runtime/shared-runtime.js` — same pattern |
 | A2.4 | Runtime: try/catch in shell-boot | `packages/agni-hub/pwa/shell-boot.js` — same pattern |
-| A2.5 | Optional: svg-registry.validateSpec(spec) | Coerce/clamp numeric params from IR; return sanitized spec or throw |
+| A2.5 | svg-registry.validateSpec(spec) | **Done** — Coerce/clamp numeric params; return sanitized spec or throw; fromSpec calls it before preview |
 
 **Proof:**
 - Regression: "AUDIT-A2: fromSpec with malformed params (length: 'abc') does not throw; fallback rendered"
