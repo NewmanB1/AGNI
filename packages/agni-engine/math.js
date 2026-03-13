@@ -373,7 +373,8 @@ function cholesky(A) {
   if (n === 0) {
     throw new Error('[MATH] cholesky: empty matrix not supported (zero-dim invalid)');
   }
-  let i, j, k, sum, diag, aij, aji;
+  var i, j, k, sum, diag, aij;
+  /* Structure + diagonal validation only (O(n)). Symmetry check folded into decomposition loop (LEN-001 #4). */
   for (i = 0; i < n; i++) {
     if (!A[i] || !Array.isArray(A[i])) {
       throw new Error('[MATH] cholesky: row ' + i + ' must be array');
@@ -384,21 +385,8 @@ function cholesky(A) {
     if (typeof A[i][i] !== 'number' || !isFinite(A[i][i])) {
       throw new Error('[MATH] cholesky: non-numeric diagonal at [' + i + ']');
     }
-    /* Fast-fail for obviously non-SPD; diag < CHOLESKY_EPSILON aligns with decomposition check.
-     * Decomposition can still fail (e.g. off-diagonal sum eats diagonal) — that throws with i=N. */
     if (A[i][i] < CHOLESKY_EPSILON) {
       throw new Error('[MATH] cholesky: diagonal at [' + i + '][' + i + '] = ' + A[i][i] + ' (matrix is not SPD)');
-    }
-    /* Off-diagonal: j>i covers each pair once; aij and aji together validate upper and lower triangle */
-    for (j = i + 1; j < n; j++) {
-      aij = A[i][j];
-      aji = A[j][i];
-      if (typeof aij !== 'number' || typeof aji !== 'number' || !isFinite(aij) || !isFinite(aji)) {
-        throw new Error('[MATH] cholesky: non-numeric entry at [' + i + '][' + j + ']');
-      }
-      if (Math.abs(aij - aji) > CHOLESKY_SYMMETRY_TOL) {
-        throw new Error('[MATH] cholesky: matrix is not symmetric (A[' + i + '][' + j + '] !== A[' + j + '][' + i + '])');
-      }
     }
   }
   const L = new Array(n);
@@ -422,11 +410,18 @@ function cholesky(A) {
         }
         L[i][j] = Math.sqrt(diag);
       } else {
-        var offDiag = (A[i][j] - sum) / L[j][j];
-        if (typeof offDiag !== 'number' || !isFinite(offDiag)) {
+        aij = A[i][j];
+        if (typeof aij !== 'number' || !isFinite(aij)) {
+          throw new Error('[MATH] cholesky: non-numeric entry at [' + i + '][' + j + ']');
+        }
+        if (Math.abs(aij - A[j][i]) > CHOLESKY_SYMMETRY_TOL) {
+          throw new Error('[MATH] cholesky: matrix is not symmetric (A[' + i + '][' + j + '] !== A[' + j + '][' + i + '])');
+        }
+        sum = (aij - sum) / L[j][j];
+        if (typeof sum !== 'number' || !isFinite(sum)) {
           throw new Error('[MATH] cholesky: non-numeric entry at [' + i + '][' + j + '] (Cholesky produced NaN/Inf)');
         }
-        L[i][j] = offDiag;
+        L[i][j] = sum;
       }
     }
   }
