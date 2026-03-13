@@ -269,12 +269,13 @@ function mergeBanditSummaries(local, remote) {
     };
   }
 
-  // Bug 3: one side has zero — return copy of the non-zero side
+  // Bug 3: one side has zero — return copy of the non-zero side. Symmetrize remote precision
+  // (JSON round-trip can introduce float asymmetry); symmetrize local for defense-in-depth.
   if (local.sampleSize === 0) {
     return {
       embeddingDim:     remote.embeddingDim,
       mean:             remote.mean.slice(),
-      precision:        copyMat(remote.precision),
+      precision:        math.symmetrize(copyMat(remote.precision)),
       sampleSize:       remote.sampleSize,
       posteriorVersion: pv,
       trainingWindow:   remote.sampleSize
@@ -284,7 +285,7 @@ function mergeBanditSummaries(local, remote) {
     return {
       embeddingDim:     local.embeddingDim,
       mean:             local.mean.slice(),
-      precision:        copyMat(local.precision),
+      precision:        math.symmetrize(copyMat(local.precision)),
       sampleSize:       local.sampleSize,
       posteriorVersion: pv,
       trainingWindow:   local.sampleSize

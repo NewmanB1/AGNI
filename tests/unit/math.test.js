@@ -329,6 +329,16 @@ describe('cholesky', () => {
     assert.throws(() => math.cholesky([[4, 1], [2, 3]]), /not symmetric/);
   });
 
+  it('LEN-001 bug 13: accepts post-federation float asymmetry within 1e-8 (JSON round-trip)', () => {
+    // Simulate precision matrix after addMat of two JSON-round-tripped matrices.
+    // Asymmetry ~5e-9 would fail with 1e-12 tolerance; 1e-8 accepts it.
+    const A = [[4, 2 + 5e-9], [2 - 5e-9, 3]];
+    const L = math.cholesky(A);
+    assert.ok(L);
+    assert.ok(L[0][0] > 0);
+    assert.ok(L[1][1] > 0);
+  });
+
   it('throws for matrix with NaN (non-numeric entry)', () => {
     assert.throws(() => math.cholesky([[1, NaN], [NaN, 1]]), /non-numeric/);
   });

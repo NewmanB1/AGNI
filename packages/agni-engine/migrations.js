@@ -179,17 +179,21 @@ function migrateLMSState(raw, opts) {
       }
       if (A.length === 0) break;
     }
-    // Validate symmetry (BUG 4: catch corrupted state at load time)
+    // Repair JSON round-trip asymmetry (LEN-001 bug 13): symmetrize instead of discarding.
     if (A.length === featureDim) {
+      var needsSymmetrize = false;
       for (ri = 0; ri < A.length; ri++) {
         for (let cj = ri + 1; cj < A[ri].length; cj++) {
           if (Math.abs(A[ri][cj] - A[cj][ri]) > math.CHOLESKY_SYMMETRY_TOL) {
-            A = [];
-            migrated = true;
+            needsSymmetrize = true;
             break;
           }
         }
-        if (A.length === 0) break;
+        if (needsSymmetrize) break;
+      }
+      if (needsSymmetrize) {
+        A = math.symmetrize(A);
+        migrated = true;
       }
     }
   }

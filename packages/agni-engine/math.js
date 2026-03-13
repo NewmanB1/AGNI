@@ -29,8 +29,8 @@
  *  JITTER in thompson.js must be > CHOLESKY_EPSILON for jitter retry to succeed. */
 const CHOLESKY_EPSILON = 1e-10;
 
-/** Symmetry tolerance for Cholesky. Tight enough to catch merge bugs; federation must call symmetrize() before Cholesky. */
-const CHOLESKY_SYMMETRY_TOL = 1e-12;
+/** Symmetry tolerance for Cholesky. Relaxed to 1e-8 to tolerate JSON round-trip and federation merge float asymmetry (LEN-001 bug 13). */
+const CHOLESKY_SYMMETRY_TOL = 1e-8;
 
 /**
  * ES5-safe zero-filled array of length n. Always allocates fresh — never cached or shared.

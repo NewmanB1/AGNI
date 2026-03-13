@@ -99,7 +99,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | 10 | identity(0) / federation zero-dim path | P3 | **Open** |
 | 11 | dot() naive summation FP error | P4 (no action) | — |
 | 12 | scaleMat O(n²) sparse check in updateBandit hot path | P2 | **Open** |
-| 13 | Symmetry tolerance 1e-12 too tight post-federation | P0 | **Open** |
+| 13 | Symmetry tolerance 1e-12 too tight post-federation | P0 | Done |
 | 14 | addVec/addMat `+` concatenates strings | P1 | **Open** |
 | 15 | dot/addVec/scaleVec NaN for sparse | P1 | **Open** |
 | 16 | scaleVec/matVec no array type check | P2 | **Open** |
