@@ -2,6 +2,8 @@
 
 ### The Open Lesson Standard — an "MP3" for offline, sensor-rich education
 
+**Quick links:** [Contributing](CONTRIBUTING.md) · [Architecture](docs/ARCHITECTURE.md) · [Roadmap](docs/ROADMAP.md)
+
 [![Status](https://img.shields.io/badge/Status-Phase_1:_Core_Engine-blue)](docs/ROADMAP.md)
 [![License](https://img.shields.io/badge/License-AGPL_v3-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Mobile_Web-orange)](#)

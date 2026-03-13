@@ -10,7 +10,7 @@ This document supports **ROADMAP Phase 4: Launch & Ecosystem (Days 76–100)**. 
   - **One-line pitch:** AGNI compiles YAML lessons into tiny, offline-first HTML bundles that run on 10-year-old phones and use sensors (accelerometer, etc.) for interactive learning.
   - **Links:** Repo, README, CONTRIBUTING.md, MANIFESTO.md.
 - [ ] **Publish manifesto / intro** to HN, Reddit, Dev.to (or equivalent).
-- [ ] **Pin README and CONTRIBUTING** so new visitors see how to run, validate, and contribute.
+- [x] **Pin README and CONTRIBUTING** — Quick links at top of README; CONTRIBUTING linked in Contributing section.
 - [ ] **Tag a release** (e.g. `v0.1.0` or `v0.2.0`) so the launch points at a stable artifact.
 
 ---

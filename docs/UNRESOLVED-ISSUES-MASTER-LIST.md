@@ -121,7 +121,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | 2-10 | yaml-safe: Regex DoS on pathological strings | Medium | Done |
 | 3-1 | svg-stage: NodeList.forEach ES5 inconsistency | Low | **Open** (document only) |
 | 3-2 | svg-stage: RAF tick handlers after destroy | Low | Done |
-| 3-3 | svg-stage: Tick handler ID not unique | Low | **Open** |
+| 3-3 | svg-stage: Tick handler ID not unique | Low | Done |
 | 3-4 | svg-stage: Layer ID injection | Medium | Done |
 | 3-5 | svg-stage: container.innerHTML destroys listeners | Medium | Done |
 | 3-8 | svg-stage: unsub() when unsub not a function | Medium | Done |
@@ -282,7 +282,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | ID | Task | Status |
 |----|------|--------|
 | L1 | Publish manifesto / intro to HN, Reddit, Dev.to | **Open** |
-| L2 | Pin README and CONTRIBUTING | **Open** |
+| L2 | Pin README and CONTRIBUTING | Done |
 | L3 | Tag a release (v0.1.0 or v0.2.0) | Done — v0.2.1 |
 | L4 | Triage issues regularly | **Open** |
 | L5 | Record 5–10 min tutorial video | **Open** (optional) |
@@ -325,7 +325,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 |----------|-------|----------|
 | **P0 (Critical)** | 0 | All Done (randn, cholesky NaN, federation symmetry) |
 | **P1 (High)** | 0 | All Done (forwardSub, addVec, sparse, yaml-safe 2-5) |
-| **P2 (Medium)** | 3 | P2-17; svg-stage 3-3, 3-10, 3-11 |
+| **P2 (Medium)** | 2 | P2-17; svg-stage 3-10, 3-11 |
 | **P3 (Low)** | 12+ | LEN-001 #5, #8; svg-stage 3-1; E2.1–E2.3; audit items |
 | **Roadmap / Launch** | 12+ | ROADMAP (R7, R9, R10 Done; R8 Design), YEAR2-PREP (Y9 Done), LAUNCH-AND-COMMUNITY unchecked |
 | **TypeScript** | ~30 | CHECK-JS-FINISH-PLAN per-file fixes |

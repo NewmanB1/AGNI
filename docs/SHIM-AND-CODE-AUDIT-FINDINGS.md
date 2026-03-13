@@ -43,7 +43,7 @@ module.exports = hub.hubTransform || hub;
 |---|-------|------|-----|
 | 1 | NodeList.forEach ES5 inconsistency | Low | `Object.keys(attrs)` is fine; document only |
 | 2 | RAF: tick handlers may run one frame after destroy | Low | **Done** — _rafLoop checks _destroyed at top and before each callback |
-| 3 | Tick handler ID: `Date.now() + Math.random()` not unique | Low | Use monotonic counter |
+| 3 | Tick handler ID: `Date.now() + Math.random()` not unique | Low | **Done** — monotonic _tickIdNext |
 | 4 | Layer ID injection (`name` with `"`, `>`, `<`) | Medium | Sanitize: `name.replace(/[^\w-]/g, '_')` |
 | 5 | `container.innerHTML = ''` destroys listeners | Medium | Use `while(container.firstChild) container.removeChild(container.firstChild)` |
 | 6 | SVG namespace injection | Low | Document; layers use createElementNS |
@@ -77,6 +77,7 @@ module.exports = hub.hubTransform || hub;
 | destroy() double-call guard | **Done** — if (_destroyed) return |
 | RAF tick handlers after destroy (3-2) | **Done** — _rafLoop checks _destroyed at top and before each callback (no automated test; code guard in svg-stage.js) |
 | _layers map cleared on destroy (3-14) | **Done** — destroy() sets _layers = {} to release DOM references |
+| Tick handler ID uniqueness (3-3) | **Done** — monotonic _tickIdNext instead of Date.now+random |
 | lastSensorValues.get guard | **Done** — typeof shared.lastSensorValues.get === 'function' |
 | Safer shim (hub-transform) | **Done** — hub.hubTransform \|\| hub |
 

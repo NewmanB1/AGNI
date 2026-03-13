@@ -1,10 +1,12 @@
 // @ts-nocheck — bindSensor callback type, Function vs specific signature
 // packages/agni-runtime/rendering/svg-stage.js
-// AGNI SVG Stage System  v1.8.1
+// AGNI SVG Stage System  v1.8.2
 //
 // Owns a single SVG viewport, manages named layers, drives the RAF animation
 // loop, and wires sensor subscriptions to update callbacks.
 //
+// Changes from v1.8.1 (3-3 tick ID uniqueness):
+//   - onTick: use monotonic counter for handler IDs instead of Date.now+random.
 // Changes from v1.8.0 (P2-23 memory leak fix):
 //   - destroy(): clear _layers map to release DOM references.
 //   - RAF loop: check _destroyed before each tick callback (handlers cannot run
@@ -74,6 +76,7 @@
     // ── Internal state ────────────────────────────────────────────────────────
     var _layers       = {};    // name → <g> element
     var _tickHandlers = [];    // [{id, fn}]
+    var _tickIdNext   = 0;     // monotonic counter for unique tick handler IDs (3-3)
 
     // Stores the unsubscribe closures returned by subscribeToSensor().
     // destroy() calls each one — no need to reach into sensorSubscriptions.
@@ -155,7 +158,7 @@
        * @returns {string}      handler id — pass to offTick() to remove
        */
       onTick: function (fn) {
-        var id = 'tick_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+        var id = 'tick_' + (++_tickIdNext);
         _tickHandlers.push({ id: id, fn: fn });
         _startLoop();
         return id;
@@ -280,6 +283,6 @@
 
   if (global.AGNI_SHARED) global.AGNI_SHARED.svg = global.AGNI_SVG;
 
-  if (global.DEV_MODE) console.log('[SVG-STAGE] v1.8.1 loaded');
+  if (global.DEV_MODE) console.log('[SVG-STAGE] v1.8.2 loaded');
 
 }(window));
