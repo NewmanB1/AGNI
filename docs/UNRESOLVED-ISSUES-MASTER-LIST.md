@@ -48,7 +48,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | P2-19 | Sensor dependency mismatch | Check availability before execution | **Open** |
 | P2-20 | Pi serveDir/lessons disk exhaustion | GC policy | Documented |
 | P2-21 | Sneakernet import integrity | Sign packets, verify on import | Done |
-| P2-22 | Catalog / IR drift | Validation step | **Open** |
+| P2-22 | Catalog / IR drift | Validation step | Done |
 | P2-23 | SVG stage memory leak | destroyStepVisual listeners | **Open** |
 | P2-24 | Edge device SW cache eviction | Document eviction strategy | Documented |
 | P2-25 | Spec.type whitelist (prototype pollution) | SVG registry | Done (audit) |
@@ -305,7 +305,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 |----------|-------|----------|
 | **P0 (Critical)** | 3 | Math randn crash, cholesky NaN, federation symmetry |
 | **P1 (High)** | 5 | Math forwardSub, addVec string concat, sparse NaN, yaml-safe JSON_SCHEMA |
-| **P2 (Medium)** | 10 | Phase 2 vulns (P2-17–23, 28), svg-stage RAF/tick, math P2 bugs |
+| **P2 (Medium)** | 9 | Phase 2 vulns (P2-17–21, 23, 28), svg-stage RAF/tick, math P2 bugs |
 | **P3 (Low)** | 15+ | Math P3 bugs, C2/D2/E2 audit items, svg-stage low-pri |
 | **Roadmap / Launch** | 15+ | ROADMAP, YEAR2-PREP, LAUNCH-AND-COMMUNITY unchecked |
 | **TypeScript** | ~30 | CHECK-JS-FINISH-PLAN per-file fixes |

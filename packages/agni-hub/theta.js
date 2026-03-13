@@ -28,7 +28,7 @@ const {
   SERVE_DIR, LESSON_INDEX, PORT,
   MIN_RESIDUAL, MIN_MLC, MASTERY_THRESHOLD, MIN_CONFIDENCE,
   MIN_LOCAL_SAMPLE_SIZE, MIN_LOCAL_EDGE_COUNT,
-  thetaCache, accountsService
+  thetaCache, accountsService, authorService
 } = ctx;
 
 // â”€â”€ LMS engine status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -401,14 +401,70 @@ async function getLessonsSortedByTheta(pseudoId) {
 async function rebuildLessonIndex() {
   const fsp = require('fs').promises;
   const catalogPath = path.join(SERVE_DIR, 'catalog.json');
-  try { await fsp.access(catalogPath); }
-  catch { log.info('No catalog.json found â€” skipping index rebuild'); return; }
+  let catalogExists = false;
+  try { await fsp.access(catalogPath); catalogExists = true; } catch (e) { void e; }
+  if (!catalogExists) {
+    const lessonsRoot = path.join(SERVE_DIR, 'lessons');
+    try {
+      const subs = await fsp.readdir(lessonsRoot);
+      const index = [];
+      let sidecarCount = 0;
+      for (let s = 0; s < subs.length; s++) {
+        const slug = subs[s];
+        const sidecarPath = path.join(lessonsRoot, slug, 'index-ir.json');
+        try {
+          await fsp.access(sidecarPath);
+          const sidecar = await loadJSONAsync(sidecarPath, null);
+          if (sidecar) {
+            sidecarCount++;
+            index.push({
+              lessonId: sidecar.identifier || slug,
+              slug: sidecar.slug || slug,
+              title: sidecar.title || '',
+              description: sidecar.description || '',
+              difficulty: sidecar.difficulty || 2,
+              language: sidecar.language || 'en',
+              compiledAt: sidecar.compiledAt || null,
+              metadata_source: sidecar.metadata_source || 'inferred',
+              utu: sidecar.utu || null,
+              teaching_mode: sidecar.teaching_mode || null,
+              is_group: !!(sidecar.is_group),
+              subject: (sidecar.utu && sidecar.utu.class) || '',
+              skillsProvided: (sidecar.ontology && sidecar.ontology.provides) || [],
+              skillsRequired: (sidecar.ontology && sidecar.ontology.requires
+                ? sidecar.ontology.requires.map((r) => typeof r === 'string' ? r : r.skill) : []),
+              inferredFeatures: sidecar.inferredFeatures || null,
+              katexAssets: sidecar.katexAssets || [],
+              factoryManifest: sidecar.factoryManifest || []
+            });
+          }
+        } catch (e2) { void e2; }
+      }
+      await saveJSONAsync(LESSON_INDEX, index);
+      log.info('Catalog-free mode: derived lesson set from IR sidecars', { total: index.length, sidecar: sidecarCount });
+      if (lmsEngine.isAvailable && lmsEngine.isAvailable()) {
+        const seedEntries = index
+          .filter((ent) => ent.skillsProvided && ent.skillsProvided.length > 0)
+          .map((ent) => {
+            const raw = (ent.inferredFeatures && typeof ent.inferredFeatures.difficulty === 'number' && Number.isFinite(ent.inferredFeatures.difficulty))
+              ? ent.inferredFeatures.difficulty : (typeof ent.difficulty === 'number' && Number.isFinite(ent.difficulty) ? ent.difficulty : 2);
+            const difficulty = Math.max(1, Math.min(5, raw));
+            return { lessonId: ent.lessonId, difficulty, skill: ent.skillsProvided[0].skill };
+          });
+        try { lmsEngine.seedLessons(seedEntries); }
+        catch (err) { log.error('LMS engine seeding failed', { error: err.message }); }
+      }
+    } catch (e) {
+      log.info('No catalog.json and no lessons dir; skipping index rebuild');
+    }
+    return;
+  }
 
   const catalog = await loadJSONAsync(catalogPath, { lessons: [] });
   let sidecarCount = 0;
   let fallbackCount = 0;
   const index = [];
-
+  const catalogOrphans = [];
   for (const entry of catalog.lessons) {
     const lessonDir   = path.join(SERVE_DIR, 'lessons', entry.slug);
     const sidecarPath = path.join(lessonDir, 'index-ir.json');
@@ -443,11 +499,45 @@ async function rebuildLessonIndex() {
     }
 
     fallbackCount++;
-    log.warn('Skipping lesson — IR sidecar missing or invalid; lesson not indexed (single source of truth)', { slug: entry.slug });
+    catalogOrphans.push(entry.slug);
+    log.warn('Catalog/IR drift: catalog lists slug but IR missing; lesson not indexed', { slug: entry.slug });
   }
 
-
-
+  const catalogSlugSet = new Set((catalog.lessons || []).map((e) => e.slug).filter(Boolean));
+  const lessonsRoot = path.join(SERVE_DIR, 'lessons');
+  const irOnly = [];
+  try {
+    const dirs = await fsp.readdir(lessonsRoot);
+    for (let d = 0; d < dirs.length; d++) {
+      const slug = dirs[d];
+      if (catalogSlugSet.has(slug)) continue;
+      try {
+        await fsp.access(path.join(lessonsRoot, slug, 'index-ir.json'));
+        irOnly.push(slug);
+      } catch (e) { void e; }
+    }
+  } catch (e) { /* lessons dir may not exist */ }
+  const yamlSlugs = (authorService && authorService.listSavedLessons)
+    ? authorService.listSavedLessons(envConfig.yamlDir) : [];
+  const yamlOnly = [];
+  for (let y = 0; y < yamlSlugs.length; y++) {
+    const ys = yamlSlugs[y];
+    if (!catalogSlugSet.has(ys)) {
+      try {
+        await fsp.access(path.join(lessonsRoot, ys, 'index-ir.json'));
+      } catch (e) { yamlOnly.push(ys); }
+    }
+  }
+  if (catalogOrphans.length > 0 || irOnly.length > 0 || yamlOnly.length > 0) {
+    log.warn('Catalog/IR drift (P2-22 validation)', {
+      catalogOrphans: catalogOrphans.length,
+      irOnly: irOnly.length,
+      yamlOnly: yamlOnly.length,
+      catalogOrphanSlugs: catalogOrphans.slice(0, 5),
+      irOnlySlugs: irOnly.slice(0, 5),
+      yamlOnlySlugs: yamlOnly.slice(0, 5)
+    });
+  }
 
   await saveJSONAsync(LESSON_INDEX, index);
   log.info('Lesson index rebuilt', { total: index.length, sidecar: sidecarCount, skippedNoIR: fallbackCount });
