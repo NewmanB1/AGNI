@@ -90,12 +90,18 @@ describe('addVec', () => {
 
   it('throws for sparse or non-finite vector', () => {
     const sparse = [1, , 3]; // eslint-disable-line no-sparse-arrays -- intentional
-    assert.throws(() => math.addVec(sparse, [1, 2, 3]), /non-finite/);
-    assert.throws(() => math.addVec([1, 2, 3], sparse), /non-finite/);
+    assert.throws(() => math.addVec(sparse, [1, 2, 3]), /addVec/);
+    assert.throws(() => math.addVec([1, 2, 3], sparse), /addVec/);
   });
 
-  it('throws for non-numeric elements (no string coercion)', () => {
-    assert.throws(() => math.addVec(['1', 2], [1, '2']), /non-finite/);
+  it('LEN-001 #14: coerces numeric strings (returns [3] not ["12"])', () => {
+    assert.deepEqual(math.addVec(['1'], [2]), [3]);
+    assert.deepEqual(math.addVec(['1', '2'], [3, 4]), [4, 6]);
+  });
+
+  it('throws when element cannot be coerced to finite number', () => {
+    assert.throws(() => math.addVec(['x'], [1]), /cannot be coerced/);
+    assert.throws(() => math.addVec([1], ['NaN']), /cannot be coerced/);
   });
 });
 
@@ -171,9 +177,13 @@ describe('addMat', () => {
     assert.throws(() => math.addMat([[1]], undefined), /null or undefined/);
   });
 
-  it('throws for non-finite element (no Number coercion)', () => {
-    assert.throws(() => math.addMat([[1, 'x']], [[1, 1]]), /addMat.*non-finite/);
-    assert.throws(() => math.addMat([[1, 1]], [[1, NaN]]), /addMat.*non-finite/);
+  it('LEN-001 #14: coerces numeric strings', () => {
+    assert.deepEqual(math.addMat([['1', '2'], ['3', '4']], [[1, 0], [0, 1]]), [[2, 2], [3, 5]]);
+  });
+
+  it('throws when element cannot be coerced to finite number', () => {
+    assert.throws(() => math.addMat([[1, 'x']], [[1, 1]]), /cannot be coerced/);
+    assert.throws(() => math.addMat([[1, 1]], [[1, NaN]]), /cannot be coerced/);
   });
 });
 
@@ -419,6 +429,22 @@ describe('forwardSub and backSub', () => {
 
   it('backSub throws when L is null', () => {
     assert.throws(() => math.backSub(null, [1, 1]), /backSub.*L is null/);
+  });
+
+  it('LEN-001 #9: forwardSub throws for non-array L', () => {
+    assert.throws(() => math.forwardSub({}, [1, 1]), /forwardSub.*L must be array/);
+  });
+
+  it('LEN-001 #9: backSub throws for non-array L', () => {
+    assert.throws(() => math.backSub({}, [1, 1]), /backSub.*L must be array/);
+  });
+
+  it('LEN-001 #9: forwardSub throws for empty L', () => {
+    assert.throws(() => math.forwardSub([], []), /forwardSub.*non-empty/);
+  });
+
+  it('LEN-001 #9: backSub throws for empty L', () => {
+    assert.throws(() => math.backSub([], []), /backSub.*non-empty/);
   });
 
   it('forwardSub throws for non-finite RHS element', () => {

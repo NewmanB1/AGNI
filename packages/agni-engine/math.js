@@ -129,18 +129,19 @@ function addVec(a, b) {
   if (a.length !== b.length) {
     throw new Error('[MATH] addVec: vector length mismatch (' + a.length + ' vs ' + b.length + ')');
   }
-  let i;
+  var i, ai, bi, sum;
   for (i = 0; i < a.length; i++) {
-    if (typeof a[i] !== 'number' || !isFinite(a[i])) {
-      throw new Error('[MATH] addVec: non-finite element at first vector index ' + i);
+    ai = Number(a[i]);
+    bi = Number(b[i]);
+    if (!isFinite(ai) || !isFinite(bi)) {
+      throw new Error('[MATH] addVec: element at index ' + i + ' cannot be coerced to finite number');
+    }
+    sum = ai + bi;
+    if (!isFinite(sum)) {
+      throw new Error('[MATH] addVec: overflow at index ' + i);
     }
   }
-  for (i = 0; i < b.length; i++) {
-    if (typeof b[i] !== 'number' || !isFinite(b[i])) {
-      throw new Error('[MATH] addVec: non-finite element at second vector index ' + i);
-    }
-  }
-  return a.map(function(v, i) { return v + b[i]; });
+  return a.map(function(v, idx) { return Number(v) + Number(b[idx]); });
 }
 
 /**
@@ -220,17 +221,19 @@ function addMat(A, B) {
       const which = (A[i].length !== cols) ? 'A' : 'B';
       throw new Error('[MATH] addMat: jagged matrix ' + which + ' at row ' + i);
     }
-    for (let c = 0; c < cols; c++) {
-      if (typeof A[i][c] !== 'number' || !isFinite(A[i][c])) {
-        throw new Error('[MATH] addMat: non-finite element at A[' + i + '][' + c + ']');
+    for (var c = 0; c < cols; c++) {
+      var ac = Number(A[i][c]);
+      var bc = Number(B[i][c]);
+      if (!isFinite(ac) || !isFinite(bc)) {
+        throw new Error('[MATH] addMat: element at [' + i + '][' + c + '] cannot be coerced to finite number');
       }
-      if (typeof B[i][c] !== 'number' || !isFinite(B[i][c])) {
-        throw new Error('[MATH] addMat: non-finite element at B[' + i + '][' + c + ']');
+      if (!isFinite(ac + bc)) {
+        throw new Error('[MATH] addMat: overflow at [' + i + '][' + c + ']');
       }
     }
   }
   return A.map(function(row, i) {
-    return row.map(function(v, j) { return v + B[i][j]; });
+    return row.map(function(v, j) { return Number(v) + Number(B[i][j]); });
   });
 }
 
@@ -419,7 +422,9 @@ function cholesky(A) {
 function forwardSub(L, b) {
   if (L == null) throw new Error('[MATH] forwardSub: L is null or undefined');
   if (b == null) throw new Error('[MATH] forwardSub: RHS vector is null or undefined');
+  if (!Array.isArray(L)) throw new Error('[MATH] forwardSub: L must be array');
   const n = L.length;
+  if (n === 0) throw new Error('[MATH] forwardSub: L must be non-empty square matrix');
   for (let ri = 0; ri < n; ri++) {
     if (!L[ri] || !Array.isArray(L[ri])) {
       throw new Error('[MATH] forwardSub: row ' + ri + ' of L must be array');
@@ -468,7 +473,9 @@ function forwardSubInner(L, b, n, y) {
 function backSub(L, y) {
   if (L == null) throw new Error('[MATH] backSub: L is null or undefined');
   if (y == null) throw new Error('[MATH] backSub: RHS vector is null or undefined');
+  if (!Array.isArray(L)) throw new Error('[MATH] backSub: L must be array');
   const n = L.length;
+  if (n === 0) throw new Error('[MATH] backSub: L must be non-empty square matrix');
   for (let ri = 0; ri < n; ri++) {
     if (!L[ri] || !Array.isArray(L[ri])) {
       throw new Error('[MATH] backSub: row ' + ri + ' of L must be array');

@@ -37,8 +37,8 @@ Address 18 identified bugs, logic errors, edge cases, and unsafe assumptions in 
 
 | ID | Bug | Fix | Regression |
 |----|-----|-----|------------|
-| 9 | forwardSub/backSub don't validate L | Add L null/square check; [MATH] prefix on error | forwardSub(null, b) throws [MATH] |
-| 14 | addVec/addMat `+` concatenates strings | Coerce to number or throw on non-numeric | addVec(["1"], [2]) returns [3] not ["12"] |
+| 9 | forwardSub/backSub don't validate L | Add L null/square check; [MATH] prefix on error | Done — Array.isArray(L), non-empty; forwardSub(null,b) throws [MATH] |
+| 14 | addVec/addMat `+` concatenates strings | Coerce to number or throw on non-numeric | Done — Number() coercion; addVec(["1"],[2]) returns [3] |
 | 15 | dot/addVec/scaleVec NaN for sparse; inconsistent with outer/scaleMat | Sparse checks or document; prefer debug-only for hot path | Sparse input fails fast or documented |
 
 ### P2 — Medium (performance, robustness)
