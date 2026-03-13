@@ -439,6 +439,17 @@
       "approved": false,
       "createdAt": "2026-03-08T16:09:47.588Z",
       "lessonsAuthored": []
+    },
+    {
+      "id": "cr-37b2e249ad3b",
+      "name": "Contract Admin",
+      "email": "contract@test.local",
+      "passwordHash": "4bd8941ae581fbb61a9bab0b47860d357dea6bc2886afca58d16c76bdf18cea1c7a4cbd1a31cd7f1bc30dd93253881afc487b5d840e5c03d4d478b541836d210",
+      "salt": "58746a630c9bc7854cc5c852d01cdd90",
+      "role": "admin",
+      "approved": true,
+      "createdAt": "2026-03-13T02:04:16.066Z",
+      "lessonsAuthored": []
     }
   ]
 }

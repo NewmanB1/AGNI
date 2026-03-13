@@ -462,6 +462,47 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // 10b. Sensor dependency availability (P2-19)
+  //
+  // Check whether the sensor required by a hardware_trigger step is available
+  // *before* execution, so we can show fallback UI instead of blocking.
+  // Uses sensor ID (e.g. accel.total, light) and device/sensorBridge state.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function getRequiredSensorIdForStep(step) {
+    if (!step) return 'accel.total';
+    var threshold = step.threshold || '';
+    var m = threshold.match(/([a-zA-Z_][\w.]*)/);
+    var fromThreshold = m ? m[1] : null;
+    if (fromThreshold && fromThreshold !== 'steady' && fromThreshold !== 'freefall') {
+      return fromThreshold;
+    }
+    if (fromThreshold === 'freefall' || fromThreshold === 'steady') return 'accel.total';
+    var s = step.sensor || 'accel.total';
+    if (s === 'accelerometer' || s === 'gyroscope') return 'accel.total';
+    return s;
+  }
+
+  function isSensorRequiredAvailable(sensorId) {
+    var S = global.AGNI_SHARED;
+    if (!S || !sensorId) return false;
+    var base = sensorId.split('.')[0];
+    var motionFamily = base === 'accel' || base === 'gyro' || base === 'rotation' ||
+      sensorId === 'orientation' || sensorId === 'freefall' || sensorId === 'steady' || sensorId === 'shake';
+    if (motionFamily) {
+      return !!(S.device && S.device.hasMotionEvents &&
+        S.sensorBridge && typeof S.sensorBridge.isActive === 'function' && S.sensorBridge.isActive());
+    }
+    if (base === 'light') {
+      return false;
+    }
+    if (base === 'sound' || sensorId === 'mic') {
+      return false;
+    }
+    return false;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // 11. Assemble and expose AGNI_SHARED
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -518,7 +559,11 @@
     // ── DOM & formatting helpers ─────────────────────────────────────────────
     el:                       el,
     parseDurationMs:          parseDurationMs,
-    formatRemainingAttempts:  formatRemainingAttempts
+    formatRemainingAttempts:  formatRemainingAttempts,
+
+    // ── Sensor dependency (P2-19) ────────────────────────────────────────────
+    getRequiredSensorIdForStep:  getRequiredSensorIdForStep,
+    isSensorRequiredAvailable:   isSensorRequiredAvailable
   };
 
   // ── Self-register with factory-loader if present ────────────────────────────

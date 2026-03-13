@@ -45,7 +45,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | P2-16 | Skill cycle handling silently hides curriculum | Add governance event | Done |
 | P2-17 | UTU band validation advisory only | Enforce or record override | **Open** |
 | P2-18 | Step spec schema validation | JSON Schema per step type | Done |
-| P2-19 | Sensor dependency mismatch | Check availability before execution | **Open** |
+| P2-19 | Sensor dependency mismatch | Check availability before execution | Done |
 | P2-20 | Pi serveDir/lessons disk exhaustion | GC policy | Documented |
 | P2-21 | Sneakernet import integrity | Sign packets, verify on import | Done |
 | P2-22 | Catalog / IR drift | Validation step | Done |

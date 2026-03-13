@@ -19,31 +19,59 @@
     app.innerHTML = '';
     S = global.AGNI_SHARED || S;
 
-    var sensorsAvailable = S.device && S.device.hasMotionEvents && S.sensorBridge && S.sensorBridge.isActive && S.sensorBridge.isActive();
+    var requiredSensorId = (S.getRequiredSensorIdForStep && S.getRequiredSensorIdForStep(step)) || 'accel.total';
+    var sensorsAvailable = (S.isSensorRequiredAvailable && S.isSensorRequiredAvailable(requiredSensorId)) ||
+      (S.device && S.device.hasMotionEvents && S.sensorBridge && S.sensorBridge.isActive && S.sensorBridge.isActive());
     var sensorOptional = step.sensor_optional === true || (ctx.lesson.meta && ctx.lesson.meta.sensor_optional === true);
 
-    if (!sensorsAvailable && sensorOptional) {
-      var fallbackContainer = document.createElement('div');
-      fallbackContainer.className = 'step step-hardware-trigger step-sensor-fallback';
-      if (step.htmlContent) {
-        var fd = document.createElement('div');
-        fd.className = 'step-content';
-        S.setSafeHtml(fd, step.htmlContent);
-        fallbackContainer.appendChild(fd);
+    if (!sensorsAvailable) {
+      if (sensorOptional) {
+        var fallbackContainer = document.createElement('div');
+        fallbackContainer.className = 'step step-hardware-trigger step-sensor-fallback';
+        if (step.htmlContent) {
+          var fd = document.createElement('div');
+          fd.className = 'step-content';
+          S.setSafeHtml(fd, step.htmlContent);
+          fallbackContainer.appendChild(fd);
+        }
+        var fallbackMsg = document.createElement('p');
+        fallbackMsg.className = 'hw-fallback-msg';
+        fallbackMsg.textContent = ctx.t('sensor_unavailable') || 'Sensors unavailable on this device.';
+        fallbackContainer.appendChild(fallbackMsg);
+        var fallbackBtn = document.createElement('button');
+        fallbackBtn.className = 'btn btn-primary';
+        fallbackBtn.textContent = ctx.t('tap_to_continue') || 'Tap to continue';
+        fallbackBtn.onclick = function () {
+          ctx.recordStepOutcome(step, true, 1, false);
+          ctx.nextStep();
+        };
+        fallbackContainer.appendChild(fallbackBtn);
+        app.appendChild(fallbackContainer);
+        return;
       }
-      var fallbackMsg = document.createElement('p');
-      fallbackMsg.className = 'hw-fallback-msg';
-      fallbackMsg.textContent = ctx.t('sensor_unavailable') || 'Sensors unavailable on this device.';
-      fallbackContainer.appendChild(fallbackMsg);
-      var fallbackBtn = document.createElement('button');
-      fallbackBtn.className = 'btn btn-primary';
-      fallbackBtn.textContent = ctx.t('tap_to_continue') || 'Tap to continue';
-      fallbackBtn.onclick = function () {
-        ctx.recordStepOutcome(step, true, 1, false);
-        ctx.nextStep();
+      var msgContainer = document.createElement('div');
+      msgContainer.className = 'step step-hardware-trigger step-sensor-fallback';
+      if (step.htmlContent) {
+        var msgContent = document.createElement('div');
+        msgContent.className = 'step-content';
+        S.setSafeHtml(msgContent, step.htmlContent);
+        msgContainer.appendChild(msgContent);
+      }
+      var msgEl = document.createElement('p');
+      msgEl.className = 'hw-fallback-msg';
+      msgEl.textContent = (ctx.t('sensor_unavailable') || 'Sensors unavailable on this device.') +
+        ' ' + (ctx.t('use_emulator') || 'Use the button below.');
+      msgContainer.appendChild(msgEl);
+      var emulatorBtn = document.createElement('button');
+      emulatorBtn.className = 'btn btn-primary';
+      emulatorBtn.textContent = ctx.t('emulator_shake') || 'Shake';
+      emulatorBtn.onclick = function () {
+        if (S.sensorBridge && S.sensorBridge.startSimulation) {
+          S.sensorBridge.startSimulation({ pattern: 'shake', hz: 20 });
+        }
       };
-      fallbackContainer.appendChild(fallbackBtn);
-      app.appendChild(fallbackContainer);
+      msgContainer.appendChild(emulatorBtn);
+      app.appendChild(msgContainer);
       return;
     }
 
@@ -70,7 +98,7 @@
 
     var gaugeLabel = document.createElement('div');
     gaugeLabel.className = 'gauge-label';
-    gaugeLabel.textContent = step.sensor || 'accel.total';
+    gaugeLabel.textContent = requiredSensorId;
     gaugeContainer.appendChild(gaugeLabel);
 
     var gaugeTrack = document.createElement('div');
@@ -104,7 +132,7 @@
     ctx._narr.narrateHardwareTrigger(step.audio_description || (container.querySelector('.step-content') ? container.querySelector('.step-content').textContent : ''), step.threshold);
 
     var thresholdStr = step.threshold || '';
-    var primarySensor = step.sensor || 'accel.total';
+    var primarySensor = requiredSensorId;
     var targetValue = 10;
     try {
       var numMatch = thresholdStr.match(/([\d.]+)g?\b/);

@@ -27,3 +27,7 @@ No separate “sensor dependency map” is stored; it is derived from the step t
 ## Phase 5
 
 This playbook satisfies the “step-level sensor dependency tracking” item in Phase 5: the **tracking** is definitional and schema-driven (step type + `sensor`/`threshold`). The runtime already uses these fields for hardware_trigger steps; analytics or UI can use the same rule to list which steps require which sensors.
+
+### Availability check (P2-19)
+
+Before executing a `hardware_trigger` step, the runtime checks whether the **required sensor** is available via `getRequiredSensorIdForStep(step)` and `isSensorRequiredAvailable(sensorId)` on `AGNI_SHARED`. If the step needs light or mic and the device only has motion sensors, the fallback UI is shown immediately (tap-to-continue when `sensor_optional`, or emulator button when required).
