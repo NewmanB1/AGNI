@@ -179,7 +179,9 @@ const config = {
   })(),
   compileRetryAfter:  Math.max(1, intVal('AGNI_COMPILE_RETRY_AFTER', 3)),
   /** Set 1 or true for strict math validation in bandit/LMS. */
-  mathStrict:         (function () { var v = strVal('AGNI_MATH_STRICT', ''); return v === '1' || String(v).toLowerCase() === 'true'; })()
+  mathStrict:         (function () { var v = strVal('AGNI_MATH_STRICT', ''); return v === '1' || String(v).toLowerCase() === 'true'; })(),
+  /** LTI 1.1 shared secret for OAuth signature validation. Empty = skip validation (dev). */
+  ltiSecret:          strVal('AGNI_LTI_SECRET', '')
 };
 
 config.USB_SAFE_ROOT = USB_SAFE_ROOT;

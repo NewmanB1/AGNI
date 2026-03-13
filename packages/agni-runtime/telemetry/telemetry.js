@@ -336,6 +336,18 @@
         log.debug('Telemetry event recorded:', eventId, 'mastery:', computed.mastery);
         // Attempt immediate flush — non-blocking, failure is silent
         flush().catch(function () {});
+        // LMS postMessage: notify parent when in iframe (see docs/playbooks/lms-plugins.md)
+        if (global.window && global.window !== global.top && (lessonData.lmsMode || true)) {
+          try {
+            global.parent.postMessage({
+              type: 'ols.lessonComplete',
+              lessonId: meta.identifier || lessonData.id || 'unknown',
+              mastery: computed.mastery,
+              durationMs: Math.round(totalDurationMs || 0),
+              stepOutcomes: computed.stepScores
+            }, '*');
+          } catch (e) { /* no-op: postMessage may fail in some contexts */ }
+        }
         return { eventId: eventId, mastery: computed.mastery };
       });
     });

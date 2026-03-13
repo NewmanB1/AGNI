@@ -84,6 +84,14 @@ Paginated endpoints: `GET /api/lessons`, `GET /api/theta/all`, `GET /api/account
 |--------|------|------|-------------|
 | GET | `/health` | No | Health check. Returns `{ status, uptime, version }` |
 
+### LTI (Moodle, Canvas)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/lti/launch` | OAuth 1.0 (AGNI_LTI_SECRET) | LTI 1.1 launch; lesson picker or Deep Link return |
+| GET | `/lti/lessons` | No | JSON lesson catalog |
+| GET | `/lti/xml` | No | LTI 1.1 XML descriptor for tool registration |
+
 ### Theta (Adaptive Scheduling)
 
 | Method | Path | Auth | Description |

@@ -88,6 +88,7 @@
   for (var _mi = 0; _mi < steps.length; _mi++) {
     if (steps[_mi].id) _stepIdMap[steps[_mi].id] = _mi;
   }
+  var _olsReadySent = false;
 
   // ── Step outcome tracking & probe collection ──
   var stepOutcomes  = [];
@@ -107,7 +108,7 @@
 
   function recordStepOutcome(step, passed, attempts, skipped) {
     var w = typeof step.weight === 'number' ? step.weight : _defaultWeight(step.type);
-    stepOutcomes.push({
+    var outcome = {
       stepId:      step.id,
       type:        step.type || 'content',
       weight:      w,
@@ -116,8 +117,24 @@
       attempts:    attempts || 1,
       maxAttempts: step.max_attempts || 1,
       durationMs:  Date.now() - stepEntryMs
-    });
+    };
+    stepOutcomes.push(outcome);
     _frust.trackOutcome(passed, skipped);
+    // LMS postMessage: notify parent when in iframe (see docs/playbooks/lms-plugins.md)
+    var scored = (step.type === 'quiz' || step.type === 'hardware_trigger' || step.type === 'gate');
+    if (scored && typeof global.window !== 'undefined' && global.window !== global.top) {
+      try {
+        var lmsMode = lesson && lesson.lmsMode;
+        if (lmsMode !== false) {
+          global.parent.postMessage({
+            type: 'ols.stepComplete',
+            stepIndex: stepIndex,
+            outcome: outcome,
+            mastery: null
+          }, '*');
+        }
+      } catch (e) { /* no-op */ }
+    }
   }
 
   function _defaultWeight(type) {
@@ -453,6 +470,19 @@
       renderer(step);
     } else {
       renderContentStep(step);
+    }
+    // LMS postMessage: ols.ready once when first step rendered (see docs/playbooks/lms-plugins.md)
+    if (!_olsReadySent && typeof global.window !== 'undefined' && global.window !== global.top) {
+      _olsReadySent = true;
+      try {
+        if (lesson && lesson.lmsMode !== false) {
+          global.parent.postMessage({
+            type: 'ols.ready',
+            lessonId: LESSON_ID,
+            stepCount: steps.length
+          }, '*');
+        }
+      } catch (e) { /* no-op */ }
     }
   }
 

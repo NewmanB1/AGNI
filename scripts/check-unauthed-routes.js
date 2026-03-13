@@ -20,7 +20,8 @@ const ALLOWLIST = new Set([
   '/api/auth/login',
   '/api/auth/logout',
   '/api/accounts/student/claim',
-  '/api/accounts/student/verify-pin'
+  '/api/accounts/student/verify-pin',
+  '/lti/launch'  // LTI 1.1: validated by OAuth signature (AGNI_LTI_SECRET)
 ]);
 
 function normalizePath(p) {

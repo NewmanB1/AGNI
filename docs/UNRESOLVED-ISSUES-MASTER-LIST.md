@@ -247,7 +247,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | R5 | Day 96-100: Research TipTap for WYSIWYG | **Open** |
 | R6 | Day 96-100: Finalize v1.0 Spec | **Open** |
 | R7 | Future: The Editor (drag-and-drop GUI) | **Done** — form-based editor in vanilla portal (meta, steps, ontology; Validate/Preview/Save; step reorder) |
-| R8 | Future: Plugins for Moodle, Kolibri, Canvas | **Open** |
+| R8 | Future: Plugins for Moodle, Kolibri, Canvas | **Phase 1–2** — [playbooks/lms-plugins.md](playbooks/lms-plugins.md); LTI server, postMessage, Moodle/Canvas docs |
 | R9 | Future: The Mesh (graph_weights sync via LoRa) | **Done** — design + impl ([playbooks/mesh-lora.md](playbooks/mesh-lora.md)); UDP sim; run `node hub-tools/mesh.js` or `sync.js --transport=lora` |
 | R10 | Future: Reference implementation refactor | **Done** — schema-based, pure pipelines, documented boundaries; see REFERENCE-IMPLEMENTATION-VISION.md §4.1–4.2 |
 
@@ -327,7 +327,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | **P1 (High)** | 0 | All Done (forwardSub, addVec, sparse, yaml-safe 2-5) |
 | **P2 (Medium)** | 6 | LEN-001 #2, #4; P2-17; svg-stage 3-3, 3-10, 3-11, 3-14 |
 | **P3 (Low)** | 12+ | LEN-001 #5, #8; svg-stage 3-1; E2.1–E2.3; audit items |
-| **Roadmap / Launch** | 12+ | ROADMAP (R7, R10 Done), YEAR2-PREP (Y9 Done), LAUNCH-AND-COMMUNITY unchecked |
+| **Roadmap / Launch** | 12+ | ROADMAP (R7, R9, R10 Done; R8 Design), YEAR2-PREP (Y9 Done), LAUNCH-AND-COMMUNITY unchecked |
 | **TypeScript** | ~30 | CHECK-JS-FINISH-PLAN per-file fixes |
 
 ---
@@ -335,5 +335,6 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 ## References
 
 - Mesh design (R9): `playbooks/mesh-lora.md`
+- LMS plugins (R8): `playbooks/lms-plugins.md`
 - Env validation: `ENV-VALIDATION-SPLIT.md`
 - Source documents: `archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`, `archive/ARCHITECTURAL-AUDIT-FINDINGS.md`, `archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md`, `archive/ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN.md`, `AUDIT-HARDENING-PLAN.md`, `LEN-001-MATH-ENGINE-BUGS.md`, `SHIM-AND-CODE-AUDIT-FINDINGS.md`, `archive/GAP-ANALYSIS-AND-MITIGATIONS.md`, `archive/RUNTIME-MANIFEST-IMPROVEMENT-PLAN.md`, `archive/sensor-toolkit-improvement-plan.md`, `archive/OPPORTUNISTIC-PRECACHE-PLAN.md`, `archive/PHASE-3-REMEDIATION-PLAN.md`, `archive/SPRINT-R16-OPEN-BUGS.md`, `ROADMAP.md`, `YEAR2-PREP.md`, `LAUNCH-AND-COMMUNITY.md`, `CHECK-JS-ENABLEMENT-PLAN.md`, `CHECK-JS-FINISH-PLAN.md`

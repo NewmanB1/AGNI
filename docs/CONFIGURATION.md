@@ -135,6 +135,12 @@ These JSON keys in `hub-config.json` map to the env vars below (via `loadHubConf
 | `AGNI_MARKOV_WEIGHT` | `0.15` | — | Markov weight in scoring |
 | `AGNI_PAGERANK_WEIGHT` | `0.10` | — | PageRank weight in scoring |
 
+### LTI (Moodle, Canvas)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AGNI_LTI_SECRET` | *(empty)* | LTI 1.1 shared secret for OAuth signature validation. Empty = skip validation (dev only). Set when using with Moodle/Canvas. |
+
 ### Sync & Federation
 
 | Variable | Default | Description |

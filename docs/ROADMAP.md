@@ -87,6 +87,6 @@ This document outlines the strategic plan to launch the Open Lesson Standard (OL
 
 ## 🔭 Future Horizons (Year 2)
 *   **The Editor (R7 — Done):** Form-based lesson editor in vanilla portal. Meta form, steps (instruction, quiz, hardware_trigger, completion) with add/remove/reorder, ontology, Validate/Preview/Save via author API. Navigate to `#/author/new` or `#/author/:slug/edit`.
-*   **The Plugins:** Official plugins for Moodle, Kolibri, and Canvas.
+*   **The Plugins (R8):** Official plugins for Moodle, Kolibri, and Canvas. Design and phased plan in [playbooks/lms-plugins.md](playbooks/lms-plugins.md). Kolibri: Ricecooker guide exists; LTI-first path for Moodle/Canvas.
 *   **The Mesh:** Enabling Village Hubs to sync `graph_weights.json` via LoRa to share cultural adaptations between villages. See **`docs/playbooks/mesh-lora.md`** for design and implementation phases.
 *   **Reference implementation refactor (R10 — Done):** Schema-based design, pure pipelines (compiler, theta, LMS, governance), and documented pure-core vs edges are in place. See **`docs/REFERENCE-IMPLEMENTATION-VISION.md`** §4.1–4.2.

@@ -600,6 +600,7 @@ function startApi(port) {
   require('./routes/admin').register(router, ctx);
   require('./routes/chain').register(router, ctx);
   require('./routes/telemetry').register(router, ctx);
+  require('./routes/lti').register(router, ctx);
   require('@agni/utils/feature-flags').registerRoutes(router, ctx);
 
   const server = http.createServer((req, res) => {
