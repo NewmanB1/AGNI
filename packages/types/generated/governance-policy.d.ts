@@ -60,4 +60,8 @@ export interface AGNIGovernancePolicy {
    * Include failure-mode hint when protocol check fails.
    */
   failureModeHints?: boolean;
+  /**
+   * When true, theta excludes lessons whose UTU band does not match any utuTargets from scheduling. Override via catalog utuBandOverrides. Default: false (advisory only).
+   */
+  enforceUtuTargets?: boolean;
 }

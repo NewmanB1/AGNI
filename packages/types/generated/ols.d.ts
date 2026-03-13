@@ -287,7 +287,7 @@ export interface StepCommonProps {
    * Unique step identifier within this lesson. Used by θ for reordering and by forks for change tracking.
    */
   id?: string;
-  type?: string;
+  type?: "instruction" | "hardware_trigger" | "quiz" | "fill_blank" | "matching" | "ordering" | "completion";
   content?: string;
   sensor?: string;
   threshold?: string;
