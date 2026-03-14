@@ -260,6 +260,11 @@ function collectLessonFromForm(main) {
   var metaDifficulty = parseInt(main.querySelector('#meta-difficulty')?.value, 10) || 1;
   var metaTags = (main.querySelector('#meta-tags')?.value?.trim() || '').split(',').map(function (t) { return t.trim(); }).filter(Boolean);
   var metaTime = main.querySelector('#meta-time')?.value?.trim() || 'PT5M';
+  var utuSpine = (main.querySelector('#meta-utu-spine')?.value || '').trim();
+  var utuBandVal = main.querySelector('#meta-utu-band')?.value;
+  var utuProtocolVal = main.querySelector('#meta-utu-protocol')?.value;
+  var utuBand = utuBandVal ? parseInt(utuBandVal, 10) : null;
+  var utuProtocol = utuProtocolVal ? parseInt(utuProtocolVal, 10) : null;
 
   var meta = {
     identifier: metaId,
@@ -272,6 +277,10 @@ function collectLessonFromForm(main) {
     tags: metaTags,
     time_required: metaTime
   };
+  meta.utu = {};
+  if (utuSpine) meta.utu.spineId = utuSpine;
+  if (utuBand >= 1 && utuBand <= 6) meta.utu.band = utuBand;
+  if (utuProtocol >= 1 && utuProtocol <= 5) meta.utu.protocol = utuProtocol;
 
   var steps = [];
   main.querySelectorAll('.step-card').forEach(function (card, idx) {
@@ -381,6 +390,10 @@ function populateFormFromLesson(main, lesson) {
   set('#meta-difficulty', m.difficulty || 1);
   set('#meta-tags', Array.isArray(m.tags) ? m.tags.join(', ') : '');
   set('#meta-time', m.time_required || 'PT5M');
+  var utu = m.utu || {};
+  set('#meta-utu-spine', utu.spineId || utu.class || '');
+  set('#meta-utu-band', utu.band != null && utu.band >= 1 && utu.band <= 6 ? String(utu.band) : '');
+  set('#meta-utu-protocol', utu.protocol != null && utu.protocol >= 1 && utu.protocol <= 5 ? String(utu.protocol) : '');
 
   var onEl = main.querySelector('#ontology-requires');
   var opEl = main.querySelector('#ontology-provides');
@@ -608,6 +621,14 @@ export function renderAuthorNew(main, slug) {
     '<div><label for="meta-time">Time (e.g. PT5M)</label><input type="text" id="meta-time" class="input" value="PT5M" placeholder="PT5M" /></div>' +
     '</div>' +
     '<div><label for="meta-tags">Tags (comma-separated)</label><input type="text" id="meta-tags" class="input" placeholder="beginner, tutorial" /></div>' +
+    '<div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #ddd;"><h4 style="margin:0 0 0.5rem 0;">UTU (optional)</h4>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">' +
+    '<div><label for="meta-utu-spine">Spine</label><select id="meta-utu-spine" class="input"><option value="">— None —</option>' +
+    ['MAC-1','MAC-2','MAC-3','MAC-4','MAC-5','MAC-6','MAC-7','MAC-8','SCI-1','SCI-2','SCI-3','SCI-4','SCI-5','SCI-6','SCI-7','SOC-1','SOC-2','SOC-3','SOC-4','SOC-5','SOC-6','SOC-7'].map(function(id){return '<option value="'+esc(id)+'">'+esc(id)+'</option>';}).join('') +
+    '</select></div>' +
+    '<div><label for="meta-utu-band">Band (1–6)</label><select id="meta-utu-band" class="input"><option value="">— None —</option><option value="1">B1</option><option value="2">B2</option><option value="3">B3</option><option value="4">B4</option><option value="5">B5</option><option value="6">B6</option></select></div>' +
+    '<div><label for="meta-utu-protocol">Protocol (1–5)</label><select id="meta-utu-protocol" class="input"><option value="">— None —</option><option value="1">P1 Transmission</option><option value="2">P2 Guided Construction</option><option value="3">P3 Apprenticeship</option><option value="4">P4 Dev. Sequencing</option><option value="5">P5 Meaning Activation</option></select></div>' +
+    '</div></div>' +
     '</section>' +
     '<section class="card"><h2>Steps</h2><div id="steps-container"></div><button type="button" id="btn-add-step" class="btn btn-primary">+ Add Step</button></section>' +
     '<section class="card"><h2>Ontology (optional)</h2>' +

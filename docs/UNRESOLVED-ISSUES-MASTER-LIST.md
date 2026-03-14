@@ -265,7 +265,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 
 | ID | Task | Status |
 |----|------|--------|
-| Y1 | E2: Meta form (/author/new) | **Open** |
+| Y1 | E2: Meta form (/author/new) | **Done** — identifier, title, language, UTU (Spine picker, Band, Protocol), difficulty, description, tags, license, time |
 | Y2 | E3: Step editor | **Done** — sensor dropdown from @agni/plugins (GET /api/author/sensors), threshold validation on blur |
 | Y3 | E4: Preview button | **Open** |
 | Y4 | E5: Save | **Done** — preflight validation, Ctrl+S shortcut, compile-on-save, success toast |

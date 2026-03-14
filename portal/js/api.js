@@ -128,6 +128,10 @@ export function createHubApi(baseUrl) {
       return authGet('api/author/sensors');
     },
 
+    getUtuConstants() {
+      return authGet('api/governance/utu-constants');
+    },
+
     postAuthorValidate(lesson) {
       return authPost('api/author/validate', lesson);
     },
