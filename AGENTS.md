@@ -24,7 +24,9 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 | `@ols/compiler` | `packages/ols-compiler/` | Lesson compiler: YAML → IR → HTML/native/YAML-packet |
 | `@agni/governance` | `packages/agni-governance/` | Policy, compliance, catalog |
 | `@agni/services` | `packages/agni-services/` | Top-down API: accounts, author, governance, LMS, lesson-chain |
-| `@agni/hub` | `packages/agni-hub/` | Hub server: pathfinder, lesson-server, telemetry engine, accounts |
+| `@agni/hub` | `packages/agni-hub/` | Hub Kernel: pathfinder, lesson-server, telemetry engine, sync, routes |
+
+**Hub Kernel** — The Village Hub binds HTTP routes to shared services. Pathfinder orchestrates lesson ordering; lesson-server compiles/serves; telemetry-engine ingests and produces graph_weights; routes bind to @agni/services (accounts, LMS, governance, lessonAssembly). See `docs/ARCHITECTURE.md` §3.1 Hub Kernel.
 
 **Lesson creator:** Template-based wizard (select from pre-created templates in `lessons/`). Bulk lesson generation (`tools/curriculum-gen`) is an independent tool, not part of core AGNI.
 
@@ -41,8 +43,10 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 | CLI entry point | `packages/agni-cli/cli.js` |
 | Browser player | `packages/agni-runtime/` (player.js, shared-runtime.js, sensor-bridge.js) |
 | LMS engine (Rasch, bandit) | `packages/agni-engine/` |
-| Hub server (on-demand PWA) | `packages/agni-hub/` (lesson-server.js, sw.js, pwa/) |
+| Hub Kernel | `packages/agni-hub/` — pathfinder, lesson-server, telemetry-engine, sync, routes |
+| Lesson Service | lesson-server.js + @agni/services (lessonAssembly, lessonChain) |
 | Pathfinder (lesson ordering) | `packages/agni-hub/pathfinder.js` |
+| Telemetry Service | `packages/agni-hub/telemetry-engine.js` |
 | Portal (teacher/admin UI) | `portal/` (vanilla HTML/CSS/JS, no build) |
 | Schemas | `schemas/*.json`, `@ols/schema` |
 | Shared types | `packages/types/index.d.ts` |

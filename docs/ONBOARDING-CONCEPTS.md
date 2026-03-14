@@ -16,7 +16,7 @@ AGNI is organized as an **npm workspaces monorepo**. Each package has a clear bo
 | [`packages/agni-engine`](../packages/agni-engine/) | `@agni/engine` | Learning engine: Rasch, Thompson, embeddings, PageRank, federation |
 | [`packages/agni-runtime`](../packages/agni-runtime/) | `@agni/runtime` | Browser runtime: player, sensors, SVG factories (ES5, Chrome 51 — see [RUN-ENVIRONMENTS.md](RUN-ENVIRONMENTS.md)) |
 | [`packages/agni-governance`](../packages/agni-governance/) | `@agni/governance` | Policy enforcement, compliance evaluation, catalog management |
-| [`packages/agni-hub`](../packages/agni-hub/) | `@agni/hub` | Village Hub server: HTTP routes, theta, accounts, telemetry |
+| [`packages/agni-hub`](../packages/agni-hub/) | `@agni/hub` | Hub Kernel: pathfinder, lesson-server, telemetry engine, sync, routes |
 | [`portal/`](../portal/) | — | Vanilla HTML/CSS/JS teacher and admin portal |
 
 **Dependency flow** (each package only depends on packages above it):
@@ -41,9 +41,9 @@ The **file format and protocol** for lessons: YAML source with `meta`, `ontology
 
 ---
 
-## Theta (θ) — adaptive ordering
+## Pathfinder — adaptive ordering
 
-**Theta** is the **lesson ordering engine**: it decides which lessons to show next based on prerequisites and a **Marginal Learning Cost (MLC)** heuristic. Implemented in **`packages/agni-hub/theta.js`** (`@agni/hub`).
+**Pathfinder** is the **lesson ordering engine**: it decides which lessons to show next based on prerequisites and a **Marginal Learning Cost (MLC)** heuristic. Implemented in **`packages/agni-hub/pathfinder.js`** (`@agni/hub`).
 
 - **Skill graph:** Lessons declare `requires` and `provides` skills. Theta builds a graph and only offers lessons whose prerequisites are met.
 - **MLC:** Among eligible lessons, theta orders by “cost” so that lessons that fit the student’s background (e.g. weaving vs farming) are preferred. Formula: θ = BaseCost − CohortDiscount. MLC is clamped to [0, ∞) to avoid negative values. BaseCost ∈ [0, 1]; graph edge weights must be in [0, 1].
@@ -61,7 +61,7 @@ Used inside the **LMS engine** to estimate **student ability** from quiz outcome
 
 ## Thompson sampling (bandit)
 
-The **LMS engine** uses **Thompson sampling** to choose which lesson to recommend next among the set that **theta** has already filtered (by prerequisites). It balances exploration and exploitation using a Bayesian bandit over lesson features. Implemented in **`packages/agni-engine/thompson.js`**. Pure function: `selectLesson(state, studentId)`; persistence is at the edge.
+The **LMS engine** uses **Thompson sampling** to choose which lesson to recommend next among the set that **pathfinder** has already filtered (by prerequisites). It balances exploration and exploitation using a Bayesian bandit over lesson features. Implemented in **`packages/agni-engine/thompson.js`**. Pure function: `selectLesson(state, studentId)`; persistence is at the edge.
 
 ---
 
@@ -91,9 +91,19 @@ Village hubs merge bandit posteriors without raw student data. **`packages/agni-
 
 ---
 
-## Village Hub / hub-transform
+## Village Hub / Hub Kernel
 
-The **Village Hub** is the edge server that compiles YAML to HTML or JSON on demand and serves the theta/LMS APIs. **`packages/agni-hub/hub-transform.js`** (server/ is a shim) turns a lesson YAML request into a PWA-style bundle. Theta runs in the same process and provides `/api/theta`, `/api/lms/...`, and governance endpoints.
+The **Village Hub** is the edge server that compiles YAML to HTML or JSON on demand and serves the pathfinder/LMS APIs. It is organized as a **Hub Kernel** that binds HTTP routes to shared services:
+
+| Kernel component | Implementation | Role |
+|------------------|----------------|------|
+| Lesson Service | lesson-server.js, @agni/services (lessonAssembly, lessonChain) | Compile YAML→HTML, serve /lessons/, /factories/ |
+| Pathfinder | pathfinder.js | Adaptive ordering, /api/pathfinder, skill graph, MLC |
+| Telemetry Service | telemetry-engine.js | Ingest events, produce graph_weights |
+| LMS Service | @agni/services/lms | Bandit selection, Rasch, Thompson |
+| Governance Service | @agni/services, @agni/governance | Catalog, policy, /api/governance/* |
+
+**`packages/agni-hub/lesson-server.js`** turns a lesson YAML request into a PWA-style bundle. Pathfinder runs in the same process and provides `/api/pathfinder`, `/api/lms/...`, and governance endpoints.
 
 ---
 
@@ -105,4 +115,4 @@ The **Village Hub** is the edge server that compiles YAML to HTML or JSON on dem
 - **Verification:** **`docs/VERIFICATION-REPORT.md`** — cross-check of architectural claims vs codebase.
 - **Gaps & mitigations:** **`docs/archive/GAP-ANALYSIS-AND-MITIGATIONS.md`** — known gaps and proposed actions (archived; see master list).
 - **Reference implementation:** **`docs/REFERENCE-IMPLEMENTATION-VISION.md`** (schema-based, pure core, boundaries).
-- **Playbooks:** **`docs/playbooks/`** — compiler, runtime, governance, theta, thin-client targets, typing, Sentry, federation, village-security.
+- **Playbooks:** **`docs/playbooks/`** — compiler, runtime, governance, pathfinder, thin-client targets, typing, Telemetry Engine (sentry.md), federation, village-security.

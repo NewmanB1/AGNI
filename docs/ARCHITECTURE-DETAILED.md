@@ -62,7 +62,7 @@ Canonical implementations live in `packages/`. **Edit packages directly.** Tests
 | **@agni/governance** | `packages/agni-governance/` | Policy, compliance, catalog | @agni/utils, @ols/schema |
 | **@ols/compiler** | `packages/ols-compiler/` | YAML → IR → HTML/native/YAML-packet | @ols/schema, @agni/utils |
 | **@agni/services** | `packages/agni-services/` | Top-down API: accounts, author, governance, LMS, lesson-chain, lessonAssembly | @ols/compiler, @agni/engine, @agni/governance |
-| **@agni/hub** | `packages/agni-hub/` | Hub server: theta, hub-transform, sentry, sync, routes | @agni/services, theta, hub-transform |
+| **@agni/hub** | `packages/agni-hub/` | Hub Kernel: pathfinder, lesson-server, telemetry-engine, sync, routes | @agni/services |
 | **@agni/plugins** | `packages/agni-plugins/` | Factory/step/sensor registration | Leaf |
 | **tools/curriculum-gen** | `tools/curriculum-gen/` | Bulk lesson generator | Independent tool, not part of core AGNI |
 
@@ -89,9 +89,9 @@ Canonical implementations live in `packages/`. **Edit packages directly.** Tests
 | Entry | File | Purpose |
 |-------|------|---------|
 | CLI | `packages/agni-cli/cli.js` | Compile lessons, hub setup, lms-repair |
-| Theta (hub API) | `packages/agni-hub/theta.js` | HTTP server, lesson ordering, LMS, governance, accounts |
-| Hub-transform | `packages/agni-hub/hub-transform.js` | On-demand YAML → HTML compilation |
-| Sentry | `packages/agni-hub/sentry.js` | Telemetry analysis, graph_weights |
+| Pathfinder (hub API) | `packages/agni-hub/pathfinder.js` | HTTP server, lesson ordering, LMS, governance, accounts |
+| lesson-server | `packages/agni-hub/lesson-server.js` | On-demand YAML → HTML compilation |
+| Telemetry Engine | `packages/agni-hub/telemetry-engine.js` | Telemetry analysis, graph_weights |
 | Sync | `packages/agni-hub/sync.js` | USB/sneakernet sync |
 | Player | `packages/agni-runtime/ui/player.js` | Browser lesson player (loaded inline in HTML) |
 
@@ -106,7 +106,7 @@ An OLS file is a YAML document with strictly defined blocks:
 | Block | Role |
 |-------|------|
 | **`meta`** | Dublin Core metadata (identifier, title, language, license, created). Optionally: `utu`, `teaching_mode`, `is_group`, `yamlSchemaVersion`. |
-| **`ontology`** | Skill contract: `requires` (prerequisites) and `provides` (skills taught). Drives theta eligibility and graph traversal. |
+| **`ontology`** | Skill contract: `requires` (prerequisites) and `provides` (skills taught). Drives pathfinder eligibility and graph traversal. |
 | **`gate`** | Logic block for zero-trust prerequisite check. Can specify quiz, passing_score, retry_delay, on_fail. |
 | **`steps`** | Content payload: text (Markdown), hardware_trigger (sensors), quiz, fill_blank, matching, ordering, svg, completion. |
 
@@ -221,21 +221,23 @@ rawYaml
 | Caller | Path |
 |--------|------|
 | CLI | `packages/agni-cli/cli.js` → `@agni/services/compiler` → `compileLessonFromYamlFile()` |
-| Hub on-demand | `hub-transform.compileLesson(slug)` → same pipeline |
+| Hub on-demand | `lesson-server.compileLesson(slug)` → same pipeline |
 | Author API | `POST /api/author/preview` → validate + build IR |
 
 ---
 
-## 5. Village Hub Architecture
+## 5. Village Hub Architecture (Hub Kernel)
+
+The Hub is organized as a **Hub Kernel** that binds routes to services. Pathfinder orchestrates; lesson-server, telemetry-engine, and routes bind to @agni/services. See `docs/ARCHITECTURE.md` §3.1 Hub Kernel.
 
 ### Request Routing Order
 
-1. **hub-transform** handles first: `/lessons/:slug`, `/factories/:file`, `/katex/:file`, `/shell/:slug`, `/library`, `/manifest.json`, `/sw.js`, `/lesson-data.js`.
-2. Unhandled requests fall through to **theta** Router: `/api/*`, `/health`.
+1. **lesson-server** handles first: `/lessons/:slug`, `/factories/:file`, `/katex/:file`, `/shell/:slug`, `/library`, `/manifest.json`, `/sw.js`, `/lesson-data.js`.
+2. Unhandled requests fall through to **pathfinder** Router: `/api/*`, `/health`.
 
-### Hub-Transform
+### lesson-server
 
-**File:** `packages/agni-hub/hub-transform.js`
+**File:** `packages/agni-hub/lesson-server.js`
 
 | Route | Handler | Notes |
 |-------|---------|-------|
@@ -255,23 +257,23 @@ rawYaml
 
 **Device binding:** `_getRequestCompileOptions()` extracts session token → `validateStudentSession` → pseudoId. If valid, `_assembleHtml` uses pseudoId as deviceId for signing.
 
-### Theta
+### Pathfinder
 
-**File:** `packages/agni-hub/theta.js`
+**File:** `packages/agni-hub/pathfinder.js`
 
 **Responsibilities:**
 - Lesson index: `rebuildLessonIndex()` from catalog + IR sidecars at `serveDir/lessons/{slug}/index-ir.json`
 - Skill graph: BFS with cycle guard (DFS back-edge detection). Cycle → fatal error at startup.
 - MLC ordering: `computeLessonOrder()` filters eligible lessons, sorts by θ = BaseCost × ResidualFactor − CoherenceBonus. MLC clamped to [0, ∞).
 - Frustration penalty: Lessons with high historical frustration get θ penalty (feedback loop from telemetry).
-- LMS integration: Passes theta-eligible candidates to `lmsEngine.selectBestLesson()` when engine is available.
+- LMS integration: Passes pathfinder-eligible candidates to `lmsEngine.selectBestLesson()` when engine is available.
 
 **Shared cache:** `skillGraph`, `eligibleLessons` invalidated when curriculum, lesson index, or schedules change (mtime check).
 
-**Theta → LMS flow:**
+**Pathfinder → LMS flow:**
 ```
-GET /api/theta?pseudoId=xxx
-  → getLessonsSortedByTheta(pseudoId)
+GET /api/pathfinder?pseudoId=xxx
+  → getLessonsSortedByPathfinder(pseudoId)
   → updateSharedCacheIfNeeded()
   → loadMasterySummaryAsync, loadBaseCostsAsync, getEffectiveGraphWeights
   → computeLessonOrder() — BFS, theta scores
@@ -285,11 +287,11 @@ GET /api/lms/select?pseudoId=&candidates=...
   → Response: { selected, ability }
 ```
 
-### Sentry → Graph Weights → Theta
+### Telemetry Engine → Graph Weights → Pathfinder
 
-- **Sentry** (`packages/agni-hub/sentry.js`): Receives `POST /api/telemetry`, buffers events, appends to `data/events/YYYY-MM-DD.ndjson`
+- **Telemetry Engine** (`packages/agni-hub/telemetry-engine.js`): Receives `POST /api/telemetry`, buffers events, appends to `data/events/YYYY-MM-DD.ndjson`
 - **Analysis:** After N events or cron: update mastery_summary, contingency_tables; cluster cohort (Jaccard); compute benefit (P(pass|prior) − P(pass|¬prior)); write `graph_weights.json`
-- **Theta:** `getEffectiveGraphWeights()` reads local first; if sample_size and edges meet thresholds, use local; else fall back to regional.
+- **Pathfinder:** `getEffectiveGraphWeights()` reads local first; if sample_size and edges meet thresholds, use local; else fall back to regional.
 - **Invariant:** Graph weights affect only MLC sort order, **never** eligibility. Eligibility = ontology.requires + mastery.
 
 ---
@@ -300,7 +302,7 @@ GET /api/lms/select?pseudoId=&candidates=...
 
 ### Architecture
 
-Theta owns **prerequisite enforcement** (BFS skill graph). The engine owns **selection** among theta-eligible candidates. The engine never sees ineligible lessons.
+Pathfinder owns **prerequisite enforcement** (BFS skill graph). The engine owns **selection** among pathfinder-eligible candidates. The engine never sees ineligible lessons.
 
 ### Components
 
@@ -424,7 +426,7 @@ Sync writes to USB. `AGNI_USB_PATH` must be under `USB_SAFE_ROOT` (`/mnt/usb`). 
 | `evaluateLessonCompliance` | Check lesson against policy → status (ok/warning/fail), issues[] |
 | `aggregateCohortCoverage` | Coverage by UTU and skill for governance reporting |
 
-**APIs (theta):** `GET /api/governance/report`, `GET /api/governance/policy`, `PUT /api/governance/policy`, `GET /api/governance/catalog`, `POST /api/governance/compliance`, etc.
+**APIs (pathfinder):** `GET /api/governance/report`, `GET /api/governance/policy`, `PUT /api/governance/policy`, `GET /api/governance/catalog`, `POST /api/governance/compliance`, etc.
 
 ---
 
@@ -440,7 +442,7 @@ Sync writes to USB. `AGNI_USB_PATH` must be under `USB_SAFE_ROOT` (`/mnt/usb`). 
 - **ontology.requires:** Hard prerequisites. Theta BFS: lesson eligible only if all required skills mastered.
 - **ontology.provides:** Skills taught. Used for stabilisation tracking, graph building.
 
-**Relationship:** UTU is a label on a subgraph. Many skill nodes share one UTU. Governance asks "how many MAC-2 Band 4 nodes stabilised?" — theta counts stabilised nodes in that bucket.
+**Relationship:** UTU is a label on a subgraph. Many skill nodes share one UTU. Governance asks "how many MAC-2 Band 4 nodes stabilised?" — pathfinder counts stabilised nodes in that bucket.
 
 ---
 
@@ -448,7 +450,7 @@ Sync writes to USB. `AGNI_USB_PATH` must be under `USB_SAFE_ROOT` (`/mnt/usb`). 
 
 ### Startup Order (Safety-Critical)
 
-Hub processes (theta, sentry, sync) must call `loadHubConfig()` **before** `require('@agni/utils/env-config')`. This populates `process.env` from `hub-config.json` first.
+Hub processes (pathfinder, telemetry-engine, sync) must call `loadHubConfig()` **before** `require('@agni/utils/env-config')`. This populates `process.env` from `hub-config.json` first.
 
 **Config flow:** `hub-config.json` (loadHubConfig) → `process.env` → env-config (canonical reader). Env vars override file values.
 
@@ -458,11 +460,11 @@ Hub processes (theta, sentry, sync) must call `loadHubConfig()` **before** `requ
 |------|----------|
 | dataDir | ensure-paths, accounts, lesson-chain, sync, sentry |
 | serveDir | data-paths |
-| yamlDir | author, hub-transform, theta |
-| thetaPort, servePort, sentryPort | theta, hub-transform, sentry |
+| yamlDir | author, lesson-server, pathfinder |
+| pathfinderPort, servePort, telemetryEnginePort | pathfinder, lesson-server, telemetry-engine |
 | hubId, usbPath | sync |
 | embeddingDim, forgetting | engine |
-| masteryThreshold | theta, governance |
+| masteryThreshold | pathfinder, governance |
 | AGNI_PRIVATE_KEY_PATH | signing (hub, CLI) |
 
 **Pi template:** `data/hub-config.pi.json`. Use `scripts/check-hub-config-pi.js` to validate.
@@ -477,7 +479,7 @@ Hub processes (theta, sentry, sync) must call `loadHubConfig()` **before** `requ
 |-------|-------|---------|
 | verify:core | Cross-cutting | dead-files, schema-sync, skill-dag, run-environments, es5 |
 | verify:runtime | agni-runtime | svg-tools, runtime-manifest, runtime-headers |
-| verify:hub | Hub + auth | hub-config-pi, hub-config-bootstrap, theta-api |
+| verify:hub | Hub + auth | hub-config-pi, hub-config-bootstrap, pathfinder-api |
 | verify:services | agni-services | services-no-scripts |
 | verify:governance | agni-governance | governance-canonical |
 
@@ -513,8 +515,8 @@ Hub processes (theta, sentry, sync) must call `loadHubConfig()` **before** `requ
 | IR / sidecar | `packages/ols-compiler/compiler/build-lesson-ir.js` |
 | HTML builder | `packages/ols-compiler/builders/html.js` |
 | Lesson assembly | `packages/ols-compiler/services/lesson-assembly.js` |
-| Hub transform | `packages/agni-hub/hub-transform.js` |
-| Theta | `packages/agni-hub/theta.js` |
+| lesson-server | `packages/agni-hub/lesson-server.js` |
+| Pathfinder | `packages/agni-hub/pathfinder.js` |
 | LMS engine | `packages/agni-engine/index.js`, rasch.js, thompson.js, embeddings.js |
 | Player | `packages/agni-runtime/ui/player.js` |
 | Sensor / threshold | `packages/agni-runtime/sensors/sensor-bridge.js`, threshold-evaluator.js |

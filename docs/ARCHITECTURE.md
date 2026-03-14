@@ -2,7 +2,7 @@
 
 **Canonical architecture document.** This file is the single source of truth for AGNI/OLS design, phases, and governance. The root `ARCHITECTURE.md` redirects here.
 
-> Updated to reflect current implementation: hub-transform, LMS engine, governance APIs, and runtime verification are in place. **Refactor backlog completed:** LMS state migration/repair, IR and runtime types in TypeScript, runtimeManifest (feature inference decoupled from filenames), consolidated binary/base64 utilities, engine numerical modules typed via `.d.ts`, sneakernet export/import script. See `docs/ROADMAP.md` for remaining work.
+> Updated to reflect current implementation: lesson-server, pathfinder, telemetry engine, LMS engine, governance APIs, and runtime verification are in place. **Refactor backlog completed:** LMS state migration/repair, IR and runtime types in TypeScript, runtimeManifest (feature inference decoupled from filenames), consolidated binary/base64 utilities, engine numerical modules typed via `.d.ts`, sneakernet export/import script. See `docs/ROADMAP.md` for remaining work.
 
 ---
 
@@ -28,9 +28,9 @@ flowchart TB
     subgraph Hub["Village Hub"]
         Compiler["Compiler / @ols/compiler"]
         IR["IR + lesson-ir.json"]
-        Theta["Theta (skill graph, MLC)"]
+        Pathfinder["Pathfinder (skill graph, MLC)"]
         LMS["LMS Engine (Rasch, Thompson)"]
-        HT[hub-transform]
+        LS[lesson-server]
     end
 
     subgraph Outputs
@@ -50,12 +50,12 @@ flowchart TB
     Compiler --> IR
     IR --> HTML
     IR --> Native
-    IR --> Theta
-    Theta --> LMS
-    YAML --> HT
-    HT -->|"on-demand: YAML to IR to HTML"| HTML
+    IR --> Pathfinder
+    Pathfinder --> LMS
+    YAML --> LS
+    LS -->|"on-demand: YAML to IR to HTML"| HTML
     HTML --> Player
-    Theta --> PortalUI
+    Pathfinder --> PortalUI
     LMS --> PortalUI
 ```
 
@@ -152,13 +152,13 @@ AGNI (root)
 │   ├── agni-engine/              # Rasch, Thompson, embeddings, PageRank, Markov
 │   ├── agni-governance/          # policy, compliance, catalog
 │   ├── agni-services/            # accounts, author, governance, LMS, lesson-chain, lessonAssembly
-│   ├── agni-hub/                 # theta.js, hub-transform.js, sentry.js, sync.js, routes/
+│   ├── agni-hub/                 # pathfinder.js, lesson-server.js, telemetry-engine.js, sync.js, routes/
 │   └── agni-cli/                 # CLI entry point (cli.js)
 │
 ├── tools/curriculum-gen/         # Independent bulk lesson generator (not part of core AGNI)
 ├── hub-tools/                    # Wrappers that delegate to packages
-│   ├── theta.js                  # Spawns packages/agni-hub/theta.js
-│   ├── sentry.js
+│   ├── pathfinder.js             # Spawns packages/agni-hub/pathfinder.js
+│   ├── telemetry-engine.js
 │   └── sync.js
 │
 ├── server/
@@ -170,7 +170,32 @@ AGNI (root)
 └── tests/                        # Unit and integration tests
 ```
 
-The server runs hub-transform for on-demand lesson compilation; theta provides the API (scheduling, LMS, governance). Key packages: `packages/agni-services/` (accounts, lesson assembly), `packages/agni-governance/` (compliance evaluation), `packages/agni-engine/` (Rasch, Thompson, embeddings, PageRank).
+The server runs lesson-server for on-demand lesson compilation; pathfinder provides the API (scheduling, LMS, governance). Key packages: `packages/agni-services/` (accounts, lesson assembly, governance, LMS), `packages/agni-governance/` (compliance evaluation), `packages/agni-engine/` (Rasch, Thompson, embeddings, PageRank).
+
+#### Hub Kernel (services + routes)
+
+The Village Hub is organized as a **Hub Kernel** that binds HTTP routes to shared services. The idea is already present via `@agni/services`; this section makes it explicit.
+
+```
+Hub Kernel
+ ├ Lesson Service      — @agni/services (lessonAssembly, lessonChain) + lesson-server (compile, serve)
+ ├ Telemetry Service   — Telemetry Engine (ingest, analyse, graph_weights) + routes/telemetry
+ ├ LMS Service         — @agni/services/lms (bandit, Rasch, Thompson) + routes/lms
+ ├ Governance Service  — @agni/services (governance) + @agni/governance + routes/governance
+ ├ Accounts Service    — @agni/services/accounts + routes/accounts
+ └ Sync                — mesh, USB, regional (cross-cutting)
+```
+
+**Pathfinder** is the orchestrator: it uses LMS, governance, and graph weights (from Telemetry Engine) to order lessons. **Routes** bind to services via `packages/agni-hub/context/services.js` and the shared `ctx` object. The kernel assembles `ctx` in `shared.js` from `context/config`, `context/data-paths`, `context/services`, etc. New routes register with the Router and receive `ctx` with `loadMasterySummaryAsync`, `lmsService`, `governanceService`, `authorService`, `accountsService`, and pathfinder helpers (`getLessonsSortedByPathfinder`, `getEffectiveGraphWeights`).
+
+| Kernel component | Implementation | Routes |
+|------------------|----------------|--------|
+| Lesson Service | lesson-server.js, lessonAssembly, lessonChain | /lessons/, /factories/, /lesson-data.js |
+| Telemetry Service | telemetry-engine.js | POST /api/telemetry, forward to engine |
+| LMS Service | lmsService (context) | /api/lms/* |
+| Governance Service | governanceService, authorService | /api/governance/*, /api/author/* |
+| Pathfinder | pathfinder.js | /api/pathfinder, /api/lessons |
+| Accounts | accountsService | /api/accounts/*, /api/auth/* |
 
 #### The IR Layer (new in Phase 2)
 
@@ -180,12 +205,12 @@ a fully enriched IR rather than raw YAML. The IR contains:
 - Pre-rendered HTML for each step (Markdown processed at build time — no parsing cost at runtime)
 - `inferredFeatures` — full feature profile (difficulty, VARK, Bloom ceiling, sensor flags,
   factory manifest, KaTeX asset list)
-- `ontology` — skill requires/provides for the theta scheduling engine
+- `ontology` — skill requires/provides for the pathfinder scheduling engine
 - Compiler stamps (`_compiledAt`, `_schemaVersion`, `_devMode`, `metadata_source`)
 
 The IR builder writes a sidecar alongside each compiled lesson. **Sidecar naming convention:**
 - **HTML output:** Sidecar is `{htmlBasename}-ir.json` (e.g. `gravity.html` → `gravity-ir.json`; `index.html` → `index-ir.json`). See `packages/ols-compiler/builders/html.js`.
-- **serveDir layout (theta):** Lessons must be at `serveDir/lessons/{slug}/index.html`; the sidecar is then `serveDir/lessons/{slug}/index-ir.json`. Theta's `rebuildLessonIndex()` reads this path (see Section 7).
+- **serveDir layout (pathfinder):** Lessons must be at `serveDir/lessons/{slug}/index.html`; the sidecar is then `serveDir/lessons/{slug}/index-ir.json`. Pathfinder's `rebuildLessonIndex()` reads this path (see Section 7).
 - **Native/yaml-packet output:** Sidecar is `lesson-ir.json` in the format's output directory. See `packages/ols-compiler/services/compiler.js`.
 
 ### 3.2 Output Strategies
@@ -205,7 +230,7 @@ The compiler supports dual-mode distribution:
 
 ### 3.3 Configuration and Bootstrap
 
-**Startup sequence (safety-critical):** Hub processes (theta, sentry, sync) must call `loadHubConfig()` before `require('@agni/utils/env-config')`. This ensures `hub-config.json` (or `hub-config.pi.json` copied as hub-config) populates `process.env` first. The startup bootstrap is the **first reader** for any config that could make the process unsafe — wrong paths cause ENOENT or data corruption; wrong ports cause bind failures or exposure; wrong `hubId` corrupts sync; wrong `usbPath` enables arbitrary file write. `scripts/check-hub-config-bootstrap.js` enforces this order for theta, sentry, and sync.
+**Startup sequence (safety-critical):** Hub processes (pathfinder, telemetry-engine, sync) must call `loadHubConfig()` before `require('@agni/utils/env-config')`. This ensures `hub-config.json` (or `hub-config.pi.json` copied as hub-config) populates `process.env` first. The startup bootstrap is the **first reader** for any config that could make the process unsafe — wrong paths cause ENOENT or data corruption; wrong ports cause bind failures or exposure; wrong `hubId` corrupts sync; wrong `usbPath` enables arbitrary file write. `scripts/check-hub-config-bootstrap.js` enforces this order for pathfinder, telemetry-engine, and sync.
 
 **Config sources:** `hub-config.json` (loaded by `@agni/utils/hub-config.loadHubConfig`) → `process.env` → `@agni/utils/env-config` (canonical reader). Env vars override file values when set.
 
@@ -213,14 +238,14 @@ The compiler supports dual-mode distribution:
 
 | Config item | Reader(s) |
 |-------------|-----------|
-| `dataDir` | ensure-paths, data-paths, accounts, lesson-chain, sync, sentry, archetype-match |
+| `dataDir` | ensure-paths, data-paths, accounts, lesson-chain, sync, telemetry-engine, archetype-match |
 | `serveDir` | data-paths |
-| `yamlDir` | author, hub-transform, theta routes |
-| `factoryDir` | hub-transform (AGNI_FACTORY_DIR) |
-| `katexDir` | hub-transform |
-| `thetaPort` | context/config → theta server |
-| `servePort` | hub-transform |
-| `sentryPort` | sentry, telemetry routes |
+| `yamlDir` | author, lesson-server, pathfinder routes |
+| `factoryDir` | lesson-server (AGNI_FACTORY_DIR) |
+| `katexDir` | lesson-server |
+| `pathfinderPort` | context/config → pathfinder server |
+| `servePort` | lesson-server |
+| `telemetryEnginePort` | telemetry-engine, telemetry routes |
 | `hubId` | sync |
 | `usbPath` | sync, admin routes — see *usbPath contract* below |
 | `embeddingDim` | engine migrations, engine index |
@@ -228,13 +253,13 @@ The compiler supports dual-mode distribution:
 | `embeddingLr`, `embeddingReg` | engine migrations |
 | `maxStudents` | accounts |
 | `maxLessons` | engine migrations |
-| `masteryThreshold` | context/config (theta), aggregateCohortCoverage, sentry |
-| `minLocalSample`, `minLocalEdges` | context/config (theta) |
-| `corsOrigin` | sentry, hub-transform |
+| `masteryThreshold` | context/config (pathfinder), aggregateCohortCoverage, telemetry-engine |
+| `minLocalSample`, `minLocalEdges` | context/config (pathfinder) |
+| `corsOrigin` | telemetry-engine, lesson-server |
 | `approvedCatalog`, `governancePolicy`, `governancePolicySchema`, `approvedCatalogSchema`, `utuConstantsPath` | data-paths, policy, evaluateLessonCompliance |
 | `syncTransport`, `homeUrl` | sync |
-| `analyseAfter`, `analyseCron`, `sentryRetentionDays` | sentry |
-| `sentryChi2Threshold`, `sentryMinSample`, `sentryJaccardThreshold`, `sentryMinClusterSize`, `sentryForward`, `sentryWeightMaxDelta`, `sentryWeightReviewThreshold` | sentry |
+| `analyseAfter`, `analyseCron`, `telemetryEngineRetentionDays` | telemetry-engine |
+| `telemetryEngineChi2Threshold`, `telemetryEngineMinSample`, etc. | telemetry-engine |
 | `markovWeight`, `pagerankWeight` | engine index (selectBestLesson) |
 | `logLevel` | logger |
 
@@ -249,7 +274,7 @@ The compiler supports dual-mode distribution:
 
 **Pi deployment:** Use `data/hub-config.pi.json` as a template; copy to `data/hub-config.json` or set `AGNI_DATA_DIR` to point at a dir containing hub-config.json. See `scripts/check-hub-config-pi.js` and `docs/RUN-ENVIRONMENTS.md`.
 
-**hub-transform standalone:** When run as a separate process (not attached to theta), the caller must ensure `loadHubConfig()` runs before hub-transform loads env-config, or set env vars explicitly. Theta attaches hub-transform after its bootstrap, so the normal deployment path is safe.
+**lesson-server standalone:** When run as a separate process (not attached to pathfinder), the caller must ensure `loadHubConfig()` runs before lesson-server loads env-config, or set env vars explicitly. Pathfinder attaches lesson-server after its bootstrap, so the normal deployment path is safe.
 
 ---
 
@@ -443,7 +468,7 @@ The Village Sentry analyzes anonymized local learning logs to detect these colla
 Result: The graph weights (`graph_weights.json`) are updated over time as real cohort
 data accumulates, making the system progressively more culturally adapted.
 
-**Invariant: Skill Collapse affects only MLC sort, never eligibility.** Graph weights influence the ordering of lessons among those that are already eligible. Eligibility is determined solely by the ontology graph (`ontology.requires` / `ontology.provides`) and mastery thresholds — theta will never offer a lesson unless all required skills are mastered, regardless of graph weights. See `docs/playbooks/sentry.md` for rate limits, human-review of large updates, and rollback.
+**Invariant: Skill Collapse affects only MLC sort, never eligibility.** Graph weights influence the ordering of lessons among those that are already eligible. Eligibility is determined solely by the ontology graph (`ontology.requires` / `ontology.provides`) and mastery thresholds — pathfinder will never offer a lesson unless all required skills are mastered, regardless of graph weights. See `docs/playbooks/sentry.md` for rate limits, human-review of large updates, and rollback.
 
 ## 8. Knowledge Architecture: UTUs and Skill Ontology
 
