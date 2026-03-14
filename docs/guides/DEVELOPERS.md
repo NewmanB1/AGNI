@@ -18,6 +18,8 @@ The system has three main parts:
 
 ## Dev environment setup
 
+For a minimal setup (init data, start hub, run tests), see **[docs/DEV-START.md](../DEV-START.md)**.
+
 ```bash
 git clone https://github.com/NewmanB1/AGNI.git
 cd AGNI
