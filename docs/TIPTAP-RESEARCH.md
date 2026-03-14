@@ -1,65 +1,67 @@
-# TipTap WYSIWYG Editor Research (R5)
+# R5: TipTap WYSIWYG Research
 
-**Scope:** Evaluate TipTap for future author/editor WYSIWYG support.  
-**Date:** 2025-03  
-**Status:** Research complete; decision deferred until Year 2 editor work (Y1–Y6).
+**Status:** Complete  
+**Decision:** Form-based builder (not TipTap) for OLS authoring.
 
 ---
 
 ## Summary
 
-TipTap is an open-source, headless WYSIWYG editor built on ProseMirror. It supports React and Vue, with a modular extension system. Suitable for future author UI enhancements (e.g. rich text in step content, Markdown preview).
+TipTap was evaluated for use as a WYSIWYG editor in the AGNI authoring portal. The conclusion: **TipTap is not a good fit** for OLS lesson authoring. A form-based builder (already implemented in the portal) is the chosen approach.
 
 ---
 
-## Key Facts
+## TipTap Overview (2024)
 
-| Aspect | Detail |
-|--------|--------|
-| **License** | MIT |
-| **Dependencies** | ProseMirror (core) |
-| **Framework support** | React, Vue, vanilla JS |
-| **Bundle size** | Modular — include only extensions needed |
-| **Browser support** | Modern (Chrome, Firefox, Safari, Edge) |
+| Attribute | Value |
+|-----------|-------|
+| **Type** | Headless rich-text editor (ProseMirror-based) |
+| **License** | MIT (core); paid Pro extensions |
+| **Output** | JSON (ProseMirror doc) or Markdown |
+| **Bundle** | Modular; ~200 KB+ with typical starter kit |
+| **Frameworks** | React, Vue, Svelte, vanilla JS |
 
----
-
-## Integration Options
-
-### React (portal is vanilla; would require React adoption)
-- `@tiptap/react` + `@tiptap/starter-kit`
-- Hook-based: `useEditor`, `EditorContent`
-- Composable API: `<Tiptap>`, `<Tiptap.Content>`, `<Tiptap.BubbleMenu>`
-
-### Vanilla / No Framework
-- TipTap can run without React/Vue via `Editor` class directly
-- More setup; fewer built-in UI components
-
-### AGNI Fit
-- **Portal:** Currently vanilla HTML/CSS/JS. Adding React for TipTap alone may be heavy.
-- **Alternative:** Use TipTap headless with vanilla DOM; or defer until portal adopts a framework.
-- **Use case:** Rich text for step content (e.g. `fill_blank` prompts, matching items), Markdown/WYSIWYG toggle in author form.
+TipTap excels at **document-like content** (blogs, notes, long-form prose). It is extensible via custom nodes and marks.
 
 ---
 
-## Installation (Reference)
+## OLS Requirements
 
-```bash
-npm install @tiptap/react @tiptap/pm @tiptap/starter-kit
-```
+OLS lessons are **structured records**, not flowing prose:
+
+- **meta:** identifier, title, language, license, UTU (Spine/Band), difficulty
+- **steps:** Ordered array of typed steps (instruction, hardware_trigger, quiz, fill_blank, etc.)
+- **gate:** type, question, expected_answer, passing_score
+- **ontology:** requires/provides (skills)
+
+Each step type has different fields (e.g. `hardware_trigger` has sensor, threshold, feedback; threshold uses a custom grammar).
 
 ---
 
-## Recommendation
+## Fit Analysis
 
-- **Short term:** Continue with current form-based author (meta, steps, Validate/Preview/Save). No immediate TipTap integration.
-- **Year 2 (Y2–Y6):** Revisit when building step editor (Y2) and YAML round-trip (Y6). TipTap may suit rich-text fields if we adopt React or a similar framework for the author UI.
-- **Alternative:** Consider lighter options (e.g. SimpleMDE, EasyMDE for Markdown) if WYSIWYG is not critical.
+| Criterion | TipTap | Form-based builder |
+|-----------|--------|--------------------|
+| **OLS fidelity** | Rich-text → YAML is lossy; steps/gates/thresholds have no natural document mapping | 1:1 form fields → OLS YAML |
+| **Threshold syntax** | Would need custom node per sensor expression | Plain input + `POST /api/author/validate` |
+| **Offline** | Large runtime, CDN dependencies | Zero extra deps; portal is vanilla |
+| **Accessibility** | Editor a11y is hard | Standard form controls |
+| **Bundle size** | ~200 KB+ | None (forms only) |
+
+---
+
+## Decision
+
+**Do not adopt TipTap** for the OLS editor. Use the existing form-based builder in the portal (`/author/new`, step cards, gate/ontology sections).
+
+**Rationale:** OLS lessons are structured data. Mapping them to a rich-text document model would require custom ProseMirror nodes for every step type, gate, and threshold — effectively rebuilding the form inside TipTap with worse a11y and a larger bundle.
+
+**Future:** If a future use case needs rich-text editing (e.g. instruction step content with bold/links), TipTap could be evaluated as a **per-field** editor for that specific `content` field, not for the whole lesson structure.
 
 ---
 
 ## References
 
-- [TipTap Docs](https://tiptap.dev/docs/editor/installation/react)
-- [TipTap Product](https://tiptap.dev/product/editor)
-- [ProseMirror](https://prosemirror.net/)
+- **Full evaluation:** `docs/YEAR2-PREP.md` §1
+- **Form-based implementation:** Portal `/author/new`, `packages/agni-hub/routes/author.js`
+- **TipTap:** https://tiptap.dev/

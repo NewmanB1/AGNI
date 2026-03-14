@@ -246,7 +246,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | R2 | Day 81-85: Triage Issues | **Ready** — see docs/LAUNCH-CHECKLIST.md |
 | R3 | Day 81-85: Label "Good First Issues" | **Ready** — see docs/LAUNCH-CHECKLIST.md |
 | R4 | Day 86-90: Record video "How to Fork and Translate" | **Ready** — see docs/LAUNCH-CHECKLIST.md (optional) |
-| R5 | Day 96-100: Research TipTap for WYSIWYG | **Open** |
+| R5 | Day 96-100: Research TipTap for WYSIWYG | **Done** — see docs/TIPTAP-RESEARCH.md; decision: form-based builder |
 | R6 | Day 96-100: Finalize v1.0 Spec | **Done** — docs/specs/ols-v1.0-spec.md |
 | R7 | Future: The Editor (drag-and-drop GUI) | **Done** — form-based editor in vanilla portal (meta, steps, ontology; Validate/Preview/Save; step reorder) |
 | R8 | Future: Plugins for Moodle, Kolibri, Canvas | **Done** — LTI, Kolibri chef, Moodle mod_ols scaffold; guides in `docs/integrations/`; `scripts/check-lms-integrations.js` |

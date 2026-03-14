@@ -8,6 +8,8 @@ This document captures **preparation for Year 2**: WYSIWYG editor research and v
 
 **Goal:** Research an approach for a drag-and-drop GUI that produces valid OLS YAML (the "Editor" in Future Horizons).
 
+**R5 research summary:** See `docs/TIPTAP-RESEARCH.md`.
+
 ### Options evaluated
 
 | Option | Notes |
