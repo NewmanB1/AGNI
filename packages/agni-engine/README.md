@@ -19,6 +19,8 @@ The AGNI learning engine. Pure algorithmic core for student modelling, adaptive 
 
 ## Architecture
 
+See **[ARCHITECTURE.md](./ARCHITECTURE.md)** for the detailed architecture document (modules, state model, algorithms, invariants, integration).
+
 The engine is designed as **pure functions with persistence at the edges**:
 
 ```
