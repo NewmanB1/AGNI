@@ -268,7 +268,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | Y1 | E2: Meta form (/author/new) | **Open** |
 | Y2 | E3: Step editor | **Done** — sensor dropdown from @agni/plugins (GET /api/author/sensors), threshold validation on blur |
 | Y3 | E4: Preview button | **Open** |
-| Y4 | E5: Save | **Open** |
+| Y4 | E5: Save | **Done** — preflight validation, Ctrl+S shortcut, compile-on-save, success toast |
 | Y5 | E6–E8: Gate, ontology, all step types | **Done** |
 | Y6 | E9: YAML round-trip | **Done** |
 | Y7 | Freeze OLS schema | **Done** — `docs/SCHEMA-FREEZE.md`; spec status Frozen; BREAKING-VS-ADDITIVE policy |

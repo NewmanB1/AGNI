@@ -726,22 +726,45 @@ export function renderAuthorNew(main, slug) {
     if (previewPane) previewPane.style.display = 'none';
   });
 
-  main.querySelector('#btn-save').addEventListener('click', function () {
+  function doSave() {
     statusEl.style.display = 'block';
-    setStatus('Saving…', false);
+    setStatus('Validating…', false);
     var formData = collectLessonFromForm(main);
     var payload = slug && lesson ? mergeLessonForRoundTrip(lesson, formData) : formData;
-    api.postAuthorSave(payload, { compile: true }).then(function (r) {
-      if (r.error) {
-        setStatus('Save failed: ' + r.error, true);
-      } else {
-        setStatus('Saved as ' + (r.slug || 'lesson') + '. Path: ' + (r.path || ''), false);
-        if (r.slug && !slug) {
-          setTimeout(function () { navigateTo('#/author/' + r.slug + '/edit'); }, 1500);
-        }
+    api.postAuthorValidate(payload).then(function (vr) {
+      if (!vr.valid) {
+        setStatus('Cannot save — invalid: ' + (vr.errors && vr.errors.join('; ')), true);
+        return;
       }
+      setStatus('Saving…', false);
+      api.postAuthorSave(payload, { compile: true }).then(function (r) {
+        if (r.error) {
+          setStatus('Save failed: ' + r.error, true);
+        } else {
+          var msg = 'Saved as ' + (r.slug || 'lesson') + '. Path: ' + (r.path || '');
+          if (vr.warnings && vr.warnings.length) msg += ' (warnings: ' + vr.warnings.join('; ') + ')';
+          setStatus(msg, false);
+          if (r.slug && !slug) {
+            setTimeout(function () { navigateTo('#/author/' + r.slug + '/edit'); }, 1500);
+          }
+        }
+      }).catch(function (err) {
+        setStatus('Save error: ' + (err.message || 'Unknown'), true);
+      });
     }).catch(function (err) {
-      setStatus('Save error: ' + (err.message || 'Unknown'), true);
+      setStatus('Validation error: ' + (err.message || 'Unknown'), true);
     });
-  });
+  }
+
+  main.querySelector('#btn-save').addEventListener('click', doSave);
+
+  var formEl = main.querySelector('form');
+  if (formEl) {
+    formEl.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        doSave();
+      }
+    });
+  }
 }
