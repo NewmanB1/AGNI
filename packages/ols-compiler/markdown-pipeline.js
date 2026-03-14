@@ -29,10 +29,8 @@ async function _buildProcessor() {
     .use(remarkParse)
     .use(remarkMath)
     .use(remarkRehype)
-    // @ts-expect-error — rehype-katex options type does not match runtime API
     .use(rehypeKatex, {
       output: 'html',
-      throwOnError: false,
       errorColor: '#ff6b35'
     })
     .use(rehypeSanitize, sanitizeSchema)
@@ -53,6 +51,11 @@ async function _getProcessor() {
   return processorPromise;
 }
 
+/**
+ * Process Markdown to HTML (with KaTeX for math).
+ * @param {string} markdown - Raw Markdown content
+ * @returns {Promise<string>} Rendered HTML
+ */
 async function processMarkdown(markdown) {
   if (typeof markdown !== 'string') return '';
   const processor = await _getProcessor();

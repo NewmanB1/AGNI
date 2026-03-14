@@ -315,7 +315,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | F2.1–F2.3 | hub type fixes | agni-hub | **Partial** — theta.js Done (no @ts-nocheck); sentry.js, student.js use @ts-expect-error |
 | F3.1–F3.3 | utils type fixes | agni-utils | **Open** |
 | F4.1 | ols-schema fix | ols-schema | **Open** |
-| F5.1 | ols-compiler fix | ols-compiler | **Open** |
+| F5.1 | ols-compiler fix | ols-compiler | **Done** — rehype-katex options aligned with Options type; @ts-expect-error removed; processMarkdown JSDoc |
 | F6.1–F6.20 | runtime type fixes | agni-runtime | **Done** — polyfills, factory-loader, player now type-checked; @ts-nocheck removed; index.d.ts expanded (AgniLoader, AgniFrustration, AgniCheckpoint, AgniNarration, LessonDataGlobal) |
 
 ---
