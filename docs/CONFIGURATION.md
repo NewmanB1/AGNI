@@ -111,6 +111,12 @@ These JSON keys in `hub-config.json` map to the env vars below (via `loadHubConf
 | `AGNI_PRIVATE_KEY_PATH` | *(empty)* | Ed25519 private key for signing lessons; empty = no signing |
 | `AGNI_STUDENT_SESSION_TTL_MS` | `21600000` (6h) | Student session TTL in ms (1h–24h). Shorter TTL mitigates token replay (P2-13). |
 
+### Disk & GC (P2-20)
+
+| Variable | Default | Range | Description |
+|----------|---------|-------|-------------|
+| `AGNI_YAML_MAX_VERSIONS` | `3` | 1–50 | Max lesson-chain versions per slug; oldest pruned on save and at hub startup |
+
 ### Compilation & Cache (hub-transform)
 
 | Variable | Default | Description |

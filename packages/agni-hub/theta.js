@@ -36,6 +36,7 @@ const authorSvc = authorService;
 /** @type {{ info: Function, warn: Function, error: Function }} */
 const thetaLog = log;
 const { pruneOrphanLessons } = require('./gc-disk-lessons');
+const { pruneAllChainVersions } = require('@agni/services/lesson-chain');
 
 // â”€â”€ LMS engine status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if (lmsEngine.isAvailable()) {
@@ -705,6 +706,8 @@ if (require.main === module) {
     const pinResult = await accountsService.migrateLegacyPins();
     if (pinResult.migrated > 0) thetaLog.info('Migrated legacy PINs to scrypt', { count: pinResult.migrated });
     if (pinResult.legacySha256 > 0) thetaLog.warn('Students with unsalted SHA-256 PINs (will migrate on next verification)', { count: pinResult.legacySha256 });
+    const chainPrune = await pruneAllChainVersions();
+    if (chainPrune.pruned > 0) thetaLog.info('P2-20: pruned old chain versions', { count: chainPrune.pruned, slugs: chainPrune.slugs.slice(0, 5) });
     await rebuildLessonIndex();
     const server = startApi(PORT);
 

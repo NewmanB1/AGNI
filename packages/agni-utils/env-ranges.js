@@ -30,5 +30,9 @@ module.exports = {
 
   /** Student session TTL: min 1h, max 24h (ms). */
   STUDENT_SESSION_TTL_MS_MIN: 60 * 60 * 1000,
-  STUDENT_SESSION_TTL_MS_MAX: 24 * 60 * 60 * 1000
+  STUDENT_SESSION_TTL_MS_MAX: 24 * 60 * 60 * 1000,
+
+  /** P2-20: Max chain versions per lesson (YAML backup retention). */
+  YAML_MAX_VERSIONS_MIN: 1,
+  YAML_MAX_VERSIONS_MAX: 50
 };

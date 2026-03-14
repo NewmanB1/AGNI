@@ -224,6 +224,12 @@ describe('chain management', () => {
     assert.ok(!result.valid);
     assert.ok(result.errors[0].includes('mismatch'));
   });
+
+  it('P2-20: pruneAllChainVersions returns shape { pruned, slugs }', async () => {
+    const r = await chain.pruneAllChainVersions();
+    assert(typeof r.pruned === 'number');
+    assert(Array.isArray(r.slugs));
+  });
 });
 
 // ── verifyContentHash ────────────────────────────────────────────────────────

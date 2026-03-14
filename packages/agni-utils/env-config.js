@@ -152,6 +152,9 @@ const config = {
 
   yamlMaxBytes:       Math.max(65536, intVal('AGNI_YAML_MAX_BYTES', 2 * 1024 * 1024)),
 
+  /** P2-20: Max chain versions per lesson; prune oldest beyond this. Default 3. */
+  yamlMaxVersions:    validRange(intVal('AGNI_YAML_MAX_VERSIONS', 3), R.YAML_MAX_VERSIONS_MIN, R.YAML_MAX_VERSIONS_MAX, 'AGNI_YAML_MAX_VERSIONS'),
+
   /** Path to Ed25519 private key for signing lessons. Empty = no signing. */
   privateKeyPath:     strVal('AGNI_PRIVATE_KEY_PATH', ''),
 

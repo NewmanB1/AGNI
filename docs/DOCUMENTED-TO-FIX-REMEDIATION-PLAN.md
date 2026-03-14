@@ -88,7 +88,7 @@
 **Tasks:**
 - [x] Add `pruneOrphanLessons(serveDir, catalog, yamlDir)` — delete lessons not in catalog (gc-disk-lessons.js)
 - [x] Run prune on hub startup (or via init-data / admin endpoint) — in rebuildLessonIndex
-- [ ] Add `AGNI_YAML_MAX_VERSIONS` and backup pruning (optional)
+- [x] Add `AGNI_YAML_MAX_VERSIONS` and backup pruning (optional)
 - [x] Document GC policy in RUN-ENVIRONMENTS.md
 
 ---

@@ -12,6 +12,7 @@
 const path = require('path');
 const crypto = require('crypto');
 
+const fs = require('fs');
 const envConfig = require('@agni/utils/env-config');
 const { loadJSONAsync, saveJSONAsync } = require('@agni/utils/json-store');
 
@@ -102,7 +103,21 @@ function createLessonChain(config) {
     uri: entry.uri || null,
     timestamp: entry.timestamp || new Date().toISOString()
   });
-  await saveChain(slug, chain);
+  const maxVersions = (envConfig.yamlMaxVersions != null && envConfig.yamlMaxVersions >= 1)
+    ? envConfig.yamlMaxVersions
+    : 0;
+  if (maxVersions > 0 && chain.versions.length > maxVersions) {
+    const excess = chain.versions.length - maxVersions;
+    chain.versions.splice(0, excess);
+    const first = chain.versions[0];
+    if (first) first.parentHash = null;
+    for (let i = 0; i < chain.versions.length; i++) {
+      chain.versions[i].version = i + 1;
+    }
+    await saveChain(slug, chain);
+  } else {
+    await saveChain(slug, chain);
+  }
   return { ok: true, version: version };
 }
 
@@ -129,7 +144,22 @@ async function verifyChain(slug) {
   return { valid: errors.length === 0, errors: errors, versions: chain.versions.length };
   }
 
-  return { loadChain, appendVersion, getLatestVersion, verifyChain };
+  async function pruneOldVersions(slug, maxVersions) {
+    if (!maxVersions || maxVersions < 1) return { pruned: 0 };
+    const chain = await loadChain(slug);
+    if (chain.versions.length <= maxVersions) return { pruned: 0 };
+    const excess = chain.versions.length - maxVersions;
+    chain.versions.splice(0, excess);
+    const first = chain.versions[0];
+    if (first) first.parentHash = null;
+    for (let i = 0; i < chain.versions.length; i++) {
+      chain.versions[i].version = i + 1;
+    }
+    await saveChain(slug, chain);
+    return { pruned: excess };
+  }
+
+  return { loadChain, appendVersion, getLatestVersion, verifyChain, pruneOldVersions };
 }
 
 function verifyContentHash(lessonData) {
@@ -158,6 +188,34 @@ function inheritedForkLicense(sourceLicense) {
 }
 
 const defaultChain = createLessonChain();
+
+/**
+ * P2-20: Prune all lesson chains to yamlMaxVersions. Call at hub startup.
+ * @returns {Promise<{ pruned: number, slugs: string[] }>}
+ */
+async function pruneAllChainVersions() {
+  const dataDir = envConfig.dataDir;
+  const chainsDir = path.join(dataDir, 'chains');
+  const maxVersions = (envConfig.yamlMaxVersions != null && envConfig.yamlMaxVersions >= 1)
+    ? envConfig.yamlMaxVersions
+    : 0;
+  if (!maxVersions) return { pruned: 0, slugs: [] };
+  if (!fs.existsSync(chainsDir)) return { pruned: 0, slugs: [] };
+  const files = fs.readdirSync(chainsDir).filter((f) => f.endsWith('.chain.json'));
+  const chain = createLessonChain();
+  let totalPruned = 0;
+  const prunedSlugs = [];
+  for (let i = 0; i < files.length; i++) {
+    const slug = files[i].replace(/\.chain\.json$/, '');
+    const r = await chain.pruneOldVersions(slug, maxVersions);
+    if (r.pruned > 0) {
+      totalPruned += r.pruned;
+      prunedSlugs.push(slug);
+    }
+  }
+  return { pruned: totalPruned, slugs: prunedSlugs };
+}
+
 module.exports = {
   computeContentHash,
   shortHash,
@@ -174,5 +232,6 @@ module.exports = {
   inheritedForkLicense,
   FORKABLE_LICENSES,
   NON_COMMERCIAL_LICENSES,
-  createLessonChain
+  createLessonChain,
+  pruneAllChainVersions
 };
