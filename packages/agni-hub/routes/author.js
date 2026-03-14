@@ -17,6 +17,13 @@ function register(router, ctx) {
     return sendResponse(200, { slug: params.slug, lessonData: result.lessonData });
   }));
 
+  router.get('/api/author/sensors', authOnly((req, res, { sendResponse }) => {
+    const plugins = require('@agni/plugins');
+    const sensors = plugins.getSensors();
+    const list = sensors.map(function (s) { return { id: s.id, label: s.label, group: s.group || 'Other' }; });
+    return sendResponse(200, { sensors: list });
+  }));
+
   router.post('/api/author/validate', authOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, (body) => {
       const parsed = authorService.parseAuthorBody(body);

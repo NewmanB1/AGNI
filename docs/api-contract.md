@@ -159,6 +159,7 @@ Paginated endpoints: `GET /api/lessons`, `GET /api/theta/all`, `GET /api/account
 |--------|------|------|-------------|
 | GET | `/api/author/lessons` | Bearer | List saved lesson slugs (yamlDir) |
 | GET | `/api/author/load/:slug` | Bearer | Load a saved lesson |
+| GET | `/api/author/sensors` | Bearer | List known sensor IDs (from @agni/plugins) for hardware_trigger step editor |
 | POST | `/api/author/validate` | Bearer | Validate lesson YAML/JSON |
 | POST | `/api/author/save` | Bearer | Save a lesson |
 | DELETE | `/api/author/delete/:slug` | Admin | Delete a lesson |

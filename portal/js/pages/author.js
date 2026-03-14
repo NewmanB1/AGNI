@@ -73,6 +73,35 @@ function esc(s) {
   return d.innerHTML;
 }
 
+/** Default sensor list when API has not returned; matches @agni/plugins builtins. */
+var DEFAULT_SENSORS = [
+  { id: 'accel.total', label: 'Accel+G total', group: 'Accelerometer' },
+  { id: 'shake', label: 'Shake detected', group: 'Accelerometer' },
+  { id: 'accel.x', label: 'Accel X', group: 'Accelerometer' },
+  { id: 'gyro.x', label: 'Gyro X', group: 'Gyroscope' },
+  { id: 'orientation', label: 'Screen position', group: 'Orientation' }
+];
+
+var authorSensorCache = [];
+var authorEditorContext = null;
+
+function getSensorsForDropdown() {
+  return authorSensorCache.length ? authorSensorCache : DEFAULT_SENSORS;
+}
+
+function buildSensorOptionsHtml(selectedId) {
+  var sensors = getSensorsForDropdown();
+  var found = false;
+  var opts = sensors.map(function (s) {
+    var sel = (s.id === selectedId) ? (found = true, ' selected') : '';
+    return '<option value="' + esc(s.id) + '"' + sel + '>' + esc(s.label) + ' (' + esc(s.id) + ')</option>';
+  }).join('');
+  if (selectedId && !found) {
+    opts = '<option value="' + esc(selectedId) + '" selected>' + esc(selectedId) + '</option>' + opts;
+  }
+  return opts;
+}
+
 /**
  * Y6: Merge form data with original lesson to preserve schema fidelity.
  * Keeps fields we don't collect (utu, on_success, on_fail, max_attempts, feedback, etc.).
@@ -265,7 +294,7 @@ function collectLessonFromForm(main) {
       step.correct_index = Math.min(correctIdx, step.answer_options.length - 1);
     }
     if (type === 'hardware_trigger') {
-      step.sensor = (card.querySelector('.step-sensor')?.value || 'accelerometer').trim();
+      step.sensor = (card.querySelector('.step-sensor')?.value || 'accel.total').trim();
       step.threshold = (card.querySelector('.step-threshold')?.value || 'freefall > 0.3s').trim();
     }
     if (type === 'fill_blank') {
@@ -405,8 +434,8 @@ function appendStepCard(container, step, idx) {
     optsHtml += '<div><label>Correct index (0-based)</label><input type="number" class="input quiz-correct" min="0" value="' + (step.correct_index || 0) + '" /></div>';
   }
   if (type === 'hardware_trigger') {
-    optsHtml = '<div><label>Sensor</label><select class="input step-sensor"><option value="accelerometer"' + (step.sensor === 'accelerometer' ? ' selected' : '') + '>accelerometer</option><option value="gyroscope"' + (step.sensor === 'gyroscope' ? ' selected' : '') + '>gyroscope</option></select></div>';
-    optsHtml += '<div><label>Threshold (e.g. freefall &gt; 0.3s)</label><input type="text" class="input step-threshold" value="' + esc(step.threshold || 'freefall > 0.3s') + '" placeholder="freefall > 0.3s" /></div>';
+    optsHtml = '<div><label>Sensor</label><select class="input step-sensor">' + buildSensorOptionsHtml(step.sensor) + '</select></div>';
+    optsHtml += '<div><label>Threshold (e.g. freefall &gt; 0.3s, accel.total &gt; 2.5g)</label><input type="text" class="input step-threshold" value="' + esc(step.threshold || 'freefall > 0.3s') + '" placeholder="freefall > 0.3s" /><span class="threshold-error hint" style="display:none;color:#c00;"></span></div>';
   }
   if (type === 'fill_blank') {
     var blanks = step.blanks || [{ answer: 'answer' }];
@@ -466,7 +495,7 @@ function appendStepCard(container, step, idx) {
     if (newType === 'quiz') {
       div.innerHTML = '<div class="quiz-opt-row"><input type="text" class="input quiz-option" value="Option A" /><button type="button" class="btn btn-remove-opt">−</button></div><div class="quiz-opt-row"><input type="text" class="input quiz-option" value="Option B" /><button type="button" class="btn btn-remove-opt">−</button></div><div><label>Correct index</label><input type="number" class="input quiz-correct" min="0" value="0" /></div>';
     } else if (newType === 'hardware_trigger') {
-      div.innerHTML = '<div><label>Sensor</label><select class="input step-sensor"><option value="accelerometer">accelerometer</option><option value="gyroscope">gyroscope</option></select></div><div><label>Threshold</label><input type="text" class="input step-threshold" value="freefall > 0.3s" /></div>';
+      div.innerHTML = '<div><label>Sensor</label><select class="input step-sensor">' + buildSensorOptionsHtml('accel.total') + '</select></div><div><label>Threshold (e.g. freefall &gt; 0.3s)</label><input type="text" class="input step-threshold" value="freefall > 0.3s" /><span class="threshold-error hint" style="display:none;color:#c00;"></span></div>';
     } else if (newType === 'fill_blank') {
       div.innerHTML = '<p class="hint">Use ___ in content for each blank.</p><div class="fill-blank-row"><input type="text" class="input blank-answer" placeholder="Correct answer" /><input type="text" class="input blank-accept" placeholder="Alternatives (comma)" /><button type="button" class="btn btn-remove-blank">−</button></div><button type="button" class="btn btn-add-blank">+ Add blank</button>';
     } else if (newType === 'matching') {
@@ -513,6 +542,27 @@ function wireStepExtraButtons(card) {
   card.querySelectorAll('.btn-remove-ordering').forEach(function (btn) {
     if (!btn._wired) { btn._wired = true; btn.addEventListener('click', function () { btn.closest('.ordering-row')?.remove(); }); }
   });
+
+  var thresholdInp = card.querySelector('.step-threshold');
+  if (thresholdInp && !thresholdInp._blurWired) {
+    thresholdInp._blurWired = true;
+    thresholdInp.addEventListener('blur', function () {
+      var ctx = authorEditorContext;
+      if (!ctx || !ctx.api || !ctx.main) return;
+      var errEl = card.querySelector('.threshold-error');
+      if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+      var lesson = collectLessonFromForm(ctx.main);
+      ctx.api.postAuthorValidate(lesson).then(function (r) {
+        var stepIdx = parseInt(card.dataset.idx, 10);
+        var stepLabel = 'step ' + (stepIdx + 1);
+        var stepErrors = (r.errors || []).filter(function (e) { return e.indexOf(stepLabel) !== -1 && e.indexOf('threshold') !== -1; });
+        if (stepErrors.length && errEl) {
+          errEl.textContent = stepErrors[0];
+          errEl.style.display = 'block';
+        }
+      }).catch(function () {});
+    });
+  }
 }
 
 export function renderAuthorNew(main, slug) {
@@ -586,8 +636,12 @@ export function renderAuthorNew(main, slug) {
     '<p style="margin-top:1rem;"><a href="#/author">← Back to Author</a></p>' +
     '</div>';
 
+  authorEditorContext = { main: main, api: api };
   statusEl = main.querySelector('#editor-status');
   var container = main.querySelector('#steps-container');
+  api.getAuthorSensors().then(function (r) {
+    authorSensorCache = r.sensors || [];
+  }).catch(function () {});
   var createdInput = main.querySelector('#meta-created');
   if (createdInput) {
     var now = new Date();

@@ -124,6 +124,10 @@ export function createHubApi(baseUrl) {
       return authGet(`api/author/load/${encodeURIComponent(slug)}`);
     },
 
+    getAuthorSensors() {
+      return authGet('api/author/sensors');
+    },
+
     postAuthorValidate(lesson) {
       return authPost('api/author/validate', lesson);
     },
