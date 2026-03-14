@@ -38,7 +38,11 @@ let _archetypeMap = null;
 
 function _loadArchetypes() {
   if (_archetypes) return _archetypes;
-  const dataPath = path.join(envConfig.dataDir, 'archetypes.json');
+  let dataPath = path.join(envConfig.dataDir, 'archetypes.json');
+  if (!require('fs').existsSync(dataPath)) {
+    const fallback = path.join(path.resolve(__dirname, '../../data'), 'archetypes.json');
+    if (require('fs').existsSync(fallback)) dataPath = fallback;
+  }
   const data = require(dataPath);
   _archetypes = data.archetypes;
   _archetypeMap = {};

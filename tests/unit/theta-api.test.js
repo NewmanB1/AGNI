@@ -55,6 +55,15 @@ describe('Theta API integration tests', () => {
     process.env.AGNI_HUB_API_KEY = TEST_HUB_KEY;
     fs.mkdirSync(process.env.AGNI_SERVE_DIR, { recursive: true });
 
+    // Clear require cache so hub/env-config use our AGNI_DATA_DIR (test isolation)
+    const rootNorm = path.resolve(__dirname, '../..').replace(/\\/g, '/');
+    Object.keys(require.cache).forEach(function (key) {
+      const norm = key.replace(/\\/g, '/');
+      if (norm.startsWith(rootNorm) && !norm.includes('node_modules')) {
+        delete require.cache[key];
+      }
+    });
+
     fs.writeFileSync(path.join(dataDir, 'mastery-summary.json'), JSON.stringify({ students: {} }));
     fs.writeFileSync(path.join(dataDir, 'lesson-index.json'), JSON.stringify([]));
     fs.writeFileSync(path.join(dataDir, 'approved-catalog.json'), JSON.stringify({ lessonIds: [] }));

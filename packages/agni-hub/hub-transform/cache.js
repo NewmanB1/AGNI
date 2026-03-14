@@ -147,7 +147,7 @@ function evictOldest() {
     }
   });
   if (oldestSlug) {
-    const entry = _lessonCache[oldestSlug];
+    const entry = /** @type {{ lastAccessed: number, byteSize?: number }} */ (_lessonCache[oldestSlug]);
     if (entry && typeof entry.byteSize === 'number') _cacheBytes -= entry.byteSize;
     delete _lessonCache[oldestSlug];
     _cacheSize--;

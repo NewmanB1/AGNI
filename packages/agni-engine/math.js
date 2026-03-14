@@ -30,11 +30,14 @@
 
 var _mathStrict;
 function getMathStrict() {
+  if (process.env.AGNI_MATH_STRICT !== undefined) {
+    return process.env.AGNI_MATH_STRICT === '1' || process.env.AGNI_MATH_STRICT === 'true';
+  }
   if (_mathStrict === undefined) {
     try {
       _mathStrict = require('@agni/utils/env-config').mathStrict;
     } catch (_) {
-      _mathStrict = process.env.AGNI_MATH_STRICT === '1' || process.env.AGNI_MATH_STRICT === 'true';
+      _mathStrict = false;
     }
   }
   return _mathStrict;
@@ -316,21 +319,24 @@ function matVec(A, x) {
   if (cols !== x.length) {
     throw new Error('[MATH] matVec: dimension mismatch (cols=' + cols + ' vs vec=' + x.length + ')');
   }
-  for (let i = 0; i < A.length; i++) {
+  var i, c, xi, ac, xv;
+  for (i = 0; i < A.length; i++) {
     if (!A[i] || !Array.isArray(A[i])) {
       throw new Error('[MATH] matVec: row ' + i + ' must be array');
     }
     if (A[i].length !== cols) {
       throw new Error('[MATH] matVec: jagged matrix at row ' + i);
     }
-    for (let c = 0; c < cols; c++) {
-      if (typeof A[i][c] !== 'number' || !isFinite(A[i][c])) {
+    for (var c = 0; c < cols; c++) {
+      var ac = Number(A[i][c]);
+      if (!isFinite(ac)) {
         throw new Error('[MATH] matVec: non-finite element at row ' + i + ', col ' + c);
       }
     }
   }
-  for (let xi = 0; xi < x.length; xi++) {
-    if (typeof x[xi] !== 'number' || !isFinite(x[xi])) {
+  for (var xi = 0; xi < x.length; xi++) {
+    var xv = Number(x[xi]);
+    if (!isFinite(xv)) {
       throw new Error('[MATH] matVec: non-finite element in vector at index ' + xi);
     }
   }
@@ -374,7 +380,7 @@ function cholesky(A) {
     throw new Error('[MATH] cholesky: empty matrix not supported (zero-dim invalid)');
   }
   var i, j, k, sum, diag, aij;
-  /* Structure + diagonal validation only (O(n)). Symmetry check folded into decomposition loop (LEN-001 #4). */
+  /* LEN-001 #5: Separate square-check pass for clarity and auditability. */
   for (i = 0; i < n; i++) {
     if (!A[i] || !Array.isArray(A[i])) {
       throw new Error('[MATH] cholesky: row ' + i + ' must be array');
@@ -382,6 +388,9 @@ function cholesky(A) {
     if (A[i].length !== n) {
       throw new Error('[MATH] cholesky: matrix must be square (got row ' + i + ' with length ' + A[i].length + ')');
     }
+  }
+  /* Diagonal validation; symmetry check folded into decomposition loop (LEN-001 #4). */
+  for (i = 0; i < n; i++) {
     if (typeof A[i][i] !== 'number' || !isFinite(A[i][i])) {
       throw new Error('[MATH] cholesky: non-numeric diagonal at [' + i + ']');
     }

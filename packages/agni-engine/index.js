@@ -56,7 +56,7 @@ const CHECKSUM_KEY = '_checksum';
 /**
  * Compute SHA-256 hash of state payload (state without _checksum).
  * Used to detect power-loss or transfer corruption.
- * @param {Record<string, unknown>} state  state object (will not be mutated)
+ * @param {object} state  state object (will not be mutated)
  * @returns {string}  hex-encoded SHA-256 (64 chars)
  */
 function computeStateChecksum(state) {

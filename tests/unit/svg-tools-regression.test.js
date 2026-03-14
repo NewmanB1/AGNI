@@ -210,6 +210,14 @@ describe('AUDIT-A2.5: validateSpec coerces malformed opts; fromSpec does not thr
   before(() => {
     setupGlobals();
     const r = path.join(runtimeRoot, 'rendering');
+    const files = ['svg-helpers.js', 'svg-stage.js', 'svg-factories.js', 'svg-factories-dynamic.js', 'svg-factories-geometry.js', 'svg-registry.js'];
+    const rNorm = path.resolve(r).replace(/\\/g, '/');
+    Object.keys(require.cache).forEach(function (key) {
+      const norm = key.replace(/\\/g, '/');
+      if (norm.startsWith(rNorm) && files.some(function (f) { return norm.endsWith('/' + f); })) {
+        delete require.cache[key];
+      }
+    });
     require(path.join(r, 'svg-helpers.js'));
     require(path.join(r, 'svg-stage.js'));
     require(path.join(r, 'svg-factories.js'));

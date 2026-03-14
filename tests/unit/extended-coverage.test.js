@@ -132,7 +132,7 @@ describe('json-store error paths', () => {
 const { createLogger } = require('@agni/utils/logger');
 
 describe('logger structured output', () => {
-  it('logger.info outputs valid JSON to stdout', (_t) => {
+  it('logger.info outputs valid JSON to stdout', () => {
     const original = console.log;
     let captured = null;
     console.log = (line) => { captured = line; };

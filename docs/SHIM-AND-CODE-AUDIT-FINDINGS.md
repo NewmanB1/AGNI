@@ -41,7 +41,7 @@ module.exports = hub.hubTransform || hub;
 
 | # | Issue | Risk | Fix |
 |---|-------|------|-----|
-| 1 | NodeList.forEach ES5 inconsistency | Low | `Object.keys(attrs)` is fine; document only |
+| 1 | NodeList.forEach ES5 inconsistency | Low | **Done** — polyfills.js provides NodeList.forEach shim (SHIM-3-1); document in polyfills |
 | 2 | RAF: tick handlers may run one frame after destroy | Low | **Done** — _rafLoop checks _destroyed at top and before each callback |
 | 3 | Tick handler ID: `Date.now() + Math.random()` not unique | Low | **Done** — monotonic _tickIdNext |
 | 4 | Layer ID injection (`name` with `"`, `>`, `<`) | Medium | Sanitize: `name.replace(/[^\w-]/g, '_')` |
@@ -50,8 +50,8 @@ module.exports = hub.hubTransform || hub;
 | 7 | `lastSensorValues.get()` — Map is ES2015 | Note | Chrome 51 supports Map; RUN-ENVIRONMENTS ES5 is “vanilla JS” not strict ES5 |
 | 8 | `unsub()` when unsub not a function | Medium | Check `typeof unsub === 'function'` before call |
 | 9 | `subscribeToSensor` returns undefined | Medium | Only push if `unsub && typeof unsub === 'function'` |
-| 10 | btoa/unescape for large SVG | Low | Consider Blob + createObjectURL for large exports |
-| 11 | PNG export: tainted canvas → silent `''` | Low | Detect taint; return explicit error |
+| 10 | btoa/unescape for large SVG | Low | **Done** — try/catch around btoa; reject with clear error on failure (SHIM-3-10) |
+| 11 | PNG export: tainted canvas → silent `''` | Low | **Done** — catch SecurityError; reject with explicit "Canvas tainted" message (SHIM-3-11) |
 | 12 | sensorValue Map mid-read race | Low | Rare; acceptable |
 | 13 | destroy() double-call | Low | Add `if (_destroyed) return` at start |
 | 14 | _layers map never cleared | Low | **Done** — destroy() clears _layers = {} (P2-23) |
@@ -78,6 +78,9 @@ module.exports = hub.hubTransform || hub;
 | RAF tick handlers after destroy (3-2) | **Done** — _rafLoop checks _destroyed at top and before each callback (no automated test; code guard in svg-stage.js) |
 | _layers map cleared on destroy (3-14) | **Done** — destroy() sets _layers = {} to release DOM references |
 | Tick handler ID uniqueness (3-3) | **Done** — monotonic _tickIdNext instead of Date.now+random |
+| NodeList.forEach ES5 (3-1) | **Done** — polyfills.js shim; documented in polyfills |
+| btoa/unescape large SVG (3-10) | **Done** — try/catch; reject with clear error |
+| PNG tainted canvas (3-11) | **Done** — catch SecurityError; reject with explicit message |
 | lastSensorValues.get guard | **Done** — typeof shared.lastSensorValues.get === 'function' |
 | Safer shim (hub-transform) | **Done** — hub.hubTransform \|\| hub |
 

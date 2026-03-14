@@ -219,23 +219,36 @@
           return svgEl.outerHTML;
         }
         if (format === 'png') {
-          return new Promise(function (resolve) {
+          return new Promise(function (resolve, reject) {
             var svgStr = svgEl.outerHTML;
+            var b64;
+            try {
+              b64 = btoa(unescape(encodeURIComponent(svgStr)));
+            } catch (e) {
+              reject(new Error('SVG too large or invalid for base64 encoding (SHIM-3-10)'));
+              return;
+            }
             var img = new Image();
             img.onload = function () {
               var c = document.createElement('canvas');
               c.width = W;
               c.height = H;
               var ctx = c.getContext('2d');
-              if (ctx) {
+              if (!ctx) {
+                reject(new Error('Canvas 2d context unavailable'));
+                return;
+              }
+              try {
                 ctx.drawImage(img, 0, 0);
-                resolve(c.toDataURL('image/png'));
-              } else {
-                resolve('');
+                var dataUrl = c.toDataURL('image/png');
+                resolve(dataUrl);
+              } catch (e) {
+                var msg = (e && e.name === 'SecurityError') ? 'Canvas tainted; PNG export unavailable (SHIM-3-11)' : ('PNG export failed: ' + (e && e.message ? e.message : 'unknown'));
+                reject(new Error(msg));
               }
             };
-            img.onerror = function () { resolve(''); };
-            img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
+            img.onerror = function () { reject(new Error('Failed to load SVG for PNG export')); };
+            img.src = 'data:image/svg+xml;base64,' + b64;
           });
         }
         return '';

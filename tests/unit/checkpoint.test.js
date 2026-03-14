@@ -5,10 +5,15 @@ const assert = require('node:assert/strict');
 const browserGlobals = require('../helpers/browser-globals');
 const { setupGlobals, teardownGlobals } = browserGlobals;
 
-before(() => setupGlobals());
+let ckpt;
 
-require('@agni/runtime/telemetry/checkpoint');
-const ckpt = globalThis.AGNI_CHECKPOINT;
+before(() => {
+  setupGlobals();
+  delete require.cache[require.resolve('@agni/runtime/telemetry/checkpoint')];
+  require('@agni/runtime/telemetry/checkpoint');
+  ckpt = globalThis.AGNI_CHECKPOINT;
+  globalThis.localStorage = storage();
+});
 
 after(() => teardownGlobals());
 
@@ -17,7 +22,10 @@ function storage() { return browserGlobals.storage; }
 // ── save ────────────────────────────────────────────────────────────────────
 
 describe('save', () => {
-  beforeEach(() => { storage().store.clear(); });
+  beforeEach(() => {
+    storage().store.clear();
+    globalThis.localStorage = storage();
+  });
 
   it('stores JSON in localStorage under agni_ckpt_<lessonId>', () => {
     const data = { stepIndex: 3, stepId: 's3', stepOutcomes: [1], probeResults: [] };
@@ -43,7 +51,10 @@ describe('save', () => {
 // ── load ────────────────────────────────────────────────────────────────────
 
 describe('load', () => {
-  beforeEach(() => { storage().store.clear(); });
+  beforeEach(() => {
+    storage().store.clear();
+    globalThis.localStorage = storage();
+  });
 
   it('returns saved data correctly', () => {
     const data = { stepIndex: 5, stepId: 's5', stepOutcomes: [], probeResults: [true] };
@@ -65,13 +76,15 @@ describe('load', () => {
 
     const raw = JSON.parse(storage().getItem('agni_ckpt_exp'));
     const origNow = Date.now;
-    Date.now = () => raw.savedAt + ckpt.DEFAULT_EXPIRY_MS + 1;
+    try {
+      Date.now = function () { return raw.savedAt + ckpt.DEFAULT_EXPIRY_MS + 1; };
 
-    const result = ckpt.load('exp', false);
-    assert.equal(result, null);
-    assert.equal(storage().getItem('agni_ckpt_exp'), null);
-
-    Date.now = origNow;
+      const result = ckpt.load('exp', false);
+      assert.equal(result, null);
+      assert.equal(storage().getItem('agni_ckpt_exp'), null);
+    } finally {
+      Date.now = origNow;
+    }
   });
 
   it('does NOT expire within the 7-day window', () => {
@@ -80,20 +93,25 @@ describe('load', () => {
 
     const raw = JSON.parse(storage().getItem('agni_ckpt_fresh'));
     const origNow = Date.now;
-    Date.now = () => raw.savedAt + 86400000 * 3;
+    try {
+      Date.now = function () { return raw.savedAt + 86400000 * 3; };
 
-    const result = ckpt.load('fresh', false);
-    assert.ok(result);
-    assert.equal(result.stepIndex, 2);
-
-    Date.now = origNow;
+      const result = ckpt.load('fresh', false);
+      assert.ok(result);
+      assert.equal(result.stepIndex, 2);
+    } finally {
+      Date.now = origNow;
+    }
   });
 });
 
 // ── clear ───────────────────────────────────────────────────────────────────
 
 describe('clear', () => {
-  beforeEach(() => { storage().store.clear(); });
+  beforeEach(() => {
+    storage().store.clear();
+    globalThis.localStorage = storage();
+  });
 
   it('removes the checkpoint from localStorage', () => {
     const data = { stepIndex: 0, stepId: 's0', stepOutcomes: [], probeResults: [] };
@@ -108,7 +126,10 @@ describe('clear', () => {
 // ── sync ────────────────────────────────────────────────────────────────────
 
 describe('sync', () => {
-  beforeEach(() => { storage().store.clear(); });
+  beforeEach(() => {
+    storage().store.clear();
+    globalThis.localStorage = storage();
+  });
 
   it('is a function on the module', () => {
     assert.equal(typeof ckpt.sync, 'function');
@@ -141,7 +162,10 @@ describe('loadRemote', () => {
 // ── error handling ──────────────────────────────────────────────────────────
 
 describe('error handling', () => {
-  beforeEach(() => { storage().store.clear(); });
+  beforeEach(() => {
+    storage().store.clear();
+    globalThis.localStorage = storage();
+  });
 
   it('save handles localStorage errors gracefully', () => {
     const origSetItem = globalThis.localStorage.setItem;

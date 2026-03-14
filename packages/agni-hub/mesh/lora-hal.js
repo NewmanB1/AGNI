@@ -26,6 +26,7 @@
 function createSx1276Transport(opts) {
   var SX127x;
   try {
+    // @ts-expect-error optional dep; sx127x-driver not installed by default
     SX127x = require('sx127x-driver');
   } catch (e) {
     return null;

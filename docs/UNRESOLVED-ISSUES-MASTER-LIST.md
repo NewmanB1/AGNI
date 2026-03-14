@@ -79,7 +79,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | D1.1–D1.3 | inferredFeatures validation before LMS | P2 | Done |
 | D2.1–D2.3 | Sneakernet state migration checksum | P3 | Done |
 | E1.1–E1.3 | Compile-time SVG spec validation | P2 | Done |
-| E2.1–E2.3 | Optional: verify:lesson-sidecars CI gate | P3 | **Open** |
+| E2.1–E2.3 | Optional: verify:lesson-sidecars CI gate | P3 | Done |
 
 ---
 
@@ -91,10 +91,10 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | 2 | randn discards sin sample; 2× PRNG/transcendentals per sample | P2 | Done |
 | 3 | cholesky `\|\| 0` masks NaN; misleading "not SPD" error | P0 | Done |
 | 4 | Symmetry check O(n²) on every invertSPD | P2 | Done |
-| 5 | Cholesky square check separate pass | P3 | **Open** |
+| 5 | Cholesky square check separate pass | P3 | Done |
 | 6 | outer() reuses loop var i | P3 | Done |
 | 7 | addMat row 0 validated twice | P3 | Done |
-| 8 | matVec/addMat validation inconsistency | P3 | **Open** |
+| 8 | matVec/addMat validation inconsistency | P3 | Done |
 | 9 | forwardSub/backSub don't validate L | P1 | Done |
 | 10 | identity(0) / federation zero-dim path | P3 | Done |
 | 11 | dot() naive summation FP error | P4 (no action) | — |
@@ -119,15 +119,15 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | 2-8 | yaml-safe: Prototype pollution | High | Done |
 | 2-9 | yaml-safe: Stack trace leakage | Low | Done |
 | 2-10 | yaml-safe: Regex DoS on pathological strings | Medium | Done |
-| 3-1 | svg-stage: NodeList.forEach ES5 inconsistency | Low | **Open** (document only) |
+| 3-1 | svg-stage: NodeList.forEach ES5 inconsistency | Low | Done (polyfills + doc) |
 | 3-2 | svg-stage: RAF tick handlers after destroy | Low | Done |
 | 3-3 | svg-stage: Tick handler ID not unique | Low | Done |
 | 3-4 | svg-stage: Layer ID injection | Medium | Done |
 | 3-5 | svg-stage: container.innerHTML destroys listeners | Medium | Done |
 | 3-8 | svg-stage: unsub() when unsub not a function | Medium | Done |
 | 3-9 | svg-stage: subscribeToSensor returns undefined | Medium | Done |
-| 3-10 | svg-stage: btoa/unescape for large SVG | Low | **Open** |
-| 3-11 | svg-stage: PNG export tainted canvas → silent '' | Low | **Open** |
+| 3-10 | svg-stage: btoa/unescape for large SVG | Low | Done |
+| 3-11 | svg-stage: PNG export tainted canvas → silent '' | Low | Done |
 | 3-13 | svg-stage: destroy() double-call | Low | Done |
 | 3-14 | svg-stage: _layers map never cleared | Low | Done |
 
@@ -299,7 +299,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | JS-1.2 | AgniShared / AgniSvgHelpers augmentation | Done |
 | JS-2.1 | HTTP namespace | Done |
 | JS-2.2 | Error extensions | Done |
-| JS-2.3 | Auth context type | **Open** (check) |
+| JS-2.3 | Auth context type | Done |
 | JS-* | Remaining Phase 2+ items | Partial |
 
 ---

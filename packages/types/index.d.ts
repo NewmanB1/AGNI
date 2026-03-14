@@ -217,3 +217,15 @@ export interface CohortCoverageReport {
   studentCount: number;
   lessonCount: number;
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Auth / Hub context (JS-2.3)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** Authenticated creator from validateSession. Passed to authOnly/adminOnly handlers as opts.creator. */
+export interface AuthCreator {
+  id?: string;
+  creatorId?: string;
+  role?: string;
+  [key: string]: unknown;
+}

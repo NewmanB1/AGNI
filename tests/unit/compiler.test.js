@@ -1,12 +1,20 @@
 'use strict';
 
-const { describe, it } = require('../helpers/test-api');
+const path = require('path');
+const { describe, it, before, after } = require('../helpers/test-api');
 const assert = require('node:assert/strict');
+const { minimalLesson: baseMinimal } = require('../helpers/fixtures');
 const { buildLessonIR, buildLessonSidecar } = require('@ols/compiler/compiler/build-lesson-ir');
 
+before(function () {
+  process.env.AGNI_DATA_DIR = path.join(__dirname, '../../data');
+});
+after(function () {
+  delete process.env.AGNI_DATA_DIR;
+});
+
 function minimalLesson(overrides) {
-  const { minimalLesson: base } = require('../helpers/fixtures');
-  return base({
+  return baseMinimal({
     meta: {
       identifier: 'test-compiler',
       title: 'Compiler Test',

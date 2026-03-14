@@ -204,7 +204,8 @@ describe('evaluateLessonCompliance', () => {
   it('warns on non-canonical Spine ID (portability check)', () => {
     const r = gov.evaluateLessonCompliance(
       sampleSidecar({ utu: { class: 'FAKE-99', band: 1, protocol: 1 } }),
-      samplePolicy()
+      samplePolicy(),
+      { utuConstants: { spineIds: ['MAC-1', 'MAC-2', 'SCI-1'] } }
     );
     assert.ok(r.issues.some(i => /not in canonical list/.test(i.message)));
   });
@@ -212,7 +213,8 @@ describe('evaluateLessonCompliance', () => {
   it('no portability warning for canonical Spine ID', () => {
     const r = gov.evaluateLessonCompliance(
       sampleSidecar({ utu: { class: 'MAC-2', band: 3, protocol: 2 } }),
-      samplePolicy()
+      samplePolicy(),
+      { utuConstants: { spineIds: ['MAC-1', 'MAC-2', 'SCI-1'] } }
     );
     assert.ok(!r.issues.some(i => /canonical/.test(i.message)));
   });

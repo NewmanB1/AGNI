@@ -80,6 +80,8 @@
   }
 
   // ── NodeList.prototype.forEach (Chrome 51+) ────────────────────────────────
+  // SHIM-3-1: querySelectorAll returns NodeList; older environments lack .forEach.
+  // This polyfill ensures table-renderer and other DOM iteration work on ES5 baseline.
   if (typeof NodeList !== 'undefined' && !NodeList.prototype.forEach) {
     NodeList.prototype.forEach = Array.prototype.forEach;
   }

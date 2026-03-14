@@ -199,4 +199,4 @@
     DEFAULT_EXPIRY_MS: DEFAULT_EXPIRY_MS
   };
 
-})(typeof self !== 'undefined' ? self : this);
+})(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : typeof global !== 'undefined' ? global : {}));
