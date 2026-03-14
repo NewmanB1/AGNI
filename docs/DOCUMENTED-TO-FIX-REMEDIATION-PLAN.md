@@ -86,10 +86,10 @@
    - **Location:** New `packages/agni-hub/gc-disk-lessons.js` or integrated into hub-transform.
 
 **Tasks:**
-- [ ] Add `pruneOrphanLessons(serveDir, catalog, yamlDir)` — delete lessons not in catalog
-- [ ] Run prune on hub startup (or via init-data / admin endpoint)
+- [x] Add `pruneOrphanLessons(serveDir, catalog, yamlDir)` — delete lessons not in catalog (gc-disk-lessons.js)
+- [x] Run prune on hub startup (or via init-data / admin endpoint) — in rebuildLessonIndex
 - [ ] Add `AGNI_YAML_MAX_VERSIONS` and backup pruning (optional)
-- [ ] Document GC policy in RUN-ENVIRONMENTS.md
+- [x] Document GC policy in RUN-ENVIRONMENTS.md
 
 ---
 
@@ -132,7 +132,7 @@
 | P2-12 | Device ID trust boundary | **Done** — session API + integrity.js |
 | Gap 4 | Device UUID trust | **Done** (same as P2-12) |
 | P2-13 | Session token replay risk | **Done** — single-session + 6h TTL |
-| P2-20 | Pi serveDir/lessons disk exhaustion | Open — fix required |
+| P2-20 | Pi serveDir/lessons disk exhaustion | **Done** — gc-disk-lessons.js, prune on startup + author delete |
 | P2-24 | Edge device SW cache eviction | Open — fix required |
 
 ---

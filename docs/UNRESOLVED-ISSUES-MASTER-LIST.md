@@ -48,7 +48,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | P2-17 | UTU band validation advisory only | Enforce or record override | Done |
 | P2-18 | Step spec schema validation | JSON Schema per step type | Done |
 | P2-19 | Sensor dependency mismatch | Check availability before execution | Done |
-| P2-20 | Pi serveDir/lessons disk exhaustion | Implement GC: prune orphans, version retention | **Open** |
+| P2-20 | Pi serveDir/lessons disk exhaustion | Implement GC: prune orphans, version retention | **Done** |
 | P2-21 | Sneakernet import integrity | Sign packets, verify on import | Done |
 | P2-22 | Catalog / IR drift | Validation step | Done |
 | P2-23 | SVG stage memory leak | destroyStepVisual listeners | Done |

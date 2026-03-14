@@ -30,6 +30,7 @@ const {
   MIN_LOCAL_SAMPLE_SIZE, MIN_LOCAL_EDGE_COUNT,
   thetaCache, accountsService, authorService
 } = ctx;
+const { pruneOrphanLessons } = require('./gc-disk-lessons');
 
 // â”€â”€ LMS engine status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if (lmsEngine.isAvailable()) {
@@ -464,6 +465,8 @@ async function rebuildLessonIndex() {
       }
       await saveJSONAsync(LESSON_INDEX, index);
       log.info('Catalog-free mode: derived lesson set from IR sidecars', { total: index.length, sidecar: sidecarCount });
+      const gcFree = await pruneOrphanLessons({ serveDir: SERVE_DIR, catalogSlugs: [] });
+      if (gcFree.pruned.length > 0) log.info('P2-20: pruned orphans (catalog-free)', { count: gcFree.pruned.length });
       if (lmsEngine.isAvailable && lmsEngine.isAvailable()) {
         const seedEntries = index
           .filter((ent) => ent.skillsProvided && ent.skillsProvided.length > 0)
@@ -560,6 +563,10 @@ async function rebuildLessonIndex() {
       yamlOnlySlugs: yamlOnly.slice(0, 5)
     });
   }
+
+  const validSlugs = new Set([].concat(Array.from(catalogSlugSet), yamlSlugs));
+  const gcResult = await pruneOrphanLessons({ serveDir: SERVE_DIR, validSlugs: validSlugs });
+  if (gcResult.pruned.length > 0) log.info('P2-20: pruned orphans', { count: gcResult.pruned.length, slugs: gcResult.pruned.slice(0, 5) });
 
   await saveJSONAsync(LESSON_INDEX, index);
   log.info('Lesson index rebuilt', { total: index.length, sidecar: sidecarCount, skippedNoIR: fallbackCount });

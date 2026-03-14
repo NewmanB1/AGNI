@@ -39,9 +39,11 @@ function register(router, ctx) {
     });
   }));
 
-  router.delete('/api/author/delete/:slug', adminOnly((req, res, { params, sendResponse }) => {
+  router.delete('/api/author/delete/:slug', adminOnly(async (req, res, { params, sendResponse }) => {
     const result = authorService.deleteLesson(params.slug, yamlDir);
     if (result.error) return sendResponse(404, { error: result.error });
+    const { pruneLessonCompiledDir } = require('../gc-disk-lessons');
+    await pruneLessonCompiledDir(params.slug, envConfig.serveDir);
     sendResponse(200, { ok: true, deleted: result.deleted });
   }));
 
