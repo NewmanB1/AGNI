@@ -155,6 +155,7 @@ Paginated endpoints: `GET /api/lessons`, `GET /api/theta/all`, `GET /api/account
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
+| GET | `/api/author/lessons` | Bearer | List saved lesson slugs (yamlDir) |
 | GET | `/api/author/load/:slug` | Bearer | Load a saved lesson |
 | POST | `/api/author/validate` | Bearer | Validate lesson YAML/JSON |
 | POST | `/api/author/save` | Bearer | Save a lesson |

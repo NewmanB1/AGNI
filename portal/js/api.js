@@ -116,6 +116,10 @@ export function createHubApi(baseUrl) {
       return authGet('api/auth/me');
     },
 
+    getAuthorLessons() {
+      return authGet('api/author/lessons');
+    },
+
     getAuthorLesson(slug) {
       return authGet(`api/author/load/${encodeURIComponent(slug)}`);
     },

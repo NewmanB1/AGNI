@@ -270,7 +270,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | Y3 | E4: Preview button | **Open** |
 | Y4 | E5: Save | **Open** |
 | Y5 | E6–E8: Gate, ontology, all step types | **Done** |
-| Y6 | E9: YAML round-trip | **Open** |
+| Y6 | E9: YAML round-trip | **Done** |
 | Y7 | Freeze OLS schema | **Open** |
 | Y8 | Document breaking vs additive | **Done** — docs/BREAKING-VS-ADDITIVE.md |
 | Y9 | Reference implementation compliance | **Done** — CI enforces validate, test, test:graph, verify:all; see REFERENCE-IMPLEMENTATION-VISION.md §4.3 |

@@ -26,18 +26,43 @@ export function renderAuthorList(main) {
       <a href="#/author/new" class="btn btn-primary">Create New Lesson</a>
       <div class="card" style="margin-top: 1rem;">
         <h3 style="margin-bottom: 0.5rem;">Edit existing</h3>
-        <p class="hint" style="margin-bottom: 0.5rem;">Enter the lesson slug (e.g. hello-world, gravity) to edit.</p>
-        <div style="display: flex; gap: 0.5rem; align-items: center;">
-          <input type="text" id="edit-slug" class="input" placeholder="hello-world" style="max-width: 200px;" />
+        <p class="hint" style="margin-bottom: 0.5rem;">Select a lesson or enter slug to edit.</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+          <select id="edit-select" class="input" style="min-width: 200px;">
+            <option value="">-- Select lesson --</option>
+          </select>
+          <span>or</span>
+          <input type="text" id="edit-slug" class="input" placeholder="hello-world" style="max-width: 180px;" />
           <button type="button" id="btn-edit" class="btn">Edit</button>
         </div>
       </div>
       <p style="margin-top: 1.5rem;"><a href="#/author/login">Account / Log out</a></p>
     </div>
   `;
-  main.querySelector('#btn-edit').addEventListener('click', function () {
-    var slug = (main.querySelector('#edit-slug').value || '').trim().replace(/\.yaml$/, '');
+  var baseUrl = getHubUrl();
+  if (baseUrl) {
+    var api = createHubApi(baseUrl);
+    api.getAuthorLessons().then(function (r) {
+      var sel = main.querySelector('#edit-select');
+      if (!sel || !r.slugs) return;
+      (r.slugs || []).sort().forEach(function (s) {
+        var opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        sel.appendChild(opt);
+      });
+    }).catch(function () {});
+  }
+  function doEdit() {
+    var sel = main.querySelector('#edit-select');
+    var inp = main.querySelector('#edit-slug');
+    var slug = (sel && sel.value) || (inp && inp.value) || '';
+    slug = String(slug).trim().replace(/\.yaml$/, '');
     if (slug) navigateTo('#/author/' + encodeURIComponent(slug) + '/edit');
+  }
+  main.querySelector('#btn-edit').addEventListener('click', doEdit);
+  main.querySelector('#edit-select')?.addEventListener('change', function () {
+    if (this.value) doEdit();
   });
 }
 
@@ -46,6 +71,40 @@ function esc(s) {
   const d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
+}
+
+/**
+ * Y6: Merge form data with original lesson to preserve schema fidelity.
+ * Keeps fields we don't collect (utu, on_success, on_fail, max_attempts, feedback, etc.).
+ */
+function mergeLessonForRoundTrip(original, formData) {
+  if (!original || !formData) return formData;
+  var merged = {};
+  for (var k in original) merged[k] = original[k];
+  merged.version = formData.version || merged.version;
+  merged.meta = shallowMerge(original.meta || {}, formData.meta || {});
+  var origSteps = original.steps || [];
+  var origById = {};
+  for (var i = 0; i < origSteps.length; i++) {
+    var oid = origSteps[i].id;
+    if (oid && !origById[oid]) origById[oid] = origSteps[i];
+  }
+  merged.steps = formData.steps.map(function (fs) {
+    var orig = (fs.id && origById[fs.id]) || {};
+    return shallowMerge(orig, fs);
+  });
+  merged.ontology = formData.ontology || original.ontology;
+  merged.gate = formData.gate;
+  return merged;
+}
+
+function shallowMerge(base, overlay) {
+  var out = {};
+  for (var k in base) out[k] = base[k];
+  for (var k in overlay) {
+    if (overlay[k] !== undefined && overlay[k] !== null) out[k] = overlay[k];
+  }
+  return out;
 }
 
 export function renderAuthorLogin(main) {
@@ -565,7 +624,8 @@ export function renderAuthorNew(main, slug) {
   main.querySelector('#btn-validate').addEventListener('click', function () {
     statusEl.style.display = 'block';
     setStatus('Validating…', false);
-    var payload = collectLessonFromForm(main);
+    var formData = collectLessonFromForm(main);
+    var payload = slug && lesson ? mergeLessonForRoundTrip(lesson, formData) : formData;
     api.postAuthorValidate(payload).then(function (r) {
       if (r.valid) {
         setStatus('Valid. ' + (r.warnings && r.warnings.length ? 'Warnings: ' + r.warnings.join('; ') : ''), false);
@@ -580,7 +640,8 @@ export function renderAuthorNew(main, slug) {
   main.querySelector('#btn-preview').addEventListener('click', function () {
     statusEl.style.display = 'block';
     setStatus('Building preview…', false);
-    var payload = collectLessonFromForm(main);
+    var formData = collectLessonFromForm(main);
+    var payload = slug && lesson ? mergeLessonForRoundTrip(lesson, formData) : formData;
     api.postAuthorPreview(payload).then(function (r) {
       if (r.error) {
         setStatus('Preview failed: ' + r.error, true);
@@ -595,7 +656,8 @@ export function renderAuthorNew(main, slug) {
   main.querySelector('#btn-save').addEventListener('click', function () {
     statusEl.style.display = 'block';
     setStatus('Saving…', false);
-    var payload = collectLessonFromForm(main);
+    var formData = collectLessonFromForm(main);
+    var payload = slug && lesson ? mergeLessonForRoundTrip(lesson, formData) : formData;
     api.postAuthorSave(payload, { compile: true }).then(function (r) {
       if (r.error) {
         setStatus('Save failed: ' + r.error, true);

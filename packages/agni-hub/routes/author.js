@@ -6,6 +6,11 @@ function register(router, ctx) {
   const envConfig = require('@agni/utils/env-config');
   const yamlDir = envConfig.yamlDir;
 
+  router.get('/api/author/lessons', authOnly((req, res, { sendResponse }) => {
+    const slugs = authorService.listSavedLessons(yamlDir);
+    return sendResponse(200, { slugs: slugs });
+  }));
+
   router.get('/api/author/load/:slug', authOnly((req, res, { params, sendResponse }) => {
     const result = authorService.loadLesson(params.slug, yamlDir);
     if (result.error) return sendResponse(404, { error: result.error });

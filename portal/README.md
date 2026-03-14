@@ -44,7 +44,7 @@ The Author page includes a form-based lesson editor:
 - **New lesson:** `#/author/new` — Create a lesson from scratch (meta, steps, ontology).
 - **Edit lesson:** `#/author/:slug/edit` — Load, edit, and save an existing lesson.
 
-Steps support: instruction, quiz, hardware_trigger, fill_blank, matching, ordering, completion. Gate (quiz/manual_verification) and ontology (requires/provides) are editable. Use **Validate** to check against the OLS schema, **Preview** to build IR, and **Save** to write YAML to the hub's yamlDir (with optional compile-on-save).
+Steps support: instruction, quiz, hardware_trigger, fill_blank, matching, ordering, completion. Gate (quiz/manual_verification) and ontology (requires/provides) are editable. **YAML round-trip (Y6):** Select from lesson list or enter slug to edit; merge-on-save preserves fields not in the form (utu, on_success, on_fail, feedback, etc.). Use **Validate**, **Preview**, and **Save**.
 
 ## Notes
 
