@@ -28,7 +28,7 @@ async function run() {
 
   const dataDir = await prompt(rl, 'Data directory (AGNI_DATA_DIR)', path.join(__dirname, '../data'));
   const serveDir = await prompt(rl, 'Serve directory (AGNI_SERVE_DIR)', path.join(__dirname, '../serve'));
-  const thetaPort = await prompt(rl, 'Theta port (AGNI_THETA_PORT)', '8082');
+  const pathfinderPort = await prompt(rl, 'Pathfinder port (AGNI_PATHFINDER_PORT)', '8082');
   const approvedCatalog = await prompt(rl, 'Approved catalog path (AGNI_APPROVED_CATALOG)', '');
   const minLocalSample = await prompt(rl, 'Min local sample size (AGNI_MIN_LOCAL_SAMPLE)', '40');
   const minLocalEdges = await prompt(rl, 'Min local edges (AGNI_MIN_LOCAL_EDGES)', '5');
@@ -41,7 +41,7 @@ async function run() {
   const config = {};
   if (dataDir) config.dataDir = dataDir;
   if (serveDir) config.serveDir = serveDir;
-  if (thetaPort) config.thetaPort = parseInt(thetaPort, 10) || 8082;
+  if (pathfinderPort) config.pathfinderPort = parseInt(pathfinderPort, 10) || 8082;
   if (approvedCatalog) config.approvedCatalog = approvedCatalog;
   if (minLocalSample) config.minLocalSample = parseInt(minLocalSample, 10) || 40;
   if (minLocalEdges) config.minLocalEdges = parseInt(minLocalEdges, 10) || 5;
@@ -55,14 +55,14 @@ async function run() {
 
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
   console.log('\n✓ Wrote', CONFIG_PATH);
-  console.log('  Restart the hub (theta) for changes to take effect.\n');
+  console.log('  Restart the hub (pathfinder) for changes to take effect.\n');
 
   // Also write env snippet
   const envPath = path.join(__dirname, '../agni.env');
   const lines = [];
   if (config.dataDir) lines.push('AGNI_DATA_DIR=' + config.dataDir);
   if (config.serveDir) lines.push('AGNI_SERVE_DIR=' + config.serveDir);
-  if (config.thetaPort) lines.push('AGNI_THETA_PORT=' + config.thetaPort);
+  if (config.pathfinderPort) lines.push('AGNI_THETA_PORT=' + config.pathfinderPort);
   if (config.approvedCatalog) lines.push('AGNI_APPROVED_CATALOG=' + config.approvedCatalog);
   if (config.minLocalSample != null) lines.push('AGNI_MIN_LOCAL_SAMPLE=' + config.minLocalSample);
   if (config.minLocalEdges != null) lines.push('AGNI_MIN_LOCAL_EDGES=' + config.minLocalEdges);

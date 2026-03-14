@@ -1,16 +1,16 @@
-// packages/agni-hub/hub-transform.js
-// AGNI Hub Transform  v1.0.0
+// packages/agni-hub/lesson-server.js
+// AGNI Lesson Server v1.0.0
 //
 // On-demand lesson delivery server. Transforms YAML source into compiled
 // lesson HTML at request time and serves it directly to the device browser.
 // Also serves factory files, KaTeX CSS, and static runtime assets.
 //
 // Module layout:
-//   hub-transform/compile.js      — YAML load, IR compilation, in-flight guard
-//   hub-transform/cache.js        — disk + memory cache, compile slot management
-//   hub-transform/assemble.js     — HTML assembly, PWA shell, device binding
-//   hub-transform/serve-assets.js — response helpers, factory/KaTeX whitelists
-//   hub-transform/route-handlers.js — HTTP route matching and handling
+//   lesson-server/compile.js      — YAML load, IR compilation, in-flight guard
+//   lesson-server/cache.js        — disk + memory cache, compile slot management
+//   lesson-server/assemble.js     — HTML assembly, PWA shell, device binding
+//   lesson-server/serve-assets.js — response helpers, factory/KaTeX whitelists
+//   lesson-server/route-handlers.js — HTTP route matching and handling
 //
 // Exports: attachRoutes, startStandalone, handleRequest, compileLesson, loadYaml
 
@@ -24,9 +24,9 @@ const createLogger = require('@agni/utils/logger').createLogger;
 
 loadHubConfig(path.join(__dirname, '../../data'));
 
-const log = createLogger('hub-transform');
-const routeHandlers = require('./hub-transform/route-handlers');
-const compile = require('./hub-transform/compile');
+const log = createLogger('lesson-server');
+const routeHandlers = require('./lesson-server/route-handlers');
+const compile = require('./lesson-server/compile');
 const envConfig = require('@agni/utils/env-config');
 
 const SERVE_PORT = envConfig.servePort;

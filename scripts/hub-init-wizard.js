@@ -41,13 +41,13 @@ async function run() {
   console.log('Minimal config. Values in brackets are defaults (Enter to accept).\n');
 
   const dataDir = await prompt(rl, 'Data directory (AGNI_DATA_DIR)', path.join(REPO_ROOT, 'data'));
-  const thetaPort = await prompt(rl, 'Theta port (AGNI_THETA_PORT)', '8082');
+  const pathfinderPort = await prompt(rl, 'Pathfinder port (AGNI_PATHFINDER_PORT)', '8082');
   const createPolicy = await prompt(rl, 'Create default governance policy? (y/n)', 'y');
 
   rl.close();
 
   const config = {
-    thetaPort: parseInt(thetaPort, 10) || 8082,
+    pathfinderPort: parseInt(pathfinderPort, 10) || 8082,
     minLocalSample: 40,
     minLocalEdges: 5,
     cacheMax: 100
@@ -74,8 +74,8 @@ async function run() {
     console.log('✓ Wrote', catalogPath);
   }
 
-  console.log('\nHub provisioned. Restart theta for changes to take effect.');
-  console.log('  node hub-tools/theta.js\n');
+  console.log('\nHub provisioned. Restart pathfinder for changes to take effect.');
+  console.log('  node hub-tools/pathfinder.js\n');
 }
 
 if (require.main === module) {

@@ -1225,13 +1225,13 @@ describe('R16-C3.3: PageRank invalidateCache clears _currGraph', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('R16-C2.1: sentry event buffer is bounded', () => {
-  it('sentry.js source contains EVENT_BUFFER_MAX constant', () => {
+  it('telemetry-engine.js source contains EVENT_BUFFER_MAX constant', () => {
     const fs = require('fs');
-    const src = fs.readFileSync(require('path').join(__dirname, '../../packages/agni-hub/sentry.js'), 'utf8');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../packages/agni-hub/telemetry-engine.js'), 'utf8');
     assert.ok(src.indexOf('EVENT_BUFFER_MAX') !== -1,
-      'sentry.js missing EVENT_BUFFER_MAX — eventBuffer can grow without limit');
+      'telemetry-engine.js missing EVENT_BUFFER_MAX — eventBuffer can grow without limit');
     assert.ok(src.indexOf('_flushing') !== -1,
-      'sentry.js missing _flushing guard — concurrent flushes can cause data duplication');
+      'telemetry-engine.js missing _flushing guard — concurrent flushes can cause data duplication');
   });
 });
 
@@ -1240,9 +1240,9 @@ describe('R16-C2.1: sentry event buffer is bounded', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('R16-C2.2: sentry UTF-8 body parsing uses Buffer.concat', () => {
-  it('sentry.js receiver uses Buffer.concat, not body += chunk', () => {
+  it('telemetry-engine.js receiver uses Buffer.concat, not body += chunk', () => {
     const fs = require('fs');
-    const src = fs.readFileSync(require('path').join(__dirname, '../../packages/agni-hub/sentry.js'), 'utf8');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../packages/agni-hub/telemetry-engine.js'), 'utf8');
     const receiverStart = src.indexOf('function startReceiver');
     const receiverBlock = src.slice(receiverStart, receiverStart + 2500);
     assert.ok(receiverBlock.indexOf('Buffer.concat') !== -1,
@@ -1257,13 +1257,13 @@ describe('R16-C2.2: sentry UTF-8 body parsing uses Buffer.concat', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('R16-C3.2: sentry has event retention pruning', () => {
-  it('sentry.js contains pruneOldEvents function', () => {
+  it('telemetry-engine.js contains pruneOldEvents function', () => {
     const fs = require('fs');
-    const src = fs.readFileSync(require('path').join(__dirname, '../../packages/agni-hub/sentry.js'), 'utf8');
+    const src = fs.readFileSync(require('path').join(__dirname, '../../packages/agni-hub/telemetry-engine.js'), 'utf8');
     assert.ok(src.indexOf('pruneOldEvents') !== -1,
-      'sentry.js missing pruneOldEvents — NDJSON files accumulate forever on Pi SD card');
+      'telemetry-engine.js missing pruneOldEvents — NDJSON files accumulate forever on Pi SD card');
     assert.ok(src.indexOf('sentryRetentionDays') !== -1,
-      'sentry.js does not reference sentryRetentionDays config — retention is not configurable');
+      'telemetry-engine.js does not reference sentryRetentionDays config — retention is not configurable');
   });
 });
 
@@ -1281,12 +1281,12 @@ describe('R16-C3.1: service worker version uses placeholder, not hardcoded', () 
       'sw.js still contains hardcoded agni-v1.9.0');
   });
 
-  it('hub-transform stamps __SW_VERSION__ with package version', () => {
+  it('lesson-server stamps __SW_VERSION__ with package version', () => {
     const fs = require('fs');
     const path = require('path');
-    const src = fs.readFileSync(path.join(__dirname, '../../packages/agni-hub/hub-transform/route-handlers.js'), 'utf8');
+    const src = fs.readFileSync(path.join(__dirname, '../../packages/agni-hub/lesson-server/route-handlers.js'), 'utf8');
     assert.ok(src.indexOf('.replace(\'__SW_VERSION__\'') !== -1 || src.indexOf('.replace("__SW_VERSION__"') !== -1,
-      'hub-transform route-handlers does not replace __SW_VERSION__ — service worker gets raw placeholder');
+      'lesson-server route-handlers does not replace __SW_VERSION__ — service worker gets raw placeholder');
   });
 });
 
@@ -1548,7 +1548,7 @@ describe('AUDIT-INVARIANT: maxStudents/maxLessons enforced at runtime', () => {
 });
 
 describe('AUDIT-INVARIANT: hub-config bootstrap — embeddingDim flows from config to engine', () => {
-  it('check-hub-config-bootstrap passes — CONFIG_KEYS has embeddingDim, loadHubConfig before env-config in theta/sentry/sync/hub-transform', () => {
+  it('check-hub-config-bootstrap passes — CONFIG_KEYS has embeddingDim, loadHubConfig before env-config in theta/sentry/sync/lesson-server', () => {
     const script = path.resolve(__dirname, '../../scripts/check-hub-config-bootstrap.js');
     const result = spawnSync(process.execPath, [script], {
       cwd: path.resolve(__dirname, '../..'),
@@ -1557,7 +1557,7 @@ describe('AUDIT-INVARIANT: hub-config bootstrap — embeddingDim flows from conf
     assert.equal(
       result.status,
       0,
-      `check-hub-config-bootstrap must pass. embeddingDim must be in CONFIG_KEYS; loadHubConfig before env-config in theta/sentry/sync/hub-transform.\n${result.stderr || result.stdout}`
+      `check-hub-config-bootstrap must pass. embeddingDim must be in CONFIG_KEYS; loadHubConfig before env-config in theta/sentry/sync/lesson-server.\n${result.stderr || result.stdout}`
     );
   });
 });
@@ -1635,7 +1635,7 @@ describe('AUDIT-B2: Service Worker fallback — registration has .catch() when S
   });
 
   it('buildPwaShell includes .catch() on SW registration in lesson HTML', () => {
-    const { buildPwaShell } = require('@agni/hub/hub-transform/assemble');
+    const { buildPwaShell } = require('@agni/hub/lesson-server/assemble');
     const ir = { meta: { identifier: 'b2-test', title: 'B2', language: 'en' }, steps: [] };
     const html = buildPwaShell(ir, '/* empty */', 'var LESSON_DATA={};', 'nonce123');
     assert.ok(html.includes("serviceWorker.register('/sw.js')"), 'PWA shell must register sw.js');

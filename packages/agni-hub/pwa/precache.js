@@ -1,5 +1,5 @@
 // precache.js — Opportunistic lesson precaching
-// Fetches theta's precacheSlugs and prefetches /lessons/:slug in background.
+// Fetches pathfinder's precacheSlugs and prefetches /lessons/:slug in background.
 // ES5 compatible. Runs when shell loads, throttled (default 5 min).
 (function () {
   'use strict';
@@ -48,10 +48,10 @@
     if (isThrottled()) return;
 
     var base = window.location.origin;
-    var thetaUrl = base + '/api/theta?pseudoId=' + encodeURIComponent(pseudoId);
+    var pathfinderUrl = base + '/api/pathfinder?pseudoId=' + encodeURIComponent(pseudoId);
     var headers = { 'X-Hub-Key': hubKey };
 
-    fetch(thetaUrl, { headers: headers })
+    fetch(pathfinderUrl, { headers: headers })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
         if (!data) return;
@@ -63,7 +63,7 @@
               graphWeights: data.graphWeights || { edges: [] },
               storedAt: Date.now()
             };
-            localStorage.setItem('agni_theta_snapshot', JSON.stringify(payload));
+            localStorage.setItem('agni_pathfinder_snapshot', JSON.stringify(payload));
           // eslint-disable-next-line no-unused-vars
           } catch (_e) { void 0; }
         }

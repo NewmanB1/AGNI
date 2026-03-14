@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * hub-transform/serve-assets.js
+ * lesson-server/serve-assets.js
  * Response helpers (gzip, sendText, sendJson, sendFile) and asset path resolution.
  */
 

@@ -219,7 +219,7 @@ async function run(baseUrl, bearer) {
 
   // PUT /api/admin/config (Admin)
   try {
-    const cfg = { thetaPort: 8082, dataDir: '' };
+    const cfg = { pathfinderPort: 8082, dataDir: '' };
     const { statusCode, data } = await put(baseUrl, '/api/admin/config', cfg, auth);
     if (statusCode !== 200) failures.push(`/api/admin/config PUT: expected 200, got ${statusCode}: ${data.error || ''}`);
     if (data && data.ok !== true) failures.push(`/api/admin/config PUT: ok must be true`);

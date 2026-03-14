@@ -36,7 +36,7 @@ const FACTORY_PATH_MAP = {
   'completion.js':              'telemetry/completion.js',
   'telemetry.js':               'telemetry/telemetry.js',
   'navigator.js':               'engine/navigator.js',
-  'edge-theta.js':              'engine/edge-theta.js'
+  'edge-pathfinder.js':         'engine/edge-pathfinder.js'
 };
 
 /**

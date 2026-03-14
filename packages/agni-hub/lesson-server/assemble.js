@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * hub-transform/assemble.js
+ * lesson-server/assemble.js
  * HTML assembly from IR: device binding (signing), PWA shell wrapper.
  */
 

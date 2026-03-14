@@ -4,12 +4,12 @@
 // The top of the dependency tree: depends on all other packages.
 
 module.exports = {
-  theta:          require('./theta'),
-  sentry:         require('./sentry'),
+  pathfinder:     require('./pathfinder'),
+  telemetryEngine: require('./telemetry-engine'),
   sync:           require('./sync'),
   mesh:           require('./mesh'),
   shared:         require('./shared'),
-  hubTransform:   require('./hub-transform'),
+  lessonServer:   require('./lesson-server'),
   accounts:       require('@agni/services/accounts'),
   author:         require('@agni/services/author'),
   lessonChain:    require('@agni/services/lesson-chain'),

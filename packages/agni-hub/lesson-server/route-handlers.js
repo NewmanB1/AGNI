@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * hub-transform/route-handlers.js
+ * lesson-server/route-handlers.js
  * HTTP request routing and handling: /lessons/, /factories/, /katex/, PWA assets, etc.
  */
 
@@ -18,7 +18,7 @@ const serveAssets = require('./serve-assets');
 const factoryManifest = require('./factory-manifest');
 
 const createLogger = require('@agni/utils/logger').createLogger;
-const log = createLogger('hub-transform');
+const log = createLogger('lesson-server');
 
 const PKG_VERSION = require('../../../package.json').version || '0.0.0';
 const SHELL_PLACEHOLDER = '<script src="/lesson-data.js"></script>';
@@ -50,7 +50,7 @@ function getRequestCompileOptions(req, baseOptions) {
 
 /**
  * Handle an incoming request for lesson delivery or factory assets.
- * Returns true if handled, false to fall through to theta.js routes.
+ * Returns true if handled, false to fall through to pathfinder.js routes.
  */
 function handleRequest(req, res, options) {
   const urlPath = req.url.split('?')[0];

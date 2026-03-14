@@ -17,7 +17,7 @@ function register(router, ctx) {
     const effective = {
       dataDir: DATA_DIR,
       serveDir: SERVE_DIR,
-      thetaPort: PORT,
+      pathfinderPort: PORT,
       approvedCatalog: APPROVED_CATALOG,
       minLocalSample: MIN_LOCAL_SAMPLE_SIZE,
       minLocalEdges: MIN_LOCAL_EDGE_COUNT,
@@ -27,7 +27,7 @@ function register(router, ctx) {
   }));
 
   const ALLOWED_CONFIG_KEYS = new Set([
-    'hubName', 'hubId', 'dataDir', 'serveDir', 'thetaPort', 'servePort', 'sentryPort',
+    'hubName', 'hubId', 'dataDir', 'serveDir', 'pathfinderPort', 'servePort', 'telemetryEnginePort',
     'corsOrigin', 'syncTransport', 'homeUrl', 'usbPath', 'maxStudents', 'maxLessons',
     'memoryBudgetMb', 'enableTelemetry', 'enableLms', 'locale', 'studentSessionTtlMs'
   ]);

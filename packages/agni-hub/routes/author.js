@@ -65,7 +65,7 @@ function register(router, ctx) {
       if (parsed.error) return sendResponse(400, { error: parsed.error });
       const result = await authorService.previewForAuthor(parsed.lessonData);
       if (result.error) return sendResponse(400, { error: result.error });
-      const assemble = require('../hub-transform/assemble');
+      const assemble = require('../lesson-server/assemble');
       let html;
       try {
         html = assemble.assembleHtml(result.ir, { dev: true });

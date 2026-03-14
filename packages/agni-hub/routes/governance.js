@@ -2,7 +2,7 @@
 
 function register(router, ctx) {
   const { governanceService, loadJSONAsync, loadLessonIndexAsync, loadMasterySummaryAsync,
-          handleJsonBody, adminOnly, authOnly, thetaCache, DATA_DIR, path } = ctx;
+          handleJsonBody, adminOnly, authOnly, pathfinderCache, DATA_DIR, path } = ctx;
 
   router.get('/api/governance/report', authOnly(async (req, res, { sendResponse }) => {
     const lessonIndex = await loadLessonIndexAsync();
@@ -59,7 +59,7 @@ function register(router, ctx) {
     handleJsonBody(req, sendResponse, (payload) => {
       const result = governanceService.updateCatalog(payload);
       if (result.ok) {
-        thetaCache.clear();
+        pathfinderCache.clear();
         sendResponse(200, { ok: true, catalog: result.catalog });
       } else {
         sendResponse(400, { error: result.error });
@@ -75,7 +75,7 @@ function register(router, ctx) {
       }
       const result = governanceService.importCatalog(imported, strategy);
       if (result.ok) {
-        thetaCache.clear();
+        pathfinderCache.clear();
         sendResponse(200, { ok: true, catalog: result.catalog });
       } else {
         sendResponse(400, { error: result.error });

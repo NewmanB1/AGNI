@@ -2,7 +2,7 @@
 
 const envConfig = require('@agni/utils/env-config');
 
-const PORT = envConfig.thetaPort;
+const PORT = envConfig.pathfinderPort;
 const STUDENT_SESSION_TTL_MS = envConfig.studentSessionTtlMs;
 const MIN_RESIDUAL = 0.15;
 const MIN_MLC = 0.001;  // Floor for MLC; prevents negative values from BaseCost - CohortDiscount

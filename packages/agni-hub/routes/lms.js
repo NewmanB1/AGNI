@@ -46,7 +46,7 @@ function register(router, ctx) {
       : null;
     if (!candidates || candidates.length === 0) {
       try {
-        const lessons = await ctx.getLessonsSortedByTheta(qs.pseudoId);
+        const lessons = await ctx.getLessonsSortedByPathfinder(qs.pseudoId);
         candidates = (lessons || []).map(function (l) { return l.lessonId || l.slug; }).filter(Boolean);
       } catch (err) {
         return sendResponse(500, { error: err && err.message ? err.message : String(err) });

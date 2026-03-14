@@ -1,6 +1,6 @@
 // packages/agni-runtime/shell/library.js
 // ES5 compatible — targets Android 7.0+ (Nougat, API 24).
-// Uses edge-theta when available to order precached lessons offline.
+// Uses edge-pathfinder when available to order precached lessons offline.
 
 var AVAILABLE_LESSONS = [
     { identifier: 'math:fractions', title: 'Fractions w/ Rhythm', difficulty: 3, inferredFeatures: { sensors_used: ['accelerometer'], has_haptic_feedback: true } },
@@ -66,9 +66,9 @@ function initLibrary() {
         renderLessons(sorted, listEl);
     }
 
-    var edgeTheta = window.AGNI_EDGE_THETA;
-    if (edgeTheta && typeof edgeTheta.getOrderedPrecachedLessons === 'function') {
-        edgeTheta.getOrderedPrecachedLessons().then(function (sorted) {
+    var edgePathfinder = window.AGNI_EDGE_PATHFINDER;
+    if (edgePathfinder && typeof edgePathfinder.getOrderedPrecachedLessons === 'function') {
+        edgePathfinder.getOrderedPrecachedLessons().then(function (sorted) {
             if (sorted && sorted.length > 0) return done(sorted);
             if (window.AGNI_NAVIGATOR && typeof window.AGNI_NAVIGATOR.sortLessons === 'function') {
                 return done(window.AGNI_NAVIGATOR.sortLessons(AVAILABLE_LESSONS, USER_LOG, GRAPH_WEIGHTS));

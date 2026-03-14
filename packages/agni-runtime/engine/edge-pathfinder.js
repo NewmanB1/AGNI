@@ -1,11 +1,11 @@
-// packages/agni-runtime/engine/edge-theta.js
-// Minimal theta for edge device: orders precached lessons when offline.
-// Uses: SW cache (precached lessons), localStorage (theta snapshot, user log), AGNI_NAVIGATOR.
+// packages/agni-runtime/engine/edge-pathfinder.js
+// Minimal pathfinder for edge device: orders precached lessons when offline.
+// Uses: SW cache (precached lessons), localStorage (pathfinder snapshot, user log), AGNI_NAVIGATOR.
 // ES5 only — targets Android 7.0 (Nougat, API 24).
 (function (global) {
   'use strict';
 
-  var STORAGE_THETA = 'agni_theta_snapshot';
+  var STORAGE_PATHFINDER_SNAPSHOT = 'agni_pathfinder_snapshot';
   var STORAGE_USER_LOG = 'agni_edge_user_log';
   var LESSON_CACHE_SUFFIX = '-lessons';
 
@@ -64,11 +64,11 @@
   }
 
   /**
-   * Get stored theta snapshot from localStorage (saved when online).
+   * Get stored pathfinder snapshot from localStorage (saved when online).
    */
   function getStoredSnapshot() {
     try {
-      var raw = localStorage.getItem(STORAGE_THETA);
+      var raw = localStorage.getItem(STORAGE_PATHFINDER_SNAPSHOT);
       if (!raw) return null;
       var data = JSON.parse(raw);
       if (!data || !Array.isArray(data.lessons)) return null;
@@ -137,7 +137,7 @@
   }
 
   /**
-   * Store theta snapshot (call when theta response received; used by precache).
+   * Store pathfinder snapshot (call when theta response received; used by precache).
    */
   function storeThetaSnapshot(lessons, graphWeights) {
     try {
@@ -146,14 +146,14 @@
         graphWeights: graphWeights || { edges: [] },
         storedAt: Date.now()
       };
-      localStorage.setItem(STORAGE_THETA, JSON.stringify(payload));
+      localStorage.setItem(STORAGE_PATHFINDER_SNAPSHOT, JSON.stringify(payload));
     } catch (e) { /* ignore */ }
   }
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { getOrderedPrecachedLessons: getOrderedPrecachedLessons, storeThetaSnapshot: storeThetaSnapshot };
   } else {
-    global.AGNI_EDGE_THETA = {
+    global.AGNI_EDGE_PATHFINDER = {
       getOrderedPrecachedLessons: getOrderedPrecachedLessons,
       storeThetaSnapshot: storeThetaSnapshot
     };

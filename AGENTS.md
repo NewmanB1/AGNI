@@ -24,7 +24,7 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 | `@ols/compiler` | `packages/ols-compiler/` | Lesson compiler: YAML → IR → HTML/native/YAML-packet |
 | `@agni/governance` | `packages/agni-governance/` | Policy, compliance, catalog |
 | `@agni/services` | `packages/agni-services/` | Top-down API: accounts, author, governance, LMS, lesson-chain |
-| `@agni/hub` | `packages/agni-hub/` | Hub server: theta, accounts, telemetry |
+| `@agni/hub` | `packages/agni-hub/` | Hub server: pathfinder, lesson-server, telemetry engine, accounts |
 
 **Lesson creator:** Template-based wizard (select from pre-created templates in `lessons/`). Bulk lesson generation (`tools/curriculum-gen`) is an independent tool, not part of core AGNI.
 
@@ -41,8 +41,8 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 | CLI entry point | `packages/agni-cli/cli.js` |
 | Browser player | `packages/agni-runtime/` (player.js, shared-runtime.js, sensor-bridge.js) |
 | LMS engine (Rasch, bandit) | `packages/agni-engine/` |
-| Hub server (on-demand PWA) | `packages/agni-hub/` (hub-transform.js, sw.js, pwa/) |
-| Theta (lesson ordering) | `packages/agni-hub/theta.js` |
+| Hub server (on-demand PWA) | `packages/agni-hub/` (lesson-server.js, sw.js, pwa/) |
+| Pathfinder (lesson ordering) | `packages/agni-hub/pathfinder.js` |
 | Portal (teacher/admin UI) | `portal/` (vanilla HTML/CSS/JS, no build) |
 | Schemas | `schemas/*.json`, `@ols/schema` |
 | Shared types | `packages/types/index.d.ts` |
@@ -67,7 +67,7 @@ When writing scripts that inspect implementations (e.g. `check-dts-arity.js`, `c
 
 ## Reference implementation
 
-**Pure core vs edges:** Compiler, governance, theta, and LMS engine expose pure functions (input → output; no I/O). CLI, hub routes, and persistence are edges. See `docs/REFERENCE-IMPLEMENTATION-VISION.md` for boundaries and schema-driven design.
+**Pure core vs edges:** Compiler, governance, pathfinder, and LMS engine expose pure functions (input → output; no I/O). CLI, hub routes, and persistence are edges. See `docs/REFERENCE-IMPLEMENTATION-VISION.md` for boundaries and schema-driven design.
 
 ---
 

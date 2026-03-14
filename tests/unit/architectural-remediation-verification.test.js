@@ -40,7 +40,7 @@ describe('architectural remediation #1: cache poisoning / device binding', funct
   });
 
   it('concurrent assembleHtml with shared IR and different deviceIds yields different OLS_INTENDED_OWNER', async function () {
-    const assemble = require('@agni/hub/hub-transform/assemble');
+    const assemble = require('@agni/hub/lesson-server/assemble');
     const ir = { meta: { title: 'Test' }, steps: [], _compiledAt: new Date().toISOString() };
     const deviceA = 'concurrent-alice-' + Date.now();
     const deviceB = 'concurrent-bob-' + Date.now();
@@ -269,10 +269,10 @@ describe('architectural remediation #5: integrity verification', function () {
 
 describe('architectural remediation #6: time-skew protection', function () {
   it('Sentry rejects writes when system year < MIN_VALID_YEAR', function () {
-    const sentryPath = path.join(__dirname, '../../packages/agni-hub/sentry.js');
+    const sentryPath = path.join(__dirname, '../../packages/agni-hub/telemetry-engine.js');
     const content = fs.readFileSync(sentryPath, 'utf8');
-    const yearMatch = content.match(/MIN_VALID_YEAR\s*=\s*(?:envConfig\.sentryMinValidYear|parseInt\([^,]+,\s*10\))/);
-    assert.ok(yearMatch, 'AGNI_SENTRY_MIN_VALID_YEAR / MIN_VALID_YEAR should exist (via envConfig or parseInt)');
+    const yearMatch = content.match(/MIN_VALID_YEAR\s*=\s*(?:envConfig\.telemetryEngineMinValidYear|parseInt\([^,]+,\s*10\))/);
+    assert.ok(yearMatch, 'AGNI_TELEMETRY_ENGINE_MIN_VALID_YEAR / MIN_VALID_YEAR should exist (via envConfig or parseInt)');
     const validMatch = content.match(/getFullYear\(\)\s*>=\s*MIN_VALID_YEAR|year\s*<\s*MIN_VALID_YEAR|isSystemClockValid/);
     assert.ok(validMatch, 'sentry should check system clock validity');
   });
@@ -298,7 +298,7 @@ describe('architectural remediation #6: time-skew protection', function () {
 
 describe('Phase 2 P0 #2: cache IR validation (force recompile on invalid)', function () {
   it('validateCachedIr rejects truncated or corrupt IR', function () {
-    const cache = require('@agni/hub/hub-transform/cache');
+    const cache = require('@agni/hub/lesson-server/cache');
     const { validateCachedIr } = cache;
 
     assert.strictEqual(validateCachedIr(null), false);
@@ -337,7 +337,7 @@ describe('Phase 2 P0 #2: cache IR validation (force recompile on invalid)', func
 
 describe('P2-27: Memory budget (LRU by bytes)', function () {
   it('cache exports byte-based eviction and computeEntryBytes', function () {
-    const cache = require('@agni/hub/hub-transform/cache');
+    const cache = require('@agni/hub/lesson-server/cache');
     assert.strictEqual(typeof cache.computeEntryBytes, 'function');
     assert.strictEqual(typeof cache.ensureRoomFor, 'function');
     assert.strictEqual(typeof cache.getMaxCacheBytes, 'function');
@@ -347,8 +347,8 @@ describe('P2-27: Memory budget (LRU by bytes)', function () {
     assert.ok(bytes > 0, 'computeEntryBytes must return positive bytes for valid ir+sidecar');
   });
 
-  it('hub-transform cache implements byte-budget eviction when AGNI_CACHE_MAX_BYTES set', function () {
-    const cachePath = path.join(__dirname, '../../packages/agni-hub/hub-transform/cache.js');
+  it('lesson-server cache implements byte-budget eviction when AGNI_CACHE_MAX_BYTES set', function () {
+    const cachePath = path.join(__dirname, '../../packages/agni-hub/lesson-server/cache.js');
     const content = fs.readFileSync(cachePath, 'utf8');
     assert.ok(/MAX_CACHE_BYTES\s*>\s*0/.test(content), 'cache must branch on MAX_CACHE_BYTES when evicting');
     assert.ok(/budgetAfter\s*>\s*MAX_CACHE_BYTES/.test(content), 'ensureRoomFor must evict when over byte budget');
@@ -381,12 +381,12 @@ describe('architectural remediation #7: Pi config and OOM mitigation', function 
   });
 
   it('P2-28: default compile concurrency uses min(cores-2, 2) when env unset', function () {
-    var cachePath = path.join(__dirname, '../../packages/agni-hub/hub-transform/cache.js');
+    var cachePath = path.join(__dirname, '../../packages/agni-hub/lesson-server/cache.js');
     var saved = process.env.AGNI_COMPILE_CONCURRENCY;
     delete process.env.AGNI_COMPILE_CONCURRENCY;
-    delete require.cache[require.resolve('../../packages/agni-hub/hub-transform/cache')];
+    delete require.cache[require.resolve('../../packages/agni-hub/lesson-server/cache')];
     try {
-      var cache = require('../../packages/agni-hub/hub-transform/cache');
+      var cache = require('../../packages/agni-hub/lesson-server/cache');
       var max = cache.getMaxConcurrentCompiles();
       var cpus = require('os').cpus().length;
       var expected = Math.min(Math.max(1, cpus - 2), 2);
@@ -394,7 +394,7 @@ describe('architectural remediation #7: Pi config and OOM mitigation', function 
       assert.strictEqual(max, expected, 'expected min(cores-2, 2) = ' + expected + ' for ' + cpus + ' cores');
     } finally {
       if (saved !== undefined) process.env.AGNI_COMPILE_CONCURRENCY = saved;
-      delete require.cache[require.resolve('../../packages/agni-hub/hub-transform/cache')];
+      delete require.cache[require.resolve('../../packages/agni-hub/lesson-server/cache')];
     }
   });
 });

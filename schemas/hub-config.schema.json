@@ -34,11 +34,11 @@
       "maximum": 2000,
       "description": "Max candidates for bandit selection (top-K by MLC). Reduces CPU on Pi. Default 500."
     },
-    "thetaPort": {
+    "pathfinderPort": {
       "type": "integer",
       "minimum": 1,
       "maximum": 65535,
-      "description": "TCP port for the theta (adaptive engine) server."
+      "description": "TCP port for the pathfinder (adaptive engine) server."
     },
     "servePort": {
       "type": "integer",
@@ -46,11 +46,11 @@
       "maximum": 65535,
       "description": "TCP port for the static file / lesson-serve server."
     },
-    "sentryPort": {
+    "telemetryEnginePort": {
       "type": "integer",
       "minimum": 1,
       "maximum": 65535,
-      "description": "TCP port for the sentry (monitoring) server."
+      "description": "TCP port for the telemetry engine server."
     },
     "dataDir": {
       "type": "string",

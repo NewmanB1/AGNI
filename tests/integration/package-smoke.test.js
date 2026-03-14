@@ -49,10 +49,10 @@ describe('Package smoke tests', function () {
     assert.ok(hasBuild, '@ols/compiler should export buildLessonIR or builders.html');
   });
 
-  it('@agni/hub loads and exports theta, hubTransform', function () {
+  it('@agni/hub loads and exports pathfinder, lessonServer', function () {
     const hub = require('@agni/hub');
     assert.ok(hub, '@agni/hub exported null/undefined');
-    assert.ok(hub.theta, 'hub.theta missing');
-    assert.ok(hub.hubTransform, 'hub.hubTransform missing');
+    assert.ok(hub.pathfinder, 'hub.pathfinder missing');
+    assert.ok(hub.lessonServer, 'hub.lessonServer missing');
   });
 });

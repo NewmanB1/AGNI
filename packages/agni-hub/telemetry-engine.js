@@ -1,5 +1,5 @@
-// packages/agni-hub/sentry.js
-// AGNI Village Sentry v1.8.0 â€“ O(1) Memory, Async Buffering, Health, Shutdown, Retry
+// packages/agni-hub/telemetry-engine.js
+// AGNI Telemetry Engine v1.8.0 â€“ O(1) Memory, Async Buffering, Health, Shutdown, Retry
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 'use strict';
 const fs = require('fs');
@@ -15,7 +15,7 @@ const { createLogger } = require('@agni/utils/logger');
 const envConfig = require('@agni/utils/env-config');
 const { ensureDataDirExists } = require('@agni/utils/ensure-paths');
 ensureDataDirExists(envConfig);
-const sentryAnalysis = require('./sentry-analysis');
+const telemetryEngineAnalysis = require('./telemetry-engine-analysis');
 
 // â”€â”€ Hub config bootstrap (F1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // â”€â”€ Configuration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -27,22 +27,22 @@ const COHORT_ASSIGNMENTS = path.join(DATA_DIR, 'cohort-assignments.json');
 const GRAPH_WEIGHTS_BACKUP = path.join(DATA_DIR, 'graph-weights.backup.json');
 const MASTERY_SUMMARY = path.join(DATA_DIR, 'mastery-summary.json');
 const CONTINGENCY_TABLES = path.join(DATA_DIR, 'contingency-tables.json');
-const SENTRY_STATE = path.join(DATA_DIR, 'sentry-state.json');
-const SENTRY_LOG = path.join(DATA_DIR, 'sentry.log');
+const TELEMETRY_ENGINE_STATE = path.join(DATA_DIR, 'telemetry-engine-state.json');
+const TELEMETRY_ENGINE_LOG = path.join(DATA_DIR, 'telemetry-engine.log');
 
-const PORT = envConfig.sentryPort;
+const PORT = envConfig.telemetryEnginePort;
 const ANALYSE_AFTER_N = envConfig.analyseAfter;
 const ANALYSE_SCHEDULE = envConfig.analyseCron;
 const MIN_MS_BETWEEN_ANALYSIS = 4 * 60 * 60 * 1000;
 
-const CHI2_THRESHOLD = envConfig.sentryChi2Threshold;
-const MIN_SAMPLE = envConfig.sentryMinSample;
-const JACCARD_THRESHOLD = envConfig.sentryJaccardThreshold;
-const MIN_CLUSTER_SIZE = envConfig.sentryMinClusterSize;
+const CHI2_THRESHOLD = envConfig.telemetryEngineChi2Threshold;
+const MIN_SAMPLE = envConfig.telemetryEngineMinSample;
+const JACCARD_THRESHOLD = envConfig.telemetryEngineJaccardThreshold;
+const MIN_CLUSTER_SIZE = envConfig.telemetryEngineMinClusterSize;
 const MASTERY_THRESHOLD = envConfig.masteryThreshold;
 const PASS_THRESHOLD = 0.6;
 const SCHEMA_VERSION = '1.7.0';
-const SW_VERSION = 'sentry-agent v1.8.0';
+const SW_VERSION = 'telemetry-engine v1.8.0';
 
 const FLUSH_INTERVAL_MS = 30000;
 const FLUSH_RETRY_ATTEMPTS = 3;
@@ -50,7 +50,7 @@ const FLUSH_RETRY_DELAY_MS = 1000;
 const SHUTDOWN_TIMEOUT_MS = 10000;
 
 // Time-skew protection: Pi without RTC may boot at epoch (1970). Reject writes when year is invalid.
-const MIN_VALID_YEAR = envConfig.sentryMinValidYear;
+const MIN_VALID_YEAR = envConfig.telemetryEngineMinValidYear;
 const AGGREGATOR_ENABLED = envConfig.aggregatorIngestEnabled;
 const AGGREGATOR_SECRET = envConfig.aggregatorIngestSecret;
 
@@ -75,7 +75,7 @@ function ensureDirs() {
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // 1. Asynchronous SD Card Logging & Buffering
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-const log = createLogger('sentry', { logFile: SENTRY_LOG });
+const log = createLogger('telemetry-engine', { logFile: TELEMETRY_ENGINE_LOG });
 
 const EVENT_BUFFER_MAX = 50000;
 let eventBuffer = [];
@@ -170,7 +170,7 @@ let _eventsSinceLastAnalysis = 0;
 let lastAnalysisAttempt = 0;
 
 function validateEvent(raw) {
-  return sentryAnalysis.validateEvent(raw);
+  return telemetryEngineAnalysis.validateEvent(raw);
 }
 
 function startReceiver() {
@@ -366,7 +366,7 @@ async function runAnalysis() {
   log.info('Starting O(1) Incremental Analysis');
   _eventsSinceLastAnalysis = 0;
 
-  const state = await loadJSONAsync(SENTRY_STATE, { cursors: {} });
+  const state = await loadJSONAsync(TELEMETRY_ENGINE_STATE, { cursors: {} });
   const mastery = await loadJSONAsync(MASTERY_SUMMARY, { schemaVersion: '1.7.0', students: {} });
   const contingencies = await loadJSONAsync(CONTINGENCY_TABLES, {});
 
@@ -396,7 +396,7 @@ async function runAnalysis() {
 
       try {
         const ev = JSON.parse(line);
-        sentryAnalysis.processOneEvent(ev, mastery, contingencies, opts);
+        telemetryEngineAnalysis.processOneEvent(ev, mastery, contingencies, opts);
         state.cursors[file] = i + 1;
         eventsProcessed++;
       } catch (e) { log.warn('Skipping malformed event', { file, error: e.message }); }
@@ -405,11 +405,11 @@ async function runAnalysis() {
 
   if (eventsProcessed === 0) { log.info('No new events to process'); return; }
 
-  await saveJSONAsync(SENTRY_STATE, state);
+  await saveJSONAsync(TELEMETRY_ENGINE_STATE, state);
   await saveJSONAsync(MASTERY_SUMMARY, mastery);
   await saveJSONAsync(CONTINGENCY_TABLES, contingencies, { minified: true });
 
-  const cohortResult = sentryAnalysis.discoverCohort(mastery, opts);
+  const cohortResult = telemetryEngineAnalysis.discoverCohort(mastery, opts);
   if (!cohortResult) {
     log.info('Cohort too small for graph building', { size: Object.keys(mastery.students).length });
     _lastAnalysisAt = new Date().toISOString();
@@ -420,12 +420,12 @@ async function runAnalysis() {
   const clustersQualifying = clusters.filter(function (c) { return c.members.length >= MIN_CLUSTER_SIZE; });
   const clustersWithIds = clustersQualifying.map(function (c) {
     return {
-      cohortId: sentryAnalysis.cohortIdFromCentroid(c.centroid),
+      cohortId: telemetryEngineAnalysis.cohortIdFromCentroid(c.centroid),
       members: c.members,
       centroid: c.centroid
     };
   });
-  const cohortAssignments = sentryAnalysis.buildCohortAssignments(clustersWithIds);
+  const cohortAssignments = telemetryEngineAnalysis.buildCohortAssignments(clustersWithIds);
   await saveJSONAsync(COHORT_ASSIGNMENTS, { assignments: cohortAssignments }, { minified: true });
 
   const cohortSet = new Set(largest.members);
@@ -442,12 +442,12 @@ async function runAnalysis() {
     });
   });
 
-  let edges = sentryAnalysis.computeEdgesFromGlobalPairs(globalPairs, opts);
+  let edges = telemetryEngineAnalysis.computeEdgesFromGlobalPairs(globalPairs, opts);
 
   // INVARIANT: graph_weights affect only MLC (sort order), never eligibility (BFS prerequisites).
   // Theta uses ontology.requires/provides for eligibility; graph_weights only tune MLC.
-  const maxDelta = envConfig.sentryWeightMaxDelta;
-  const reviewThreshold = envConfig.sentryWeightReviewThreshold;
+  const maxDelta = envConfig.telemetryEngineWeightMaxDelta;
+  const reviewThreshold = envConfig.telemetryEngineWeightReviewThreshold;
   let maxWeightChange = 0;
   const prevGw = await loadJSONAsync(GRAPH_WEIGHTS, null);
   const prevByKey = {};
@@ -465,7 +465,7 @@ async function runAnalysis() {
     return Object.assign({}, e, { weight: Math.max(0, Math.min(1, newWeight)) });
   });
 
-  const cohortId = sentryAnalysis.cohortIdFromCentroid(largest.centroid);
+  const cohortId = telemetryEngineAnalysis.cohortIdFromCentroid(largest.centroid);
   const now = new Date().toISOString();
   const gw = {
     '$schema': 'https://github.com/NewmanB1/AGNI/schemas/graph-weights.schema.json',
@@ -521,7 +521,7 @@ async function runAnalysis() {
         cpairs[pair].d += counts.d;
       });
     });
-    var cedges = sentryAnalysis.computeEdgesFromGlobalPairs(cpairs, opts);
+    var cedges = telemetryEngineAnalysis.computeEdgesFromGlobalPairs(cpairs, opts);
     var cgw = {
       '$schema': 'https://github.com/NewmanB1/AGNI/schemas/graph-weights.schema.json',
       version: SCHEMA_VERSION,
@@ -542,7 +542,7 @@ async function runAnalysis() {
     }
   }
 
-  pruneOldEvents(envConfig.sentryRetentionDays);
+  pruneOldEvents(envConfig.telemetryEngineRetentionDays);
 }
 
 // â”€â”€ Cron-based analysis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -569,7 +569,7 @@ function checkCronAndRunAnalysis() {
 
 if (require.main === module) {
   ensureDirs();
-  pruneOldEvents(envConfig.sentryRetentionDays);
+  pruneOldEvents(envConfig.telemetryEngineRetentionDays);
   startFlushTimer();
   startReceiver();
   runAnalysis().catch(e => log.error('Startup analysis error', { error: e.message }));

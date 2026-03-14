@@ -62,7 +62,7 @@ function register(router, ctx) {
       await withLock(OVERRIDES_PATH, async () => {
         const overrides = await loadOverridesAsync();
         for (const pseudoId of result.studentIds) {
-          const eligible = await ctx.getLessonsSortedByTheta(pseudoId);
+          const eligible = await ctx.getLessonsSortedByPathfinder(pseudoId);
           const inList = eligible.some(l => l.lessonId === lessonId);
           if (inList) {
             overrides[pseudoId] = { lessonId };

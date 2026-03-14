@@ -224,7 +224,7 @@ describe('Wiring smoke tests', function () {
   it('GET /library returns 200 HTML with edge-theta and navigator', async function () {
     const res = await httpGet(port, '/library');
     assert.equal(res.status, 200, '/library route missing');
-    assert.ok(res.body.indexOf('edge-theta.js') !== -1, 'Library HTML missing edge-theta.js');
+    assert.ok(res.body.indexOf('edge-pathfinder.js') !== -1, 'Library HTML missing edge-pathfinder.js');
     assert.ok(res.body.indexOf('navigator.js') !== -1, 'Library HTML missing navigator.js');
     assert.ok(res.body.indexOf('lesson-list') !== -1, 'Library HTML missing lesson-list container');
   });
@@ -241,10 +241,10 @@ describe('Wiring smoke tests', function () {
     assert.ok(res.body.indexOf('AGNI_NAVIGATOR') !== -1, 'navigator.js missing AGNI_NAVIGATOR');
   });
 
-  it('GET /factories/edge-theta.js returns 200 with AGNI_EDGE_THETA', async function () {
-    const res = await httpGet(port, '/factories/edge-theta.js');
-    assert.equal(res.status, 200, '/factories/edge-theta.js route missing');
-    assert.ok(res.body.indexOf('AGNI_EDGE_THETA') !== -1, 'edge-theta.js missing AGNI_EDGE_THETA');
+  it('GET /factories/edge-pathfinder.js returns 200 with AGNI_EDGE_PATHFINDER', async function () {
+    const res = await httpGet(port, '/factories/edge-pathfinder.js');
+    assert.equal(res.status, 200, '/factories/edge-pathfinder.js route missing');
+    assert.ok(res.body.indexOf('AGNI_EDGE_PATHFINDER') !== -1, 'edge-pathfinder.js missing AGNI_EDGE_PATHFINDER');
   });
 
   // ── Lesson data route ─────────────────────────────────────────────────

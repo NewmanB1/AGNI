@@ -9,7 +9,7 @@ const assert = require('node:assert/strict');
 
 describe('hub-signed factory manifest (P0 #5)', () => {
   it('buildFactoryManifest returns version, factories, timestamp', () => {
-    const factoryManifest = require('@agni/hub/hub-transform/factory-manifest');
+    const factoryManifest = require('@agni/hub/lesson-server/factory-manifest');
     const manifest = factoryManifest.buildFactoryManifest({});
     assert.ok(manifest.version);
     assert.ok(Array.isArray(manifest.factories));
@@ -28,7 +28,7 @@ describe('hub-signed factory manifest (P0 #5)', () => {
     const pemPath = path.join(os.tmpdir(), 'agni-manifest-sig-test-' + Date.now() + '.pem');
     fs.writeFileSync(pemPath, privateKey, 'utf8');
     try {
-      const factoryManifest = require('@agni/hub/hub-transform/factory-manifest');
+      const factoryManifest = require('@agni/hub/lesson-server/factory-manifest');
       const manifest = factoryManifest.buildFactoryManifest({ privateKeyPath: pemPath });
       assert.ok(manifest.signature, 'manifest should have signature when key provided');
       assert.match(manifest.signature, /^[A-Za-z0-9+/]+=*$/);

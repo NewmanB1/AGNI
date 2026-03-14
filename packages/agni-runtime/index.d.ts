@@ -48,7 +48,7 @@ declare global {
     AGNI_NAVIGATOR?: { sortLessons?: (a: unknown, b: unknown, c: unknown) => unknown[]; sortLessonsEnhanced?: (a: unknown, b: unknown, c: unknown) => unknown[]; calculateFeatureAffinity?: (a: unknown, b?: unknown) => unknown; applyTeachingModeFilter?: (a: unknown, b?: unknown) => unknown; [key: string]: unknown };
     AGNI_HUB?: string;
     AGNI_CSP_NONCE?: string;
-    AGNI_EDGE_THETA?: { getOrderedPrecachedLessons?: () => Promise<unknown[]> };
+    AGNI_EDGE_PATHFINDER?: { getOrderedPrecachedLessons?: () => Promise<unknown[]> };
     AGNI_FRUSTRATION?: AgniFrustration;
     AGNI_CHECKPOINT?: AgniCheckpoint;
     AGNI_TELEMETRY?: unknown;

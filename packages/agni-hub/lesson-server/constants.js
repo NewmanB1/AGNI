@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * hub-transform/constants.js
+ * lesson-server/constants.js
  * Shared constants for lesson serving: factory whitelists, KaTeX files, MIME types.
  * Used by serve-assets, compile, and CI verification (check-factory-order.js).
  *
@@ -21,7 +21,7 @@ const HUB_EXTRA_FACTORY_FILES = [
   'shared-runtime.js',
   'factory-loader.js',
   'navigator.js',
-  'edge-theta.js'
+  'edge-pathfinder.js'
 ];
 
 // Whitelist prevents directory traversal. Only files in this set can be served from /factories/.

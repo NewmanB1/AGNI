@@ -28,9 +28,9 @@ async function run() {
 
   const hubId = await prompt(rl, 'Hub ID (AGNI_HUB_ID)', 'hub-local');
   const homeUrl = await prompt(rl, 'Home URL (AGNI_HOME_URL)', '');
-  const thetaPort = await prompt(rl, 'Theta port (AGNI_THETA_PORT)', '8082');
+  const pathfinderPort = await prompt(rl, 'Pathfinder port (AGNI_PATHFINDER_PORT)', '8082');
   const servePort = await prompt(rl, 'Serve port (AGNI_SERVE_PORT)', '8083');
-  const sentryPort = await prompt(rl, 'Sentry port (AGNI_SENTRY_PORT)', '8081');
+  const telemetryEnginePort = await prompt(rl, 'Telemetry Engine port (AGNI_TELEMETRY_ENGINE_PORT)', '8081');
   const usbPath = await prompt(rl, 'USB path (AGNI_USB_PATH)', '/mnt/usb/agni-sync');
 
   rl.close();
@@ -45,9 +45,9 @@ async function run() {
   const config = {
     ...existing,
     hubId: hubId || 'hub-local',
-    thetaPort: parseInt(thetaPort, 10) || 8082,
+    pathfinderPort: parseInt(pathfinderPort, 10) || 8082,
     servePort: parseInt(servePort, 10) || 8083,
-    sentryPort: parseInt(sentryPort, 10) || 8081
+    telemetryEnginePort: parseInt(telemetryEnginePort, 10) || 8081
   };
   if (homeUrl) config.homeUrl = homeUrl;
   if (usbPath) config.usbPath = usbPath;
@@ -58,7 +58,7 @@ async function run() {
 
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
   console.log('\n✓ Wrote', CONFIG_PATH);
-  console.log('  Restart theta, sync, and Sentry for changes to take effect.\n');
+  console.log('  Restart pathfinder, sync, and Telemetry Engine for changes to take effect.\n');
 }
 
 if (require.main === module) {

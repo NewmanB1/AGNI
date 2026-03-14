@@ -1,6 +1,6 @@
-// packages/agni-hub/sentry-analysis.js
-// Pure analysis logic for Sentry: event validation, contingency updates, cohort discovery, graph weights.
-// Extracted for testability. Used by packages/agni-hub/sentry.js.
+// packages/agni-hub/telemetry-engine-analysis.js
+// Pure analysis logic for Telemetry Engine: event validation, contingency updates, cohort discovery, graph weights.
+// Extracted for testability. Used by packages/agni-hub/telemetry-engine.js.
 
 'use strict';
 

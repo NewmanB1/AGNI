@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * hub-transform/compile.js
+ * lesson-server/compile.js
  * YAML loading, IR compilation, factory deps, in-flight guard orchestration.
  */
 
@@ -24,7 +24,7 @@ const cache   = require('./cache');
 const assemble = require('./assemble');
 const constants = require('./constants');
 
-const log = createLogger('hub-transform');
+const log = createLogger('lesson-server');
 const YAML_DIR  = envConfig.yamlDir;
 const FACTORY_DIR = envConfig.factoryDir;
 const KATEX_DIR   = envConfig.katexDir;

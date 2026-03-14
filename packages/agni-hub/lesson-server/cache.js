@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * hub-transform/cache.js
+ * lesson-server/cache.js
  * Disk and in-memory lesson cache, compile slot management, in-flight guard.
  * DoS mitigation: LRU eviction (by bytes or count), concurrency cap, 202/Retry-After on queue overflow.
  *
@@ -16,7 +16,7 @@ const envConfig = require('@agni/utils/env-config');
 const buildLessonSidecar = require('@ols/compiler/compiler/build-lesson-ir').buildLessonSidecar;
 const createLogger = require('@agni/utils/logger').createLogger;
 
-const log = createLogger('hub-transform:cache');
+const log = createLogger('lesson-server:cache');
 const SERVE_DIR = envConfig.serveDir;
 
 const _lessonCache = {};

@@ -138,7 +138,7 @@ that changes it. Do not defer "will add test later."
 Current smoke test coverage (see `tests/integration/wiring-smoke.test.js`):
 | Route                                | What it verifies                               |
 |--------------------------------------|-------------------------------------------------|
-| `GET /factories/shared-runtime.js`   | hub-transform.attachRoutes works                |
+| `GET /factories/shared-runtime.js`   | lesson-server.attachRoutes works                |
 | `GET /factories/polyfills.js`        | polyfills in ALLOWED_FACTORY_FILES              |
 | `GET /factory-loader.js`             | factory-loader route exists                     |
 | `GET /sw.js`                         | service worker route exists                     |

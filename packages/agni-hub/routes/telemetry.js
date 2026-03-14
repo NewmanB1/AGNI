@@ -5,8 +5,8 @@ const { updateSchedule } = require('@agni/engine/sm2');
 const { withLock } = require('@agni/utils/file-lock');
 const envConfig = require('@agni/utils/env-config');
 
-function forwardToSentry(events) {
-  const port = envConfig.sentryPort;
+function forwardToTelemetryEngine(events) {
+  const port = envConfig.telemetryEnginePort;
   const body = JSON.stringify({ events: events });
   const req = http.request({
     hostname: '127.0.0.1',
@@ -17,12 +17,12 @@ function forwardToSentry(events) {
   }, function (res) {
     if (res.statusCode !== 200) {
       const log = require('@agni/utils/logger').createLogger('theta');
-      log.warn('Sentry forward failed', { statusCode: res.statusCode });
+      log.warn('Telemetry Engine forward failed', { statusCode: res.statusCode });
     }
   });
   req.on('error', function (e) {
     const log = require('@agni/utils/logger').createLogger('theta');
-    log.warn('Sentry forward error', { error: e.message });
+    log.warn('Telemetry Engine forward error', { error: e.message });
   });
   req.setTimeout(5000, function () { req.destroy(); });
   req.end(body);
@@ -31,7 +31,7 @@ function forwardToSentry(events) {
 function register(router, ctx) {
   const { loadJSONAsync, saveJSONAsync, loadMasterySummaryAsync, handleJsonBody,
           requireHubKey, lmsService: lmsEngine, log, path,
-          DATA_DIR, MASTERY_SUMMARY, REVIEW_SCHEDULE_PATH, thetaCache } = ctx;
+          DATA_DIR, MASTERY_SUMMARY, REVIEW_SCHEDULE_PATH, pathfinderCache } = ctx;
 
   router.post('/api/telemetry', requireHubKey((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
@@ -78,7 +78,7 @@ function register(router, ctx) {
         }
 
         await saveJSONAsync(MASTERY_SUMMARY, mastery);
-        thetaCache.clear();
+        pathfinderCache.clear();
       });
 
       // SM-2 schedule update under lock
@@ -128,8 +128,8 @@ function register(router, ctx) {
         log.warn('Telemetry event persistence failed', { error: e.message });
       }
 
-      if (envConfig.sentryForward) {
-        forwardToSentry(events);
+      if (envConfig.telemetryEngineForward) {
+        forwardToTelemetryEngine(events);
       }
 
       return sendResponse(200, { accepted, processed: events.length });

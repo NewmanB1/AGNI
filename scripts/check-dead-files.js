@@ -21,8 +21,8 @@ const CONSUMER_DIRS = ['hub-tools', 'server', 'packages', 'tests', 'scripts'];
 
 const ENTRY_POINTS = new Set([
   normalize('packages/agni-cli/cli.js'),
-  normalize('hub-tools/theta.js'),
-  normalize('hub-tools/sentry.js'),
+  normalize('hub-tools/pathfinder.js'),
+  normalize('hub-tools/telemetry-engine.js'),
   normalize('hub-tools/sync.js'),
   normalize('hub-tools/mesh.js'),
   normalize('server/hub-transform.js'),

@@ -93,9 +93,9 @@ const config = {
   katexDir:           strVal('AGNI_KATEX_DIR', path.join(DATA_DIR, 'katex-css')),
   serveDir:           strVal('AGNI_SERVE_DIR', path.join(__dirname, '../../serve')),
 
-  thetaPort:          validPort(intVal('AGNI_THETA_PORT', 8082), 'AGNI_THETA_PORT'),
+  pathfinderPort:     validPort(intVal('AGNI_PATHFINDER_PORT', 8082), 'AGNI_PATHFINDER_PORT'),
   servePort:          validPort(intVal('AGNI_SERVE_PORT', 8080), 'AGNI_SERVE_PORT'),
-  sentryPort:         validPort(intVal('AGNI_SENTRY_PORT', 8081), 'AGNI_SENTRY_PORT'),
+  telemetryEnginePort: validPort(intVal('AGNI_TELEMETRY_ENGINE_PORT', 8081), 'AGNI_TELEMETRY_ENGINE_PORT'),
 
   corsOrigin:         strVal('AGNI_CORS_ORIGIN', '*'),
   hubId:              strVal('AGNI_HUB_ID', 'hub-local'),
@@ -122,17 +122,17 @@ const config = {
 
   analyseAfter:       intVal('AGNI_ANALYSE_AFTER', 50),
   analyseCron:        strVal('AGNI_ANALYSE_CRON', '02:00'),
-  sentryRetentionDays: intVal('AGNI_SENTRY_RETENTION_DAYS', 90),
+  telemetryEngineRetentionDays: intVal('AGNI_TELEMETRY_ENGINE_RETENTION_DAYS', 90),
 
-  sentryChi2Threshold:   floatVal('AGNI_SENTRY_CHI2_THRESHOLD', 3.841),
-  sentryMinSample:       intVal('AGNI_SENTRY_MIN_SAMPLE', 20),
-  sentryJaccardThreshold: validRange(floatVal('AGNI_SENTRY_JACCARD_THRESHOLD', 0.5), 0, 1, 'AGNI_SENTRY_JACCARD_THRESHOLD'),
-  sentryMinClusterSize:  intVal('AGNI_SENTRY_MIN_CLUSTER_SIZE', 20),
-  sentryForward:         process.env.AGNI_SENTRY_FORWARD !== 'false',
-  sentryWeightMaxDelta:  validRange(floatVal('AGNI_SENTRY_WEIGHT_MAX_DELTA', 0.2), 0.01, 1, 'AGNI_SENTRY_WEIGHT_MAX_DELTA'),
-  sentryWeightReviewThreshold: validRange(floatVal('AGNI_SENTRY_WEIGHT_REVIEW_THRESHOLD', 0.3), 0.1, 1, 'AGNI_SENTRY_WEIGHT_REVIEW_THRESHOLD'),
-  sentryMinValidYear:   intVal('AGNI_SENTRY_MIN_VALID_YEAR', 2020),
-  /** B1.1: Enable remote telemetry ingestion for log aggregator. Village hubs POST to central Sentry. */
+  telemetryEngineChi2Threshold:   floatVal('AGNI_TELEMETRY_ENGINE_CHI2_THRESHOLD', 3.841),
+  telemetryEngineMinSample:       intVal('AGNI_TELEMETRY_ENGINE_MIN_SAMPLE', 20),
+  telemetryEngineJaccardThreshold: validRange(floatVal('AGNI_TELEMETRY_ENGINE_JACCARD_THRESHOLD', 0.5), 0, 1, 'AGNI_TELEMETRY_ENGINE_JACCARD_THRESHOLD'),
+  telemetryEngineMinClusterSize:  intVal('AGNI_TELEMETRY_ENGINE_MIN_CLUSTER_SIZE', 20),
+  telemetryEngineForward:         process.env.AGNI_TELEMETRY_ENGINE_FORWARD !== 'false',
+  telemetryEngineWeightMaxDelta:  validRange(floatVal('AGNI_TELEMETRY_ENGINE_WEIGHT_MAX_DELTA', 0.2), 0.01, 1, 'AGNI_TELEMETRY_ENGINE_WEIGHT_MAX_DELTA'),
+  telemetryEngineWeightReviewThreshold: validRange(floatVal('AGNI_TELEMETRY_ENGINE_WEIGHT_REVIEW_THRESHOLD', 0.3), 0.1, 1, 'AGNI_TELEMETRY_ENGINE_WEIGHT_REVIEW_THRESHOLD'),
+  telemetryEngineMinValidYear:   intVal('AGNI_TELEMETRY_ENGINE_MIN_VALID_YEAR', 2020),
+  /** B1.1: Enable remote telemetry ingestion for log aggregator. Village hubs POST to central Telemetry Engine. */
   aggregatorIngestEnabled: (function () { var v = strVal('AGNI_AGGREGATOR_INGEST_ENABLED', '0'); return v === '1' || String(v).toLowerCase() === 'true'; })(),
   /** Shared secret for POST /api/telemetry/ingest. Required when aggregatorIngestEnabled. */
   aggregatorIngestSecret:  strVal('AGNI_AGGREGATOR_INGEST_SECRET', ''),
@@ -176,7 +176,7 @@ const config = {
   loraFrequency:      intVal('AGNI_LORA_FREQUENCY', 868000000),
   /** Set 1 or true to throw on skill graph cycles (default: graceful degrade). */
   strictSkillGraph:   (function () { var v = strVal('AGNI_STRICT_SKILL_GRAPH', ''); return v === '1' || String(v).toLowerCase() === 'true'; })(),
-  /** Hint for opportunistic precache (max slugs in theta response). */
+  /** Hint for opportunistic precache (max slugs in pathfinder response). */
   precacheHintCount:  Math.max(0, intVal('AGNI_PRECACHE_HINT_COUNT', 5)),
   /** Set 1 or true to verify YAML content_hash on compile. */
   verifyYamlHash:     (function () { var v = strVal('AGNI_VERIFY_YAML_HASH', ''); return v === '1' || String(v).toLowerCase() === 'true'; })(),

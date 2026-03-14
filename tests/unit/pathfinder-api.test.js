@@ -8,7 +8,7 @@ const fs = require('fs');
 const os = require('os');
 
 function tempDir() {
-  const dir = path.join(os.tmpdir(), 'agni-theta-test-' + Date.now());
+  const dir = path.join(os.tmpdir(), 'agni-pathfinder-test-' + Date.now());
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
@@ -42,7 +42,7 @@ function request(port, method, urlPath, body, token, opts) {
   });
 }
 
-describe('Theta API integration tests', () => {
+describe('Pathfinder API integration tests', () => {
   let server;
   let port;
   let dataDir;
@@ -80,8 +80,8 @@ describe('Theta API integration tests', () => {
     const login = await accountsService.loginCreator({ email: 'admin@test.local', password: 'testpass123' });
     adminToken = login.token;
 
-    const theta = require('@agni/hub').theta;
-    server = theta.startApi(0);
+    const pathfinder = require('@agni/hub').pathfinder;
+    server = pathfinder.startApi(0);
     await new Promise(resolve => setTimeout(resolve, 200));
     port = server.address().port;
   });
@@ -98,28 +98,28 @@ describe('Theta API integration tests', () => {
     delete require.cache[require.resolve('@agni/utils/env-config')];
   });
 
-  it('GET /api/theta requires pseudoId', async () => {
-    const res = await request(port, 'GET', '/api/theta');
+  it('GET /api/pathfinder requires pseudoId', async () => {
+    const res = await request(port, 'GET', '/api/pathfinder');
     assert.equal(res.status, 400);
     assert.ok(res.body.error);
   });
 
-  it('GET /api/theta returns lessons for valid pseudoId', async () => {
-    const res = await request(port, 'GET', '/api/theta?pseudoId=test-student');
+  it('GET /api/pathfinder returns lessons for valid pseudoId', async () => {
+    const res = await request(port, 'GET', '/api/pathfinder?pseudoId=test-student');
     assert.equal(res.status, 200);
     assert.ok(Array.isArray(res.body.lessons));
-    assert.ok(Array.isArray(res.body.precacheSlugs), 'theta must return precacheSlugs for opportunistic precache');
+    assert.ok(Array.isArray(res.body.precacheSlugs), 'pathfinder must return precacheSlugs for opportunistic precache');
     assert.equal(res.body.pseudoId, 'test-student');
   });
 
-  it('GET /api/theta/all returns all students', async () => {
-    const res = await request(port, 'GET', '/api/theta/all', null, adminToken);
+  it('GET /api/pathfinder/all returns all students', async () => {
+    const res = await request(port, 'GET', '/api/pathfinder/all', null, adminToken);
     assert.equal(res.status, 200);
     assert.ok(res.body.students);
   });
 
-  it('GET /api/theta/graph returns graph weights', async () => {
-    const res = await request(port, 'GET', '/api/theta/graph');
+  it('GET /api/pathfinder/graph returns graph weights', async () => {
+    const res = await request(port, 'GET', '/api/pathfinder/graph');
     assert.equal(res.status, 200);
   });
 
@@ -130,7 +130,7 @@ describe('Theta API integration tests', () => {
   });
 
   it('returns 405 for unsupported methods', async () => {
-    const res = await request(port, 'PATCH', '/api/theta');
+    const res = await request(port, 'PATCH', '/api/pathfinder');
     assert.equal(res.status, 405);
   });
 
@@ -140,7 +140,7 @@ describe('Theta API integration tests', () => {
   });
 
   it('sets security headers on responses', async () => {
-    const res = await request(port, 'GET', '/api/theta?pseudoId=test');
+    const res = await request(port, 'GET', '/api/pathfinder?pseudoId=test');
     assert.ok(res.headers['x-content-type-options']);
     assert.ok(res.headers['x-request-id']);
   });

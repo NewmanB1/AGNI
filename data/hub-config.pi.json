@@ -9,7 +9,7 @@
   "yamlDir": "/opt/agni/lessons",
   "factoryDir": "/opt/agni/serve/factories",
   "katexDir": "/opt/agni/serve/katex",
-  "thetaPort": 8082,
+  "pathfinderPort": 8082,
   "servePort": 8080,
 
   "hubId": "village-pi-CHANGE_ME",

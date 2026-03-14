@@ -5,11 +5,11 @@ const envConfig = require('@agni/utils/env-config');
 function register(router, ctx) {
   const { loadMasterySummaryAsync, loadLessonIndexAsync, loadOverridesAsync, saveOverridesAsync,
           authorService, handleJsonBody, requireHubKey, adminOnly,
-          DATA_DIR, path, thetaCache } = ctx;
+          DATA_DIR, path, pathfinderCache } = ctx;
 
-  router.get('/api/theta', requireHubKey(async (req, res, { qs, sendResponse }) => {
+  router.get('/api/pathfinder', requireHubKey(async (req, res, { qs, sendResponse }) => {
     if (!qs.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
-    const lessons = await ctx.getLessonsSortedByTheta(qs.pseudoId);
+    const lessons = await ctx.getLessonsSortedByPathfinder(qs.pseudoId);
     const overrides = await loadOverridesAsync();
     const overrideLessonId = overrides[qs.pseudoId]?.lessonId || null;
     const effectiveLessons = ctx.applyRecommendationOverride(lessons, overrideLessonId);
@@ -25,24 +25,24 @@ function register(router, ctx) {
       precacheSlugs: precacheSlugs,
       graphWeights:  graphWeights,
       computedAt:    new Date().toISOString(),
-      cached:        thetaCache.has(qs.pseudoId),
+      cached:        pathfinderCache.has(qs.pseudoId),
       graphSource:   graphWeights.level || 'village',
       override:      overrideLessonId || undefined
     });
   }));
 
-  router.get('/api/theta/all', adminOnly(async (req, res, { qs, sendResponse }) => {
+  router.get('/api/pathfinder/all', adminOnly(async (req, res, { qs, sendResponse }) => {
     const mastery = await loadMasterySummaryAsync();
     const allIds = Object.keys(mastery.students || {});
     const page = ctx.paginate(allIds, qs);
     const result  = {};
     for (const id of page.items) {
-      result[id] = await ctx.getLessonsSortedByTheta(id);
+      result[id] = await ctx.getLessonsSortedByPathfinder(id);
     }
     return sendResponse(200, { students: result, total: page.total, limit: page.limit, offset: page.offset, computedAt: new Date().toISOString() });
   }));
 
-  router.get('/api/theta/graph', requireHubKey(async (req, res, { sendResponse }) => {
+  router.get('/api/pathfinder/graph', requireHubKey(async (req, res, { sendResponse }) => {
     return sendResponse(200, await ctx.getEffectiveGraphWeights());
   }));
 
@@ -72,7 +72,7 @@ function register(router, ctx) {
     return sendResponse(200, { lessons: page.items, savedSlugs, total: page.total, limit: page.limit, offset: page.offset });
   }));
 
-  router.post('/api/theta/override', adminOnly((req, res, { sendResponse }) => {
+  router.post('/api/pathfinder/override', adminOnly((req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       const pseudoId = payload.pseudoId;
       const lessonId = payload.lessonId !== undefined ? payload.lessonId : null;
@@ -85,7 +85,7 @@ function register(router, ctx) {
         await saveOverridesAsync(overrides);
         return sendResponse(200, { ok: true, override: null });
       }
-      const eligible = await ctx.getLessonsSortedByTheta(pseudoId);
+      const eligible = await ctx.getLessonsSortedByPathfinder(pseudoId);
       const inList = eligible.some(l => l.lessonId === lessonId);
       if (!inList) {
         return sendResponse(400, { error: 'lessonId not in eligible list for this student', lessonId });

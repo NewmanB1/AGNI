@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * hub-transform/factory-manifest.js
+ * lesson-server/factory-manifest.js
  * Hub-signed factory manifest for supply-chain verification (Phase 2 P0 #5).
  * Lists all authorized factory resources with SRI; device verifies signature
  * before loading any factory.
