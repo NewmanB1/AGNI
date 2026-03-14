@@ -46,7 +46,7 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 | Hub Kernel | `packages/agni-hub/` — pathfinder, lesson-server, telemetry-engine, sync, routes |
 | Lesson Service | lesson-server.js + @agni/services (lessonAssembly, lessonChain) |
 | Pathfinder (lesson ordering) | `packages/agni-hub/pathfinder.js` |
-| Telemetry Service | `packages/agni-hub/telemetry-engine.js` |
+| Telemetry Service | `packages/agni-hub/telemetry-engine.js` (see `docs/TELEMETRY-ARCHITECTURE.md`) |
 | Portal (teacher/admin UI) | `portal/` (vanilla HTML/CSS/JS, no build) |
 | Schemas | `schemas/*.json`, `@ols/schema` |
 | Shared types | `packages/types/index.d.ts` |
@@ -78,6 +78,7 @@ When writing scripts that inspect implementations (e.g. `check-dts-arity.js`, `c
 ## Key Docs
 
 - **Architecture:** `docs/ARCHITECTURE.md`
+- **Telemetry / Sentry:** `docs/TELEMETRY-ARCHITECTURE.md` (Sentry, graph_weights, MLC flow)
 - **Configuration:** `docs/CONFIGURATION.md` (env vars, bootstrap order, hub-config)
 - **Architectural remediation:** `docs/archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`, `docs/archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md`
 - **Concepts:** `docs/ONBOARDING-CONCEPTS.md`

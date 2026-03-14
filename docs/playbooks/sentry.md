@@ -2,6 +2,8 @@
 
 This playbook describes the **Sentry → graph_weights → theta** flow: how telemetry becomes a cohort graph and how theta uses it for Marginal Learning Cost (MLC).
 
+> **Architecture:** For a thorough architectural reference, see `docs/TELEMETRY-ARCHITECTURE.md`.
+
 ---
 
 ## 1. Overview
