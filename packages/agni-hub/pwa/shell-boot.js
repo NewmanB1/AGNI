@@ -8,7 +8,9 @@
   'use strict';
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js');
+    navigator.serviceWorker.register('/sw.js').catch(function (e) {
+      console.warn('[SW] Registration failed (offline cache disabled):', e && e.message ? e.message : String(e));
+    });
   }
 
   function renderLesson(lesson) {

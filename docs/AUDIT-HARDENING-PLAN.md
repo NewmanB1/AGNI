@@ -96,11 +96,11 @@ Plan to address gaps identified in the architecture/audit review. Items are prio
 
 ---
 
-### B2. Service Worker fallback (P2) — *Deferred*
+### B2. Service Worker fallback (P2) — **Done**
 
-**Former gap:** Android 6 (Marshmallow) WebView had inconsistent SW support.
+**Former gap:** Android 6 (Marshmallow) WebView had inconsistent SW support. When SW registration fails (e.g. private browsing, storage restrictions), the app could leave unhandled rejections or not document fallback behavior.
 
-**Resolution:** Edge baseline changed to Android 7.0 (Nougat, API 24), which has reliable Service Worker support. B2 tasks are deferred; implement only if we resume support for pre-Nougat devices.
+**Resolution:** (1) `shell-boot.js` and lesson HTML shell (`hub-transform/assemble.js`) register SW with `.catch()` to avoid unhandled rejections. (2) Without SW, fetches go directly to the network; factory-loader uses Cache API when available and falls back to direct fetch otherwise. (3) Documented in `docs/RUN-ENVIRONMENTS.md` §Service Worker fallback (B2).
 
 ---
 
@@ -235,7 +235,7 @@ Plan to address gaps identified in the architecture/audit review. Items are prio
 | 3 | A1 (yamlSchemaVersion) | **Done** — schema, IR, sidecar, warn on unknown |
 | 4 | A2 compile-time (E1), D1 (inferredFeatures clamp) | **Done** — NUMERIC_PARAM_KEYS warn; seedLesson clamps |
 | 5 | C1 (SRI) — security improvement | **Done** — SRI in LESSON_DATA, factory-loader verifies |
-| 6 | B2 (SW fallback), C2, D2 ✓, E2 | D2 done; B2 deferred |
+| 6 | B2 (SW fallback), C2, D2 ✓, E2 | B2 done; D2 done |
 
 ---
 

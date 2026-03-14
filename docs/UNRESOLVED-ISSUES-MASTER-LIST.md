@@ -75,7 +75,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | A2.5 | Optional: svg-registry.validateSpec(spec) | P1 | Done |
 | A3 | HTML scrape fallback hardening | P3 | Resolved |
 | B1.1–B1.4 | Hub-transform standalone bootstrap | P1 | Done |
-| B2 | Service Worker fallback | P2 | Deferred (Android 7 baseline) |
+| B2 | Service Worker fallback | P2 | Done |
 | C1.1–C1.4 | Subresource Integrity for shared assets | P2 | Done |
 | C2.1–C2.3 | Federation merge idempotency / versioning | P3 | Done |
 | D1.1–D1.3 | inferredFeatures validation before LMS | P2 | Done |

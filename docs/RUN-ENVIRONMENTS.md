@@ -70,6 +70,8 @@ Runs on the Raspberry Pi server. Node 14+.
 
 **Service Worker cache eviction (P2-24):** The SW in `packages/agni-hub/sw.js` requests `navigator.storage.persist()` on activate when available (Chrome 55+), and uses quota-aware caching for lessons: `navigator.storage.estimate()` triggers proactive eviction when usage > 85% of quota, and `QuotaExceededError` on `cache.put` is caught and handled gracefully (best-effort caching; response still returned). Factory files use versioned URLs (`?v=<version>`), so cache misses trigger fresh fetches. On older devices (e.g. Chrome 51), `persist` and `estimate` are not available; eviction remains best-effort.
 
+**Service Worker fallback (B2):** When SW is unavailable or registration fails (e.g. private browsing, restricted storage, pre-Nougat WebView), the app continues to work. Lesson and factory fetches go directly to the network (no SW intercept). The factory-loader (`packages/agni-runtime/ui/factory-loader.js`) checks `caches` availability and falls back to direct fetch when the Cache API is absent. Both `shell-boot.js` and the lesson HTML shell (`hub-transform/assemble.js`) register the SW with `.catch()` to avoid unhandled rejections and log a warning. Offline lesson access is not available when SW is absent.
+
 ---
 
 ## 3. Node.js scripts and tools

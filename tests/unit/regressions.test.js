@@ -1623,6 +1623,26 @@ describe('AUDIT-A1: yamlSchemaVersion passed through to IR', () => {
 });
 
 
+describe('AUDIT-B2: Service Worker fallback — registration has .catch() when SW unavailable', () => {
+  const fs = require('fs');
+  const root = path.resolve(__dirname, '../..');
+
+  it('shell-boot.js registers SW with .catch() to avoid unhandled rejections', () => {
+    const src = fs.readFileSync(path.join(root, 'packages/agni-hub/pwa/shell-boot.js'), 'utf8');
+    assert.ok(src.includes("serviceWorker.register('/sw.js')"), 'shell-boot must register sw.js');
+    assert.ok(src.includes('.catch('), 'shell-boot must have .catch() on SW registration');
+    assert.ok(src.includes('[SW]'), 'shell-boot must log [SW] on failure');
+  });
+
+  it('buildPwaShell includes .catch() on SW registration in lesson HTML', () => {
+    const { buildPwaShell } = require('@agni/hub/hub-transform/assemble');
+    const ir = { meta: { identifier: 'b2-test', title: 'B2', language: 'en' }, steps: [] };
+    const html = buildPwaShell(ir, '/* empty */', 'var LESSON_DATA={};', 'nonce123');
+    assert.ok(html.includes("serviceWorker.register('/sw.js')"), 'PWA shell must register sw.js');
+    assert.ok(html.includes('.catch('), 'PWA shell must have .catch() on SW registration');
+  });
+});
+
 describe('AUDIT-E1: compile warns on svg_spec with non-numeric opts', () => {
   const dataDir = path.join(path.resolve(__dirname, '../..'), 'data');
   let savedDataDir;
