@@ -158,7 +158,7 @@ function defaultLesson() {
       { id: 'step2', type: 'completion', content: '## Done!\n\nYou completed this lesson.' }
     ],
     ontology: { requires: [], provides: [] },
-    gate: null
+    gate: null  // optional: { type: 'quiz'|'manual_verification', question, expected_answer, ... }
   };
 }
 
@@ -209,6 +209,33 @@ function collectLessonFromForm(main) {
       step.sensor = (card.querySelector('.step-sensor')?.value || 'accelerometer').trim();
       step.threshold = (card.querySelector('.step-threshold')?.value || 'freefall > 0.3s').trim();
     }
+    if (type === 'fill_blank') {
+      var blanks = [];
+      card.querySelectorAll('.fill-blank-row').forEach(function (row) {
+        var ans = row.querySelector('.blank-answer')?.value?.trim();
+        var acc = row.querySelector('.blank-accept')?.value?.trim();
+        if (ans) blanks.push({ answer: ans, accept: acc ? acc.split(/\s*,\s*/).map(function (s) { return s.trim(); }).filter(Boolean) : undefined });
+      });
+      step.blanks = blanks.length ? blanks : [{ answer: 'answer' }];
+    }
+    if (type === 'matching') {
+      var pairs = [];
+      card.querySelectorAll('.matching-pair-row').forEach(function (row) {
+        var left = row.querySelector('.pair-left')?.value?.trim();
+        var right = row.querySelector('.pair-right')?.value?.trim();
+        if (left || right) pairs.push({ left: left || '', right: right || '' });
+      });
+      step.pairs = pairs.length >= 2 ? pairs : [{ left: 'A', right: '1' }, { left: 'B', right: '2' }];
+    }
+    if (type === 'ordering') {
+      var items = [];
+      card.querySelectorAll('.ordering-item').forEach(function (inp) {
+        var v = inp.value?.trim();
+        if (v) items.push(v);
+      });
+      step.items = items.length >= 2 ? items : ['First', 'Second', 'Third'];
+      step.correct_order = step.items.map(function (_, i) { return i; });
+    }
 
     steps.push(step);
   });
@@ -223,12 +250,31 @@ function collectLessonFromForm(main) {
     ontology.provides = provEl.value.trim().split(/\s*,\s*/).filter(Boolean).map(function (s) { return { skill: s.trim(), level: 1 }; });
   }
 
+  var gate = null;
+  var gateEnabled = main.querySelector('#gate-enabled')?.checked;
+  if (gateEnabled) {
+    var gt = (main.querySelector('#gate-type')?.value || 'quiz').trim();
+    gate = { type: gt };
+    var gst = main.querySelector('#gate-skill-target')?.value?.trim();
+    if (gst) gate.skill_target = gst;
+    var gq = main.querySelector('#gate-question')?.value?.trim();
+    if (gq) gate.question = gq;
+    var gea = main.querySelector('#gate-expected-answer')?.value?.trim();
+    if (gea) gate.expected_answer = gea;
+    var gof = main.querySelector('#gate-on-fail')?.value?.trim();
+    if (gof) gate.on_fail = gof;
+    var gps = parseFloat(main.querySelector('#gate-passing-score')?.value);
+    if (!isNaN(gps) && gps >= 0 && gps <= 1) gate.passing_score = gps;
+    var grd = main.querySelector('#gate-retry-delay')?.value?.trim();
+    if (grd) gate.retry_delay = grd;
+  }
+
   return {
     version: '1.8.0',
     meta: meta,
     steps: steps,
     ontology: (ontology.requires && ontology.requires.length) || (ontology.provides && ontology.provides.length) ? ontology : undefined,
-    gate: null
+    gate: gate
   };
 }
 
@@ -255,6 +301,25 @@ function populateFormFromLesson(main, lesson) {
   }
   if (opEl && lesson.ontology && lesson.ontology.provides && lesson.ontology.provides.length) {
     opEl.value = lesson.ontology.provides.map(function (p) { return p.skill || p; }).join(', ');
+  }
+
+  var gateEl = main.querySelector('#gate-enabled');
+  var gateFields = main.querySelector('#gate-fields');
+  if (gateEl && lesson.gate && lesson.gate.type) {
+    gateEl.checked = true;
+    if (gateFields) gateFields.style.display = 'block';
+    var g = lesson.gate;
+    var gset = function (sel, val) { var e = main.querySelector(sel); if (e) e.value = val || ''; };
+    gset('#gate-type', g.type);
+    gset('#gate-skill-target', g.skill_target);
+    gset('#gate-question', g.question);
+    gset('#gate-expected-answer', g.expected_answer);
+    gset('#gate-on-fail', g.on_fail);
+    gset('#gate-passing-score', g.passing_score != null ? g.passing_score : '');
+    gset('#gate-retry-delay', g.retry_delay);
+  } else if (gateEl) {
+    gateEl.checked = false;
+    if (gateFields) gateFields.style.display = 'none';
   }
 
   var container = main.querySelector('#steps-container');
@@ -284,10 +349,41 @@ function appendStepCard(container, step, idx) {
     optsHtml = '<div><label>Sensor</label><select class="input step-sensor"><option value="accelerometer"' + (step.sensor === 'accelerometer' ? ' selected' : '') + '>accelerometer</option><option value="gyroscope"' + (step.sensor === 'gyroscope' ? ' selected' : '') + '>gyroscope</option></select></div>';
     optsHtml += '<div><label>Threshold (e.g. freefall &gt; 0.3s)</label><input type="text" class="input step-threshold" value="' + esc(step.threshold || 'freefall > 0.3s') + '" placeholder="freefall > 0.3s" /></div>';
   }
+  if (type === 'fill_blank') {
+    var blanks = step.blanks || [{ answer: 'answer' }];
+    optsHtml = '<p class="hint">Use ___ in content for each blank. One blank definition per ___.</p>';
+    optsHtml += blanks.map(function (b, i) {
+      var acc = (b.accept || []).join(', ');
+      return '<div class="fill-blank-row"><input type="text" class="input blank-answer" value="' + esc(b.answer || '') + '" placeholder="Correct answer" /><input type="text" class="input blank-accept" value="' + esc(acc) + '" placeholder="Alternatives (comma)" /><button type="button" class="btn btn-remove-blank">−</button></div>';
+    }).join('');
+    optsHtml += '<button type="button" class="btn btn-add-blank">+ Add blank</button>';
+  }
+  if (type === 'matching') {
+    var pairs = step.pairs || [{ left: 'A', right: '1' }, { left: 'B', right: '2' }];
+    optsHtml = pairs.map(function (p, i) {
+      return '<div class="matching-pair-row"><input type="text" class="input pair-left" value="' + esc(p.left || '') + '" placeholder="Left" /><input type="text" class="input pair-right" value="' + esc(p.right || '') + '" placeholder="Right" /><button type="button" class="btn btn-remove-pair">−</button></div>';
+    }).join('');
+    optsHtml += '<button type="button" class="btn btn-add-pair">+ Add pair</button>';
+  }
+  if (type === 'ordering') {
+    var items = step.items || ['First', 'Second', 'Third'];
+    optsHtml = '<p class="hint">Items in correct order (runtime shuffles for learner).</p>';
+    optsHtml += items.map(function (it, i) {
+      return '<div class="ordering-row"><input type="text" class="input ordering-item" value="' + esc(it || '') + '" placeholder="Item ' + (i + 1) + '" /><button type="button" class="btn btn-remove-ordering">−</button></div>';
+    }).join('');
+    optsHtml += '<button type="button" class="btn btn-add-ordering">+ Add item</button>';
+  }
 
   card.innerHTML = '<div class="step-header"><span>Step ' + (idx + 1) + '</span><div class="step-actions"><button type="button" class="btn btn-move-up">↑</button><button type="button" class="btn btn-move-down">↓</button><button type="button" class="btn btn-remove-step">Remove</button></div></div>' +
     '<div><label>ID</label><input type="text" class="input step-id" value="' + esc(step.id) + '" placeholder="step' + (idx + 1) + '" /></div>' +
-    '<div><label>Type</label><select class="input step-type"><option value="instruction"' + (type === 'instruction' ? ' selected' : '') + '>instruction</option><option value="quiz"' + (type === 'quiz' ? ' selected' : '') + '>quiz</option><option value="hardware_trigger"' + (type === 'hardware_trigger' ? ' selected' : '') + '>hardware_trigger</option><option value="completion"' + (type === 'completion' ? ' selected' : '') + '>completion</option></select></div>' +
+    '<div><label>Type</label><select class="input step-type">' +
+    '<option value="instruction"' + (type === 'instruction' ? ' selected' : '') + '>instruction</option>' +
+    '<option value="quiz"' + (type === 'quiz' ? ' selected' : '') + '>quiz</option>' +
+    '<option value="hardware_trigger"' + (type === 'hardware_trigger' ? ' selected' : '') + '>hardware_trigger</option>' +
+    '<option value="fill_blank"' + (type === 'fill_blank' ? ' selected' : '') + '>fill_blank</option>' +
+    '<option value="matching"' + (type === 'matching' ? ' selected' : '') + '>matching</option>' +
+    '<option value="ordering"' + (type === 'ordering' ? ' selected' : '') + '>ordering</option>' +
+    '<option value="completion"' + (type === 'completion' ? ' selected' : '') + '>completion</option></select></div>' +
     '<div><label>Content (Markdown)</label><textarea class="input step-content" rows="4">' + esc(step.content || '') + '</textarea></div>' +
     (optsHtml ? '<div class="step-extra">' + optsHtml + '</div>' : '');
   container.appendChild(card);
@@ -305,22 +401,58 @@ function appendStepCard(container, step, idx) {
   card.querySelector('.step-type')?.addEventListener('change', function () {
     var newType = this.value;
     var extra = card.querySelector('.step-extra');
-    if (newType === 'quiz' && (!extra || !extra.querySelector('.quiz-option'))) {
-      var q = { type: 'quiz', answer_options: ['Option A', 'Option B'], correct_index: 0 };
-      card.querySelector('.step-extra')?.remove();
-      var div = document.createElement('div');
-      div.className = 'step-extra';
+    extra?.remove();
+    var div = document.createElement('div');
+    div.className = 'step-extra';
+    if (newType === 'quiz') {
       div.innerHTML = '<div class="quiz-opt-row"><input type="text" class="input quiz-option" value="Option A" /><button type="button" class="btn btn-remove-opt">−</button></div><div class="quiz-opt-row"><input type="text" class="input quiz-option" value="Option B" /><button type="button" class="btn btn-remove-opt">−</button></div><div><label>Correct index</label><input type="number" class="input quiz-correct" min="0" value="0" /></div>';
-      card.appendChild(div);
-    } else if (newType === 'hardware_trigger' && (!extra || !extra.querySelector('.step-threshold'))) {
-      card.querySelector('.step-extra')?.remove();
-      var d = document.createElement('div');
-      d.className = 'step-extra';
-      d.innerHTML = '<div><label>Sensor</label><select class="input step-sensor"><option value="accelerometer">accelerometer</option><option value="gyroscope">gyroscope</option></select></div><div><label>Threshold</label><input type="text" class="input step-threshold" value="freefall > 0.3s" /></div>';
-      card.appendChild(d);
-    } else if ((newType === 'instruction' || newType === 'completion') && extra) {
-      extra.remove();
+    } else if (newType === 'hardware_trigger') {
+      div.innerHTML = '<div><label>Sensor</label><select class="input step-sensor"><option value="accelerometer">accelerometer</option><option value="gyroscope">gyroscope</option></select></div><div><label>Threshold</label><input type="text" class="input step-threshold" value="freefall > 0.3s" /></div>';
+    } else if (newType === 'fill_blank') {
+      div.innerHTML = '<p class="hint">Use ___ in content for each blank.</p><div class="fill-blank-row"><input type="text" class="input blank-answer" placeholder="Correct answer" /><input type="text" class="input blank-accept" placeholder="Alternatives (comma)" /><button type="button" class="btn btn-remove-blank">−</button></div><button type="button" class="btn btn-add-blank">+ Add blank</button>';
+    } else if (newType === 'matching') {
+      div.innerHTML = '<div class="matching-pair-row"><input type="text" class="input pair-left" placeholder="Left" /><input type="text" class="input pair-right" placeholder="Right" /><button type="button" class="btn btn-remove-pair">−</button></div><div class="matching-pair-row"><input type="text" class="input pair-left" placeholder="Left" /><input type="text" class="input pair-right" placeholder="Right" /><button type="button" class="btn btn-remove-pair">−</button></div><button type="button" class="btn btn-add-pair">+ Add pair</button>';
+    } else if (newType === 'ordering') {
+      div.innerHTML = '<p class="hint">Items in correct order.</p><div class="ordering-row"><input type="text" class="input ordering-item" placeholder="Item 1" /><button type="button" class="btn btn-remove-ordering">−</button></div><div class="ordering-row"><input type="text" class="input ordering-item" placeholder="Item 2" /><button type="button" class="btn btn-remove-ordering">−</button></div><div class="ordering-row"><input type="text" class="input ordering-item" placeholder="Item 3" /><button type="button" class="btn btn-remove-ordering">−</button></div><button type="button" class="btn btn-add-ordering">+ Add item</button>';
     }
+    if (div.innerHTML) card.appendChild(div);
+    wireStepExtraButtons(card);
+  });
+
+  wireStepExtraButtons(card);
+}
+
+function wireStepExtraButtons(card) {
+  card.querySelector('.btn-add-blank')?.addEventListener('click', function () {
+    var wrap = this.previousElementSibling?.parentElement || this.parentElement;
+    var row = document.createElement('div');
+    row.className = 'fill-blank-row';
+    row.innerHTML = '<input type="text" class="input blank-answer" placeholder="Correct answer" /><input type="text" class="input blank-accept" placeholder="Alternatives (comma)" /><button type="button" class="btn btn-remove-blank">−</button>';
+    this.parentElement.insertBefore(row, this);
+    row.querySelector('.btn-remove-blank').addEventListener('click', function () { row.remove(); });
+  });
+  card.querySelectorAll('.btn-remove-blank').forEach(function (btn) {
+    if (!btn._wired) { btn._wired = true; btn.addEventListener('click', function () { btn.closest('.fill-blank-row')?.remove(); }); }
+  });
+  card.querySelector('.btn-add-pair')?.addEventListener('click', function () {
+    var row = document.createElement('div');
+    row.className = 'matching-pair-row';
+    row.innerHTML = '<input type="text" class="input pair-left" placeholder="Left" /><input type="text" class="input pair-right" placeholder="Right" /><button type="button" class="btn btn-remove-pair">−</button>';
+    this.parentElement.insertBefore(row, this);
+    row.querySelector('.btn-remove-pair').addEventListener('click', function () { row.remove(); });
+  });
+  card.querySelectorAll('.btn-remove-pair').forEach(function (btn) {
+    if (!btn._wired) { btn._wired = true; btn.addEventListener('click', function () { btn.closest('.matching-pair-row')?.remove(); }); }
+  });
+  card.querySelector('.btn-add-ordering')?.addEventListener('click', function () {
+    var row = document.createElement('div');
+    row.className = 'ordering-row';
+    row.innerHTML = '<input type="text" class="input ordering-item" placeholder="Item" /><button type="button" class="btn btn-remove-ordering">−</button>';
+    this.parentElement.insertBefore(row, this);
+    row.querySelector('.btn-remove-ordering').addEventListener('click', function () { row.remove(); });
+  });
+  card.querySelectorAll('.btn-remove-ordering').forEach(function (btn) {
+    if (!btn._wired) { btn._wired = true; btn.addEventListener('click', function () { btn.closest('.ordering-row')?.remove(); }); }
   });
 }
 
@@ -373,6 +505,18 @@ export function renderAuthorNew(main, slug) {
     '<div><label for="ontology-requires">Requires (skill IDs, comma)</label><input type="text" id="ontology-requires" class="input" placeholder="skill:a, skill:b" /></div>' +
     '<div><label for="ontology-provides">Provides (skill IDs, comma)</label><input type="text" id="ontology-provides" class="input" placeholder="skill:x" /></div>' +
     '</section>' +
+    '<section class="card"><h2>Gate (optional)</h2>' +
+    '<div><label for="gate-enabled">Enable gate</label><input type="checkbox" id="gate-enabled" /></div>' +
+    '<div id="gate-fields" style="display:none;margin-top:1rem;">' +
+    '<div><label for="gate-type">Type</label><select id="gate-type" class="input"><option value="quiz">quiz</option><option value="manual_verification">manual_verification</option></select></div>' +
+    '<div><label for="gate-skill-target">Skill target</label><input type="text" id="gate-skill-target" class="input" placeholder="skill:id" /></div>' +
+    '<div><label for="gate-question">Question</label><input type="text" id="gate-question" class="input" placeholder="What is the prerequisite?" /></div>' +
+    '<div><label for="gate-expected-answer">Expected answer</label><input type="text" id="gate-expected-answer" class="input" placeholder="Correct answer text" /></div>' +
+    '<div><label for="gate-on-fail">On fail</label><input type="text" id="gate-on-fail" class="input" placeholder="skip_to:step_id or message" /></div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">' +
+    '<div><label for="gate-passing-score">Passing score (0–1)</label><input type="number" id="gate-passing-score" class="input" min="0" max="1" step="0.1" placeholder="1" /></div>' +
+    '<div><label for="gate-retry-delay">Retry delay (e.g. PT30S)</label><input type="text" id="gate-retry-delay" class="input" placeholder="PT30S" /></div>' +
+    '</div></div></section>' +
     '<div class="editor-actions">' +
     '<button type="button" id="btn-validate" class="btn">Validate</button>' +
     '<button type="button" id="btn-preview" class="btn">Preview</button>' +
@@ -407,6 +551,11 @@ export function renderAuthorNew(main, slug) {
   }
 
   loadAndPopulate();
+
+  main.querySelector('#gate-enabled')?.addEventListener('change', function () {
+    var gf = main.querySelector('#gate-fields');
+    if (gf) gf.style.display = this.checked ? 'block' : 'none';
+  });
 
   main.querySelector('#btn-add-step').addEventListener('click', function () {
     var count = container.querySelectorAll('.step-card').length;

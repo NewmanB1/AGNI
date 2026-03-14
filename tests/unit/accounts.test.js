@@ -87,7 +87,10 @@ describe('session management', () => {
   let token;
 
   before(async () => {
+    const reg = await accounts.registerCreator({ name: 'Alice', email: 'alice@example.com', password: 'secret123' });
+    if (reg.error && !reg.error.includes('already exists')) throw new Error('registerCreator failed: ' + reg.error);
     const r = await accounts.loginCreator({ email: 'alice@example.com', password: 'secret123' });
+    if (!r.token) throw new Error('loginCreator failed; need token for validateSession tests: ' + JSON.stringify(r));
     token = r.token;
   });
 

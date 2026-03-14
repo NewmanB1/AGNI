@@ -255,8 +255,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 
 **R7 Editor limitations (future improvements):**
 
-- No gate editor (gate is optional; add later if needed)
-- No `fill_blank` / `matching` / `ordering` step types (extensible)
+- Gate editor, fill_blank, matching, ordering added (Y5). Ontology editable.
 - No live HTML/Markdown preview pane (Preview only reports success)
 - Move up/down buttons for step reorder; no native drag-and-drop
 
@@ -270,7 +269,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | Y2 | E3: Step editor | **Open** |
 | Y3 | E4: Preview button | **Open** |
 | Y4 | E5: Save | **Open** |
-| Y5 | E6–E8: Gate, ontology, all step types | **Open** |
+| Y5 | E6–E8: Gate, ontology, all step types | **Done** |
 | Y6 | E9: YAML round-trip | **Open** |
 | Y7 | Freeze OLS schema | **Open** |
 | Y8 | Document breaking vs additive | **Done** — docs/BREAKING-VS-ADDITIVE.md |
