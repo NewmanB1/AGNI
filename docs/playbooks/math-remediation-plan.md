@@ -131,14 +131,14 @@ Merged from code audit and deep-dive analysis. Each bug includes severity, impac
 
 ---
 
-### BUG 11 — dot() naive summation (floating-point error) — acknowledged, no action
+### BUG 11 — dot() naive summation (floating-point error) — Done
 
 | Item | Detail |
 |------|--------|
 | **Severity** | Informational |
 | **Code** | `for (...) sum += a[i] * b[i]` |
-| **Problem** | Naive summation error bound O(n * ε * ||a|| * ||b||). For n=16, negligible. For n=256 (migration max), still negligible. Noted for completeness. |
-| **Fix** | No action required at current scale. |
+| **Problem** | Naive summation error bound O(n * ε * ||a|| * ||b||). For n=16, negligible. For n=256 (migration max), cancellation can lose precision. |
+| **Fix** | **Done** — Kahan summation in dotInner. Test: math.test.js LEN-001 #11. |
 
 ---
 

@@ -63,6 +63,14 @@ describe('dot', () => {
     assert.throws(() => math.dot(sparse, [1, 2, 3]), /non-finite/);
     assert.throws(() => math.dot([1, 2, 3], sparse), /non-finite/);
   });
+
+  it('LEN-001 #11: Kahan summation reduces FP error for cancellation (large + small - large)', () => {
+    // Naive sum: 1e16 + 8 - 1e16 loses the 8 (1e16 + 1 === 1e16 in float64). Kahan recovers it.
+    const big = 1e16;
+    const a = [big, 1, 1, 1, 1, 1, 1, 1, 1, -big];
+    const b = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+    assert.equal(math.dot(a, b), 8, 'dot should be 8 (Kahan summation)');
+  });
 });
 
 // ── addVec / scaleVec ────────────────────────────────────────────────────────

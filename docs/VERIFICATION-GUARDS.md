@@ -54,6 +54,7 @@ E2E runs in a separate job.
 | LEN-001 #3 cholesky NaN/Inf | regressions.test.js MATH-1b, math.test.js | ✓ |
 | LEN-001 #9 forwardSub/backSub L validation | math.test.js LEN-001 #9, regressions MATH-4 | ✓ |
 | LEN-001 #14 addVec/addMat coercion | math.test.js LEN-001 #14 | ✓ |
+| LEN-001 #11 dot() Kahan summation | math.test.js LEN-001 #11 | ✓ |
 | LEN-001 #15 sparse (dot/addVec/scaleVec/outer) | math.test.js LEN-001 #15 | ✓ |
 | LEN-001 #16 scaleVec/matVec Array.isArray | math.test.js LEN-001 #16 | ✓ |
 | yaml-safe 2-5 Date/binary/omap | regressions.test.js YAML-SAFE 2-5, yaml-safe.test.js | ✓ |

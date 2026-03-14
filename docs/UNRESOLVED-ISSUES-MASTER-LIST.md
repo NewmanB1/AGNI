@@ -99,7 +99,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | 8 | matVec/addMat validation inconsistency | P3 | Done |
 | 9 | forwardSub/backSub don't validate L | P1 | Done |
 | 10 | identity(0) / federation zero-dim path | P3 | Done |
-| 11 | dot() naive summation FP error | P4 (no action) | — |
+| 11 | dot() naive summation FP error | **Done** — Kahan summation in dotInner; math.test.js LEN-001 #11 |
 | 12 | scaleMat O(n²) sparse check in updateBandit hot path | P2 | Done |
 | 13 | Symmetry tolerance 1e-12 too tight post-federation | P0 | Done |
 | 14 | addVec/addMat `+` concatenates strings | P1 | Done |

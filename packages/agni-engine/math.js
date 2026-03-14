@@ -91,11 +91,18 @@ function assertEmbeddingDim(x, prefix) {
   }
 }
 
-/** Inner dot product (no validation). Call only after inputs are validated. */
+/** Inner dot product (no validation). Call only after inputs are validated.
+ *  Uses Kahan summation (LEN-001 #11) to reduce floating-point accumulation error
+ *  for long vectors (e.g. embedding dim 256, federation merge paths). */
 function dotInner(a, b) {
-  let sum = 0;
-  for (let i = 0; i < a.length; i++) {
-    sum += a[i] * b[i];
+  var sum = 0;
+  var c = 0;
+  var i, y, t;
+  for (i = 0; i < a.length; i++) {
+    y = a[i] * b[i] - c;
+    t = sum + y;
+    c = (t - sum) - y;
+    sum = t;
   }
   return sum;
 }
