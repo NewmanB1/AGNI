@@ -1,4 +1,3 @@
-// @ts-nocheck — ES5 step-type renderers for AGNI player; Element vs HTMLInputElement
 // packages/agni-runtime/ui/step-renderers.js
 //
 // Extracted from player.js for maintainability. Each renderer receives (ctx, step).
@@ -275,7 +274,7 @@
       });
 
       var optBtns = optionsDiv.querySelectorAll('.quiz-option');
-      optBtns.forEach(function (btn) { btn.disabled = true; });
+      optBtns.forEach(function (btn) { /** @type {HTMLButtonElement} */ (btn).disabled = true; });
       if (correctIdx >= 0 && correctIdx < optBtns.length) {
         optBtns[correctIdx].classList.add('quiz-correct');
       }
@@ -337,7 +336,7 @@
         ctx._narr.narrateFeedback(retryMsg);
         optBtns.forEach(function (btn, i) {
           if (i !== selectedIdx) {
-            btn.disabled = false;
+            /** @type {HTMLButtonElement} */ (btn).disabled = false;
             btn.classList.remove('quiz-correct', 'quiz-incorrect');
           }
         });
@@ -387,14 +386,15 @@
       var inputs = container.querySelectorAll('.fill-blank-input');
       var correctCount = 0;
       for (var i = 0; i < inputs.length; i++) {
-        var userAnswer = (inputs[i].value || '').trim().toLowerCase();
+        var inp = /** @type {HTMLInputElement} */ (inputs[i]);
+        var userAnswer = (inp.value || '').trim().toLowerCase();
         var blankDef = blanks[i] || {};
         var accepted = [blankDef.answer || ''].concat(blankDef.accept || []);
         var isCorrect = false;
         for (var j = 0; j < accepted.length; j++) {
           if (userAnswer === String(accepted[j]).toLowerCase()) { isCorrect = true; break; }
         }
-        inputs[i].style.borderColor = isCorrect ? '#1B5E20' : '#B00020';
+        inp.style.borderColor = isCorrect ? '#1B5E20' : '#B00020';
         if (isCorrect) correctCount++;
       }
 

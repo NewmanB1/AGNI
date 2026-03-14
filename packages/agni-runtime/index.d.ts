@@ -32,10 +32,10 @@ declare global {
     AGNI_A11Y?: AgniA11y;
     AGNI_SVG_HELPERS?: AgniSvgHelpers;
     AGNI_INTEGRITY?: unknown;
-    AGNI_NAVIGATOR?: unknown;
+    AGNI_NAVIGATOR?: { sortLessons?: (a: unknown, b: unknown, c: unknown) => unknown[]; sortLessonsEnhanced?: (a: unknown, b: unknown, c: unknown) => unknown[]; calculateFeatureAffinity?: (a: unknown, b?: unknown) => unknown; applyTeachingModeFilter?: (a: unknown, b?: unknown) => unknown; [key: string]: unknown };
     AGNI_HUB?: string;
     AGNI_CSP_NONCE?: string;
-    AGNI_EDGE_THETA?: unknown;
+    AGNI_EDGE_THETA?: { getOrderedPrecachedLessons?: () => Promise<unknown[]> };
     AGNI_FRUSTRATION?: { getEvents?: () => unknown[]; getTotalEvents?: () => number };
     AGNI_CHECKPOINT?: unknown;
     AGNI_TELEMETRY?: unknown;
@@ -50,6 +50,7 @@ declare global {
     OLS_ROUTE?: unknown;
     OLS_BINARY?: { base64ToBytes?: (b64: string) => Uint8Array; concatBytes?: (...arrays: Uint8Array[]) => Uint8Array };
     AGNI_LOADER?: { register?: (name: string, version: string) => void };
+    AGNI_STEP_RENDERERS?: Record<string, (ctx: unknown, step: unknown, container: HTMLElement) => void>;
     initPlayer?: () => void;
     svgGenerators?: { circle: (props: any) => string; rect: (props: any) => string; line: (props: any) => string };
   }
@@ -118,16 +119,16 @@ declare global {
     injectSettingsButton?: (container: HTMLElement, opts?: unknown) => void;
   }
 
-  /** Minimal shape for SVG helpers */
+  /** Minimal shape for SVG helpers (matches svg-helpers.js) */
   interface AgniSvgHelpers {
     el?: (tag: string, attrs: Record<string, string | number>) => SVGElement;
     rootSvg?: (container: HTMLElement, w: number, h: number, opts?: { ariaLabel?: string }) => SVGElement;
-    txt?: (s: string, x: number, y: number, opts?: unknown) => SVGElement;
-    clamp?: (n: number, min: number, max: number) => number;
-    polar?: (r: number, theta: number) => { x: number; y: number };
+    txt?: (content: string | number, attrs: Record<string, string | number>) => SVGElement;
+    clamp?: (v: number, min: number, max: number) => number;
+    polar?: (cx: number, cy: number, r: number, angleDeg: number) => { x: number; y: number };
     assign?: (target: object, ...sources: object[]) => object;
-    arcPath?: (cx: number, cy: number, r: number, start: number, end: number) => string;
-    g?: (children?: unknown[]) => SVGGElement;
+    arcPath?: (cx: number, cy: number, r: number, startDeg: number, endDeg: number) => string;
+    g?: (attrs?: Record<string, string | number>, children?: unknown[]) => SVGGElement;
     PALETTE?: string[];
     [key: string]: unknown;
   }
@@ -144,7 +145,7 @@ declare global {
     AGNI_LOADER?: { register?: (name: string, version: string) => void };
     AGNI_INTEGRITY?: unknown;
     AGNI_NAVIGATOR?: unknown;
-    AGNI_STEP_RENDERERS?: unknown;
+    AGNI_STEP_RENDERERS?: Record<string, (ctx: unknown, step: unknown, container: HTMLElement) => void>;
     AGNI_FRUSTRATION?: unknown;
     AGNI_CHECKPOINT?: unknown;
     AGNI_TELEMETRY?: unknown;

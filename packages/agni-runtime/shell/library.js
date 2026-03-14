@@ -1,4 +1,3 @@
-// @ts-nocheck — edge-theta module shape, callback types
 // packages/agni-runtime/shell/library.js
 // ES5 compatible — targets Android 7.0+ (Nougat, API 24).
 // Uses edge-theta when available to order precached lessons offline.

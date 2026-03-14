@@ -1,4 +1,3 @@
-// @ts-nocheck — ES5 geometry SVG factories; AgniSvgHelpers el/txt arity
 // packages/agni-runtime/rendering/svg-factories-geometry.js
 // AGNI Geometry SVG Factories
 // Provides dynamic polygon transforms, decomposition, a full Cartesian grid
@@ -951,7 +950,7 @@
    *   r            {number}   circle radius in px (default ~35% of min dimension)
    *   title        {string}
    *
-   * @returns { setAngle(deg) }
+   * @returns {{ setAngle: function(number): void }}
    */
   SVG.unitCircle = function (stage, opts) {
     opts = opts || {};
@@ -1043,7 +1042,7 @@
       var py   = cy - r * sinV;   // SVG y-axis flipped
 
       // Radius
-      radiusLine.setAttribute('x1', cx); radiusLine.setAttribute('y1', cy);
+      radiusLine.setAttribute('x1', String(cx)); radiusLine.setAttribute('y1', String(cy));
       radiusLine.setAttribute('x2', px.toFixed(1)); radiusLine.setAttribute('y2', py.toFixed(1));
 
       // Point
@@ -1053,14 +1052,14 @@
       // Sine (vertical drop to x-axis)
       if (opts.showSine !== false) {
         sineLine.setAttribute('x1', px.toFixed(1)); sineLine.setAttribute('y1', py.toFixed(1));
-        sineLine.setAttribute('x2', px.toFixed(1)); sineLine.setAttribute('y2', cy);
+        sineLine.setAttribute('x2', px.toFixed(1)); sineLine.setAttribute('y2', String(cy));
         sinLabel.setAttribute('x', (px + 6).toFixed(1));
         sinLabel.setAttribute('y', ((py + cy) / 2).toFixed(1));
       }
 
       // Cosine (horizontal to y-axis)
       if (opts.showCosine !== false) {
-        cosineLine.setAttribute('x1', cx); cosineLine.setAttribute('y1', py.toFixed(1));
+        cosineLine.setAttribute('x1', String(cx)); cosineLine.setAttribute('y1', py.toFixed(1));
         cosineLine.setAttribute('x2', px.toFixed(1)); cosineLine.setAttribute('y2', py.toFixed(1));
         cosLabel.setAttribute('x', ((cx + px) / 2).toFixed(1));
         cosLabel.setAttribute('y', (py - 10).toFixed(1));
@@ -1072,7 +1071,7 @@
       var large = Math.abs(deg % 360) > 180 ? 1 : 0;
       var sweep = deg >= 0 ? 0 : 1;
       angleArcEl.setAttribute('d',
-        'M ' + (cx + arcR) + ' ' + cy +
+        'M ' + String(cx + arcR) + ' ' + String(cy) +
         ' A ' + arcR + ' ' + arcR + ' 0 ' + large + ' ' + sweep +
         ' ' + endPt.x.toFixed(1) + ' ' + endPt.y.toFixed(1));
       var midRad = (deg / 2) * Math.PI / 180;

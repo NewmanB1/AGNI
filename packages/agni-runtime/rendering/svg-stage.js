@@ -1,4 +1,3 @@
-// @ts-nocheck — bindSensor callback type, Function vs specific signature
 // packages/agni-runtime/rendering/svg-stage.js
 // AGNI SVG Stage System  v1.8.2
 //
@@ -191,7 +190,7 @@
           return;
         }
         // Store the unsubscribe closure directly (pattern A)
-        var unsub = shared.subscribeToSensor(sensorId, fn);
+        var unsub = shared.subscribeToSensor(sensorId, /** @type {function(number, number): void} */ (fn));
         if (unsub && typeof unsub === 'function') _sensorUnsubs.push(unsub);
       },
 

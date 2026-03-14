@@ -1,4 +1,3 @@
-// @ts-nocheck — ES5 dynamic SVG factories; AgniSvgHelpers el/txt arity
 // packages/agni-runtime/rendering/svg-factories-dynamic.js
 // AGNI Dynamic SVG Factories
 // Extends svg-factories.js with:
