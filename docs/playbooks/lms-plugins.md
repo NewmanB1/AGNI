@@ -2,7 +2,7 @@
 
 This playbook outlines the design for **official plugins** that integrate OLS (Open Lesson Standard) lessons into major Learning Management Systems. It addresses roadmap item **R8**.
 
-**Status:** Phase 0–2 implemented. LTI server, runtime postMessage, LTI 1.1 Basic Outcomes grade passback, Moodle/Canvas docs. Phase 2: Kolibri Ricecooker chef + Moodle mod_ols scaffold added.
+**Status:** Phase 0–2 implemented. LTI server, runtime postMessage, LTI 1.1 Basic Outcomes grade passback, Moodle/Canvas docs. Phase 2 complete: Kolibri Ricecooker chef (`integrations/kolibri/`), Moodle mod_ols scaffold (`integrations/moodle-mod_ols/`). CI: `node scripts/check-lms-integrations.js`.
 
 ---
 
@@ -132,7 +132,7 @@ Add optional postMessage dispatch in:
 | **2b** | Canvas LTI config doc + XML descriptor | Done | `docs/integrations/CANVAS-LTI-SETUP.md` |
 | **2c** | Kolibri Ricecooker chef — OLS channel upload | Done | `integrations/kolibri/` |
 | **2d** | Kolibri native plugin (optional) — OLS content kind | High | See `docs/integrations/KOLIBRI-PLUGIN-GUIDE.md` |
-| **3** | Moodle mod_ols — native activity module | Scaffold | `integrations/moodle-mod_ols/`; see `docs/integrations/MOODLE-MOD-OLS-GUIDE.md` |
+| **3** | Moodle mod_ols — native activity module | **Done** (scaffold) | `integrations/moodle-mod_ols/`; see `docs/integrations/MOODLE-MOD-OLS-GUIDE.md` |
 
 ### 5.1 Phase 1a: LTI Server Skeleton
 

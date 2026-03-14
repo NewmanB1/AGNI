@@ -1,7 +1,7 @@
 # Open Lesson Standard (OLS) v1.0 Spec
 
-**Status:** Draft for finalization.  
-**Target:** Lock schema and contracts so v1.0 is a stable target for implementers.
+**Status:** Frozen for v1.0.  
+**Target:** Schema and contracts locked; v1.0 is a stable target for implementers. See `docs/SCHEMA-FREEZE.md`.
 
 ---
 

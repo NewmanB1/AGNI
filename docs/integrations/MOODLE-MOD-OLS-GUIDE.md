@@ -112,15 +112,17 @@ mod/ols/
 
 ## Implementation Checklist
 
-- [ ] `version.php` – plugin version, requires Moodle 4.0+
-- [ ] `db/install.xml` – table schema
-- [ ] `lib.php` – `ols_supports()`, `ols_get_view_actions()`, `ols_add_instance()`, etc.
-- [ ] `mod_form.php` – lesson URL, grade max
-- [ ] `view.php` – iframe + AMD init
-- [ ] `amd/src/grade_listener.js` – postMessage handler, `core/ajax` or `core_external`
-- [ ] PHP callback for grade submission (e.g. `ajax/service.php` or `classes/external/submit_grade.php`)
-- [ ] Language strings
-- [ ] `db/access.php` – capabilities (`mod/ols:view`, `mod/ols:addinstance`)
+- [x] `version.php` – plugin version, requires Moodle 4.0+
+- [x] `db/install.xml` – table schema
+- [x] `lib.php` – `ols_supports()`, `ols_get_view_actions()`, `ols_add_instance()`, etc.
+- [x] `mod_form.php` – lesson URL, grade max
+- [x] `view.php` – iframe + AMD init
+- [x] `amd/src/grade_listener.js` – postMessage handler, `core/ajax` or `core_external`
+- [x] PHP callback for grade submission (`classes/external/submit_grade.php`)
+- [x] Language strings
+- [x] `db/access.php` – capabilities (`mod/ols:view`, `mod/ols:addinstance`)
+
+**Phase 2 scaffold complete.** Install into `moodle/mod/ols/` and test on Moodle 4.x.
 
 ---
 

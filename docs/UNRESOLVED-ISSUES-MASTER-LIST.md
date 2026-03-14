@@ -249,7 +249,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | R5 | Day 96-100: Research TipTap for WYSIWYG | **Open** |
 | R6 | Day 96-100: Finalize v1.0 Spec | **Done** — docs/specs/ols-v1.0-spec.md |
 | R7 | Future: The Editor (drag-and-drop GUI) | **Done** — form-based editor in vanilla portal (meta, steps, ontology; Validate/Preview/Save; step reorder) |
-| R8 | Future: Plugins for Moodle, Kolibri, Canvas | **Phase 2 scaffold** — LTI done; Kolibri Ricecooker chef (`integrations/kolibri/`); Moodle mod_ols scaffold (`integrations/moodle-mod_ols/`); guides in `docs/integrations/` |
+| R8 | Future: Plugins for Moodle, Kolibri, Canvas | **Done** — LTI, Kolibri chef, Moodle mod_ols scaffold; guides in `docs/integrations/`; `scripts/check-lms-integrations.js` |
 | R9 | Future: The Mesh (graph_weights sync via LoRa) | **Done** — design + impl ([playbooks/mesh-lora.md](playbooks/mesh-lora.md)); UDP sim; run `node hub-tools/mesh.js` or `sync.js --transport=lora` |
 | R10 | Future: Reference implementation refactor | **Done** — schema-based, pure pipelines, documented boundaries; see REFERENCE-IMPLEMENTATION-VISION.md §4.1–4.2 |
 
@@ -271,7 +271,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | Y4 | E5: Save | **Open** |
 | Y5 | E6–E8: Gate, ontology, all step types | **Done** |
 | Y6 | E9: YAML round-trip | **Done** |
-| Y7 | Freeze OLS schema | **Open** |
+| Y7 | Freeze OLS schema | **Done** — `docs/SCHEMA-FREEZE.md`; spec status Frozen; BREAKING-VS-ADDITIVE policy |
 | Y8 | Document breaking vs additive | **Done** — docs/BREAKING-VS-ADDITIVE.md |
 | Y9 | Reference implementation compliance | **Done** — CI enforces validate, test, test:graph, verify:all; see REFERENCE-IMPLEMENTATION-VISION.md §4.3 |
 | Y10 | Changelog | **Done** — CHANGELOG.md maintained |
