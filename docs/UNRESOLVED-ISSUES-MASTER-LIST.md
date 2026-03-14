@@ -312,7 +312,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | F1.1 | migrations.js type fixes | agni-engine | **Open** |
 | F1.2 | pagerank.js type fixes | agni-engine | **Done** — JSDoc Record types for providersBySkill, requirersBySkill, lessonsBySkill, nodeIndex, result, scores, transRanks, persRanks, results |
 | F1.3 | index.js type fixes | agni-engine | **Open** |
-| F2.1–F2.3 | hub type fixes | agni-hub | **Partial** — theta.js Done (no @ts-nocheck); sentry.js, student.js use @ts-expect-error |
+| F2.1–F2.3 | hub type fixes | agni-hub | **Done** — theta.js no @ts-nocheck; sentry.js Ajv/addFormats @ts-expect-error (CJS interop); student.js Date coercion uses +new Date() |
 | F3.1–F3.3 | utils type fixes | agni-utils | **Open** |
 | F4.1 | ols-schema fix | ols-schema | **Open** |
 | F5.1 | ols-compiler fix | ols-compiler | **Done** — rehype-katex options aligned with Options type; @ts-expect-error removed; processMarkdown JSDoc |
