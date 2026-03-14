@@ -301,7 +301,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | JS-2.1 | HTTP namespace | Done |
 | JS-2.2 | Error extensions | Done |
 | JS-2.3 | Auth context type | Done |
-| JS-* | Remaining Phase 2+ items | **Partial** — theta.js, navigator.js, svg-registry, svg-catalog, threshold-evaluator, sensor-bridge, checkpoint, shared-runtime, telemetry, table-renderer, math-renderer, step-renderers, library, svg-stage, svg-factories* type-checked; ~3 runtime files still use @ts-nocheck (polyfills, factory-loader, player) |
+| JS-* | Remaining Phase 2+ items | **Done** — all runtime files type-checked; polyfills, factory-loader, player no longer use @ts-nocheck |
 
 ---
 
@@ -316,7 +316,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | F3.1–F3.3 | utils type fixes | agni-utils | **Open** |
 | F4.1 | ols-schema fix | ols-schema | **Open** |
 | F5.1 | ols-compiler fix | ols-compiler | **Open** |
-| F6.1–F6.20 | runtime type fixes | agni-runtime | **Partial** — threshold-evaluator, sensor-bridge, checkpoint, shared-runtime, telemetry, table-renderer, math-renderer, step-renderers, library, svg-stage, svg-factories, svg-factories-dynamic, svg-factories-geometry type-checked; AgniSvgHelpers (el, txt, polar, g) aligned with svg-helpers; polyfills, factory-loader, player still use @ts-nocheck |
+| F6.1–F6.20 | runtime type fixes | agni-runtime | **Done** — polyfills, factory-loader, player now type-checked; @ts-nocheck removed; index.d.ts expanded (AgniLoader, AgniFrustration, AgniCheckpoint, AgniNarration, LessonDataGlobal) |
 
 ---
 

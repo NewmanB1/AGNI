@@ -20,28 +20,41 @@ declare global {
     phyphoxOrigins?: string[];
     sensorSmoothing?: boolean;
     _hubUrl?: string;
+    id?: string;
+    meta?: { identifier?: string; title?: string; language?: string; expected_duration?: string; accessibility_mode?: string; [key: string]: unknown };
+    steps?: Array<{ id?: string; type?: string; [key: string]: unknown }>;
+    requires?: { factories?: Array<{ file: string; version?: string; integrity?: string }> };
+    inferredFeatures?: { flags?: { has_sensors?: boolean }; [key: string]: unknown };
+    lmsMode?: boolean;
     [key: string]: unknown;
+  }
+
+  /** TweetNaCl / nacl for Ed25519 (integrity verification fallback) */
+  interface AgniNacl {
+    sign?: { detached?: { verify?: (msg: Uint8Array, sig: Uint8Array, pub: Uint8Array) => boolean } };
   }
 
   interface Window {
     LESSON_DATA?: LessonDataGlobal;
     DEV_MODE?: boolean;
+    nacl?: AgniNacl;
+    OLS_PUBLIC_KEY?: string;
     AGNI_SHARED?: AgniShared;
     AGNI_SVG?: AgniSvg;
     AGNI_GATES?: AgniGates;
     AGNI_A11Y?: AgniA11y;
     AGNI_SVG_HELPERS?: AgniSvgHelpers;
-    AGNI_INTEGRITY?: unknown;
+    AGNI_INTEGRITY?: { verify?: (lesson: LessonDataGlobal) => Promise<boolean> };
     AGNI_NAVIGATOR?: { sortLessons?: (a: unknown, b: unknown, c: unknown) => unknown[]; sortLessonsEnhanced?: (a: unknown, b: unknown, c: unknown) => unknown[]; calculateFeatureAffinity?: (a: unknown, b?: unknown) => unknown; applyTeachingModeFilter?: (a: unknown, b?: unknown) => unknown; [key: string]: unknown };
     AGNI_HUB?: string;
     AGNI_CSP_NONCE?: string;
     AGNI_EDGE_THETA?: { getOrderedPrecachedLessons?: () => Promise<unknown[]> };
-    AGNI_FRUSTRATION?: { getEvents?: () => unknown[]; getTotalEvents?: () => number };
-    AGNI_CHECKPOINT?: unknown;
+    AGNI_FRUSTRATION?: AgniFrustration;
+    AGNI_CHECKPOINT?: AgniCheckpoint;
     AGNI_TELEMETRY?: unknown;
-    AGNI_I18N?: unknown;
-    AGNI_NARRATION?: unknown;
-    AGNI_COMPLETION?: unknown;
+    AGNI_I18N?: { t?: (key: string, opts?: Record<string, unknown>) => string; setLanguage?: (lang: string) => void; getLanguage?: () => string; getAvailableLanguages?: () => string[]; addStrings?: (lang: string, strings: Record<string, string>) => void };
+    AGNI_NARRATION?: AgniNarration;
+    AGNI_COMPLETION?: { render?: (opts: unknown) => void };
     AGNI_HUB_KEY?: string;
     AGNI_LOAD_TIMEOUT?: number;
     AGNI_RETRY_TIMEOUT?: number;
@@ -49,8 +62,8 @@ declare global {
     OLS_NEXT?: unknown;
     OLS_ROUTE?: unknown;
     OLS_BINARY?: { base64ToBytes?: (b64: string) => Uint8Array; concatBytes?: (...arrays: Uint8Array[]) => Uint8Array };
-    AGNI_LOADER?: { register?: (name: string, version: string) => void };
-    AGNI_STEP_RENDERERS?: Record<string, (ctx: unknown, step: unknown, container: HTMLElement) => void>;
+    AGNI_LOADER?: AgniLoader;
+    AGNI_STEP_RENDERERS?: Record<string, (ctx: unknown, step: unknown, container?: HTMLElement) => void>;
     initPlayer?: () => void;
     svgGenerators?: { circle: (props: any) => string; rect: (props: any) => string; line: (props: any) => string };
   }
@@ -77,7 +90,7 @@ declare global {
     setSafeHtml?: (el: HTMLElement, html: string) => void;
     parseDurationMs?: (str: string) => number;
     registerStepCleanup?: (fn: () => void) => void;
-    mountStepVisual?: (container: HTMLElement, spec: unknown) => unknown;
+    mountStepVisual?: (container: HTMLElement, spec: unknown) => Promise<unknown>;
     currentStageHandle?: { stage?: { destroy: () => void } };
     clearSensorSubscriptions?: (sensorId?: string) => void;
     loadLessonVibrationPatterns?: (patterns: unknown) => void;
@@ -104,10 +117,63 @@ declare global {
     export?: (format: 'svg' | 'png') => string | Promise<string>;
   }
 
+  /** Frustration detection module */
+  interface AgniFrustration {
+    getEvents?: () => unknown[];
+    getTotalEvents?: () => number;
+    trackOutcome?: (passed: boolean, skipped: boolean) => void;
+    trackRetry?: () => void;
+    shouldShowNudge?: () => boolean;
+    showNudge?: (container: HTMLElement, t: (k: string, o?: Record<string, unknown>) => string) => void;
+    reset?: () => void;
+  }
+
+  /** Checkpoint save/resume module */
+  interface AgniCheckpoint {
+    save?: (lessonId: string, data: unknown, devMode?: boolean) => void;
+    load?: (lessonId: string, devMode?: boolean) => unknown;
+    clear?: (lessonId: string, devMode?: boolean) => void;
+    sync?: (hubUrl: string, pseudoId: string, lessonId: string, devMode?: boolean) => void;
+    loadRemote?: (hubUrl: string, pseudoId: string, lessonId: string, devMode?: boolean) => Promise<unknown>;
+  }
+
+  /** Narration / TTS module */
+  interface AgniNarration {
+    isEnabled?: () => boolean;
+    setEnabled?: (enabled: boolean) => void;
+    setLang?: (lang: string) => void;
+    cancel?: () => void;
+    narrateStepEntry?: (stepIndex: number, total: number) => void;
+    narrateContent?: (text: string) => void;
+    narrateSvgDescription?: (factory: string, desc?: string) => void;
+    narrateCompletion?: () => void;
+    [key: string]: unknown;
+  }
+
+  /** Factory loader (cache-first, hub fetch) */
+  interface AgniLoader {
+    register?: (name: string, version: string) => void;
+    loadDependencies?: (lessonData: LessonDataGlobal) => Promise<void>;
+    loadOne?: (dep: { file: string; version?: string; integrity?: string }, timeoutMs?: number) => Promise<void>;
+    isAvailable?: (factoryId: string) => boolean;
+    listCached?: () => Promise<string[]>;
+    evict?: (file: string, version?: string) => Promise<unknown>;
+    clearCache?: () => Promise<unknown>;
+    retryQueued?: () => void;
+    setHubUrl?: (url: string) => void;
+    showHubSetup?: () => void;
+    hubUrl?: string;
+    lastError?: { url: string; message: string; error: Error } | null;
+  }
+
   /** Minimal shape for gate renderer */
   interface AgniGates {
     render?: (opts: unknown) => void;
     evaluate?: (opts: unknown) => boolean;
+    resolveDirective?: (directive: string) => string;
+    renderQuiz?: (gate: unknown, onResult: (result: 'pass' | 'fail') => void) => void;
+    renderManualVerification?: (gate: unknown, onResult: (result: 'pass' | 'fail') => void) => void;
+    renderRedirect?: (gate: unknown, lesson: unknown, devMode?: boolean) => void;
     [key: string]: unknown;
   }
 
@@ -115,8 +181,8 @@ declare global {
   interface AgniA11y {
     prefs?: { fontScale: number; highContrast: boolean; reducedMotion: boolean; hapticIntensity: number };
     apply?: () => void;
-    addAria?: (el: HTMLElement, role: string, label: string) => void;
-    injectSettingsButton?: (container: HTMLElement, opts?: unknown) => void;
+    addAria?: (el: HTMLElement, role: string, label?: string) => void;
+    injectSettingsButton?: (container?: HTMLElement, opts?: unknown) => void;
   }
 
   /** Minimal shape for SVG helpers (matches svg-helpers.js) */
@@ -142,12 +208,12 @@ declare global {
     AGNI_GATES?: AgniGates;
     AGNI_A11Y?: AgniA11y;
     AGNI_SVG_HELPERS?: AgniSvgHelpers;
-    AGNI_LOADER?: { register?: (name: string, version: string) => void };
+    AGNI_LOADER?: AgniLoader;
     AGNI_INTEGRITY?: unknown;
     AGNI_NAVIGATOR?: unknown;
-    AGNI_STEP_RENDERERS?: Record<string, (ctx: unknown, step: unknown, container: HTMLElement) => void>;
-    AGNI_FRUSTRATION?: unknown;
-    AGNI_CHECKPOINT?: unknown;
+    AGNI_STEP_RENDERERS?: Record<string, (ctx: unknown, step: unknown, container?: HTMLElement) => void>;
+    AGNI_FRUSTRATION?: AgniFrustration;
+    AGNI_CHECKPOINT?: AgniCheckpoint;
     AGNI_TELEMETRY?: unknown;
     AGNI_I18N?: unknown;
     AGNI_NARRATION?: unknown;

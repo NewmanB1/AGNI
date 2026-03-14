@@ -1,4 +1,3 @@
-// @ts-nocheck — runtime globals (LESSON_DATA, AGNI_*), DOM, sensors; types in index.d.ts
 // packages/agni-runtime/ui/player.js
 // AGNI Lesson Player  v4.0.0
 //
@@ -145,7 +144,8 @@
 
   // ── Checkpoint save/resume — delegated to AGNI_CHECKPOINT module ──
   var _ckpt = global.AGNI_CHECKPOINT || {
-    save: function () {}, load: function () { return null; }, clear: function () {}
+    save: function () {}, load: function () { return null; }, clear: function () {},
+    sync: undefined, loadRemote: undefined
   };
 
   var _hubUrl = (function () {
@@ -213,7 +213,7 @@
           if (result === 'pass') { resolve(nextId); } else { renderGateRedirect(gate); }
         });
       } else {
-        resolve(nextId);
+        resolve(nextId || null);
       }
     });
   }
@@ -386,8 +386,9 @@
         var SVG = global.AGNI_SVG;
         if (SVG && SVG.fromSpec) {
           var handle = SVG.fromSpec(svgSpec, svgContainer);
-          if (handle && handle.stage) {
-            S.currentStageHandle = handle;
+          var h = /** @type {Object} */ (handle);
+          if (h && h.stage) {
+            S.currentStageHandle = h;
           }
           if (DEV_MODE) console.log('[PLAYER] SVG factory rendered:', svgSpec.factory);
         } else {
@@ -611,7 +612,7 @@
     var step = steps[idx];
 
     if (step.type === 'redirect') {
-      var directive = resolveDirective(step.directive);
+      var directive = resolveDirective(String(step.directive || ''));
       renderGateRedirect({ on_fail: directive });
       return;
     }
@@ -623,7 +624,7 @@
 
     if (step.type === 'gate') {
       evaluateGate(step).then(function (nextId) {
-        routeStep(nextId);
+        if (nextId) routeStep(nextId);
       });
     }
   }
@@ -703,7 +704,7 @@
       // on_success routing: instruction and content steps always "pass",
       // so on_success acts as a non-linear "next" override.
       if (currentStep.on_success) {
-        routeStep(resolveDirective(currentStep.on_success));
+        routeStep(resolveDirective(String(currentStep.on_success)));
         return;
       }
     }
@@ -785,16 +786,17 @@
 
     if (!hasSensors || !S.sensorBridge) return Promise.resolve();
 
+    var DME = /** @type {*} */ (DeviceMotionEvent);
     var needsGesture = typeof DeviceMotionEvent !== 'undefined' &&
-                       typeof DeviceMotionEvent.requestPermission === 'function';
+                       typeof (DME && DME.requestPermission) === 'function';
 
     if (needsGesture) {
       return showPermissionPrompt()
         .then(function () {
-          return DeviceMotionEvent.requestPermission();
+          return DME.requestPermission();
         })
         .then(function (state) {
-          if (state !== 'granted') { showSensorWarning(); return; }
+          if (state !== 'granted') { showSensorWarning(); return Promise.resolve(); }
           return S.sensorBridge.start().then(function (available) {
             if (!available) showSensorWarning();
           }).catch(function (err) {
@@ -802,7 +804,7 @@
             showSensorWarning();
           });
         })
-        .catch(function () { showSensorWarning(); });
+        .catch(function () { showSensorWarning(); return Promise.resolve(); });
     }
 
     // Non-gesture path — FIX: .catch() added

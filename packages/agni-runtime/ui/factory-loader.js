@@ -1,4 +1,3 @@
-// @ts-nocheck — AGNI_LOADER, nacl, LESSON_DATA globals; loadDependencies shape
 // packages/agni-runtime/ui/factory-loader.js
 // AGNI Factory Loader  v1.1.0
 //
@@ -396,7 +395,7 @@
    * Load a single factory file. Resolves when the file is cached and executed.
    * Deduplicates concurrent requests for the same cache key.
    *
-   * @param {{ file: string, version: string }} dep
+   * @param {{ file: string, version?: string, integrity?: string }} dep
    * @param {number} [timeoutMs]   optional timeout override (used by retryQueued)
    * @returns {Promise}
    */

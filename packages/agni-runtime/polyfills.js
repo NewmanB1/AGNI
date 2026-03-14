@@ -1,5 +1,5 @@
-// @ts-nocheck — Polyfills for DOM; type signatures conflict with lib.dom.d.ts
 // packages/agni-runtime/polyfills.js
+// ES5 polyfills — augmentations declared in polyfills.d.ts to avoid lib.dom conflicts
 // ES5 polyfills for Chrome 51 WebView (Android 7.0 Nougat). See docs/RUN-ENVIRONMENTS.md.
 //
 // Loaded FIRST by factory-loader before any other runtime code.
@@ -83,13 +83,16 @@
   // SHIM-3-1: querySelectorAll returns NodeList; older environments lack .forEach.
   // This polyfill ensures table-renderer and other DOM iteration work on ES5 baseline.
   if (typeof NodeList !== 'undefined' && !NodeList.prototype.forEach) {
-    NodeList.prototype.forEach = Array.prototype.forEach;
+    NodeList.prototype.forEach = /** @type {*} */ (Array.prototype.forEach);
   }
 
   // ── Minimal URLSearchParams (Chrome 49+) ───────────────────────────────────
   // Only implements .get() and .has() — sufficient for AGNI runtime usage.
+  // Uses internal _params; type assertion avoids conflict with full lib.dom.d.ts.
   if (typeof global.URLSearchParams !== 'function') {
-    global.URLSearchParams = function (search) {
+    /** @constructor */
+    function MinimalURLSearchParams(search) {
+      /** @type {Record<string, string>} */
       this._params = {};
       if (typeof search !== 'string') return;
       if (search.charAt(0) === '?') search = search.slice(1);
@@ -101,14 +104,14 @@
         var val = decodeURIComponent(pairs[i].slice(idx + 1).replace(/\+/g, ' '));
         this._params[key] = val;
       }
-    };
-    global.URLSearchParams.prototype.get = function (name) {
+    }
+    MinimalURLSearchParams.prototype.get = function (name) {
       return Object.prototype.hasOwnProperty.call(this._params, name) ? this._params[name] : null;
     };
-    global.URLSearchParams.prototype.has = function (name) {
+    MinimalURLSearchParams.prototype.has = function (name) {
       return Object.prototype.hasOwnProperty.call(this._params, name);
     };
-    global.URLSearchParams.prototype.toString = function () {
+    MinimalURLSearchParams.prototype.toString = function () {
       var parts = [];
       for (var key in this._params) {
         if (Object.prototype.hasOwnProperty.call(this._params, key)) {
@@ -117,9 +120,11 @@
       }
       return parts.join('&');
     };
-    global.URLSearchParams.prototype.set = function (name, val) {
+    MinimalURLSearchParams.prototype.set = function (name, val) {
       this._params[name] = String(val);
     };
+    // @ts-expect-error — minimal polyfill; full URLSearchParams interface not implemented
+    global.URLSearchParams = MinimalURLSearchParams;
   }
 
 })(typeof self !== 'undefined' ? self : this);
