@@ -213,7 +213,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | A4.1–A4.13 | Update documentation | Done |
 | A5.1–A5.2 | CI gate: no hub-tools-only imports | Done |
 | A6.1 | Optional: docs consistency gate | Done |
-| B1.1 | Log aggregator / telemetry ingestion | Deferred |
+| B1.1 | Log aggregator / telemetry ingestion | **Done** — ingest API, multi-cohort graph_weights, cohort-aware theta |
 | B2.1–B2.2 | Outreach & pitch | Done |
 | B3.1–B3.2 | Sensory & accessibility review | Done |
 | C1.1–C1.4 | SPRINT-R16: file locking, sentry, parent auth | See SPRINT-R16 |

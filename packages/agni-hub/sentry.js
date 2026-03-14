@@ -23,6 +23,7 @@ const DATA_DIR = envConfig.dataDir;
 const EVENTS_DIR = path.join(DATA_DIR, 'events');
 const GRAPH_WEIGHTS = path.join(DATA_DIR, 'graph-weights.json');
 const GRAPH_WEIGHTS_PENDING = path.join(DATA_DIR, 'graph-weights-pending.json');
+const COHORT_ASSIGNMENTS = path.join(DATA_DIR, 'cohort-assignments.json');
 const GRAPH_WEIGHTS_BACKUP = path.join(DATA_DIR, 'graph-weights.backup.json');
 const MASTERY_SUMMARY = path.join(DATA_DIR, 'mastery-summary.json');
 const CONTINGENCY_TABLES = path.join(DATA_DIR, 'contingency-tables.json');
@@ -50,8 +51,18 @@ const SHUTDOWN_TIMEOUT_MS = 10000;
 
 // Time-skew protection: Pi without RTC may boot at epoch (1970). Reject writes when year is invalid.
 const MIN_VALID_YEAR = envConfig.sentryMinValidYear;
+const AGGREGATOR_ENABLED = envConfig.aggregatorIngestEnabled;
+const AGGREGATOR_SECRET = envConfig.aggregatorIngestSecret;
+
 function isSystemClockValid() {
   return new Date().getFullYear() >= MIN_VALID_YEAR;
+}
+
+/** B1.1: Anonymize pseudoId for cross-village aggregation. Same (sourceHubId, pseudoId) -> same anon. */
+function anonymizeForAggregator(pseudoId, sourceHubId) {
+  if (!pseudoId || !sourceHubId) return pseudoId;
+  var h = crypto.createHash('sha256').update(String(sourceHubId) + ':' + String(pseudoId)).digest('hex').slice(0, 12);
+  return 'anon-' + String(sourceHubId).replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 32) + '-' + h;
 }
 
 let _httpServer = null;
@@ -245,6 +256,64 @@ function startReceiver() {
       });
       return;
     }
+
+    if (req.method === 'POST' && req.url === '/api/telemetry/ingest') {
+      if (!AGGREGATOR_ENABLED || !AGGREGATOR_SECRET) {
+        res.writeHead(404); res.end();
+        return;
+      }
+      var secret = req.headers['x-aggregator-secret'];
+      if (secret !== AGGREGATOR_SECRET) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized' }));
+        return;
+      }
+      var chunks = [];
+      var size = 0;
+      var tooBig = false;
+      req.on('data', function (chunk) {
+        if (tooBig) return;
+        size += chunk.length;
+        if (size > 1e6) { tooBig = true; req.destroy(); return; }
+        chunks.push(chunk);
+      });
+      req.on('end', function () {
+        if (tooBig) { res.writeHead(413); res.end(); return; }
+        try {
+          var body = Buffer.concat(chunks).toString('utf8');
+          var payload = JSON.parse(body);
+          var sourceHubId = (payload.sourceHubId || req.headers['x-source-hub'] || 'unknown').toString().slice(0, 64);
+          var raw = Array.isArray(payload.events) ? payload.events : [payload];
+          var valid = [];
+          for (var i = 0; i < raw.length; i++) {
+            var ev = validateEvent(raw[i]);
+            if (ev) {
+              ev.sourceHubId = sourceHubId;
+              ev.pseudoId = anonymizeForAggregator(ev.pseudoId, sourceHubId);
+              valid.push(ev);
+            }
+          }
+          if (!valid.length) { res.writeHead(400); res.end(); return; }
+          if (!isSystemClockValid()) {
+            log.warn('System clock skewed, rejecting ingest');
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'System clock invalid' }));
+            return;
+          }
+          appendEvents(valid);
+          _eventsSinceLastAnalysis += valid.length;
+          log.info('Ingest received', { count: valid.length, sourceHubId: sourceHubId });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ accepted: valid.map(function (e) { return e.eventId; }) }));
+          if (_eventsSinceLastAnalysis >= ANALYSE_AFTER_N && Date.now() - lastAnalysisAttempt > MIN_MS_BETWEEN_ANALYSIS) {
+            lastAnalysisAttempt = Date.now();
+            setImmediate(function () { runAnalysis().catch(function (e) { log.error('Analysis error', { error: e.message }); }); });
+          }
+        } catch (e) { res.writeHead(400); res.end(); }
+      });
+      return;
+    }
+
     res.writeHead(404); res.end();
   });
   _httpServer = server;
@@ -350,13 +419,24 @@ async function runAnalysis() {
     return;
   }
 
-  const { largest } = cohortResult;
-  const cohortSet = new Set(largest.members);
+  const { largest, clusters } = cohortResult;
+  const clustersQualifying = clusters.filter(function (c) { return c.members.length >= MIN_CLUSTER_SIZE; });
+  const clustersWithIds = clustersQualifying.map(function (c) {
+    return {
+      cohortId: sentryAnalysis.cohortIdFromCentroid(c.centroid),
+      members: c.members,
+      centroid: c.centroid
+    };
+  });
+  const cohortAssignments = sentryAnalysis.buildCohortAssignments(clustersWithIds);
+  await saveJSONAsync(COHORT_ASSIGNMENTS, { assignments: cohortAssignments }, { minified: true });
 
+  const cohortSet = new Set(largest.members);
   const globalPairs = {};
-  cohortSet.forEach(pid => {
+  cohortSet.forEach(function (pid) {
     const tables = contingencies[pid] || {};
-    Object.entries(tables).forEach(([pair, counts]) => {
+    Object.keys(tables).forEach(function (pair) {
+      const counts = tables[pair];
       if (!globalPairs[pair]) globalPairs[pair] = { a: 0, b: 0, c: 0, d: 0 };
       globalPairs[pair].a += counts.a;
       globalPairs[pair].b += counts.b;
@@ -375,9 +455,9 @@ async function runAnalysis() {
   const prevGw = await loadJSONAsync(GRAPH_WEIGHTS, null);
   const prevByKey = {};
   if (prevGw && Array.isArray(prevGw.edges)) {
-    prevGw.edges.forEach(e => { prevByKey[e.from + '\x00' + e.to] = e; });
+    prevGw.edges.forEach(function (e) { prevByKey[e.from + '\x00' + e.to] = e; });
   }
-  edges = edges.map(e => {
+  edges = edges.map(function (e) {
     const key = e.from + '\x00' + e.to;
     const prev = prevByKey[key];
     if (!prev || typeof prev.weight !== 'number') return e;
@@ -388,7 +468,7 @@ async function runAnalysis() {
     return Object.assign({}, e, { weight: Math.max(0, Math.min(1, newWeight)) });
   });
 
-  const cohortId = 'c_' + crypto.createHash('sha256').update(largest.centroid.map(v => v.toFixed(4)).join(',')).digest('hex').slice(0, 8);
+  const cohortId = sentryAnalysis.cohortIdFromCentroid(largest.centroid);
   const now = new Date().toISOString();
   const gw = {
     '$schema': 'https://github.com/NewmanB1/AGNI/schemas/graph-weights.schema.json',
@@ -427,6 +507,42 @@ async function runAnalysis() {
     await saveJSONAsync(GRAPH_WEIGHTS, gw);
     _graphWeightsUpdatedAt = now;
     log.info('Analysis complete', { eventsProcessed, edges: edges.length });
+  }
+
+  for (var ci = 0; ci < clustersWithIds.length; ci++) {
+    var cl = clustersWithIds[ci];
+    if (cl.cohortId === cohortId) continue;
+    var cpairs = {};
+    cl.members.forEach(function (pid) {
+      var tables = contingencies[pid] || {};
+      Object.keys(tables).forEach(function (pair) {
+        var counts = tables[pair];
+        if (!cpairs[pair]) cpairs[pair] = { a: 0, b: 0, c: 0, d: 0 };
+        cpairs[pair].a += counts.a;
+        cpairs[pair].b += counts.b;
+        cpairs[pair].c += counts.c;
+        cpairs[pair].d += counts.d;
+      });
+    });
+    var cedges = sentryAnalysis.computeEdgesFromGlobalPairs(cpairs, opts);
+    var cgw = {
+      '$schema': 'https://github.com/NewmanB1/AGNI/schemas/graph-weights.schema.json',
+      version: SCHEMA_VERSION,
+      discovered_cohort: cl.cohortId,
+      level: 'village',
+      sample_size: cl.members.length,
+      created_date: now,
+      last_updated: now,
+      default_weight: 1.0,
+      weight_estimation_method: 'correlation_based',
+      clustering_method: 'jaccard_similarity',
+      edges: cedges,
+      metadata: { computation_date: now, software_version: SW_VERSION }
+    };
+    var cv = getGraphWeightsValidator();
+    if (!cv || cv(cgw)) {
+      await saveJSONAsync(path.join(DATA_DIR, 'graph-weights-' + cl.cohortId + '.json'), cgw);
+    }
   }
 
   pruneOldEvents(envConfig.sentryRetentionDays);

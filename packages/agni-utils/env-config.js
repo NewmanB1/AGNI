@@ -132,6 +132,10 @@ const config = {
   sentryWeightMaxDelta:  validRange(floatVal('AGNI_SENTRY_WEIGHT_MAX_DELTA', 0.2), 0.01, 1, 'AGNI_SENTRY_WEIGHT_MAX_DELTA'),
   sentryWeightReviewThreshold: validRange(floatVal('AGNI_SENTRY_WEIGHT_REVIEW_THRESHOLD', 0.3), 0.1, 1, 'AGNI_SENTRY_WEIGHT_REVIEW_THRESHOLD'),
   sentryMinValidYear:   intVal('AGNI_SENTRY_MIN_VALID_YEAR', 2020),
+  /** B1.1: Enable remote telemetry ingestion for log aggregator. Village hubs POST to central Sentry. */
+  aggregatorIngestEnabled: (function () { var v = strVal('AGNI_AGGREGATOR_INGEST_ENABLED', '0'); return v === '1' || String(v).toLowerCase() === 'true'; })(),
+  /** Shared secret for POST /api/telemetry/ingest. Required when aggregatorIngestEnabled. */
+  aggregatorIngestSecret:  strVal('AGNI_AGGREGATOR_INGEST_SECRET', ''),
 
   markovWeight:       floatVal('AGNI_MARKOV_WEIGHT', 0.15),
   pagerankWeight:     floatVal('AGNI_PAGERANK_WEIGHT', 0.10),

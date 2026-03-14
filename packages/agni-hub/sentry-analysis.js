@@ -219,6 +219,31 @@ function discoverCohort(mastery, opts) {
   return { clusters: clusters, largest: largest };
 }
 
+/**
+ * Compute deterministic cohort ID from cluster centroid. B1.1: used for per-cohort graph_weights.
+ */
+function cohortIdFromCentroid(centroid) {
+  if (!centroid || !Array.isArray(centroid)) return 'c_default';
+  var str = centroid.map(function (v) { return Number(v).toFixed(4); }).join(',');
+  return 'c_' + crypto.createHash('sha256').update(str).digest('hex').slice(0, 8);
+}
+
+/**
+ * Build pseudoId -> cohortId map from clusters. B1.1: theta uses this to select cohort-specific graph.
+ */
+function buildCohortAssignments(clustersWithIds) {
+  var out = {};
+  for (var i = 0; i < clustersWithIds.length; i++) {
+    var c = clustersWithIds[i];
+    var id = c.cohortId;
+    var members = c.members;
+    for (var j = 0; j < members.length; j++) {
+      out[members[j]] = id;
+    }
+  }
+  return out;
+}
+
 module.exports = {
   validateEvent: validateEvent,
   normalizeSkillsProvided: normalizeSkillsProvided,
@@ -226,5 +251,7 @@ module.exports = {
   computeConfidence: computeConfidence,
   computeEdgesFromGlobalPairs: computeEdgesFromGlobalPairs,
   processOneEvent: processOneEvent,
-  discoverCohort: discoverCohort
+  discoverCohort: discoverCohort,
+  cohortIdFromCentroid: cohortIdFromCentroid,
+  buildCohortAssignments: buildCohortAssignments
 };

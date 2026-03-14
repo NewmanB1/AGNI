@@ -20,6 +20,7 @@ const APPROVED_CATALOG     = envConfig.approvedCatalog;
 const GRAPH_WEIGHTS_LOCAL    = path.join(DATA_DIR, 'graph-weights.json');
 const GRAPH_WEIGHTS_REGIONAL = path.join(DATA_DIR, 'graph-weights-regional.json');
 const GRAPH_WEIGHTS_MESH     = path.join(DATA_DIR, 'graph-weights-mesh.json');
+const COHORT_ASSIGNMENTS     = path.join(DATA_DIR, 'cohort-assignments.json');
 const TELEMETRY_PATH       = path.join(DATA_DIR, 'telemetry-events.json');
 const SKILL_GRAPH_CYCLES   = path.join(DATA_DIR, 'skill-graph-cycles.json');
 
@@ -28,5 +29,6 @@ module.exports = {
   MASTERY_SUMMARY, BASE_COSTS, LESSON_INDEX, SCHEDULES, CURRICULUM_GRAPH,
   OVERRIDES_PATH, GROUPS_PATH, PARENT_LINKS_PATH, REVIEW_SCHEDULE_PATH,
   LEARNING_PATHS_PATH, CHECKPOINTS_DIR, APPROVED_CATALOG,
-  GRAPH_WEIGHTS_LOCAL, GRAPH_WEIGHTS_REGIONAL, GRAPH_WEIGHTS_MESH, TELEMETRY_PATH, SKILL_GRAPH_CYCLES
+  GRAPH_WEIGHTS_LOCAL, GRAPH_WEIGHTS_REGIONAL, GRAPH_WEIGHTS_MESH, COHORT_ASSIGNMENTS,
+  TELEMETRY_PATH, SKILL_GRAPH_CYCLES
 };

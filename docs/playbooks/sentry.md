@@ -39,6 +39,7 @@ This playbook describes the **Sentry → graph_weights → theta** flow: how tel
   - `GET /health` — Returns `{ ok: true }`. Use for liveness probes.
   - `GET /api/sentry/status` — Returns `{ bufferSize, lastAnalysisAt, graphWeightsUpdatedAt, edgesCount, pendingReview, pendingPath }`. `edgesCount` is the number of edges in the current graph_weights.json (null if file missing). `pendingReview` is true when a large update was written to graph-weights-pending.json; `pendingPath` is the file path when applicable.
   - `POST /api/telemetry` — Submit events (see below).
+  - `POST /api/telemetry/ingest` — **B1.1 log aggregator.** When `AGNI_AGGREGATOR_INGEST_ENABLED=1` and `AGNI_AGGREGATOR_INGEST_SECRET` is set, village hubs can POST events. Requires `X-Aggregator-Secret` header; optional `X-Source-Hub` or `sourceHubId` in body. Events are anonymized (pseudoId hashed per source hub) for cross-village aggregation.
 - **Port:** `AGNI_SENTRY_PORT` (default `8081`)
 - **Body:** JSON with `events` array (or single event). Each event:
   - `lessonId` (string), `completedAt` (string), `mastery` (number 0–1)
@@ -101,12 +102,14 @@ If a bad update was committed:
 
 ### 3.1 Which File Theta Uses
 
-- **Local:** `data/graph_weights.json`
+- **Local:** `data/graph_weights.json` (primary; largest cohort)
+- **Cohort-specific:** `data/graph_weights_{cohortId}.json` (B1.1: per-discovered cohort)
 - **Regional:** `data/graph_weights_regional.json` (e.g. from sync or manual drop-in)
 
-**Selection** (`getEffectiveGraphWeights()`):
+**Selection** (`getEffectiveGraphWeights(pseudoId)`):
 
-- If local has `sample_size >= MIN_LOCAL_SAMPLE_SIZE` (default 40) and `edges.length >= MIN_LOCAL_EDGE_COUNT` (default 5), use **local**.
+- If `pseudoId` provided and `cohort-assignments.json` maps it to a cohort, use **cohort-specific** graph if it exists and has enough edges.
+- Else if local has `sample_size >= MIN_LOCAL_SAMPLE_SIZE` (default 40) and `edges.length >= MIN_LOCAL_EDGE_COUNT` (default 5), use **local**.
 - Else if regional exists and has edges, use **regional**.
 - Else use local anyway (may be empty or default).
 
@@ -139,6 +142,9 @@ So: **Sentry produces edges (prior → target, weight, confidence); theta uses t
 | Theta reads graph_weights, getEffectiveGraphWeights, residual in computeLessonTheta | Implemented |
 | Sync of regional graph_weights (sync.js) | Implemented (write path); deployment/orchestration is environment-specific |
 | Runtime → theta; theta forwards to Sentry | Implemented (packages/agni-hub/routes/telemetry.js) |
+| **B1.1 Log aggregator:** `POST /api/telemetry/ingest`, anonymized cross-village ingestion | Implemented |
+| **B1.1 Multi-cohort:** graph_weights per discovered cluster, cohort-assignments.json | Implemented |
+| **B1.1 Theta cohort-aware:** getEffectiveGraphWeights(pseudoId) selects cohort-specific graph | Implemented |
 
 ---
 

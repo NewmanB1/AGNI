@@ -13,7 +13,7 @@ function register(router, ctx) {
     const overrides = await loadOverridesAsync();
     const overrideLessonId = overrides[qs.pseudoId]?.lessonId || null;
     const effectiveLessons = ctx.applyRecommendationOverride(lessons, overrideLessonId);
-    const graphWeights = await ctx.getEffectiveGraphWeights();
+    const graphWeights = await ctx.getEffectiveGraphWeights(qs.pseudoId);
     const precacheN = envConfig.precacheHintCount;
     const precacheSlugs = effectiveLessons
       .slice(0, precacheN)

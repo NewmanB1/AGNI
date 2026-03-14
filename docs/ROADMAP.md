@@ -55,7 +55,7 @@ This document outlines the strategic plan to launch the Open Lesson Standard (OL
     - [x] Runtime verification in player.js (verifyIntegrity: SubtleCrypto + TweetNaCl fallback).
 - [x] **Day 56-60: The Sentry Protocol (Adaptation)** *(partial)*
     - [x] Sentry logic and `graph_weights.json` output (`hub-tools/sentry.js`); schema finalized (`schemas/graph_weights.schema.json`). Flow documented in `docs/playbooks/sentry.md`.
-    - [ ] Log aggregator / anonymized telemetry ingestion (optional); full cohort-specific weight updates in production.
+    - [x] Log aggregator / anonymized telemetry ingestion (optional); full cohort-specific weight updates in production. (B1.1 Done)
 - [x] **Day 61-65: The "Signing Desk"**
     - [x] Signing in utils/crypto.js; CLI and hub-transform use it; lessonAssembly injects globals.
 - [x] **Day 66-70: Outreach & Pitch**

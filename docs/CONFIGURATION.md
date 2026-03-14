@@ -179,6 +179,8 @@ These JSON keys in `hub-config.json` map to the env vars below (via `loadHubConf
 | `AGNI_SENTRY_FORWARD` | `true` | Set `false` to disable forward |
 | `AGNI_SENTRY_WEIGHT_MAX_DELTA` | `0.2` | Max weight delta (0.01–1) |
 | `AGNI_SENTRY_WEIGHT_REVIEW_THRESHOLD` | `0.3` | Review threshold (0.1–1) |
+| `AGNI_AGGREGATOR_INGEST_ENABLED` | `0` | Set `1` to enable `POST /api/telemetry/ingest` (B1.1 log aggregator) |
+| `AGNI_AGGREGATOR_INGEST_SECRET` | *(empty)* | Shared secret for ingest; required when enabled |
 
 ### Security & Misc
 

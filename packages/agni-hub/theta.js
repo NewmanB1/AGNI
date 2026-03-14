@@ -23,9 +23,9 @@ const {
   loadMasterySummaryAsync, loadBaseCostsAsync, loadLessonIndexAsync, loadSchedulesAsync,
   loadCurriculumAsync, loadApprovedCatalogAsync,
   lmsService: lmsEngine, governanceService, log,
-  GRAPH_WEIGHTS_LOCAL, GRAPH_WEIGHTS_REGIONAL, GRAPH_WEIGHTS_MESH, SKILL_GRAPH_CYCLES,
-  MASTERY_SUMMARY, SCHEDULES, CURRICULUM_GRAPH, APPROVED_CATALOG,
-  SERVE_DIR, LESSON_INDEX, PORT,
+  GRAPH_WEIGHTS_LOCAL, GRAPH_WEIGHTS_REGIONAL, GRAPH_WEIGHTS_MESH, COHORT_ASSIGNMENTS,
+  SKILL_GRAPH_CYCLES, MASTERY_SUMMARY, SCHEDULES, CURRICULUM_GRAPH, APPROVED_CATALOG,
+  SERVE_DIR, LESSON_INDEX, PORT, DATA_DIR,
   MIN_RESIDUAL, MIN_MLC, MASTERY_THRESHOLD, MIN_CONFIDENCE,
   MIN_LOCAL_SAMPLE_SIZE, MIN_LOCAL_EDGE_COUNT,
   thetaCache, accountsService, authorService
@@ -52,13 +52,24 @@ const sharedCache = {
 // Theta business logic (pure computation + caching)
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-async function getEffectiveGraphWeights() {
-  const local = await loadJSONAsync(GRAPH_WEIGHTS_LOCAL, { edges: [], sample_size: 0, default_weight: 1.0 });
-  const useLocal = local.sample_size >= MIN_LOCAL_SAMPLE_SIZE && local.edges.length >= MIN_LOCAL_EDGE_COUNT;
+async function getEffectiveGraphWeights(pseudoId) {
+  if (pseudoId) {
+    var assignments = await loadJSONAsync(COHORT_ASSIGNMENTS, { assignments: {} });
+    var cohortId = assignments.assignments && assignments.assignments[pseudoId];
+    if (cohortId) {
+      var cohortPath = path.join(DATA_DIR, 'graph-weights-' + cohortId + '.json');
+      var cohortGw = await loadJSONAsync(cohortPath, null);
+      if (cohortGw && Array.isArray(cohortGw.edges) && cohortGw.edges.length >= MIN_LOCAL_EDGE_COUNT) {
+        return cohortGw;
+      }
+    }
+  }
+  var local = await loadJSONAsync(GRAPH_WEIGHTS_LOCAL, { edges: [], sample_size: 0, default_weight: 1.0 });
+  var useLocal = local.sample_size >= MIN_LOCAL_SAMPLE_SIZE && local.edges.length >= MIN_LOCAL_EDGE_COUNT;
   if (useLocal) return local;
-  const regional = await loadJSONAsync(GRAPH_WEIGHTS_REGIONAL, null);
+  var regional = await loadJSONAsync(GRAPH_WEIGHTS_REGIONAL, null);
   if (regional && regional.edges && regional.edges.length > 0) return regional;
-  const mesh = await loadJSONAsync(GRAPH_WEIGHTS_MESH, null);
+  var mesh = await loadJSONAsync(GRAPH_WEIGHTS_MESH, null);
   if (mesh && mesh.edges && mesh.edges.length > 0) return mesh;
   return local;
 }
@@ -328,7 +339,7 @@ async function getLessonsSortedByTheta(pseudoId) {
   const [baseCosts, masterySummary, graphWeights, schedules, catalog] = await Promise.all([
     loadBaseCostsAsync(),
     loadMasterySummaryAsync(),
-    getEffectiveGraphWeights(),
+    getEffectiveGraphWeights(pseudoId),
     loadSchedulesAsync(),
     loadApprovedCatalogAsync()
   ]);
