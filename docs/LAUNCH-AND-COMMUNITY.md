@@ -9,7 +9,7 @@ This document supports **ROADMAP Phase 4: Launch & Ecosystem (Days 76–100)**. 
 - [x] **Manifesto written** — see `MANIFESTO.md` in repo root.
   - **One-line pitch:** AGNI compiles YAML lessons into tiny, offline-first HTML bundles that run on 10-year-old phones and use sensors (accelerometer, etc.) for interactive learning.
   - **Links:** Repo, README, CONTRIBUTING.md, MANIFESTO.md.
-- [ ] **Publish manifesto / intro** to HN, Reddit, Dev.to (or equivalent).
+- [ ] **Publish manifesto / intro** to HN, Reddit, Dev.to (or equivalent). See **`docs/LAUNCH-CHECKLIST.md`** for actionable steps.
 - [x] **Pin README and CONTRIBUTING** — Quick links at top of README; CONTRIBUTING linked in Contributing section.
 - [ ] **Tag a release** (e.g. `v0.1.0` or `v0.2.0`) so the launch points at a stable artifact.
 
@@ -19,7 +19,7 @@ This document supports **ROADMAP Phase 4: Launch & Ecosystem (Days 76–100)**. 
 
 ### Triage and labels
 
-- **Triage issues** regularly so contributors know what's in scope and what's already covered.
+- **Triage issues** regularly so contributors know what's in scope and what's already covered. See **`docs/LAUNCH-CHECKLIST.md`** for steps.
 - **GitHub labels** configured in `.github/labels.yml`. Includes:
   - `good first issue` — small, well-scoped tasks (e.g. translate one lesson, fix a doc typo).
   - `lesson` — new lesson or lesson improvement.
@@ -47,7 +47,7 @@ This document supports **ROADMAP Phase 4: Launch & Ecosystem (Days 76–100)**. 
 
 - **Tutorial doc:** **`docs/tutorials/fork-and-translate-lesson.md`**  
   Step-by-step "How to fork and translate a lesson" using the Golden Master (`gravity.yaml`) and the Spanish example (`gravity-es.yaml`). Use this as the **script or source for a short video** ("How to fork and translate a lesson").
-- **Optional:** Record a 5–10 minute video walking through the tutorial and link it from the README or CONTRIBUTING.
+- **Optional:** Record a 5–10 minute video walking through the tutorial and link it from the README or CONTRIBUTING. See **`docs/LAUNCH-CHECKLIST.md`** for steps.
 
 ---
 

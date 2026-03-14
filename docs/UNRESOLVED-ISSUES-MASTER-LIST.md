@@ -242,12 +242,12 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 
 | ID | Task | Status |
 |----|------|--------|
-| R1 | Day 76-80: Publish Manifesto to HN, Reddit, Dev.to | **Open** |
-| R2 | Day 81-85: Triage Issues | **Open** |
-| R3 | Day 81-85: Label "Good First Issues" | **Open** |
-| R4 | Day 86-90: Record video "How to Fork and Translate" | **Open** (optional) |
+| R1 | Day 76-80: Publish Manifesto to HN, Reddit, Dev.to | **Ready** — see docs/LAUNCH-CHECKLIST.md |
+| R2 | Day 81-85: Triage Issues | **Ready** — see docs/LAUNCH-CHECKLIST.md |
+| R3 | Day 81-85: Label "Good First Issues" | **Ready** — see docs/LAUNCH-CHECKLIST.md |
+| R4 | Day 86-90: Record video "How to Fork and Translate" | **Ready** — see docs/LAUNCH-CHECKLIST.md (optional) |
 | R5 | Day 96-100: Research TipTap for WYSIWYG | **Open** |
-| R6 | Day 96-100: Finalize v1.0 Spec | **Open** |
+| R6 | Day 96-100: Finalize v1.0 Spec | **Done** — docs/specs/ols-v1.0-spec.md |
 | R7 | Future: The Editor (drag-and-drop GUI) | **Done** — form-based editor in vanilla portal (meta, steps, ontology; Validate/Preview/Save; step reorder) |
 | R8 | Future: Plugins for Moodle, Kolibri, Canvas | **Phase 1–2** — [playbooks/lms-plugins.md](playbooks/lms-plugins.md); LTI server, postMessage, Moodle/Canvas docs |
 | R9 | Future: The Mesh (graph_weights sync via LoRa) | **Done** — design + impl ([playbooks/mesh-lora.md](playbooks/mesh-lora.md)); UDP sim; run `node hub-tools/mesh.js` or `sync.js --transport=lora` |
@@ -273,9 +273,9 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | Y5 | E6–E8: Gate, ontology, all step types | **Open** |
 | Y6 | E9: YAML round-trip | **Open** |
 | Y7 | Freeze OLS schema | **Open** |
-| Y8 | Document breaking vs additive | **Open** |
+| Y8 | Document breaking vs additive | **Done** — docs/BREAKING-VS-ADDITIVE.md |
 | Y9 | Reference implementation compliance | **Done** — CI enforces validate, test, test:graph, verify:all; see REFERENCE-IMPLEMENTATION-VISION.md §4.3 |
-| Y10 | Changelog | Deferred |
+| Y10 | Changelog | **Done** — CHANGELOG.md maintained |
 
 ---
 
@@ -283,11 +283,11 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 
 | ID | Task | Status |
 |----|------|--------|
-| L1 | Publish manifesto / intro to HN, Reddit, Dev.to | **Open** |
+| L1 | Publish manifesto / intro to HN, Reddit, Dev.to | **Ready** — see docs/LAUNCH-CHECKLIST.md |
 | L2 | Pin README and CONTRIBUTING | Done |
 | L3 | Tag a release (v0.1.0 or v0.2.0) | Done — v0.2.1 |
-| L4 | Triage issues regularly | **Open** |
-| L5 | Record 5–10 min tutorial video | **Open** (optional) |
+| L4 | Triage issues regularly | **Ready** — see docs/LAUNCH-CHECKLIST.md |
+| L5 | Record 5–10 min tutorial video | **Ready** — see docs/LAUNCH-CHECKLIST.md (optional) |
 
 ---
 
@@ -329,7 +329,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | **P1 (High — fix first)** | 2 | P2-20 (disk GC); P2-24 (SW eviction) |
 | **P2 (Medium)** | 2 | P2-17; svg-stage 3-10, 3-11 |
 | **P3 (Low)** | 12+ | LEN-001 #5, #8; svg-stage 3-1; E2.1–E2.3; audit items |
-| **Roadmap / Launch** | 12+ | ROADMAP (R7, R9, R10 Done; R8 Design), YEAR2-PREP (Y9 Done), LAUNCH-AND-COMMUNITY unchecked |
+| **Roadmap / Launch** | 8+ | R6, Y8, Y10 Done; R1–R4, L1, L4, L5 Ready (see LAUNCH-CHECKLIST); R5, R8, Y1–Y7 Open |
 | **TypeScript** | ~30 | CHECK-JS-FINISH-PLAN per-file fixes |
 
 ---

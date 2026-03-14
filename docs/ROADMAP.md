@@ -83,7 +83,7 @@ This document outlines the strategic plan to launch the Open Lesson Standard (OL
     - [x] Prove that the Lesson Menu reorders itself differently for each group using the same content (`npm run test:graph`).
 - [ ] **Day 96-100: Year 2 Prep**
     - [ ] Research TipTap for WYSIWYG editor. See **`docs/YEAR2-PREP.md`** for options and requirements.
-    - [ ] Finalize v1.0 Spec. See **`docs/YEAR2-PREP.md`** for checklist.
+    - [x] Finalize v1.0 Spec. See **`docs/specs/ols-v1.0-spec.md`** and **`docs/BREAKING-VS-ADDITIVE.md`**.
 
 ## 🔭 Future Horizons (Year 2)
 *   **The Editor (R7 — Done):** Form-based lesson editor in vanilla portal. Meta form, steps (instruction, quiz, hardware_trigger, completion) with add/remove/reorder, ontology, Validate/Preview/Save via author API. Navigate to `#/author/new` or `#/author/:slug/edit`.

@@ -1,100 +1,79 @@
-# Breaking vs Additive Changes (Y8)
+# Breaking vs Additive Changes
 
-Guidelines for categorizing schema, API, and behavioral changes in AGNI. Use when releasing versions, updating docs, or proposing changes.
+This document defines how OLS and AGNI distinguish **breaking** from **additive** changes. Use it when modifying schemas, APIs, or contracts.
 
 ---
 
 ## Definitions
 
-| Type | Meaning | Examples |
-|------|---------|----------|
-| **Breaking** | Existing clients, lessons, or configs may fail or behave incorrectly after the change | Remove required field, change field type, rename key |
-| **Additive** | New behavior or data; existing usage continues to work | New optional field, new endpoint, new step type |
-| **Deprecation** | Mark for future removal; still supported for N releases | Deprecated field with replacement, deprecated flag |
+| Type | Description | Example |
+|------|-------------|---------|
+| **Breaking** | Change that invalidates existing content, code, or config. Downstream must migrate. | Remove a required field; rename an endpoint |
+| **Additive** | Change that extends behavior without invalidating existing usage. Optional opt-in. | Add optional meta field; new step type |
 
 ---
 
-## OLS / Lesson Schema
+## Schema Changes
 
-| Change | Category | Notes |
-|--------|----------|-------|
-| New optional `meta` field | Additive | Clients ignore unknown fields |
-| New step type (e.g. `fill_blank`) | Additive | Old runtimes skip unknown types or show fallback |
-| Remove optional field | Additive (low risk) | Clients should not rely on optional |
-| Remove required field | **Breaking** | Compile/runtime may fail |
-| Change `meta.creator_id` from string to object | **Breaking** | Type change |
-| Rename `difficulty` → `estimated_difficulty` | **Breaking** | Rename |
-| Add `yamlSchemaVersion` | Additive | Enables version checks |
-| Relax validation (allow more) | Additive | |
-| Stricter validation (reject previously accepted) | **Breaking** | |
+### Breaking (require major version bump)
 
----
+- **Remove** a required field from any schema
+- **Rename** a field (existing parsers won't find it)
+- **Change** type of an existing field (string → number, etc.)
+- **Narrow** an enum (remove a previously allowed value)
+- **Add** a new required field (existing documents fail validation)
 
-## Hub API
+### Additive (minor/patch)
 
-| Change | Category | Notes |
-|--------|----------|-------|
-| New endpoint | Additive | |
-| New optional query/body param | Additive | |
-| Remove endpoint | **Breaking** | |
-| Change response shape (remove field) | **Breaking** | |
-| Add field to response | Additive | Clients ignore unknown |
-| Change HTTP status for existing case | **Breaking** | |
+- **Add** an optional field to `meta`, steps, ontology, gate
+- **Add** a new step type (`fill_blank`, `matching`, etc.) — runtime must handle unknown types gracefully
+- **Add** optional schema properties with `default` or allow undefined
+- **Extend** an enum with new values (old parsers ignore them)
+
+### Migration path for breaking changes
+
+1. Announce in CHANGELOG and release notes
+2. Provide migration script or documented manual steps
+3. Bump major version (e.g. 1.x → 2.0)
 
 ---
 
-## Engine / LMS
-
-| Change | Category | Notes |
-|--------|----------|-------|
-| New optional state field | Additive | Migrations add defaults |
-| Change merge semantics | **Breaking** | Sneakernet/federation |
-| New bandit/embedding param | Additive (if optional) | |
-
----
-
-## Runtime (Player, Sensors)
-
-| Change | Category | Notes |
-|--------|----------|-------|
-| New sensor type | Additive | Unknown sensors ignored |
-| Change `AGNI_SHARED` contract | **Breaking** | Factories depend on it |
-| New optional step renderer | Additive | |
-
----
-
-## Versioning Convention
-
-- **Major (x.0.0):** Breaking changes
-- **Minor (0.x.0):** Additive features, deprecations
-- **Patch (0.0.x):** Bug fixes, docs, additive only
-
----
-
-## Changelog Format
-
-For each release, group entries:
-
-```markdown
-## [1.2.0] - YYYY-MM-DD
-
-### Added
-- New optional field X (additive)
-
-### Deprecated
-- Field Y; use Z instead (removal in 2.0)
-
-### Fixed
-- Bug in ...
+## API Contract Changes
 
 ### Breaking
-- Removed support for ... (migration: ...)
-```
+
+- Remove an endpoint
+- Change request/response shape (remove field, change type)
+- Change authentication requirements (e.g. add required header)
+- Change status code semantics
+
+### Additive
+
+- Add new endpoint
+- Add optional query parameter or header
+- Add optional response field
+- Add new error code with distinct semantics
 
 ---
 
-## References
+## Runtime / Compiler Changes
 
-- [CONVENTIONS.md](CONVENTIONS.md)
-- [REFERENCE-IMPLEMENTATION-VISION.md](REFERENCE-IMPLEMENTATION-VISION.md)
-- [YEAR2-PREP.md](YEAR2-PREP.md)
+### Breaking
+
+- Change IR format so old sidecars are unreadable
+- Change `AGNI_SHARED` or `LESSON_DATA` global shape in incompatible way
+- Remove support for a schema version (e.g. drop 1.6.0)
+
+### Additive
+
+- New optional IR field (consumers ignore if absent)
+- New optional `LESSON_DATA` property
+- Support new schema version while keeping old ones
+
+---
+
+## Versioning Policy
+
+- **OLS schema:** `version` in lesson YAML (e.g. `1.8.0`). Breaking → bump major.
+- **AGNI package:** Semantic versioning. Breaking → bump major (e.g. 0.x → 1.0).
+- **API contract:** Document in `api-contract.md`; breaking changes require announcement and migration window.
