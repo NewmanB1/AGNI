@@ -267,7 +267,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 |----|------|--------|
 | Y1 | E2: Meta form (/author/new) | **Done** — identifier, title, language, UTU (Spine picker, Band, Protocol), difficulty, description, tags, license, time |
 | Y2 | E3: Step editor | **Done** — sensor dropdown from @agni/plugins (GET /api/author/sensors), threshold validation on blur |
-| Y3 | E4: Preview button | **Open** |
+| Y3 | E4: Preview button | **Done** — Preview button calls POST /api/author/preview; Live HTML in iframe (R7) |
 | Y4 | E5: Save | **Done** — preflight validation, Ctrl+S shortcut, compile-on-save, success toast |
 | Y5 | E6–E8: Gate, ontology, all step types | **Done** |
 | Y6 | E9: YAML round-trip | **Done** |
@@ -309,11 +309,11 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 
 | ID | Task | Package | Status |
 |----|------|---------|--------|
-| F1.1 | migrations.js type fixes | agni-engine | **Open** |
+| F1.1 | migrations.js type fixes | agni-engine | **Done** — JSDoc casts for ensureObject, markovHistory, markovTransitions, markovBigrams, LMSState |
 | F1.2 | pagerank.js type fixes | agni-engine | **Done** — JSDoc Record types for providersBySkill, requirersBySkill, lessonsBySkill, nodeIndex, result, scores, transRanks, persRanks, results |
-| F1.3 | index.js type fixes | agni-engine | **Open** |
+| F1.3 | index.js type fixes | agni-engine | **Done** — breakdown Record cast in explain path |
 | F2.1–F2.3 | hub type fixes | agni-hub | **Done** — theta.js no @ts-nocheck; sentry.js Ajv/addFormats @ts-expect-error (CJS interop); student.js Date coercion uses +new Date() |
-| F3.1–F3.3 | utils type fixes | agni-utils | **Open** |
+| F3.1–F3.3 | utils type fixes | agni-utils | **Done** — binary.js Buffer.from cast; router.js params Record; http-helpers JSDoc |
 | F4.1 | ols-schema fix | ols-schema | **Done** — Ajv/ajv-formats @ts-expect-error (CJS interop); same pattern as sentry |
 | F5.1 | ols-compiler fix | ols-compiler | **Done** — rehype-katex options aligned with Options type; @ts-expect-error removed; processMarkdown JSDoc |
 | F6.1–F6.20 | runtime type fixes | agni-runtime | **Done** — polyfills, factory-loader, player now type-checked; @ts-nocheck removed; index.d.ts expanded (AgniLoader, AgniFrustration, AgniCheckpoint, AgniNarration, LessonDataGlobal) |
@@ -329,7 +329,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | **P2 (Medium)** | 2 | P2-17; svg-stage 3-10, 3-11 |
 | **P3 (Low)** | 12+ | LEN-001 #5, #8; svg-stage 3-1; E2.1–E2.3; audit items |
 | **Roadmap / Launch** | 8+ | R6, Y8, Y10 Done; R1–R4, L1, L4, L5 Ready (see LAUNCH-CHECKLIST); R5, R8, Y1–Y7 Open |
-| **TypeScript** | ~30 | CHECK-JS-FINISH-PLAN per-file fixes |
+| **TypeScript** | 0 | CHECK-JS-FINISH-PLAN — all Done (F1.1, F1.3, F3.1–F3.3, F4.1, F5.1, F6.x) |
 
 ---
 
