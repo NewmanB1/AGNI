@@ -2,6 +2,8 @@
 
 Every individual issue, task, bug, and checklist item extracted from planning and remediation documents. Status: Open | Done | Deferred.
 
+**Policy:** Items are fixed, not "documented." Formerly "Documented" limitations (P2-12, P2-13, P2-20, P2-24, Gap 4) are now **Open** and must be fixed. See [DOCUMENTED-TO-FIX-REMEDIATION-PLAN.md](DOCUMENTED-TO-FIX-REMEDIATION-PLAN.md) for fix tasks in architectural priority order.
+
 ---
 
 ## ARCHITECTURAL-VULNERABILITIES-REMEDIATION (Phase 1 + Hardening)
@@ -38,19 +40,19 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | P2-9 | Service Worker update / version mismatch trap | factory-loader, runtimeManifest, SW | Done |
 | P2-10 | PWA race — factories vs. lesson execution | shell-boot, factory-loader | Done |
 | P2-11 | Signature placeholder fragility | crypto.js, integrity.js | Done |
-| P2-12 | Device ID trust boundary | Document limitation | Documented |
-| P2-13 | Session token replay risk | Document | Documented |
+| P2-12 | Device ID trust boundary | Session API + integrity watermark | **Done** |
+| P2-13 | Session token replay risk | Bind to device fingerprint; shorter TTL; single-session | **Open** |
 | P2-14 | Theta rebuild hazard (partial file) | rebuildLessonIndex | Done |
 | P2-15 | Graph weight runaway | Sentry, theta merge | Done |
 | P2-16 | Skill cycle handling silently hides curriculum | Add governance event | Done |
 | P2-17 | UTU band validation advisory only | Enforce or record override | Done |
 | P2-18 | Step spec schema validation | JSON Schema per step type | Done |
 | P2-19 | Sensor dependency mismatch | Check availability before execution | Done |
-| P2-20 | Pi serveDir/lessons disk exhaustion | GC policy | Documented |
+| P2-20 | Pi serveDir/lessons disk exhaustion | Implement GC: prune orphans, version retention | **Open** |
 | P2-21 | Sneakernet import integrity | Sign packets, verify on import | Done |
 | P2-22 | Catalog / IR drift | Validation step | Done |
 | P2-23 | SVG stage memory leak | destroyStepVisual listeners | Done |
-| P2-24 | Edge device SW cache eviction | Document eviction strategy | Documented |
+| P2-24 | Edge device SW cache eviction | persist(); quota; explicit eviction | **Open** |
 | P2-25 | Spec.type whitelist (prototype pollution) | SVG registry | Done (audit) |
 | P2-26 | LMS federation merge correctness | posteriorVersion, trainingWindow | Done |
 | P2-27 | Memory budget (LRU by bytes) | Cache by bytes, not count | Done |
@@ -140,7 +142,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | 1 | YAML schema versioning | Resolved |
 | 2 | DAG validation | Resolved |
 | 3 | HTML scrape fallback | Resolved |
-| 4 | Device UUID trust | Document only; optional attestation |
+| 4 | Device UUID trust | **Done** — session API + integrity (P2-12) |
 | 5 | Federation merge version/timestamp | Resolved |
 | 6 | Service Worker on Android | Resolved (Android 7 baseline) |
 | 7 | Root player.js stub | Resolved |
@@ -324,7 +326,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | Priority | Count | Examples |
 |----------|-------|----------|
 | **P0 (Critical)** | 0 | All Done (randn, cholesky NaN, federation symmetry) |
-| **P1 (High)** | 0 | All Done (forwardSub, addVec, sparse, yaml-safe 2-5) |
+| **P1 (High — fix first)** | 3 | P2-13 (session replay); P2-20 (disk GC); P2-24 (SW eviction) |
 | **P2 (Medium)** | 2 | P2-17; svg-stage 3-10, 3-11 |
 | **P3 (Low)** | 12+ | LEN-001 #5, #8; svg-stage 3-1; E2.1–E2.3; audit items |
 | **Roadmap / Launch** | 12+ | ROADMAP (R7, R9, R10 Done; R8 Design), YEAR2-PREP (Y9 Done), LAUNCH-AND-COMMUNITY unchecked |
@@ -334,7 +336,8 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 
 ## References
 
+- **Documented-to-fix policy:** [DOCUMENTED-TO-FIX-REMEDIATION-PLAN.md](DOCUMENTED-TO-FIX-REMEDIATION-PLAN.md)
 - Mesh design (R9): `playbooks/mesh-lora.md`
 - LMS plugins (R8): `playbooks/lms-plugins.md`
 - Env validation: `ENV-VALIDATION-SPLIT.md`
-- Source documents: `archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`, `archive/ARCHITECTURAL-AUDIT-FINDINGS.md`, `archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md`, `archive/ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN.md`, `AUDIT-HARDENING-PLAN.md`, `LEN-001-MATH-ENGINE-BUGS.md`, `SHIM-AND-CODE-AUDIT-FINDINGS.md`, `archive/GAP-ANALYSIS-AND-MITIGATIONS.md`, `archive/RUNTIME-MANIFEST-IMPROVEMENT-PLAN.md`, `archive/sensor-toolkit-improvement-plan.md`, `archive/OPPORTUNISTIC-PRECACHE-PLAN.md`, `archive/PHASE-3-REMEDIATION-PLAN.md`, `archive/SPRINT-R16-OPEN-BUGS.md`, `ROADMAP.md`, `YEAR2-PREP.md`, `LAUNCH-AND-COMMUNITY.md`, `CHECK-JS-ENABLEMENT-PLAN.md`, `CHECK-JS-FINISH-PLAN.md`
+- Source documents (includes DOCUMENTED-TO-FIX-REMEDIATION-PLAN): `archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`, `archive/ARCHITECTURAL-AUDIT-FINDINGS.md`, `archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md`, `archive/ARCHITECTURAL-VULNERABILITIES-PHASE2-PLAN.md`, `AUDIT-HARDENING-PLAN.md`, `LEN-001-MATH-ENGINE-BUGS.md`, `SHIM-AND-CODE-AUDIT-FINDINGS.md`, `archive/GAP-ANALYSIS-AND-MITIGATIONS.md`, `archive/RUNTIME-MANIFEST-IMPROVEMENT-PLAN.md`, `archive/sensor-toolkit-improvement-plan.md`, `archive/OPPORTUNISTIC-PRECACHE-PLAN.md`, `archive/PHASE-3-REMEDIATION-PLAN.md`, `archive/SPRINT-R16-OPEN-BUGS.md`, `ROADMAP.md`, `YEAR2-PREP.md`, `LAUNCH-AND-COMMUNITY.md`, `CHECK-JS-ENABLEMENT-PLAN.md`, `CHECK-JS-FINISH-PLAN.md`

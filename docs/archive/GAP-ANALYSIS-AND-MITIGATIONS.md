@@ -34,13 +34,7 @@ Expands on `../ARCHITECTURE.md` Appendix: Known Gaps with actionable proposals. 
 
 ## 4. Device UUID Trust
 
-**Gap (resolved):** The Hub signs only for *authenticated* pseudoId from session (PIN or transfer token). No client-supplied UUID path. When auth is disabled, unsigned lessons are served. See `../ARCHITECTURE.md` §5.
-
-**Proposed mitigation:**
-- Document clearly: trust boundary is hub–device. P2P cloning is prevented by signature.
-- Optional: add a lightweight device attestation flow (e.g. TPM-backed or app-signed token) in future phases. Not required for MVP.
-
-**Effort:** None for current design; attestation is a larger project.
+**Gap (resolved):** Runtime identity now comes from session API (`GET /api/session/identity`), not URL. integrity.js fetches hub-validated pseudoId; URL used only as offline fallback. See `../ARCHITECTURE.md` §5.
 
 ---
 
@@ -75,7 +69,7 @@ Expands on `../ARCHITECTURE.md` Appendix: Known Gaps with actionable proposals. 
 | YAML versioning | Medium | Add `yamlSchemaVersion` to meta |
 | DAG validation | Done | Graceful degradation; AGNI_STRICT_SKILL_GRAPH for strict |
 | HTML scrape | Done | Removed; Theta refuses to index without IR |
-| Device UUID | Low | Documentation only |
+| Device UUID | Done | Session API + integrity watermark (P2-12) |
 | Federation | Low | Document contentHash behaviour |
 | Service Worker | Resolved | Edge baseline now Android 7.0 (reliable SW) |
 | Root player.js | Low | Clarify or remove |

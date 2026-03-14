@@ -64,8 +64,7 @@
     return null;
   }
 
-  // Device pseudoId from URL (?pseudoId=...) — same source as portal/player.
-  // Used for watermark check: signed lessons must match intended owner.
+  // Device pseudoId from URL (?pseudoId=...) — fallback when session API unavailable.
   function getDevicePseudoIdFromUrl() {
     try {
       var loc = (typeof window !== 'undefined' && window.location) || (global && global.location);
@@ -73,6 +72,37 @@
       var p = new URLSearchParams(loc.search);
       return p.get('pseudoId') || '';
     } catch (e) { return ''; }
+  }
+
+  // P2-12: Device ID trust — use session identity when available.
+  // Session API returns hub-validated pseudoId; URL can be forged by student.
+  // When online with valid session, we require OLS_INTENDED_OWNER === session.pseudoId.
+  // When offline or no session (sneakernet, file://), fall back to URL or pass.
+  function getDeviceIdentity(cb) {
+    if (typeof fetch !== 'function') {
+      cb(getDevicePseudoIdFromUrl());
+      return;
+    }
+    var base = '';
+    try {
+      var loc = (typeof window !== 'undefined' && window.location) || (global && global.location);
+      if (loc && loc.origin) base = loc.origin;
+    } catch (e) { /* ignore */ }
+    fetch(base + '/api/session/identity', { credentials: 'same-origin' })
+      .then(function (r) {
+        if (r.ok) return r.json();
+        return null;
+      })
+      .then(function (data) {
+        if (data && typeof data.pseudoId === 'string' && data.pseudoId) {
+          cb(data.pseudoId);
+        } else {
+          cb(getDevicePseudoIdFromUrl());
+        }
+      })
+      .catch(function () {
+        cb(getDevicePseudoIdFromUrl());
+      });
   }
 
   // Dev mode from URL parameter (?dev=1) or localhost, NOT from lesson data [P1.1]
@@ -251,18 +281,24 @@
       });
     }).then(function (signatureValid) {
       if (!signatureValid) return false;
-      // Watermark check: OLS_INTENDED_OWNER must match device identity.
-      // Device identity from URL (portal launcher sets ?pseudoId=...).
-      // If no pseudoId in URL (e.g. local file, sneakernet), we cannot verify — pass.
+      // P2-12: Watermark check — OLS_INTENDED_OWNER must match device identity.
+      // Identity from session API when online (hub-validated); else URL or pass (offline).
       var intendedOwner = global.OLS_INTENDED_OWNER;
       if (!intendedOwner) return true;
-      var devicePseudoId = getDevicePseudoIdFromUrl();
-      if (!devicePseudoId) return true;
-      if (devicePseudoId !== intendedOwner) {
-        console.error('[VERIFY] Unauthorized Copy — OLS_INTENDED_OWNER does not match device pseudoId');
-        return false;
-      }
-      return true;
+      return new Promise(function (resolve) {
+        getDeviceIdentity(function (devicePseudoId) {
+          if (!devicePseudoId) {
+            resolve(true);
+            return;
+          }
+          if (devicePseudoId !== intendedOwner) {
+            console.error('[VERIFY] Unauthorized Copy — OLS_INTENDED_OWNER does not match device identity');
+            resolve(false);
+            return;
+          }
+          resolve(true);
+        });
+      });
     });
   }
 

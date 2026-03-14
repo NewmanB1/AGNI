@@ -15,18 +15,19 @@ function tempDir() {
 
 const TEST_HUB_KEY = 'test-hub-key-for-unit-tests';
 
-function request(port, method, urlPath, body, token) {
+function request(port, method, urlPath, body, token, opts) {
   return new Promise((resolve, reject) => {
     const headers = { 'Content-Type': 'application/json', Accept: 'application/json', 'x-hub-key': TEST_HUB_KEY };
-    if (token) headers['Authorization'] = 'Bearer ' + token;
-    const opts = {
+    if (token && typeof token === 'string') headers['Authorization'] = 'Bearer ' + token;
+    if (opts && opts.cookie) headers['Cookie'] = opts.cookie;
+    const reqOpts = {
       hostname: '127.0.0.1',
       port,
       path: urlPath,
       method,
       headers
     };
-    const req = http.request(opts, (res) => {
+    const req = http.request(reqOpts, (res) => {
       let data = '';
       res.on('data', chunk => { data += chunk; });
       res.on('end', () => {
@@ -204,6 +205,44 @@ describe('Theta API integration tests', () => {
     });
     assert.equal(res.status, 201, 'Expected 201 but got ' + res.status + ': ' + JSON.stringify(res.body));
     assert.ok(res.body.ok);
+  });
+
+  it('GET /api/session/identity returns 401 without session (P2-12)', async () => {
+    const res = await request(port, 'GET', '/api/session/identity', null, null);
+    assert.equal(res.status, 401);
+    assert.ok(res.body.error);
+  });
+
+  it('GET /api/session/identity returns pseudoId with valid student session (P2-12)', async () => {
+    const createRes = await request(port, 'POST', '/api/accounts/student', { displayName: 'Session Test', pin: '1234' }, adminToken);
+    assert.equal(createRes.status, 201);
+    const pseudoId = createRes.body.student && createRes.body.student.pseudoId;
+    assert.ok(pseudoId);
+
+    const pinRes = await new Promise((resolve, reject) => {
+      const body = JSON.stringify({ pseudoId, pin: '1234' });
+      const req = http.request({
+        hostname: '127.0.0.1', port, path: '/api/accounts/student/verify-pin', method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-hub-key': TEST_HUB_KEY, 'Content-Length': Buffer.byteLength(body) }
+      }, (res) => {
+        let data = '';
+        res.on('data', c => { data += c; });
+        res.on('end', () => {
+          const cookie = res.headers['set-cookie'];
+          const match = cookie && cookie[0] && cookie[0].match(/agni_student_session=([^;]+)/);
+          resolve({ status: res.statusCode, sessionCookie: match ? 'agni_student_session=' + match[1] : null });
+        });
+      });
+      req.on('error', reject);
+      req.write(body);
+      req.end();
+    });
+    assert.equal(pinRes.status, 200);
+    assert.ok(pinRes.sessionCookie);
+
+    const idRes = await request(port, 'GET', '/api/session/identity', null, null, { cookie: pinRes.sessionCookie });
+    assert.equal(idRes.status, 200);
+    assert.equal(idRes.body.pseudoId, pseudoId);
   });
 
   it('POST /api/telemetry accepts events', async () => {

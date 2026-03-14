@@ -1,8 +1,22 @@
 'use strict';
 
 function register(router, ctx) {
-  const { accountsService, handleJsonBody, extractBearerToken, getClientIp,
+  const { accountsService, handleJsonBody, extractBearerToken, extractStudentSessionToken, getClientIp,
           adminOnly, withRateLimit } = ctx;
+
+  // P2-12: Device ID trust — session identity for integrity watermark check.
+  // Returns pseudoId when student session is valid. Used by integrity.js to verify
+  // OLS_INTENDED_OWNER matches authenticated identity (not URL-controlled).
+  router.get('/api/session/identity', (req, res, { sendResponse }) => {
+    const token = extractStudentSessionToken(req);
+    if (!token) return sendResponse(401, { error: 'No session' });
+    return accountsService.validateStudentSession(token, { clientIp: getClientIp(req) })
+      .then(function (session) {
+        if (!session || !session.pseudoId) return sendResponse(401, { error: 'Invalid session' });
+        return sendResponse(200, { pseudoId: session.pseudoId });
+      })
+      .catch(function () { return sendResponse(401, { error: 'Invalid session' }); });
+  });
 
   router.post('/api/auth/register', withRateLimit('register', (req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {

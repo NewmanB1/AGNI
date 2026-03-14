@@ -133,7 +133,7 @@ This document extends the Phase 1 remediation (`ARCHITECTURAL-VULNERABILITIES-RE
 
 **Problem:** `OLS_INTENDED_OWNER` compared to device UUID. If UUID in localStorage, student can change it → anti-copy bypassed.
 
-**Fix:** Hub-issued device secret or hardware-backed identifier. Document limitation.
+**Fix:** Session API (`GET /api/session/identity`) returns hub-validated pseudoId; integrity.js uses it for watermark check. **Done**.
 
 ---
 
@@ -141,7 +141,7 @@ This document extends the Phase 1 remediation (`ARCHITECTURAL-VULNERABILITIES-RE
 
 **Problem:** 24h session; token can be copied between devices.
 
-**Fix:** Bind session to deviceId; or shorter TTL. Document.
+**Fix:** Bind session to device fingerprint; shorter TTL; single-session-per-student. **Open** — fix required. See `docs/DOCUMENTED-TO-FIX-REMEDIATION-PLAN.md`.
 
 ---
 
@@ -199,7 +199,7 @@ This document extends the Phase 1 remediation (`ARCHITECTURAL-VULNERABILITIES-RE
 
 **Problem:** Many YAML versions → disk fills. No GC policy.
 
-**Fix:** Garbage collection or version retention. Document policy.
+**Fix:** Implement GC: prune orphan compiled lessons; version retention. **Open** — fix required. See `docs/DOCUMENTED-TO-FIX-REMEDIATION-PLAN.md`.
 
 ---
 
@@ -233,7 +233,7 @@ This document extends the Phase 1 remediation (`ARCHITECTURAL-VULNERABILITIES-RE
 
 **Problem:** Chrome evicts cache arbitrarily. Offline lesson load fails.
 
-**Fix:** Document eviction strategy; consider explicit quota/versioning.
+**Fix:** `navigator.storage.persist()`; quota awareness; explicit eviction in SW. **Open** — fix required. See `docs/DOCUMENTED-TO-FIX-REMEDIATION-PLAN.md`.
 
 ---
 

@@ -5,8 +5,8 @@
 **Related:** `docs/DEPLOYMENT.md` (setup), `docs/ARCHITECTURE.md` §5 (security), `docs/playbooks/federation.md` (sync), `SECURITY.md` (vulnerability reporting).
 
 **Trust boundaries:**
-- **Device ID:** `OLS_INTENDED_OWNER` is compared to a device UUID (often in localStorage). A student can change the UUID to bypass anti-copy — document as a known limitation. Hub-issued device secret or hardware-backed identifier would strengthen; not implemented.
-- **Session replay:** Student sessions are bound to client IP at creation (verify-pin, claim). If a token is used from a different IP, the session is rejected. This mitigates token theft between devices on the same network. See `docs/DEPLOYMENT.md` for auth configuration.
+- **Device ID:** Resolved — integrity checks identity via `GET /api/session/identity` (hub-validated). URL used only as offline fallback.
+- **Session replay:** Student sessions are bound to client IP at creation (verify-pin, claim). Fix in progress for device fingerprint binding and single-session-per-student. See `docs/DOCUMENTED-TO-FIX-REMEDIATION-PLAN.md`.
 
 ---
 
