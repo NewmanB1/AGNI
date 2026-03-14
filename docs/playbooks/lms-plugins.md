@@ -2,7 +2,7 @@
 
 This playbook outlines the design for **official plugins** that integrate OLS (Open Lesson Standard) lessons into major Learning Management Systems. It addresses roadmap item **R8**.
 
-**Status:** Phase 0–1 implemented. LTI server, runtime postMessage, Moodle/Canvas docs.
+**Status:** Phase 0–1c implemented. LTI server, runtime postMessage, LTI 1.1 Basic Outcomes grade passback, Moodle/Canvas docs.
 
 ---
 
@@ -127,7 +127,7 @@ Add optional postMessage dispatch in:
 | **0** | Playbook (this doc) | Done | — |
 | **1a** | LTI server (Node.js) — launch + Deep Link + lesson catalog | Done | `packages/agni-hub/routes/lti.js` |
 | **1b** | Runtime postMessage (ols.lessonComplete, ols.ready) | Done | `telemetry.js`, `player.js` |
-| **1c** | LTI Grade Passback (Assignment and Grade Services) | Medium | LTI 1.3 Advantage |
+| **1c** | LTI Grade Passback (Basic Outcomes) | Done | LTI 1.1 replaceResult; AGS (LTI 1.3) optional future |
 | **2a** | Moodle LTI config doc + XML descriptor | Done | `docs/integrations/MOODLE-LTI-SETUP.md`, `GET /lti/xml` |
 | **2b** | Canvas LTI config doc + XML descriptor | Done | `docs/integrations/CANVAS-LTI-SETUP.md` |
 | **2c** | Kolibri plugin (optional) — OLS content kind | High | Kolibri plugin SDK |
@@ -144,7 +144,13 @@ Add optional postMessage dispatch in:
 
 **Config:** `AGNI_HUB_URL`, `AGNI_LTI_JWKS_URI`, `AGNI_LTI_CLIENT_ID`, platform credentials (from LMS admin).
 
-### 5.2 Phase 2: Platform Configuration
+### 5.2 Phase 1c: LTI 1.1 Basic Outcomes Grade Passback
+
+When the LMS includes `lis_outcome_service_url` and `lis_result_sourcedid` at launch, the hub creates a one-time token (24h TTL) and stores the outcome params. The basic launch picker links to `/lti/lesson/:slug?token=xxx`, which serves a wrapper page that embeds the lesson in an iframe. On `ols.lessonComplete` postMessage, the wrapper POSTs to `/lti/submit-grade` with `{ token, score }`. The hub calls LTI 1.1 replaceResult (OAuth body hash) to submit the grade to the LMS. Tokens are single-use.
+
+**Endpoints:** `GET /lti/lesson/:slug`, `POST /lti/submit-grade`
+
+### 5.3 Phase 2: Platform Configuration
 
 Each LMS needs an **LTI tool registration**. Provide:
 

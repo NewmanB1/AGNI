@@ -69,7 +69,7 @@ When adding the activity, if your Moodle version supports it, you may be prompte
 
 ## Grade Passback
 
-The OLS player sends `ols.lessonComplete` via `postMessage` when a lesson is completed. Full LTI Advantage Grade Services passback is planned (Phase 1c). For now, completion is visible in the lesson UI; Moodle gradebook integration requires additional setup.
+The OLS player sends `ols.lessonComplete` via `postMessage` when a lesson is completed. **LTI 1.1 Basic Outcomes** grade passback is implemented: when the LMS provides `lis_outcome_service_url` and `lis_result_sourcedid` at launch, the hub submits the mastery score (0–1) to the Moodle gradebook on lesson completion.
 
 ---
 

@@ -21,7 +21,8 @@ const ALLOWLIST = new Set([
   '/api/auth/logout',
   '/api/accounts/student/claim',
   '/api/accounts/student/verify-pin',
-  '/lti/launch'  // LTI 1.1: validated by OAuth signature (AGNI_LTI_SECRET)
+  '/lti/launch',       // LTI 1.1: validated by OAuth signature (AGNI_LTI_SECRET)
+  '/lti/submit-grade'  // LTI Basic Outcomes: one-time token from launch; single-use, 24h TTL
 ]);
 
 function normalizePath(p) {

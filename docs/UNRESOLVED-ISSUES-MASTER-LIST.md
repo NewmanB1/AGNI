@@ -249,7 +249,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | R5 | Day 96-100: Research TipTap for WYSIWYG | **Open** |
 | R6 | Day 96-100: Finalize v1.0 Spec | **Done** — docs/specs/ols-v1.0-spec.md |
 | R7 | Future: The Editor (drag-and-drop GUI) | **Done** — form-based editor in vanilla portal (meta, steps, ontology; Validate/Preview/Save; step reorder) |
-| R8 | Future: Plugins for Moodle, Kolibri, Canvas | **Phase 1–2** — [playbooks/lms-plugins.md](playbooks/lms-plugins.md); LTI server, postMessage, Moodle/Canvas docs |
+| R8 | Future: Plugins for Moodle, Kolibri, Canvas | **Phase 1 done** — LTI server, postMessage, Basic Outcomes grade passback, Moodle/Canvas docs; Phase 2 optional (Kolibri plugin, mod_ols) |
 | R9 | Future: The Mesh (graph_weights sync via LoRa) | **Done** — design + impl ([playbooks/mesh-lora.md](playbooks/mesh-lora.md)); UDP sim; run `node hub-tools/mesh.js` or `sync.js --transport=lora` |
 | R10 | Future: Reference implementation refactor | **Done** — schema-based, pure pipelines, documented boundaries; see REFERENCE-IMPLEMENTATION-VISION.md §4.1–4.2 |
 

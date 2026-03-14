@@ -71,7 +71,7 @@ Canvas supports LTI Deep Linking. When adding an External Tool module with Conte
 
 ## Grade Passback
 
-The OLS player sends `ols.lessonComplete` via `postMessage` when a lesson is completed. Full LTI Advantage Assignment and Grade Services (AGS) is planned (Phase 1c). For now, completion is visible in the lesson UI.
+The OLS player sends `ols.lessonComplete` via `postMessage` when a lesson is completed. **LTI 1.1 Basic Outcomes** grade passback is implemented: when the LMS provides `lis_outcome_service_url` and `lis_result_sourcedid` at launch, the hub submits the mastery score (0–1) to the Canvas gradebook on lesson completion.
 
 ---
 

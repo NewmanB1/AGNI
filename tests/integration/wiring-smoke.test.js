@@ -78,6 +78,30 @@ function httpGet(port, urlPath) {
   });
 }
 
+function httpPost(port, urlPath, body, contentType) {
+  return new Promise(function (resolve, reject) {
+    const payload = typeof body === 'string' ? body : JSON.stringify(body || {});
+    const headers = {
+      'Content-Type': contentType || 'application/json',
+      'Content-Length': Buffer.byteLength(payload, 'utf8')
+    };
+    const req = http.request({
+      hostname: '127.0.0.1', port: port, path: urlPath, method: 'POST',
+      headers: headers
+    }, function (res) {
+      let data = '';
+      res.on('data', function (chunk) { data += chunk; });
+      res.on('end', function () {
+        resolve({ status: res.statusCode, body: data, headers: res.headers });
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(10000, function () { req.destroy(); reject(new Error('Timeout: ' + urlPath)); });
+    req.write(payload, 'utf8');
+    req.end();
+  });
+}
+
 describe('Wiring smoke tests', function () {
   let server, port, dataDir;
 
@@ -348,5 +372,21 @@ describe('Wiring smoke tests', function () {
       'Factory deps have inconsistent versions: ' + JSON.stringify(unique));
     assert.equal(unique[0], pkgVersion,
       'Factory deps version ' + unique[0] + ' does not match package.json version ' + pkgVersion);
+  });
+
+  // ── LTI (R8) grade passback ──────────────────────────────────────────────
+
+  it('GET /lti/lesson/smoke-test returns 200 with iframe and postMessage listener', async function () {
+    const res = await httpGet(port, '/lti/lesson/smoke-test');
+    assert.equal(res.status, 200, '/lti/lesson/:slug route missing');
+    assert.ok(res.body.indexOf('ols.lessonComplete') !== -1, 'Wrapper missing ols.lessonComplete listener');
+    assert.ok(res.body.indexOf('/lessons/smoke-test') !== -1, 'Wrapper missing lesson iframe src');
+  });
+
+  it('POST /lti/submit-grade with invalid token returns 404', async function () {
+    const res = await httpPost(port, '/lti/submit-grade', { token: 'invalid-token', score: 0.9 });
+    assert.equal(res.status, 404, 'Expected 404 for invalid token');
+    const parsed = JSON.parse(res.body);
+    assert.equal(parsed.ok, false);
   });
 });
