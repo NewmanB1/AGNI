@@ -1,4 +1,4 @@
-// @ts-nocheck — ES5 step-type renderers for AGNI player
+// @ts-nocheck — ES5 step-type renderers for AGNI player; Element vs HTMLInputElement
 // packages/agni-runtime/ui/step-renderers.js
 //
 // Extracted from player.js for maintainability. Each renderer receives (ctx, step).

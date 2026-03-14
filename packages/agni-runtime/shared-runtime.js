@@ -1,4 +1,3 @@
-// @ts-nocheck — LESSON_DATA, log union, global typing
 // packages/agni-runtime/shared-runtime.js
 // AGNI Shared Runtime  v1.8.1
 //
@@ -33,6 +32,7 @@
 //     svg-stage.js destroy() uses this. See Section 1.
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** @param {Window} global */
 (function (global) {
   'use strict';
 

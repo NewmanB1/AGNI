@@ -1,4 +1,3 @@
-// @ts-nocheck — LESSON_DATA, log union, AGNI_* globals
 // packages/agni-runtime/telemetry/telemetry.js
 // AGNI Telemetry  v1.8.0
 //
@@ -37,6 +36,7 @@
 //   The hub is the only place that can link it to a real identity (optionally).
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** @param {Window} global */
 (function (global) {
   'use strict';
 
@@ -69,7 +69,7 @@
       var req = global.indexedDB.open(DB_NAME, DB_VERSION);
 
       req.onupgradeneeded = function (e) {
-        var db = e.target.result;
+        var db = /** @type {IDBOpenDBRequest} */ (e.target).result;
         if (!db.objectStoreNames.contains(STORE_EVENTS)) {
           var store = db.createObjectStore(STORE_EVENTS, { keyPath: 'eventId' });
           store.createIndex('by_flushed', 'flushed', { unique: false });
@@ -81,12 +81,12 @@
       };
 
       req.onsuccess = function (e) {
-        _db = e.target.result;
+        _db = /** @type {IDBOpenDBRequest} */ (e.target).result;
         resolve(_db);
       };
 
       req.onerror = function (e) {
-        reject(new Error('IndexedDB open failed: ' + e.target.error));
+        reject(new Error('IndexedDB open failed: ' + /** @type {IDBRequest} */ (e.target).error));
       };
     });
   }

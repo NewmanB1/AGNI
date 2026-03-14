@@ -8,21 +8,35 @@
  */
 
 declare global {
+  /** iOS 13+ DeviceMotion permission API (optional) */
+  interface DeviceMotionEvent {
+    requestPermission?: () => Promise<'granted' | 'denied'>;
+  }
+
+  /** Lesson metadata injected by hub-transform; shape varies by lesson */
+  interface LessonDataGlobal {
+    _devMode?: boolean;
+    checkpointExpiryMs?: number;
+    phyphoxOrigins?: string[];
+    sensorSmoothing?: boolean;
+    _hubUrl?: string;
+    [key: string]: unknown;
+  }
+
   interface Window {
-    LESSON_DATA?: unknown;
+    LESSON_DATA?: LessonDataGlobal;
     DEV_MODE?: boolean;
     AGNI_SHARED?: AgniShared;
     AGNI_SVG?: AgniSvg;
     AGNI_GATES?: AgniGates;
     AGNI_A11Y?: AgniA11y;
     AGNI_SVG_HELPERS?: AgniSvgHelpers;
-    AGNI_LOADER?: unknown;
     AGNI_INTEGRITY?: unknown;
     AGNI_NAVIGATOR?: unknown;
     AGNI_HUB?: string;
     AGNI_CSP_NONCE?: string;
     AGNI_EDGE_THETA?: unknown;
-    AGNI_FRUSTRATION?: unknown;
+    AGNI_FRUSTRATION?: { getEvents?: () => unknown[]; getTotalEvents?: () => number };
     AGNI_CHECKPOINT?: unknown;
     AGNI_TELEMETRY?: unknown;
     AGNI_I18N?: unknown;
@@ -34,7 +48,8 @@ declare global {
     AGNI_SHARED_LOADED?: boolean;
     OLS_NEXT?: unknown;
     OLS_ROUTE?: unknown;
-    OLS_BINARY?: unknown;
+    OLS_BINARY?: { base64ToBytes?: (b64: string) => Uint8Array; concatBytes?: (...arrays: Uint8Array[]) => Uint8Array };
+    AGNI_LOADER?: { register?: (name: string, version: string) => void };
     initPlayer?: () => void;
     svgGenerators?: { circle: (props: any) => string; rect: (props: any) => string; line: (props: any) => string };
   }
@@ -42,20 +57,22 @@ declare global {
   /** Minimal shape for shared runtime pub/sub core */
   interface AgniShared {
     subscribeToSensor?(sensorId: string, fn: (value: number, ts: number) => void): () => void;
-    publishSensorReading?(sensorId: string, value: number, ts?: number): void;
+    publishSensorReading?(reading: { sensorId: string; value: number; timestamp?: number }): void;
     lastSensorValues?: Map<string, number>;
     thresholdEvaluator?: {
-      compile(expr: string): (values: Record<string, number>) => boolean;
-      watch?(opts: { expr: string; onMet: () => void; onTimeout?: () => void; timeoutMs?: number }): () => void;
+      compile(expr: string): (values: Map<string, number>) => boolean;
+      watch?(thresholdStr: string, primarySensor: string, onMet: (reading: unknown) => void, opts?: { timeoutMs?: number; onTimeout?: () => void }): () => void;
+      describe?: (thresholdStr: string) => string;
+      validate?: (thresholdStr: string) => { valid: boolean; error: string | null; description: string | null };
     };
-    log?: (msg: string, ...args: unknown[]) => void | { debug: () => void; warn: (m: unknown) => void; error: (m: unknown) => void };
+    log?: { debug: (...args: unknown[]) => void; warn: (...args: unknown[]) => void; error: (...args: unknown[]) => void };
     registerModule?: (name: string, version: string) => void;
     svg?: AgniSvg;
     fromSpec?: (spec: unknown, container: HTMLElement) => Promise<unknown>;
     destroyStepVisual?: () => void;
     _version?: string;
     device?: { isOldAndroid?: boolean; isLowEnd?: boolean; hasMotionEvents?: boolean; hasOrientationEvents?: boolean };
-    sensorBridge?: { isActive?: () => boolean; startSimulation?: (opts: unknown) => void; stopSimulation?: () => void };
+    sensorBridge?: { isActive?: () => boolean; start?: () => Promise<boolean>; stop?: () => void; startSimulation?: (opts: unknown) => void; stopSimulation?: () => void; needsPermissionGesture?: boolean; requestPermission?: () => Promise<boolean>; startPhyphox?: () => void; stopPhyphox?: () => void; registerAdapter?: (adapter: unknown) => void };
     setSafeHtml?: (el: HTMLElement, html: string) => void;
     parseDurationMs?: (str: string) => number;
     registerStepCleanup?: (fn: () => void) => void;
@@ -74,6 +91,7 @@ declare global {
   interface AgniSvg {
     stage?: (container: HTMLElement, opts?: { w?: number; h?: number; background?: string }) => AgniStage;
     fromSpec?: (spec: unknown, container: HTMLElement) => unknown;
+    barGraph?: (container: HTMLElement, opts: { data: unknown[]; title?: string; yLabel?: string; w?: number; h?: number }) => void;
     [factoryId: string]: unknown;
   }
 
@@ -115,14 +133,15 @@ declare global {
   }
   /** Augment global (typeof globalThis) for isomorphic runtime */
   var global: typeof globalThis & {
-    LESSON_DATA?: unknown;
+    LESSON_DATA?: LessonDataGlobal;
+    OLS_BINARY?: { base64ToBytes?: (b64: string) => Uint8Array; concatBytes?: (...arrays: Uint8Array[]) => Uint8Array };
     DEV_MODE?: boolean;
     AGNI_SHARED?: AgniShared;
     AGNI_SVG?: AgniSvg;
     AGNI_GATES?: AgniGates;
     AGNI_A11Y?: AgniA11y;
     AGNI_SVG_HELPERS?: AgniSvgHelpers;
-    AGNI_LOADER?: unknown;
+    AGNI_LOADER?: { register?: (name: string, version: string) => void };
     AGNI_INTEGRITY?: unknown;
     AGNI_NAVIGATOR?: unknown;
     AGNI_STEP_RENDERERS?: unknown;

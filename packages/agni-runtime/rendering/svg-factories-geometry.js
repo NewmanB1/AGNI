@@ -1,4 +1,4 @@
-// @ts-nocheck — ES5 geometry SVG factories
+// @ts-nocheck — ES5 geometry SVG factories; AgniSvgHelpers el/txt arity
 // packages/agni-runtime/rendering/svg-factories-geometry.js
 // AGNI Geometry SVG Factories
 // Provides dynamic polygon transforms, decomposition, a full Cartesian grid

@@ -1,4 +1,3 @@
-// @ts-nocheck — global typing, LESSON_DATA
 // packages/agni-runtime/telemetry/checkpoint.js
 // AGNI Checkpoint Persistence Module
 //
@@ -13,6 +12,7 @@
 //
 // ES5 only — targets Android 7.0+ (Chrome 51 WebView).
 
+/** @param {Record<string, unknown>} global */
 (function (global) {
   'use strict';
 
@@ -24,8 +24,9 @@
   }
 
   function getExpiryMs() {
-    if (typeof LESSON_DATA !== 'undefined' && LESSON_DATA && LESSON_DATA.checkpointExpiryMs) {
-      return LESSON_DATA.checkpointExpiryMs;
+    var ld = /** @type {{checkpointExpiryMs?: number} | undefined} */ (global['LESSON_DATA']);
+    if (ld && ld.checkpointExpiryMs) {
+      return ld.checkpointExpiryMs;
     }
     return DEFAULT_EXPIRY_MS;
   }
@@ -189,7 +190,7 @@
     return thenable;
   }
 
-  global.AGNI_CHECKPOINT = {
+  global['AGNI_CHECKPOINT'] = {
     save:       save,
     load:       load,
     clear:      clear,

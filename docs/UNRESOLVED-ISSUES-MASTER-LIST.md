@@ -301,7 +301,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | JS-2.1 | HTTP namespace | Done |
 | JS-2.2 | Error extensions | Done |
 | JS-2.3 | Auth context type | Done |
-| JS-* | Remaining Phase 2+ items | **Partial** — theta.js, navigator.js, svg-registry, svg-catalog now type-checked; ~15 runtime/PWA files still use @ts-nocheck |
+| JS-* | Remaining Phase 2+ items | **Partial** — theta.js, navigator.js, svg-registry, svg-catalog, threshold-evaluator, sensor-bridge, checkpoint, shared-runtime, telemetry, table-renderer, math-renderer type-checked; ~9 runtime files still use @ts-nocheck |
 
 ---
 
@@ -316,7 +316,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | F3.1–F3.3 | utils type fixes | agni-utils | **Open** |
 | F4.1 | ols-schema fix | ols-schema | **Open** |
 | F5.1 | ols-compiler fix | ols-compiler | **Open** |
-| F6.1–F6.20 | runtime type fixes | agni-runtime | **Partial** — navigator.js, svg-registry, svg-catalog Done; ~15 files still use @ts-nocheck |
+| F6.1–F6.20 | runtime type fixes | agni-runtime | **Partial** — threshold-evaluator, sensor-bridge, checkpoint, shared-runtime, telemetry, table-renderer, math-renderer type-checked; index.d.ts augmented (LessonDataGlobal, AgniShared, sensorBridge, etc.); polyfills, factory-loader, player, svg-*, step-renderers, library still use @ts-nocheck |
 
 ---
 

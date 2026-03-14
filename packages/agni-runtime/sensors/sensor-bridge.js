@@ -1,4 +1,3 @@
-// @ts-nocheck — DeviceMotionEvent.requestPermission, LESSON_DATA, AGNI_* globals
 // packages/agni-runtime/sensors/sensor-bridge.js
 // AGNI Sensor Bridge  v1.7.1
 //
@@ -34,6 +33,7 @@
 // Target platform: iOS 9+, Android 4+. No ES6, no arrow functions, no const/let.
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** @param {Window} global */
 (function (global) {
   'use strict';
 
@@ -52,7 +52,7 @@
   var _permissionGranted  = false;
 
   // Old Android: axes are reported with opposite signs and lower precision
-  var IS_OLD_ANDROID = S.device.isOldAndroid;
+  var IS_OLD_ANDROID = !!(S.device && S.device.isOldAndroid);
 
   // Optional low-pass smoothing for accel.total (STK-2.1). Disabled on low-end to save CPU.
   var _accelSmoothing = true;
@@ -106,9 +106,10 @@
   var needsPermissionGesture = (function () {
     var ua = navigator.userAgent || '';
 
-    // iOS 13+: explicit permission API present
-    if (typeof DeviceMotionEvent !== 'undefined' &&
-        typeof DeviceMotionEvent.requestPermission === 'function') {
+    // iOS 13+: explicit permission API present (augmented in index.d.ts)
+    var DME = typeof DeviceMotionEvent !== 'undefined' ? DeviceMotionEvent : null;
+    var rp = DME ? DME['requestPermission'] : null;
+    if (rp && typeof rp === 'function') {
       return true;
     }
 
@@ -250,9 +251,10 @@
    * @returns {Promise<boolean>}  true if permission granted or not needed
    */
   function requestPermission() {
-    if (typeof DeviceMotionEvent !== 'undefined' &&
-        typeof DeviceMotionEvent.requestPermission === 'function') {
-      return DeviceMotionEvent.requestPermission().then(function (state) {
+    var DME = typeof DeviceMotionEvent !== 'undefined' ? DeviceMotionEvent : null;
+    var rp = DME ? DME['requestPermission'] : null;
+    if (rp && typeof rp === 'function') {
+      return rp.call(DME).then(function (state) {
         _permissionGranted = (state === 'granted');
         if (!_permissionGranted) {
           log.warn('DeviceMotion permission denied by user');

@@ -1,4 +1,3 @@
-// @ts-nocheck — LESSON_DATA._devMode, log.debug/warn, global typing
 // packages/agni-runtime/rendering/table-renderer.js
 // AGNI Table Renderer  v1.7.0
 //

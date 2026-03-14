@@ -1,4 +1,3 @@
-// @ts-nocheck — log union, compile return, threshold grammar
 // packages/agni-runtime/sensors/threshold-evaluator.js
 // AGNI Threshold Evaluator  v1.7.0
 //
@@ -35,6 +34,7 @@
 // Each compile() call produces an independent evaluator with its own state.
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** @param {Window} global */
 (function (global) {
   'use strict';
 
@@ -270,7 +270,7 @@
    * Compile a threshold string into a stateful evaluator function.
    *
    * @param  {string} thresholdStr   e.g. "accel.total > 2.5g AND steady > 1.5s"
-   * @returns {function(Map) → boolean}
+   * @returns {(values: Map<string, number>) => boolean}
    *   Pass AGNI_SHARED.lastSensorValues; returns true when threshold is met.
    *   The function is stateful — call it on every sensor reading tick.
    *
@@ -295,7 +295,7 @@
    * @param {function} onMet           called with the triggering reading when met
    * @param {object}   [opts]          { timeoutMs: 5000, onTimeout: fn } — if no sensor
    *                                  data within timeoutMs, call onTimeout (hardware failure).
-   * @returns {function}               cancel — call to unsubscribe without firing onMet
+   * @returns {function(): void}       cancel — call to unsubscribe without firing onMet
    */
   function watch(thresholdStr, primarySensor, onMet, opts) {
     var evaluate = compile(thresholdStr);
