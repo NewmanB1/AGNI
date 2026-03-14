@@ -256,7 +256,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 **R7 Editor limitations (future improvements):**
 
 - Gate editor, fill_blank, matching, ordering added (Y5). Ontology editable.
-- No live HTML/Markdown preview pane (Preview only reports success)
+- Live HTML/Markdown preview pane — **Done** — Preview button shows rendered lesson in iframe
 - Move up/down buttons for step reorder; no native drag-and-drop
 
 ---

@@ -65,7 +65,14 @@ function register(router, ctx) {
       if (parsed.error) return sendResponse(400, { error: parsed.error });
       const result = await authorService.previewForAuthor(parsed.lessonData);
       if (result.error) return sendResponse(400, { error: result.error });
-      sendResponse(200, { ir: result.ir, sidecar: result.sidecar });
+      const assemble = require('../hub-transform/assemble');
+      let html;
+      try {
+        html = assemble.assembleHtml(result.ir, { dev: true });
+      } catch (e) {
+        return sendResponse(400, { error: 'Assemble failed: ' + (e.message || 'Unknown') });
+      }
+      sendResponse(200, { ir: result.ir, sidecar: result.sidecar, html: html });
     });
   }));
 }

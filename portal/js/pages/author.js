@@ -633,6 +633,13 @@ export function renderAuthorNew(main, slug) {
     '<a href="#/author" class="btn">Cancel</a>' +
     '</div>' +
     '</form>' +
+    '<section id="preview-pane" class="card" style="margin-top:1.5rem;display:none;">' +
+    '<h3 style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">' +
+    '<span>Live Preview</span>' +
+    '<button type="button" id="btn-hide-preview" class="btn" style="font-size:0.85rem;">Hide</button>' +
+    '</h3>' +
+    '<iframe id="preview-iframe" title="Lesson preview" style="width:100%;min-height:400px;border:1px solid #ccc;border-radius:4px;background:#fff;"></iframe>' +
+    '</section>' +
     '<p style="margin-top:1rem;"><a href="#/author">← Back to Author</a></p>' +
     '</div>';
 
@@ -691,6 +698,8 @@ export function renderAuthorNew(main, slug) {
     });
   });
 
+  var previewPane = main.querySelector('#preview-pane');
+  var previewIframe = main.querySelector('#preview-iframe');
   main.querySelector('#btn-preview').addEventListener('click', function () {
     statusEl.style.display = 'block';
     setStatus('Building preview…', false);
@@ -699,12 +708,22 @@ export function renderAuthorNew(main, slug) {
     api.postAuthorPreview(payload).then(function (r) {
       if (r.error) {
         setStatus('Preview failed: ' + r.error, true);
+        if (previewPane) previewPane.style.display = 'none';
       } else {
-        setStatus('Preview OK. IR has ' + (r.ir?.steps?.length || 0) + ' steps. Open compiled HTML in hub to view.', false);
+        var stepCount = (r.ir && r.ir.steps && r.ir.steps.length) || 0;
+        setStatus('Preview OK. ' + stepCount + ' step(s).', false);
+        if (r.html && previewIframe && previewPane) {
+          previewIframe.srcdoc = r.html;
+          previewPane.style.display = 'block';
+        }
       }
     }).catch(function (err) {
       setStatus('Preview error: ' + (err.message || 'Unknown'), true);
+      if (previewPane) previewPane.style.display = 'none';
     });
+  });
+  main.querySelector('#btn-hide-preview')?.addEventListener('click', function () {
+    if (previewPane) previewPane.style.display = 'none';
   });
 
   main.querySelector('#btn-save').addEventListener('click', function () {
