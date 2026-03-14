@@ -58,6 +58,11 @@ E2E runs in a separate job.
 | LEN-001 #16 scaleVec/matVec Array.isArray | math.test.js LEN-001 #16 | ✓ |
 | yaml-safe 2-5 Date/binary/omap | regressions.test.js YAML-SAFE 2-5, yaml-safe.test.js | ✓ |
 | svg-stage 3-2 RAF after destroy | Code guard only (svg-stage.js lines 90, 98) | — |
+| AUDIT-B2 SW fallback .catch() | regressions.test.js AUDIT-B2 | ✓ |
+| B2 factory-loader cache fallback | regressions.test.js B2 | ✓ |
+| R8 LTI grade passback | wiring-smoke.test.js (GET /lti/lesson, /lti/xml, /lti/lessons, POST /lti/submit-grade) | ✓ |
+| R8 LTI postMessage (telemetry, player) | regressions.test.js R8 | ✓ |
+| Hub no hub-tools references | regressions.test.js REGRESSION, check-hub-docs.js | ✓ |
 
 ---
 

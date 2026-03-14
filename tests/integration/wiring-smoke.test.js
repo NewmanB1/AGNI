@@ -374,13 +374,34 @@ describe('Wiring smoke tests', function () {
       'Factory deps version ' + unique[0] + ' does not match package.json version ' + pkgVersion);
   });
 
-  // ── LTI (R8) grade passback ──────────────────────────────────────────────
+  // ── LTI (R8) ──────────────────────────────────────────────────────────────
+
+  it('GET /lti/xml returns 200 with LTI descriptor', async function () {
+    const res = await httpGet(port, '/lti/xml');
+    assert.equal(res.status, 200, '/lti/xml route missing');
+    assert.ok(res.body.indexOf('cartridge_basiclti_link') !== -1, 'Missing LTI cartridge XML');
+    assert.ok(res.body.indexOf('/lti/launch') !== -1, 'Missing launch_url in descriptor');
+  });
+
+  it('GET /lti/lessons returns 200 with JSON catalog', async function () {
+    const res = await httpGet(port, '/lti/lessons');
+    assert.equal(res.status, 200, '/lti/lessons route missing');
+    const parsed = JSON.parse(res.body);
+    assert.ok(Array.isArray(parsed.lessons), 'Response must have lessons array');
+  });
 
   it('GET /lti/lesson/smoke-test returns 200 with iframe and postMessage listener', async function () {
     const res = await httpGet(port, '/lti/lesson/smoke-test');
     assert.equal(res.status, 200, '/lti/lesson/:slug route missing');
     assert.ok(res.body.indexOf('ols.lessonComplete') !== -1, 'Wrapper missing ols.lessonComplete listener');
     assert.ok(res.body.indexOf('/lessons/smoke-test') !== -1, 'Wrapper missing lesson iframe src');
+  });
+
+  it('POST /lti/submit-grade with missing token returns 400', async function () {
+    const res = await httpPost(port, '/lti/submit-grade', { score: 0.9 });
+    assert.equal(res.status, 400, 'Expected 400 for missing token');
+    const parsed = JSON.parse(res.body);
+    assert.equal(parsed.ok, false);
   });
 
   it('POST /lti/submit-grade with invalid token returns 404', async function () {

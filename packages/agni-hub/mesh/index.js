@@ -1,7 +1,7 @@
 'use strict';
 // packages/agni-hub/mesh/index.js — Mesh daemon (R9 Phases 1–6)
 // Broadcasts graph_weights advertisements and edge deltas; receives and merges from peers.
-// Run via: node hub-tools/mesh.js [--transport=udp|stub] [--port=18471]
+// Run via: npm run mesh (or npm run mesh -- --transport=udp --port=18471). See docs/playbooks/mesh-lora.md.
 
 const path = require('path');
 const fs = require('fs');

@@ -1643,6 +1643,53 @@ describe('AUDIT-B2: Service Worker fallback — registration has .catch() when S
   });
 });
 
+describe('R8: LTI grade passback — replaceResult and submit-grade wiring', () => {
+  const fs = require('fs');
+  const root = path.resolve(__dirname, '../..');
+
+  it('lti.js contains replaceResult and outcome store for grade passback', () => {
+    const src = fs.readFileSync(path.join(root, 'packages/agni-hub/routes/lti.js'), 'utf8');
+    assert.ok(src.includes('replaceResult'), 'lti.js must implement replaceResult for LTI Basic Outcomes');
+    assert.ok(src.includes('_outcomeStore'), 'lti.js must have outcome token store');
+    assert.ok(src.includes('/lti/submit-grade'), 'lti.js must register POST /lti/submit-grade');
+    assert.ok(src.includes('/lti/lesson/'), 'lti.js must register GET /lti/lesson/:slug');
+    assert.ok(src.includes('lis_outcome_service_url'), 'lti.js must read outcome params at launch');
+  });
+
+  it('telemetry and player send ols.lessonComplete and ols.ready for LTI grade passback', () => {
+    const telemetrySrc = fs.readFileSync(path.join(root, 'packages/agni-runtime/telemetry/telemetry.js'), 'utf8');
+    const playerSrc = fs.readFileSync(path.join(root, 'packages/agni-runtime/ui/player.js'), 'utf8');
+    assert.ok(telemetrySrc.includes('ols.lessonComplete'), 'telemetry must post ols.lessonComplete on completion');
+    assert.ok(telemetrySrc.includes('parent.postMessage'), 'telemetry must use parent.postMessage');
+    assert.ok(playerSrc.includes('ols.ready'), 'player must post ols.ready when first step rendered');
+    assert.ok(playerSrc.includes('ols.lessonComplete') || telemetrySrc.includes('ols.lessonComplete'),
+      'ols.lessonComplete must be sent (telemetry or player)');
+  });
+});
+
+describe('REGRESSION: hub package must not reference hub-tools or server paths', () => {
+  const fs = require('fs');
+  const root = path.resolve(__dirname, '../..');
+
+  it('mesh/index.js run instruction does not reference hub-tools', () => {
+    const src = fs.readFileSync(path.join(root, 'packages/agni-hub/mesh/index.js'), 'utf8');
+    assert.ok(!src.includes('hub-tools/'), 'mesh must not reference hub-tools (use npm run mesh); see check-hub-docs');
+  });
+});
+
+describe('B2: factory-loader cache fallback when Cache API unavailable', () => {
+  const fs = require('fs');
+  const root = path.resolve(__dirname, '../..');
+
+  it('factory-loader has cacheSupported and falls back when Cache API absent', () => {
+    const src = fs.readFileSync(path.join(root, 'packages/agni-runtime/ui/factory-loader.js'), 'utf8');
+    assert.ok(src.includes('cacheSupported'), 'factory-loader must check Cache API availability');
+    assert.ok(src.includes('typeof caches'), 'cacheSupported must check caches');
+    assert.ok(src.includes('!cacheSupported()') || src.includes('!cacheSupported ('), 'readFromCache must handle !cacheSupported');
+    assert.ok(src.includes('fetchFromHub') || src.includes('fetch('), 'factory-loader must fetch when cache miss');
+  });
+});
+
 describe('AUDIT-E1: compile warns on svg_spec with non-numeric opts', () => {
   const dataDir = path.join(path.resolve(__dirname, '../..'), 'data');
   let savedDataDir;

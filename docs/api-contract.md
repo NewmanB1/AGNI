@@ -91,6 +91,8 @@ Paginated endpoints: `GET /api/lessons`, `GET /api/theta/all`, `GET /api/account
 | POST | `/lti/launch` | OAuth 1.0 (AGNI_LTI_SECRET) | LTI 1.1 launch; lesson picker or Deep Link return |
 | GET | `/lti/lessons` | No | JSON lesson catalog |
 | GET | `/lti/xml` | No | LTI 1.1 XML descriptor for tool registration |
+| GET | `/lti/lesson/:slug` | No | Wrapper page for grade passback (embeds lesson, listens for ols.lessonComplete) |
+| POST | `/lti/submit-grade` | One-time token | LTI 1.1 Basic Outcomes replaceResult; body `{ token, score }` |
 
 ### Theta (Adaptive Scheduling)
 

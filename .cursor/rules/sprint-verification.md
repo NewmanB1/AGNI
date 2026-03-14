@@ -149,6 +149,10 @@ Current smoke test coverage (see `tests/integration/wiring-smoke.test.js`):
 | `GET /lesson-data.js?slug=X`         | lesson compilation + slug param wiring          |
 | `GET /lessons/:slug`                 | full lesson HTML with factory-loader + polyfills |
 | `GET /lessons/:slug/sidecar`         | sidecar JSON route                              |
+| `GET /lti/xml`                       | LTI descriptor for Moodle/Canvas registration   |
+| `GET /lti/lessons`                   | LTI lesson catalog JSON                         |
+| `GET /lti/lesson/:slug`              | LTI grade wrapper (iframe + postMessage)        |
+| `POST /lti/submit-grade`             | LTI Basic Outcomes token validation (400/404)   |
 | factory deps order                   | polyfills.js at index 0, correct ordering       |
 | factory deps version                 | all versions match package.json                 |
 
