@@ -26,6 +26,7 @@ data/learning-paths.json
 data/feature-flags.json
 data/parent-links.json
 data/recommendation-overrides.json
+data/collab-sessions.json
 
 # Cryptographic keys
 *.pem

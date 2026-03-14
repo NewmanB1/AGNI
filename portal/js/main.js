@@ -9,8 +9,10 @@ import { render as renderSettings } from './pages/settings.js';
 import { renderAuthorList, renderAuthorLogin, renderAuthorNew } from './pages/author.js';
 import { renderGroups, renderGroupsAssign } from './pages/groups.js';
 import { renderStub } from './pages/stub.js';
+import { renderCollab } from './pages/collab.js';
 
 const main = document.getElementById('main-content');
+let prevCleanup = null;
 
 function setActiveNav(path) {
   document.querySelectorAll('#main-nav a').forEach(a => {
@@ -22,8 +24,13 @@ function setActiveNav(path) {
 
 function render(handler) {
   return (ctx) => {
+    if (typeof prevCleanup === 'function') {
+      prevCleanup();
+      prevCleanup = null;
+    }
     setActiveNav(ctx.path);
-    handler(main, ctx);
+    const result = handler(main, ctx);
+    prevCleanup = typeof result === 'function' ? result : null;
   };
 }
 
@@ -36,6 +43,7 @@ route('/author/new', render((m) => renderAuthorNew(m, null)));
 route('/author/:slug/edit', render((m, ctx) => renderAuthorNew(m, ctx.slug)));
 
 route('/hub', render((m) => renderStub(m, 'Teacher Hub', 'Class overview and recommendations.')));
+route('/hub/collab', render((m) => renderCollab(m)));
 route('/groups', render(renderGroups));
 route('/groups/:id/assign', render((m, ctx) => renderGroupsAssign(m, ctx)));
 route('/students', render((m) => renderStub(m, 'Students', 'Student roster.')));

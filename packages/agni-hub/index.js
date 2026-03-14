@@ -3,8 +3,10 @@
 // @agni/hub - Village Hub server
 // The top of the dependency tree: depends on all other packages.
 
+const pathfinder = require('./pathfinder');
 module.exports = {
-  pathfinder:     require('./pathfinder'),
+  pathfinder,
+  theta: pathfinder, // alias for backward compat
   telemetryEngine: require('./telemetry-engine'),
   sync:           require('./sync'),
   mesh:           require('./mesh'),

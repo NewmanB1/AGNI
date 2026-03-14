@@ -98,6 +98,14 @@ function handleRequest(req, res, options) {
     return true;
   }
 
+  // GET /audio/beacon.js — collab find-classmates beacon (ES5)
+  if (req.method === 'GET' && urlPath === '/audio/beacon.js') {
+    const runtimeRoot = require('@agni/runtime').RUNTIME_ROOT;
+    const beaconPath = path.join(runtimeRoot, 'audio', 'beacon.js');
+    sendFile(req, res, beaconPath, MIME['.js'], 3600);
+    return true;
+  }
+
   // GET /lessons/:slug/sidecar
   const sidecarMatch = urlPath.match(/^\/lessons\/([a-zA-Z0-9_\-/]+)\/sidecar$/);
   if (req.method === 'GET' && sidecarMatch) {

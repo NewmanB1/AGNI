@@ -275,6 +275,62 @@ async function run(baseUrl, bearer) {
     failures.push(`/api/theta/override: ${e.message}`);
   }
 
+  // GET /api/collab/opportunities?pseudoId=test (HubKey)
+  try {
+    const { statusCode, data } = await get(baseUrl, '/api/collab/opportunities?pseudoId=test');
+    if (statusCode !== 200) failures.push(`/api/collab/opportunities: expected 200, got ${statusCode}: ${data.error || ''}`);
+    if (!Array.isArray(data.opportunities)) failures.push(`/api/collab/opportunities: opportunities must be array`);
+  } catch (e) {
+    failures.push(`/api/collab/opportunities: ${e.message}`);
+  }
+
+  // POST /api/collab/seek (HubKey)
+  try {
+    const { statusCode, data } = await post(baseUrl, '/api/collab/seek', { pseudoId: 'test', lessonId: 'test-lesson' });
+    if (statusCode !== 200) failures.push(`/api/collab/seek: expected 200, got ${statusCode}: ${data.error || ''}`);
+    if (typeof data.status !== 'string') failures.push(`/api/collab/seek: status must be string`);
+  } catch (e) {
+    failures.push(`/api/collab/seek: ${e.message}`);
+  }
+
+  // GET /api/collab/status?pseudoId=test (HubKey)
+  try {
+    const { statusCode, data } = await get(baseUrl, '/api/collab/status?pseudoId=test');
+    if (statusCode !== 200) failures.push(`/api/collab/status: expected 200, got ${statusCode}: ${data.error || ''}`);
+    if (typeof data.seeking !== 'boolean') failures.push(`/api/collab/status: seeking must be boolean`);
+  } catch (e) {
+    failures.push(`/api/collab/status: ${e.message}`);
+  }
+
+  // POST /api/collab/cancel-seek (HubKey)
+  try {
+    const { statusCode, data } = await post(baseUrl, '/api/collab/cancel-seek', { pseudoId: 'test' });
+    if (statusCode !== 200) failures.push(`/api/collab/cancel-seek: expected 200, got ${statusCode}: ${data.error || ''}`);
+  } catch (e) {
+    failures.push(`/api/collab/cancel-seek: ${e.message}`);
+  }
+
+  // GET /api/collab/sessions (Bearer)
+  if (bearer) {
+    try {
+      const { statusCode, data } = await get(baseUrl, '/api/collab/sessions', { bearer });
+      if (statusCode !== 200) failures.push(`/api/collab/sessions: expected 200, got ${statusCode}: ${data.error || ''}`);
+      if (!Array.isArray(data.sessions)) failures.push(`/api/collab/sessions: sessions must be array`);
+    } catch (e) {
+      failures.push(`/api/collab/sessions: ${e.message}`);
+    }
+  }
+
+  // POST /api/collab/sessions/:id/deny (Admin) — use invalid id, expect 404
+  if (bearer) {
+    try {
+      const { statusCode } = await post(baseUrl, '/api/collab/sessions/nonexistent-session-id/deny', {}, auth);
+      if (statusCode !== 404) failures.push(`/api/collab/sessions/:id/deny: expected 404 for invalid id, got ${statusCode}`);
+    } catch (e) {
+      failures.push(`/api/collab/sessions/:id/deny: ${e.message}`);
+    }
+  }
+
   // Auth regression: HubKey-protected endpoints reject requests without X-Hub-Key
   const getNoKey = (p) => {
     const u = new URL(p, baseUrl);

@@ -84,6 +84,7 @@ When writing scripts that inspect implementations (e.g. `check-dts-arity.js`, `c
 - **Concepts:** `docs/ONBOARDING-CONCEPTS.md`
 - **Conventions:** `docs/CONVENTIONS.md`
 - **Playbooks:** `docs/playbooks/` (compiler, runtime, lms, governance, etc.)
+- **Collaborative lessons plan:** `docs/COLLABORATIVE-LESSONS-IMPLEMENTATION-PLAN.md` (collab discovery, beacon, teacher deny)
 - **src/ deprecation:** `docs/SRC-DEPRECATION.md` (migration to packages/ complete)
 - **Verification rules:** `.cursor/rules/sprint-verification.md`
 - **Verification guards layout:** `docs/VERIFICATION-GUARDS.md`

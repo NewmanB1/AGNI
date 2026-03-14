@@ -200,6 +200,12 @@ Paginated endpoints: `GET /api/lessons`, `GET /api/theta/all`, `GET /api/account
 | POST | `/api/learning-paths` | Admin | Create a learning path (201) |
 | PUT | `/api/learning-paths` | Admin | Update a learning path |
 | GET | `/api/collab/stats` | HubKey | Collaboration statistics |
+| GET | `/api/collab/opportunities?pseudoId=` | HubKey | Collab opportunities (lessons with peerCount ≥ 1) |
+| POST | `/api/collab/seek` | HubKey | Register seek; body `{ pseudoId, lessonId }`; returns `{ status, sessionId?, matchedPseudoIds? }` |
+| GET | `/api/collab/status?pseudoId=` | HubKey | Seek/session status for student |
+| POST | `/api/collab/cancel-seek` | HubKey | Cancel seek; body `{ pseudoId }` |
+| GET | `/api/collab/sessions` | Bearer | List active collab sessions (teacher) |
+| POST | `/api/collab/sessions/:id/deny` | Admin | Deny a session |
 
 ### Content Chain
 

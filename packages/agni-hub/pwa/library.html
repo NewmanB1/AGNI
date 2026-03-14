@@ -15,12 +15,22 @@
     .meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #555; margin-top: 0.8rem; }
     .tag { background: #E3F2FD; padding: 2px 6px; border-radius: 2px; font-size: 0.75rem; margin-right: 4px; }
     .theta-score { font-family: monospace; font-weight: bold; color: var(--accent); }
+    .collab-banner { background: #E8F5E9; border: 2px solid #4CAF50; border-radius: 4px; padding: 1rem; margin-bottom: 1rem; }
+    .collab-banner h3 { margin: 0 0 0.5rem 0; color: #2E7D32; }
+    .collab-banner .btn { margin-right: 0.5rem; margin-top: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: var(--accent); color: #fff; border: none; border-radius: 4px; }
+    .collab-finder { background: #FFF3E0; border: 2px solid #FF9800; border-radius: 4px; padding: 1.5rem; margin-bottom: 1rem; }
+    .collab-finder h3 { margin: 0 0 0.5rem 0; color: #E65100; }
+    .collab-finder .btn { margin-right: 0.5rem; margin-top: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #FF9800; color: #fff; border: none; border-radius: 4px; }
+    .collab-finder .btn-secondary { background: #757575; }
   </style>
 </head>
 <body>
   <header><h1>Village Library</h1></header>
   <div id="loading">Loading lessons...</div>
+  <div id="collab-banner" style="display:none;"></div>
   <div id="lesson-list" class="lesson-grid"></div>
+  <div id="collab-finder" style="display:none;"></div>
+  <script src="/audio/beacon.js"></script>
   <script src="/factories/navigator.js"></script>
   <script src="/factories/edge-pathfinder.js"></script>
   <script src="/library.js"></script>

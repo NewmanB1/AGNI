@@ -179,6 +179,14 @@ export function createHubApi(baseUrl) {
       if (filters.spine) params.set('spine', filters.spine);
       const qs = params.toString();
       return authGet('api/lessons' + (qs ? '?' + qs : ''));
+    },
+
+    getCollabSessions() {
+      return authGet('api/collab/sessions');
+    },
+
+    denyCollabSession(sessionId) {
+      return authPost(`api/collab/sessions/${encodeURIComponent(sessionId)}/deny`, {});
     }
   };
 }

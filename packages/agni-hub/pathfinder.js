@@ -323,6 +323,80 @@ function applyRecommendationOverride(orderedLessons, overrideLessonId) {
   return out;
 }
 
+/**
+ * Check if a student meets all prerequisites for a lesson (same logic as computeLessonOrder).
+ * @param {object} lesson
+ * @param {object} skillGraph
+ * @param {object} studentSkills
+ * @param {Set} effectiveScheduledSkills
+ * @returns {boolean}
+ */
+function isEligibleForLesson(lesson, skillGraph, studentSkills, effectiveScheduledSkills) {
+  const skillsProvided = lesson.skillsProvided || [];
+  if (skillsProvided.length === 0) return false;
+  if (effectiveScheduledSkills.size > 0) {
+    const providesNeeded = skillsProvided.some(function (p) {
+      return effectiveScheduledSkills.has(typeof p === 'string' ? p : p.skill);
+    });
+    if (!providesNeeded) return false;
+  }
+  return skillsProvided.every(function (provided) {
+    const skillId = typeof provided === 'string' ? provided : provided.skill;
+    const reqs = skillGraph[skillId] || new Set();
+    for (const req of reqs) {
+      if ((studentSkills[req] || 0) < MASTERY_THRESHOLD) return false;
+    }
+    return true;
+  });
+}
+
+/**
+ * Get collaborative lesson opportunities for a student.
+ * @param {string} pseudoId
+ * @returns {Promise<Array<{ lessonId: string, slug: string, title: string, peerCount: number }>>}
+ */
+async function getCollabOpportunities(pseudoId) {
+  await updateSharedCacheIfNeeded();
+  const [masterySummary, schedules, lessonIndex, curriculum] = await Promise.all([
+    loadMasterySummaryAsync(),
+    loadSchedulesAsync(),
+    loadLessonIndexAsync(),
+    loadCurriculumAsync()
+  ]);
+  const skillGraph = sharedCache.skillGraph || buildSkillGraph(lessonIndex, curriculum);
+  const studentSkills = (masterySummary.students || {})[pseudoId] || {};
+  const scheduledSkills = schedules.students && schedules.students[pseudoId] || [];
+  const effectiveScheduledSkills = expandScheduledSkills(
+    Array.isArray(scheduledSkills) ? scheduledSkills : [], studentSkills, skillGraph
+  );
+
+  const groupLessons = (lessonIndex || []).filter(function (l) { return !!l.is_group; });
+  const opportunities = [];
+  const allStudents = Object.keys(masterySummary.students || {});
+
+  for (let i = 0; i < groupLessons.length; i++) {
+    const lesson = groupLessons[i];
+    if (!isEligibleForLesson(lesson, skillGraph, studentSkills, effectiveScheduledSkills)) continue;
+
+    let peerCount = 0;
+    for (let j = 0; j < allStudents.length; j++) {
+      const pid = allStudents[j];
+      if (pid === pseudoId) continue;
+      const peerSkills = (masterySummary.students || {})[pid] || {};
+      if (isEligibleForLesson(lesson, skillGraph, peerSkills, effectiveScheduledSkills)) peerCount++;
+    }
+    if (peerCount >= 1) {
+      opportunities.push({
+        lessonId: lesson.lessonId || lesson.identifier,
+        slug: lesson.slug || '',
+        title: lesson.title || '',
+        peerCount: peerCount
+      });
+    }
+  }
+  return opportunities;
+}
+
 async function getLessonsSortedByPathfinder(pseudoId) {
   const [currentMasteryMtime, currentScheduleMtime, currentCurriculumMtime, currentCatalogMtime] =
     await Promise.all([
@@ -599,6 +673,7 @@ async function rebuildLessonIndex() {
 /** @type {Record<string, unknown>} */ (ctx).getLessonsSortedByPathfinder = getLessonsSortedByPathfinder;
 /** @type {Record<string, unknown>} */ (ctx).getEffectiveGraphWeights = getEffectiveGraphWeights;
 /** @type {Record<string, unknown>} */ (ctx).applyRecommendationOverride = applyRecommendationOverride;
+/** @type {Record<string, unknown>} */ (ctx).getCollabOpportunities = getCollabOpportunities;
 
 function startApi(port) {
   const listenPort = (typeof port === 'number' && port >= 0) ? port : PORT;
@@ -622,6 +697,7 @@ function startApi(port) {
   require('./routes/groups').register(router, ctx);
   require('./routes/parent').register(router, ctx);
   require('./routes/student').register(router, ctx);
+  require('./routes/collab').register(router, ctx);
   require('./routes/admin').register(router, ctx);
   require('./routes/chain').register(router, ctx);
   require('./routes/telemetry').register(router, ctx);
@@ -738,5 +814,6 @@ module.exports = {
   rebuildLessonIndex,
   getEffectiveGraphWeights,
   applyRecommendationOverride,
-  detectSkillGraphCycles
+  detectSkillGraphCycles,
+  getCollabOpportunities
 };
