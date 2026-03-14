@@ -174,7 +174,7 @@ The server runs lesson-server for on-demand lesson compilation; pathfinder provi
 
 #### Hub Kernel (services + routes)
 
-The Village Hub is organized as a **Hub Kernel** that binds HTTP routes to shared services. The idea is already present via `@agni/services`; this section makes it explicit.
+The Village Hub is organized as a **Hub Kernel** that binds HTTP routes to shared services. The idea is already present via `@agni/services`; this section makes it explicit. **For a thorough architecture reference, see `docs/HUB-KERNEL-ARCHITECTURE.md`.**
 
 ```
 Hub Kernel

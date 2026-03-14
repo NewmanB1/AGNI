@@ -26,7 +26,7 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 | `@agni/services` | `packages/agni-services/` | Top-down API: accounts, author, governance, LMS, lesson-chain |
 | `@agni/hub` | `packages/agni-hub/` | Hub Kernel: pathfinder, lesson-server, telemetry engine, sync, routes |
 
-**Hub Kernel** — The Village Hub binds HTTP routes to shared services. Pathfinder orchestrates lesson ordering; lesson-server compiles/serves; telemetry-engine ingests and produces graph_weights; routes bind to @agni/services (accounts, LMS, governance, lessonAssembly). See `docs/ARCHITECTURE.md` §3.1 Hub Kernel.
+**Hub Kernel** — The Village Hub binds HTTP routes to shared services. Pathfinder orchestrates lesson ordering; lesson-server compiles/serves; telemetry-engine ingests and produces graph_weights; routes bind to @agni/services (accounts, LMS, governance, lessonAssembly). See `docs/HUB-KERNEL-ARCHITECTURE.md` (thorough) and `docs/ARCHITECTURE.md` §3.1.
 
 **Lesson creator:** Template-based wizard (select from pre-created templates in `lessons/`). Bulk lesson generation (`tools/curriculum-gen`) is an independent tool, not part of core AGNI.
 
@@ -78,6 +78,7 @@ When writing scripts that inspect implementations (e.g. `check-dts-arity.js`, `c
 ## Key Docs
 
 - **Architecture:** `docs/ARCHITECTURE.md`
+- **Hub Kernel:** `docs/HUB-KERNEL-ARCHITECTURE.md` (pathfinder, lesson-server, telemetry, sync, routes, ctx)
 - **Telemetry / Sentry:** `docs/TELEMETRY-ARCHITECTURE.md` (Sentry, graph_weights, MLC flow)
 - **Configuration:** `docs/CONFIGURATION.md` (env vars, bootstrap order, hub-config)
 - **Architectural remediation:** `docs/archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-PLAN.md`, `docs/archive/ARCHITECTURAL-VULNERABILITIES-REMEDIATION-STATUS.md`
