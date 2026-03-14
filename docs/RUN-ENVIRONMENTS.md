@@ -68,7 +68,7 @@ Runs on the Raspberry Pi server. Node 14+.
 
 **Disk (Pi `serveDir/lessons`):** Many lesson YAML versions can fill disk. Policy: keep compiled lessons for YAML files present in `yaml/`; prune compiled output when YAML is removed. No automatic GC for old YAML backups — manage manually or via external cron. Consider `AGNI_YAML_MAX_BYTES` and version retention in authoring workflow.
 
-**Service Worker cache eviction:** Chrome may evict Cache API entries under storage pressure. Factory files use versioned URLs (`?v=<version>`), so cache misses trigger fresh fetches. Offline lesson load may fail if evicted — student sees "Connect to hub" banner. Mitigation: ensure hub connectivity for first load; document that eviction is expected on low-storage devices.
+**Service Worker cache eviction (P2-24):** The SW in `packages/agni-hub/sw.js` requests `navigator.storage.persist()` on activate when available (Chrome 55+), and uses quota-aware caching for lessons: `navigator.storage.estimate()` triggers proactive eviction when usage > 85% of quota, and `QuotaExceededError` on `cache.put` is caught and handled gracefully (best-effort caching; response still returned). Factory files use versioned URLs (`?v=<version>`), so cache misses trigger fresh fetches. On older devices (e.g. Chrome 51), `persist` and `estimate` are not available; eviction remains best-effort.
 
 ---
 

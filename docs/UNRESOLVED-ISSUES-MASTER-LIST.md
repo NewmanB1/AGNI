@@ -52,7 +52,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | P2-21 | Sneakernet import integrity | Sign packets, verify on import | Done |
 | P2-22 | Catalog / IR drift | Validation step | Done |
 | P2-23 | SVG stage memory leak | destroyStepVisual listeners | Done |
-| P2-24 | Edge device SW cache eviction | persist(); quota; explicit eviction | **Open** |
+| P2-24 | Edge device SW cache eviction | persist(); quota; explicit eviction | **Done** |
 | P2-25 | Spec.type whitelist (prototype pollution) | SVG registry | Done (audit) |
 | P2-26 | LMS federation merge correctness | posteriorVersion, trainingWindow | Done |
 | P2-27 | Memory budget (LRU by bytes) | Cache by bytes, not count | Done |
