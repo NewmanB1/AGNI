@@ -89,8 +89,8 @@ function buildCurriculumGraph(probes, ontologyMap) {
   for (let i = 0; i < nodes.length; i++) edges[nodes[i]] = [];
 
   if (ontologyMap) {
-    const providersBySkill = {};
-    const requirersBySkill = {};
+    const providersBySkill = /** @type {Record<string, string[]>} */ ({});
+    const requirersBySkill = /** @type {Record<string, string[]>} */ ({});
 
     for (let n = 0; n < nodes.length; n++) {
       const nid = nodes[n];
@@ -220,9 +220,9 @@ function computePageRank(nodes, edges, weights, opts) {
   const tol = opts.tolerance || CONVERGENCE_THRESHOLD;
 
   const N = nodes.length;
-  if (N === 0) return {};
+  if (N === 0) return /** @type {Record<string, number>} */ ({});
 
-  const nodeIndex = {};
+  const nodeIndex = /** @type {Record<string, number>} */ ({});
   for (let i = 0; i < N; i++) nodeIndex[nodes[i]] = i;
 
   let rank = new Array(N);
@@ -299,9 +299,9 @@ function personalizedPageRank(nodes, edges, targetNodes, weights, opts) {
   const tol = opts.tolerance || CONVERGENCE_THRESHOLD;
 
   const N = nodes.length;
-  if (N === 0) return {};
+  if (N === 0) return /** @type {Record<string, number>} */ ({});
 
-  const nodeIndex = {};
+  const nodeIndex = /** @type {Record<string, number>} */ ({});
   for (let i = 0; i < N; i++) nodeIndex[nodes[i]] = i;
 
   const teleport = new Array(N);
@@ -389,7 +389,7 @@ function scoreCandidates(state, studentId, candidates, ontologyMap) {
     _cache.curriculumRanks = currRanks;
     _cache._currGraph = currGraph;
 
-    transRanks = {};
+    transRanks = /** @type {Record<string, number>} */ ({});
     if (state.markov && state.markov.transitions) {
       const transGraph = buildTransitionGraph(state.markov.transitions, { qualityWeighted: true });
       if (transGraph.nodes.length > 0) {
@@ -407,7 +407,7 @@ function scoreCandidates(state, studentId, candidates, ontologyMap) {
 
   // Personalized PageRank is always per-student so it can't be cached globally
   const gapLessons = findSkillGapLessons(state, studentId, candidates);
-  let persRanks = {};
+  let persRanks = /** @type {Record<string, number>} */ ({});
   const currGraph2 = _cache._currGraph;
   if (gapLessons.length > 0 && currGraph2 && currGraph2.nodes.length > 0) {
     persRanks = personalizedPageRank(currGraph2.nodes, currGraph2.edges, gapLessons);
@@ -516,7 +516,7 @@ function identifyFlowBottlenecks(state, topK) {
   if (Object.keys(dist).length === 0) return [];
 
   const transitions = (state.markov && state.markov.transitions) ? state.markov.transitions : {};
-  const results = [];
+  const results = /** @type {Array<{ lessonId: string, stationaryProb: number, outDegree: number, avgOutGain: number }>} */ ([]);
 
   const lessonIds = Object.keys(dist);
   for (let i = 0; i < lessonIds.length; i++) {

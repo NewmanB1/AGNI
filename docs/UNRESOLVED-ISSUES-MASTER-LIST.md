@@ -310,7 +310,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | ID | Task | Package | Status |
 |----|------|---------|--------|
 | F1.1 | migrations.js type fixes | agni-engine | **Open** |
-| F1.2 | pagerank.js type fixes | agni-engine | **Open** |
+| F1.2 | pagerank.js type fixes | agni-engine | **Done** — JSDoc Record types for providersBySkill, requirersBySkill, lessonsBySkill, nodeIndex, result, scores, transRanks, persRanks, results |
 | F1.3 | index.js type fixes | agni-engine | **Open** |
 | F2.1–F2.3 | hub type fixes | agni-hub | **Partial** — theta.js Done (no @ts-nocheck); sentry.js, student.js use @ts-expect-error |
 | F3.1–F3.3 | utils type fixes | agni-utils | **Open** |
