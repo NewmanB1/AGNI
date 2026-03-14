@@ -1,42 +1,6 @@
 {
   "sessions": [
     {
-      "tokenHash": "9e6b622302e4698f744cc51620b21d8776723e59c7ab0050bb2203201cd29f53",
-      "pseudoId": "px-c157de099937f176b91471308528b412",
-      "createdAt": "2026-03-13T00:37:55.084Z",
-      "expiresAt": "2026-03-14T00:37:55.084Z"
-    },
-    {
-      "tokenHash": "fb756ad09516faea7860e2f6dae04ddcd02b8be01c7ede4ca7c07d434a4dc18a",
-      "pseudoId": "px-de326f7edea39cc50dedf5b46ac09644",
-      "createdAt": "2026-03-13T00:37:55.286Z",
-      "expiresAt": "2026-03-14T00:37:55.286Z"
-    },
-    {
-      "tokenHash": "8dfdc20be92dc17ac27615e5f57f7db7e976268a8cf62ea7cf4f40b9f9197fda",
-      "pseudoId": "px-437a700497550b195816d5c773f9ca51",
-      "createdAt": "2026-03-13T00:37:55.601Z",
-      "expiresAt": "2026-03-14T00:37:55.601Z"
-    },
-    {
-      "tokenHash": "c6d960f5832910047c7df5302efc57be62e621e67c8b7ddff91c084db7bfe116",
-      "pseudoId": "px-a7178548d02132341fa2cd9bd644b76e",
-      "createdAt": "2026-03-13T02:51:28.965Z",
-      "expiresAt": "2026-03-14T02:51:28.965Z"
-    },
-    {
-      "tokenHash": "a4a5ba278f160d9be8926931541c360c240a694ebc9d31eec32b6a1d89e183c7",
-      "pseudoId": "px-24a1de6ca052473f4c718b17f0a7cc73",
-      "createdAt": "2026-03-13T02:51:29.184Z",
-      "expiresAt": "2026-03-14T02:51:29.184Z"
-    },
-    {
-      "tokenHash": "3d17e4fbaae5f5e6341454294bc68b248b6584d341ce88066bdcf1a3dbe76925",
-      "pseudoId": "px-43de9ff17ef2743b8a59f4395d788c60",
-      "createdAt": "2026-03-13T02:51:29.448Z",
-      "expiresAt": "2026-03-14T02:51:29.448Z"
-    },
-    {
       "tokenHash": "cac476ac8287c44fe69e4c79d7cb7da2f3cac7465ca47a3c9f657555423aeaa5",
       "pseudoId": "px-7ce73b5a7e462295fc67ca318518da68",
       "createdAt": "2026-03-13T21:13:54.070Z",
@@ -161,6 +125,37 @@
       "pseudoId": "px-e60a9728f5229061ea0de993e637ebfd",
       "createdAt": "2026-03-14T00:21:53.749Z",
       "expiresAt": "2026-03-15T00:21:53.749Z"
+    },
+    {
+      "tokenHash": "5895f688fe69193ac5cfcfe12d774906e11445695df3a6ac1bd93ff2ff64bd0a",
+      "pseudoId": "px-f352d26ca406575ca2cce8b1b0960f5c",
+      "createdAt": "2026-03-14T05:48:53.405Z",
+      "expiresAt": "2026-03-14T11:48:53.405Z"
+    },
+    {
+      "tokenHash": "c15f3c2e03183f555b7ffeb2219b5c39da8ab456a6a386a8c8c44b574fe75372",
+      "pseudoId": "px-28b7cb7b5996176d8347c1d198b606df",
+      "createdAt": "2026-03-14T05:48:53.543Z",
+      "expiresAt": "2026-03-14T11:48:53.543Z"
+    },
+    {
+      "tokenHash": "392feed309b49764382a5884a89611b01d3085c7ea73a7efb42ece396cd1fb8e",
+      "pseudoId": "px-85f6248c14865820772c69b88948de09",
+      "createdAt": "2026-03-14T05:48:53.748Z",
+      "expiresAt": "2026-03-14T11:48:53.748Z"
+    },
+    {
+      "tokenHash": "ea9f891e39d66d9b8d6a6ed1ee4c65afac6b01ba89a23507d033e1190fb62611",
+      "pseudoId": "px-7ad693fd439566d54ae7fd2fe9eb0047",
+      "createdAt": "2026-03-14T05:48:53.884Z",
+      "expiresAt": "2026-03-14T11:48:53.884Z",
+      "deviceFingerprint": "1bcad5b85b3b6175cb7c33ba8388bd7fbe61cd189aa298c0a47394a2599c7ddb"
+    },
+    {
+      "tokenHash": "c24a8584eba95a42c63fcd59d4e63998b3b49e10fb65b970e2f28127362096a0",
+      "pseudoId": "px-6d43b1f0bd8eb65d44d761420dbd8fb0",
+      "createdAt": "2026-03-14T05:48:54.105Z",
+      "expiresAt": "2026-03-14T11:48:54.105Z"
     }
   ]
 }

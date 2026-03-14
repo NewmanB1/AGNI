@@ -1,4 +1,3 @@
-// @ts-nocheck — global.AGNI_SVG, global.AGNI_SHARED, global.DEV_MODE
 // packages/agni-runtime/rendering/svg-registry.js
 // AGNI SVG Registry
 //
@@ -17,9 +16,10 @@
 // them to the existing AGNI_SVG functions.
 // ─────────────────────────────────────────────────────────────────────────────
 
-(function (global) {
+(function (globalObj) {
   'use strict';
-
+  /** @type {{ AGNI_SVG?: object, AGNI_SHARED?: object, DEV_MODE?: boolean }} */
+  var global = globalObj;
   if (!global.AGNI_SVG) { console.error('[REGISTRY] AGNI_SVG not found'); return; }
   var SVG = global.AGNI_SVG;
 
@@ -967,4 +967,4 @@
     module.exports.CATEGORIES = catIds.map(function (c) { return { id: c, label: catMap[c] || c, icon: catIcons[c] || '📊' }; });
   }
 
-}(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : typeof global !== 'undefined' ? global : {})));
+})(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : typeof global !== 'undefined' ? global : {}));

@@ -6,7 +6,7 @@ This document describes the structure of automated guards against regression. Ru
 
 | Group | Scope | Contents |
 |-------|--------|----------|
-| **verify:core** | Cross-cutting | dead-files, dts, innerhtml, factory-order, precache-regression, schema-sync, codegen-sync, canonical, canonical-imports, node-version-docs, engine-no-ts, package-headers, skill-dag, run-environments, architectural-remediation, **es5** |
+| **verify:core** | Cross-cutting | dead-files, dts, innerhtml, factory-order, precache-regression, schema-sync, codegen-sync, canonical, canonical-imports, node-version-docs, engine-no-ts, package-headers, skill-dag, run-environments, architectural-remediation, **lms-integrations** (R8 Phase 2), **es5** |
 
 **Edge device (Android Nougat) guard:** `test:es5` runs `scripts/check-es5.js` and enforces ES5-only syntax and APIs in `packages/agni-runtime/`, `packages/agni-hub/sw.js`, and `packages/agni-hub/pwa/*.js`. These run in Chrome 51 WebView on student devices. See `docs/RUN-ENVIRONMENTS.md` and `.cursor/rules/edge-device-es5.md`.
 | **verify:runtime** | `packages/agni-runtime/` | svg-tools, runtime-manifest, runtime-headers, runtime-docs, runtime-lint, sensors |
@@ -62,6 +62,7 @@ E2E runs in a separate job.
 | B2 factory-loader cache fallback | regressions.test.js B2 | ✓ |
 | R8 LTI grade passback | wiring-smoke.test.js (GET /lti/lesson, /lti/xml, /lti/lessons, POST /lti/submit-grade) | ✓ |
 | R8 LTI postMessage (telemetry, player) | regressions.test.js R8 | ✓ |
+| R8 Phase 2 Kolibri chef + mod_ols structure | regressions.test.js R8 Phase 2, check-lms-integrations.js | ✓ |
 | Hub no hub-tools references | regressions.test.js REGRESSION, check-hub-docs.js | ✓ |
 
 ---

@@ -1667,6 +1667,38 @@ describe('R8: LTI grade passback — replaceResult and submit-grade wiring', () 
   });
 });
 
+describe('R8 Phase 2: Kolibri and Moodle mod_ols integration structure', () => {
+  const fs = require('fs');
+  const root = path.resolve(__dirname, '../..');
+
+  it('Kolibri Ricecooker chef exists with HTML5AppNode and HTMLZipFile', () => {
+    const chefPath = path.join(root, 'integrations/kolibri/sushichef_ols.py');
+    assert.ok(fs.existsSync(chefPath), 'sushichef_ols.py must exist');
+    const src = fs.readFileSync(chefPath, 'utf8');
+    assert.ok(src.includes('HTML5AppNode'), 'chef must use HTML5AppNode');
+    assert.ok(src.includes('HTMLZipFile'), 'chef must use HTMLZipFile');
+    assert.ok(src.includes('create_predictable_zip'), 'chef must use create_predictable_zip');
+    assert.ok(src.includes('OLSSushiChef'), 'chef must define OLSSushiChef');
+  });
+
+  it('Moodle mod_ols scaffold exists with grade passback wiring', () => {
+    const gradeListenerPath = path.join(root, 'integrations/moodle-mod_ols/amd/src/grade_listener.js');
+    assert.ok(fs.existsSync(gradeListenerPath), 'grade_listener.js must exist');
+    const src = fs.readFileSync(gradeListenerPath, 'utf8');
+    assert.ok(src.includes('ols.lessonComplete'), 'grade_listener must listen for ols.lessonComplete');
+    assert.ok(src.includes('mod_ols_external_submit_grade'), 'grade_listener must call submit_grade API');
+    const libPath = path.join(root, 'integrations/moodle-mod_ols/lib.php');
+    assert.ok(fs.existsSync(libPath), 'lib.php must exist');
+    const libSrc = fs.readFileSync(libPath, 'utf8');
+    assert.ok(libSrc.includes('ols_grade_update'), 'lib.php must define ols_grade_update');
+  });
+
+  it('R8 Phase 2 implementation guides exist', () => {
+    assert.ok(fs.existsSync(path.join(root, 'docs/integrations/KOLIBRI-PLUGIN-GUIDE.md')));
+    assert.ok(fs.existsSync(path.join(root, 'docs/integrations/MOODLE-MOD-OLS-GUIDE.md')));
+  });
+});
+
 describe('REGRESSION: hub package must not reference hub-tools or server paths', () => {
   const fs = require('fs');
   const root = path.resolve(__dirname, '../..');

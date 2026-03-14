@@ -1,4 +1,3 @@
-// @ts-nocheck — empty object to Record/interface assignment
 // packages/agni-runtime/engine/navigator.js
 
 /**
@@ -278,7 +277,8 @@ function buildStudentVarkProfile(userLog) {
         }
     });
 
-    var result = {};
+    /** @type {{ visual: number, auditory: number, readWrite: number, kinesthetic: number }} */
+    var result = { visual: 0, auditory: 0, readWrite: 0, kinesthetic: 0 };
     for (var di = 0; di < VARK_DIMS.length; di++) {
         var dim = VARK_DIMS[di];
         result[dim] = counts[dim] > 0 ? profile[dim] / counts[dim] : 0;
@@ -421,6 +421,7 @@ function scoreMarkovTransitions(candidates, recentLessons, transitionTable) {
     if (!transitionTable || !recentLessons || recentLessons.length === 0) return {};
 
     var RECENCY_DECAY = 0.7;
+    /** @type {Record<string, { prob: number, quality: number }>} */
     var scores = {};
 
     candidates.forEach(function (lesson) {
@@ -500,6 +501,7 @@ function computeClientPageRank(nodes, edges, opts) {
         if (diff < 1e-6) break;
     }
 
+    /** @type {Record<string, number>} */
     var result = {};
     for (var ki = 0; ki < N; ki++) { result[nodes[ki]] = rank[ki]; }
     return result;

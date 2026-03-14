@@ -83,7 +83,7 @@ class OLSChannelChef(SushiChef):
         return channel
 ```
 
-See [Ricecooker documentation](https://github.com/learningequality/ricecooker) for the exact API and node types.
+A working Ricecooker chef is in **`integrations/kolibri/sushichef_ols.py`**. Run `./build-lessons.sh` to compile, then `python sushichef_ols.py --token=YOUR_STUDIO_TOKEN` to upload. See [integrations/kolibri/README.md](../../integrations/kolibri/README.md).
 
 ---
 

@@ -249,7 +249,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | R5 | Day 96-100: Research TipTap for WYSIWYG | **Open** |
 | R6 | Day 96-100: Finalize v1.0 Spec | **Done** — docs/specs/ols-v1.0-spec.md |
 | R7 | Future: The Editor (drag-and-drop GUI) | **Done** — form-based editor in vanilla portal (meta, steps, ontology; Validate/Preview/Save; step reorder) |
-| R8 | Future: Plugins for Moodle, Kolibri, Canvas | **Phase 1 done** — LTI server, postMessage, Basic Outcomes grade passback, Moodle/Canvas docs; Phase 2 optional (Kolibri plugin, mod_ols) |
+| R8 | Future: Plugins for Moodle, Kolibri, Canvas | **Phase 2 scaffold** — LTI done; Kolibri Ricecooker chef (`integrations/kolibri/`); Moodle mod_ols scaffold (`integrations/moodle-mod_ols/`); guides in `docs/integrations/` |
 | R9 | Future: The Mesh (graph_weights sync via LoRa) | **Done** — design + impl ([playbooks/mesh-lora.md](playbooks/mesh-lora.md)); UDP sim; run `node hub-tools/mesh.js` or `sync.js --transport=lora` |
 | R10 | Future: Reference implementation refactor | **Done** — schema-based, pure pipelines, documented boundaries; see REFERENCE-IMPLEMENTATION-VISION.md §4.1–4.2 |
 
@@ -301,7 +301,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | JS-2.1 | HTTP namespace | Done |
 | JS-2.2 | Error extensions | Done |
 | JS-2.3 | Auth context type | Done |
-| JS-* | Remaining Phase 2+ items | Partial |
+| JS-* | Remaining Phase 2+ items | **Partial** — theta.js, navigator.js, svg-registry, svg-catalog now type-checked; ~15 runtime/PWA files still use @ts-nocheck |
 
 ---
 
@@ -312,11 +312,11 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | F1.1 | migrations.js type fixes | agni-engine | **Open** |
 | F1.2 | pagerank.js type fixes | agni-engine | **Open** |
 | F1.3 | index.js type fixes | agni-engine | **Open** |
-| F2.1–F2.3 | hub type fixes | agni-hub | **Open** |
+| F2.1–F2.3 | hub type fixes | agni-hub | **Partial** — theta.js Done (no @ts-nocheck); sentry.js, student.js use @ts-expect-error |
 | F3.1–F3.3 | utils type fixes | agni-utils | **Open** |
 | F4.1 | ols-schema fix | ols-schema | **Open** |
 | F5.1 | ols-compiler fix | ols-compiler | **Open** |
-| F6.1–F6.20 | runtime type fixes | agni-runtime | **Open** |
+| F6.1–F6.20 | runtime type fixes | agni-runtime | **Partial** — navigator.js, svg-registry, svg-catalog Done; ~15 files still use @ts-nocheck |
 
 ---
 

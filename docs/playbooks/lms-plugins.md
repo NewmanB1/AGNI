@@ -2,7 +2,7 @@
 
 This playbook outlines the design for **official plugins** that integrate OLS (Open Lesson Standard) lessons into major Learning Management Systems. It addresses roadmap item **R8**.
 
-**Status:** Phase 0–1c implemented. LTI server, runtime postMessage, LTI 1.1 Basic Outcomes grade passback, Moodle/Canvas docs.
+**Status:** Phase 0–2 implemented. LTI server, runtime postMessage, LTI 1.1 Basic Outcomes grade passback, Moodle/Canvas docs. Phase 2: Kolibri Ricecooker chef + Moodle mod_ols scaffold added.
 
 ---
 
@@ -130,8 +130,9 @@ Add optional postMessage dispatch in:
 | **1c** | LTI Grade Passback (Basic Outcomes) | Done | LTI 1.1 replaceResult; AGS (LTI 1.3) optional future |
 | **2a** | Moodle LTI config doc + XML descriptor | Done | `docs/integrations/MOODLE-LTI-SETUP.md`, `GET /lti/xml` |
 | **2b** | Canvas LTI config doc + XML descriptor | Done | `docs/integrations/CANVAS-LTI-SETUP.md` |
-| **2c** | Kolibri plugin (optional) — OLS content kind | High | Kolibri plugin SDK |
-| **3** | Moodle mod_ols (optional) — native activity module | High | PHP, Moodle APIs |
+| **2c** | Kolibri Ricecooker chef — OLS channel upload | Done | `integrations/kolibri/` |
+| **2d** | Kolibri native plugin (optional) — OLS content kind | High | See `docs/integrations/KOLIBRI-PLUGIN-GUIDE.md` |
+| **3** | Moodle mod_ols — native activity module | Scaffold | `integrations/moodle-mod_ols/`; see `docs/integrations/MOODLE-MOD-OLS-GUIDE.md` |
 
 ### 5.1 Phase 1a: LTI Server Skeleton
 
@@ -194,9 +195,21 @@ AGNI/
 
 ---
 
-## 8. References
+## 8. Phase 2 Additions
+
+| Deliverable | Location |
+|-------------|----------|
+| **Kolibri Ricecooker chef** | `integrations/kolibri/` — upload OLS lessons to Kolibri Studio as HTML5 Apps |
+| **Kolibri plugin guide** | `docs/integrations/KOLIBRI-PLUGIN-GUIDE.md` — design for native OLS content kind |
+| **Moodle mod_ols** | `integrations/moodle-mod_ols/` — activity module scaffold (iframe + grade passback) |
+| **mod_ols guide** | `docs/integrations/MOODLE-MOD-OLS-GUIDE.md` — implementation checklist |
+
+---
+
+## 9. References
 
 - **Kolibri guide:** `docs/integrations/KOLIBRI-INTEGRATION-GUIDE.md`
+- **Kolibri chef:** `integrations/kolibri/`
 - **iframe demo:** `demo/iframe-demo.html`
 - **Hub API:** `docs/api-contract.md`
 - **LTI 1.3 spec:** [IMS LTI Core 1.3](https://www.imsglobal.org/spec/lti/v1p3)

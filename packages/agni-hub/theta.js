@@ -1,4 +1,3 @@
-// @ts-nocheck — dynamic ctx shape, lmsEngine, thetaCache, log from shared
 'use strict';
 // packages/agni-hub/theta.js â€” AGNI Hub API entry point
 // Runs on: Village Hub (Raspberry Pi, Node 14+).
@@ -22,7 +21,7 @@ const {
   loadJSONAsync, saveJSONAsync, getFileMtimeAsync,
   loadMasterySummaryAsync, loadBaseCostsAsync, loadLessonIndexAsync, loadSchedulesAsync,
   loadCurriculumAsync, loadApprovedCatalogAsync,
-  lmsService: lmsEngine, governanceService, log,
+  lmsService, governanceService, log,
   GRAPH_WEIGHTS_LOCAL, GRAPH_WEIGHTS_REGIONAL, GRAPH_WEIGHTS_MESH, COHORT_ASSIGNMENTS,
   SKILL_GRAPH_CYCLES, MASTERY_SUMMARY, SCHEDULES, CURRICULUM_GRAPH, APPROVED_CATALOG,
   SERVE_DIR, LESSON_INDEX, PORT, DATA_DIR,
@@ -30,17 +29,24 @@ const {
   MIN_LOCAL_SAMPLE_SIZE, MIN_LOCAL_EDGE_COUNT,
   thetaCache, accountsService, authorService
 } = ctx;
+/** @type {import('@agni/services/types').LMSService} */
+const lmsEngine = lmsService;
+/** @type {import('@agni/services/types').AuthorService | undefined} */
+const authorSvc = authorService;
+/** @type {{ info: Function, warn: Function, error: Function }} */
+const thetaLog = log;
 const { pruneOrphanLessons } = require('./gc-disk-lessons');
 
 // â”€â”€ LMS engine status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if (lmsEngine.isAvailable()) {
   try {
-    log.info('LMS engine loaded', lmsEngine.getStatus());
+    const getStatusFn = lmsEngine.getStatus;
+    thetaLog.info('LMS engine loaded', typeof getStatusFn === 'function' ? /** @type {function(): object} */ (getStatusFn)() : undefined);
   } catch (err) {
-    log.info('LMS engine loaded (status unavailable)', { error: err.message });
+    thetaLog.info('LMS engine loaded (status unavailable)', { error: err.message });
   }
 } else {
-  log.warn('LMS engine not available â€” degraded mode: theta scheduling active, bandit selection disabled');
+  thetaLog.warn('LMS engine not available â€” degraded mode: theta scheduling active, bandit selection disabled');
 }
 
 // â”€â”€ Shared cache â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -154,7 +160,7 @@ async function updateSharedCacheIfNeeded() {
       /** @type {Error & { code?: string; cycle?: string[] }} */ (err).cycle = cycle;
       throw err;
     }
-    log.error('Skill graph cycle detected; pruning affected lessons (graceful degradation)', {
+    thetaLog.error('Skill graph cycle detected; pruning affected lessons (graceful degradation)', {
       cycle: cycle,
       message: 'Lessons that provide these skills are excluded until cycle is fixed.'
     });
@@ -163,7 +169,7 @@ async function updateSharedCacheIfNeeded() {
       detectedAt: new Date().toISOString(),
       message: 'Lessons that provide these skills are excluded until cycle is fixed.'
     }).catch(function (e) {
-      log.warn('Could not write skill-graph-cycles.json', { error: e.message });
+      thetaLog.warn('Could not write skill-graph-cycles.json', { error: e.message });
     });
     for (let ci = 0; ci < cycle.length; ci++) delete skillGraph[cycle[ci]];
   } else {
@@ -190,7 +196,7 @@ async function updateSharedCacheIfNeeded() {
   });
   sharedCache.graphMtime = maxMtime;
   sharedCache.eligibleMtime = maxMtime;
-  log.info('Shared cache updated', { skills: Object.keys(sharedCache.skillGraph).length, eligibleLessons: sharedCache.eligibleLessons.length });
+  thetaLog.info('Shared cache updated', { skills: Object.keys(sharedCache.skillGraph).length, eligibleLessons: sharedCache.eligibleLessons.length });
 }
 
 function expandScheduledSkills(initialSkills, studentSkills, skillGraph) {
@@ -213,7 +219,7 @@ function expandScheduledSkills(initialSkills, studentSkills, skillGraph) {
     }
     depth++;
   }
-  if (depth >= MAX_DEPTH) log.warn('BFS depth limit reached â€” possible cycle in skill graph');
+  if (depth >= MAX_DEPTH) thetaLog.warn('BFS depth limit reached â€” possible cycle in skill graph');
   return expanded;
 }
 
@@ -259,7 +265,7 @@ function computeLessonTheta(lesson, pseudoId, baseCosts, masterySummary, graphWe
   const rawTheta = repBaseCost * repResidual - coherenceBonus;
   const theta = Math.round(Math.max(MIN_MLC, rawTheta) * 1000) / 1000;
   if (rawTheta < MIN_MLC) {
-    log.warn('MLC anomaly: raw theta below MIN_MLC (clamped). May indicate invalid model or graph weights.',
+    thetaLog.warn('MLC anomaly: raw theta below MIN_MLC (clamped). May indicate invalid model or graph weights.',
       { lessonId: lesson.lessonId, rawTheta, MIN_MLC, baseCost: repBaseCost, residualFactor: repResidual, coherenceBonus });
   }
   return {
@@ -405,7 +411,7 @@ async function getLessonsSortedByTheta(pseudoId) {
       });
     }
   } catch (e) {
-    log.warn('Frustration feedback loop failed (non-critical)', { error: e.message });
+    thetaLog.warn('Frustration feedback loop failed (non-critical)', { error: e.message });
   }
 
   const topK = envConfig.topKCandidates || 500;
@@ -464,9 +470,9 @@ async function rebuildLessonIndex() {
         } catch (e2) { void e2; }
       }
       await saveJSONAsync(LESSON_INDEX, index);
-      log.info('Catalog-free mode: derived lesson set from IR sidecars', { total: index.length, sidecar: sidecarCount });
+      thetaLog.info('Catalog-free mode: derived lesson set from IR sidecars', { total: index.length, sidecar: sidecarCount });
       const gcFree = await pruneOrphanLessons({ serveDir: SERVE_DIR, catalogSlugs: [] });
-      if (gcFree.pruned.length > 0) log.info('P2-20: pruned orphans (catalog-free)', { count: gcFree.pruned.length });
+      if (gcFree.pruned.length > 0) thetaLog.info('P2-20: pruned orphans (catalog-free)', { count: gcFree.pruned.length });
       if (lmsEngine.isAvailable && lmsEngine.isAvailable()) {
         const seedEntries = index
           .filter((ent) => ent.skillsProvided && ent.skillsProvided.length > 0)
@@ -476,11 +482,11 @@ async function rebuildLessonIndex() {
             const difficulty = Math.max(1, Math.min(5, raw));
             return { lessonId: ent.lessonId, difficulty, skill: ent.skillsProvided[0].skill };
           });
-        try { lmsEngine.seedLessons(seedEntries); }
-        catch (err) { log.error('LMS engine seeding failed', { error: err.message }); }
+        try { (/** @type {(entries: Array<{lessonId: string, difficulty: number, skill: string}>) => void} */ (lmsEngine.seedLessons))(seedEntries); }
+        catch (err) { thetaLog.error('LMS engine seeding failed', { error: err.message }); }
       }
     } catch (e) {
-      log.info('No catalog.json and no lessons dir; skipping index rebuild');
+      thetaLog.info('No catalog.json and no lessons dir; skipping index rebuild');
     }
     return;
   }
@@ -525,7 +531,7 @@ async function rebuildLessonIndex() {
 
     fallbackCount++;
     catalogOrphans.push(entry.slug);
-    log.warn('Catalog/IR drift: catalog lists slug but IR missing; lesson not indexed', { slug: entry.slug });
+    thetaLog.warn('Catalog/IR drift: catalog lists slug but IR missing; lesson not indexed', { slug: entry.slug });
   }
 
   const catalogSlugSet = new Set((catalog.lessons || []).map((e) => e.slug).filter(Boolean));
@@ -542,8 +548,8 @@ async function rebuildLessonIndex() {
       } catch (e) { void e; }
     }
   } catch (e) { /* lessons dir may not exist */ }
-  const yamlSlugs = (authorService && authorService.listSavedLessons)
-    ? authorService.listSavedLessons(envConfig.yamlDir) : [];
+  const yamlSlugs = (authorSvc && authorSvc.listSavedLessons)
+    ? authorSvc.listSavedLessons(envConfig.yamlDir) : [];
   const yamlOnly = [];
   for (let y = 0; y < yamlSlugs.length; y++) {
     const ys = yamlSlugs[y];
@@ -554,7 +560,7 @@ async function rebuildLessonIndex() {
     }
   }
   if (catalogOrphans.length > 0 || irOnly.length > 0 || yamlOnly.length > 0) {
-    log.warn('Catalog/IR drift (P2-22 validation)', {
+    thetaLog.warn('Catalog/IR drift (P2-22 validation)', {
       catalogOrphans: catalogOrphans.length,
       irOnly: irOnly.length,
       yamlOnly: yamlOnly.length,
@@ -566,10 +572,10 @@ async function rebuildLessonIndex() {
 
   const validSlugs = new Set([].concat(Array.from(catalogSlugSet), yamlSlugs));
   const gcResult = await pruneOrphanLessons({ serveDir: SERVE_DIR, validSlugs: validSlugs });
-  if (gcResult.pruned.length > 0) log.info('P2-20: pruned orphans', { count: gcResult.pruned.length, slugs: gcResult.pruned.slice(0, 5) });
+  if (gcResult.pruned.length > 0) thetaLog.info('P2-20: pruned orphans', { count: gcResult.pruned.length, slugs: gcResult.pruned.slice(0, 5) });
 
   await saveJSONAsync(LESSON_INDEX, index);
-  log.info('Lesson index rebuilt', { total: index.length, sidecar: sidecarCount, skippedNoIR: fallbackCount });
+  thetaLog.info('Lesson index rebuilt', { total: index.length, sidecar: sidecarCount, skippedNoIR: fallbackCount });
   if (lmsEngine.isAvailable && lmsEngine.isAvailable()) {
     const seedEntries = index
       .filter(entry => entry.skillsProvided.length > 0)
@@ -579,8 +585,8 @@ async function rebuildLessonIndex() {
         const difficulty = Math.max(1, Math.min(5, raw));
         return { lessonId: entry.lessonId, difficulty, skill: entry.skillsProvided[0].skill };
       });
-    try { lmsEngine.seedLessons(seedEntries); }
-    catch (err) { log.error('LMS engine seeding failed', { error: err.message }); }
+    try { (/** @type {(entries: Array<{lessonId: string, difficulty: number, skill: string}>) => void} */ (lmsEngine.seedLessons))(seedEntries); }
+    catch (err) { thetaLog.error('LMS engine seeding failed', { error: err.message }); }
   }
 }
 
@@ -589,9 +595,9 @@ async function rebuildLessonIndex() {
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // Inject business logic into shared context so route modules can use them
-ctx.getLessonsSortedByTheta = getLessonsSortedByTheta;
-ctx.getEffectiveGraphWeights = getEffectiveGraphWeights;
-ctx.applyRecommendationOverride = applyRecommendationOverride;
+/** @type {Record<string, unknown>} */ (ctx).getLessonsSortedByTheta = getLessonsSortedByTheta;
+/** @type {Record<string, unknown>} */ (ctx).getEffectiveGraphWeights = getEffectiveGraphWeights;
+/** @type {Record<string, unknown>} */ (ctx).applyRecommendationOverride = applyRecommendationOverride;
 
 function startApi(port) {
   const listenPort = (typeof port === 'number' && port >= 0) ? port : PORT;
@@ -642,7 +648,7 @@ function startApi(port) {
 
     res.on('finish', () => {
       const durationMs = Number(process.hrtime.bigint() - startTime) / 1e6;
-      log.info('request', {
+      thetaLog.info('request', {
         method: req.method, path: urlPath, status: res.statusCode,
         durationMs: Math.round(durationMs * 10) / 10, requestId
       });
@@ -653,7 +659,7 @@ function startApi(port) {
       const result = match.handler(req, res, { qs, sendResponse, params: match.params });
       if (result && typeof result.catch === 'function') {
         result.catch(err => {
-          log.error('Unhandled route error', { error: err.message || String(err), stack: err.stack });
+          thetaLog.error('Unhandled route error', { error: err.message || String(err), stack: err.stack });
           if (!res.headersSent) sendResponse(500, { error: 'Internal server error' });
         });
       }
@@ -682,13 +688,13 @@ function startApi(port) {
     const privateKeyPath = envConfig.privateKeyPath || null;
     hubTransform.attachRoutes(server, { dev: process.env.NODE_ENV !== 'production', deviceId: null, privateKey: privateKeyPath });
   } catch (err) {
-    log.warn('hub-transform not available â€” /lessons/, /factories/, /katex/ routes disabled', { error: err.message });
+    thetaLog.warn('hub-transform not available â€” /lessons/, /factories/, /katex/ routes disabled', { error: err.message });
   }
 
   server.listen(listenPort, '0.0.0.0', () => {
     const addr = server.address();
     const port = addr && typeof addr === 'object' ? addr.port : listenPort;
-    log.info('API listening', { port });
+    thetaLog.info('API listening', { port });
   });
   return server;
 }
@@ -697,22 +703,22 @@ function startApi(port) {
 if (require.main === module) {
   (async () => {
     const pinResult = await accountsService.migrateLegacyPins();
-    if (pinResult.migrated > 0) log.info('Migrated legacy PINs to scrypt', { count: pinResult.migrated });
-    if (pinResult.legacySha256 > 0) log.warn('Students with unsalted SHA-256 PINs (will migrate on next verification)', { count: pinResult.legacySha256 });
+    if (pinResult.migrated > 0) thetaLog.info('Migrated legacy PINs to scrypt', { count: pinResult.migrated });
+    if (pinResult.legacySha256 > 0) thetaLog.warn('Students with unsalted SHA-256 PINs (will migrate on next verification)', { count: pinResult.legacySha256 });
     await rebuildLessonIndex();
     const server = startApi(PORT);
 
     function shutdown(signal) {
-      log.info('Shutting down gracefully', { signal });
+      thetaLog.info('Shutting down gracefully', { signal });
       server.close(() => {
-        log.info('HTTP server closed');
+        thetaLog.info('HTTP server closed');
         if (lmsEngine.isAvailable && lmsEngine.isAvailable()) {
-          try { lmsEngine.persistState(); log.info('LMS state persisted'); }
-          catch (e) { log.error('LMS state save failed', { error: e.message }); }
+          try { lmsEngine.persistState(); thetaLog.info('LMS state persisted'); }
+          catch (e) { thetaLog.error('LMS state save failed', { error: e.message }); }
         }
         process.exit(0);
       });
-      setTimeout(() => { log.error('Forced shutdown after timeout'); process.exit(1); }, 10000);
+      setTimeout(() => { thetaLog.error('Forced shutdown after timeout'); process.exit(1); }, 10000);
     }
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));

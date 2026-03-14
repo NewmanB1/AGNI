@@ -58,7 +58,7 @@ This document is the **implementation plan** to finish enabling `checkJs: true` 
 
 ## 2. @agni/hub
 
-### 2.1 theta.js
+### 2.1 theta.js — **Done** (no @ts-nocheck)
 
 | Line | Issue | Fix |
 |------|-------|-----|
@@ -170,6 +170,9 @@ Ensure `global` is used where the code uses `global.X` (not `window.X`).
 
 | File | Error count | Strategy |
 |------|-------------|----------|
+| **navigator.js** | **Done** | Removed @ts-nocheck; added Record types for VARK profile, scores, PageRank result |
+| **svg-registry.js** | **Done** | Removed @ts-nocheck; typed IIFE global param |
+| **svg-catalog.js** | **Done** | Removed @ts-nocheck; typed global/globalThis |
 | player.js | ~60 | Extend Window/global; add JSDoc for `lesson`/`steps` from `LESSON_DATA`; optional chaining for `log`, `_narr`, `_ckpt`, `_frust`; type `getElementById` results as `HTMLElement \| null` |
 | sensor-bridge.js | ~18 | Type `DeviceMotionEvent` with optional `requestPermission`; type sensor callback params; extend global if needed |
 | shared-runtime.js | ~10 | Same global + `log` typing; LESSON_DATA access |

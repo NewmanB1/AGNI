@@ -19,8 +19,8 @@ This document outlines the plan to fix type mismatches so `checkJs: true` can be
 
 **Completed (checkJs enabled):**
 - engine: migrations.js (ensureObject cast, for-in types, state cast), pagerank.js (provides/requires guards, Record types), index.js (breakdown type)
-- hub: theta.js (@ts-nocheck), sentry.js (Ajv/addFormats @ts-expect-error), routes/student.js (Date arithmetic)
-- runtime: player, sensors, shared-runtime, rendering/*, navigator, threshold-evaluator, telemetry, checkpoint, factory-loader, library, svg-catalog (@ts-nocheck)
+- hub: **theta.js (no @ts-nocheck — LMSService/AuthorService types, thetaLog, ctx cast)**, sentry.js (Ajv/addFormats @ts-expect-error), routes/student.js (Date arithmetic)
+- runtime: player, sensors, shared-runtime, rendering/*, **navigator (no @ts-nocheck — Record types for VARK/profile/scores)**, threshold-evaluator, telemetry, checkpoint, factory-loader, library, svg-catalog (@ts-nocheck)
 - utils: binary.js (Buffer.from ArrayBuffer), http-helpers.js (return paths, JSDoc), router.js (params type)
 - ols-compiler: markdown-pipeline (rehype-katex @ts-expect-error)
 - ols-schema: lesson-schema (Ajv/ajvFormats @ts-expect-error)

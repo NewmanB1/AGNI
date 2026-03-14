@@ -4,6 +4,7 @@
  * Node: index.js exports RUNTIME_ROOT and resolve().
  * Browser: IIFE scripts attach to window.AGNI_SHARED, AGNI_SVG, AGNI_GATES, AGNI_A11Y, AGNI_SVG_HELPERS.
  * This file declares both the module export and the global types for TypeScript consumers.
+ * Runtime uses `global.X` (isomorphic); augment both Window and global.
  */
 
 declare global {
@@ -112,6 +113,32 @@ declare global {
     PALETTE?: string[];
     [key: string]: unknown;
   }
+  /** Augment global (typeof globalThis) for isomorphic runtime */
+  var global: typeof globalThis & {
+    LESSON_DATA?: unknown;
+    DEV_MODE?: boolean;
+    AGNI_SHARED?: AgniShared;
+    AGNI_SVG?: AgniSvg;
+    AGNI_GATES?: AgniGates;
+    AGNI_A11Y?: AgniA11y;
+    AGNI_SVG_HELPERS?: AgniSvgHelpers;
+    AGNI_LOADER?: unknown;
+    AGNI_INTEGRITY?: unknown;
+    AGNI_NAVIGATOR?: unknown;
+    AGNI_STEP_RENDERERS?: unknown;
+    AGNI_FRUSTRATION?: unknown;
+    AGNI_CHECKPOINT?: unknown;
+    AGNI_TELEMETRY?: unknown;
+    AGNI_I18N?: unknown;
+    AGNI_NARRATION?: unknown;
+    AGNI_COMPLETION?: unknown;
+    AGNI_HUB?: string;
+    AGNI_LOAD_TIMEOUT?: number;
+    AGNI_RETRY_TIMEOUT?: number;
+    AGNI_CSP_NONCE?: string;
+    AGNI_HUB_KEY?: string;
+    [key: string]: unknown;
+  };
 }
 
 export {};
