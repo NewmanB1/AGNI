@@ -12,6 +12,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { walkDir } = require('@agni/utils/io');
 
 const ROOT = path.resolve(__dirname, '..');
 const DOCS_DIR = path.join(ROOT, 'docs');
@@ -29,20 +30,6 @@ const REQUIRED_IN_ARCHITECTURE = [
   /node\s*14\+/,
 ];
 
-function walkDir(dir, out, skipArchive) {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const e of entries) {
-    const full = path.join(dir, e.name);
-    if (e.isDirectory()) {
-      if (e.name === 'node_modules') continue;
-      if (skipArchive && e.name === 'archive') continue;
-      walkDir(full, out, skipArchive);
-    } else if (e.name.endsWith('.md')) {
-      out.push(full);
-    }
-  }
-}
-
 const errors = [];
 
 // 1. ARCHITECTURE must state Node 18+ for hub
@@ -59,8 +46,7 @@ if (fs.existsSync(ARCHITECTURE)) {
 }
 
 // 2. No non-archive docs may state Node 14 or Node 14–16 as hub/engine target
-const files = [];
-walkDir(DOCS_DIR, files, true);
+const files = walkDir(DOCS_DIR, { extensions: ['.md'], skipArchive: true });
 for (const f of files) {
   const rel = path.relative(ROOT, f).replace(/\\/g, '/');
   const content = fs.readFileSync(f, 'utf8');

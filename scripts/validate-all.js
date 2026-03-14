@@ -5,25 +5,17 @@ const fs = require('fs');
 const path = require('path');
 const { safeYamlLoad } = require('@ols/compiler/services/compiler');
 const lessonSchema = require('@agni/services/lesson-schema');
+const { walkDir } = require('@agni/utils/io');
 
 const lessonsDir = path.resolve(__dirname, '..', 'lessons');
 
 console.log('🔍 Validating all .yaml lessons...\n');
 
-function collectYaml(dir, prefix) {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  let result = [];
-  for (const e of entries) {
-    if (e.isDirectory()) {
-      result = result.concat(collectYaml(path.join(dir, e.name), prefix ? prefix + e.name + '/' : e.name + '/'));
-    } else if (e.name.endsWith('.yaml') || e.name.endsWith('.yml')) {
-      result.push({ rel: (prefix || '') + e.name, full: path.join(dir, e.name) });
-    }
-  }
-  return result;
-}
-
-const files = collectYaml(lessonsDir, '');
+const fullPaths = walkDir(lessonsDir, { extensions: ['.yaml', '.yml'] });
+const files = fullPaths.map(function (full) {
+  const rel = path.relative(lessonsDir, full).replace(/\\/g, '/');
+  return { rel: rel, full: full };
+});
 
 if (files.length === 0) {
   console.log('No .yaml or .yml files found in lessons/');

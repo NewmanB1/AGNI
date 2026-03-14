@@ -12,6 +12,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { walkDir } = require('@agni/utils/io');
 
 const ROOT = path.resolve(__dirname, '..');
 
@@ -54,24 +55,14 @@ function collectFiles(dirs, extensions) {
   dirs.forEach(function (dir) {
     const abs = path.join(ROOT, dir);
     if (!fs.existsSync(abs)) return;
-    walk(abs, dir, extensions, results);
+    const relPaths = walkDir(abs, {
+      extensions: extensions,
+      baseDir: ROOT,
+      skipDirs: ['node_modules', 'dist']
+    });
+    results.push.apply(results, relPaths);
   });
   return results;
-}
-
-function walk(absDir, relDir, extensions, out) {
-  const entries = fs.readdirSync(absDir);
-  for (let i = 0; i < entries.length; i++) {
-    const full = path.join(absDir, entries[i]);
-    const rel = relDir + '/' + entries[i];
-    const stat = fs.statSync(full);
-    if (stat.isDirectory()) {
-      if (entries[i] === 'node_modules' || entries[i] === 'dist') continue;
-      walk(full, rel, extensions, out);
-    } else if (extensions.some(function (ext) { return entries[i].endsWith(ext); })) {
-      out.push(normalize(rel));
-    }
-  }
 }
 
 const sourceFiles = collectFiles(SOURCE_DIRS, ['.js', '.ts']);

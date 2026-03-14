@@ -10,6 +10,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { walkDir } = require('@agni/utils/io');
 
 const ROOT = path.resolve(__dirname, '..');
 const DOCS_DIR = path.join(ROOT, 'docs');
@@ -22,22 +23,7 @@ const BAD_PATTERNS = [
 // Meta-docs that describe the migration (mention old paths by design); PHASE-3 is in archive (not scanned)
 const SKIP_FILES = [];
 
-function walkDir(dir, out, skipArchive) {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const e of entries) {
-    const full = path.join(dir, e.name);
-    if (e.isDirectory()) {
-      if (e.name === 'node_modules') continue;
-      if (skipArchive && e.name === 'archive') continue;
-      walkDir(full, out, skipArchive);
-    } else if (e.name.endsWith('.md')) {
-      out.push(full);
-    }
-  }
-}
-
-const files = [];
-walkDir(DOCS_DIR, files, true);
+const files = walkDir(DOCS_DIR, { extensions: ['.md'], skipArchive: true });
 const violations = [];
 for (const f of files) {
   const rel = path.relative(ROOT, f).replace(/\\/g, '/');
@@ -53,20 +39,7 @@ for (const f of files) {
 // Also scan packages/agni-hub for stale path references in comments
 const HUB_DIR = path.join(ROOT, 'packages', 'agni-hub');
 const HUB_BAD_PATTERNS = [/hub-tools\//, /server\/hub-transform/, /server\/theta/];
-function walkHub(dir, out) {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const e of entries) {
-    const full = path.join(dir, e.name);
-    if (e.isDirectory()) {
-      if (e.name === 'node_modules') continue;
-      walkHub(full, out);
-    } else if (e.name.endsWith('.js')) {
-      out.push(full);
-    }
-  }
-}
-const hubFiles = [];
-walkHub(HUB_DIR, hubFiles);
+const hubFiles = walkDir(HUB_DIR);
 for (const f of hubFiles) {
   const rel = path.relative(ROOT, f).replace(/\\/g, '/');
   const content = fs.readFileSync(f, 'utf8');

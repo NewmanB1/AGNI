@@ -9,6 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { walkDir } = require('@agni/utils/io');
 
 const ROOT = path.resolve(__dirname, '..');
 const SERVICES_DIR = path.join(ROOT, 'packages', 'agni-services');
@@ -20,23 +21,7 @@ const REQUIRE_PATH_SCRIPTS = /require\s*\(\s*(?:path\.join|path\.resolve)\s*\([^
 const PATH_JOIN_SCRIPTS = /path\.join\s*\(\s*__dirname\s*,\s*['"][^'"]*scripts[/\\]/;
 
 const violations = [];
-
-function walkDir(dir, out) {
-  if (!fs.existsSync(dir)) return;
-  const entries = fs.readdirSync(dir);
-  for (const e of entries) {
-    const full = path.join(dir, e);
-    const stat = fs.statSync(full);
-    if (stat.isDirectory() && e !== 'node_modules') {
-      walkDir(full, out);
-    } else if (e.endsWith('.js')) {
-      out.push(full);
-    }
-  }
-}
-
-const files = [];
-walkDir(SERVICES_DIR, files);
+const files = walkDir(SERVICES_DIR);
 
 for (const file of files) {
   const content = fs.readFileSync(file, 'utf8');

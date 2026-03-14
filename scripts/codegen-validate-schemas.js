@@ -9,17 +9,14 @@
 
 const fs = require('fs');
 const path = require('path');
+const { createSchemaValidator } = require('@agni/utils/schema-validator');
 
 const schemasDir = path.join(__dirname, '..', 'schemas');
-let Ajv;
-try {
-  Ajv = require('ajv');
-} catch (e) {
+const ajv = createSchemaValidator({ strict: false });
+if (!ajv) {
   console.error('ajv not installed. npm install ajv');
   process.exit(1);
 }
-
-const ajv = new Ajv({ strict: false });
 const files = fs.readdirSync(schemasDir).filter(f => f.endsWith('.schema.json'));
 
 let failed = false;

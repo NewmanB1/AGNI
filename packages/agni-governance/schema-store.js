@@ -9,13 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
-
-let Ajv;
-try {
-  Ajv = require('ajv');
-} catch (e) {
-  Ajv = null;
-}
+const { createSchemaValidator } = require('@agni/utils/schema-validator');
 
 /**
  * Create a schema-backed JSON store.
@@ -29,10 +23,13 @@ try {
  */
 function createSchemaStore({ schemaPath, defaults, log, preValidate }) {
   let compiledValidator = null;
-  if (Ajv && fs.existsSync(schemaPath)) {
+  if (fs.existsSync(schemaPath)) {
     try {
-      const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
-      compiledValidator = new Ajv().compile(schema);
+      const ajv = createSchemaValidator();
+      if (ajv) {
+        const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+        compiledValidator = ajv.compile(schema);
+      }
     } catch (err) {
       compiledValidator = null;
     }

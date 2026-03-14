@@ -1,4 +1,53 @@
 const fs = require('fs');
+const path = require('path');
+
+/**
+ * Recursively walk a directory, collecting file paths.
+ * @param {string} dir - Directory to walk
+ * @param {Object} [opts] - Options
+ * @param {string[]} [opts.extensions] - File extensions to include (e.g. ['.js'], ['.yaml','.yml']). Default ['.js']
+ * @param {string[]} [opts.skipDirs] - Directory names to skip. Default ['node_modules']
+ * @param {boolean} [opts.skipArchive] - When true, skip 'archive' directories. Default false
+ * @param {string} [opts.baseDir] - When set, return paths relative to baseDir (normalized) instead of absolute
+ * @returns {string[]} Array of file paths
+ */
+function walkDir(dir, opts) {
+  opts = opts || {};
+  const extensions = opts.extensions || ['.js'];
+  let skipDirs = opts.skipDirs ? opts.skipDirs.slice() : ['node_modules'];
+  if (opts.skipArchive) skipDirs.push('archive');
+  const baseDir = opts.baseDir;
+  const results = [];
+
+  function walk(d) {
+    if (!fs.existsSync(d)) return;
+    const entries = fs.readdirSync(d, { withFileTypes: true });
+    for (let i = 0; i < entries.length; i++) {
+      const e = entries[i];
+      const full = path.join(d, e.name);
+      if (e.isDirectory()) {
+        if (skipDirs.indexOf(e.name) !== -1) continue;
+        walk(full);
+      } else {
+        const ext = path.extname(e.name);
+        if (extensions.indexOf(ext) !== -1) {
+          results.push(baseDir ? path.relative(baseDir, full).replace(/\\/g, '/') : full);
+        }
+      }
+    }
+  }
+  walk(dir);
+  return results;
+}
+
+/**
+ * Check if a filename has a YAML extension (.yaml or .yml).
+ * @param {string} filename
+ * @returns {boolean}
+ */
+function isYamlFile(filename) {
+  return /\.(yaml|yml)$/i.test(String(filename));
+}
 
 /**
  * Ensure a directory exists, creating it recursively if needed.
@@ -67,4 +116,4 @@ function escapeHtml(str) {
     .replace(/'/g,  '&#039;');
 }
 
-module.exports = { ensureDir, readFileSafe, writeIfNewer, copyIfNewer, escapeHtml };
+module.exports = { ensureDir, readFileSafe, writeIfNewer, copyIfNewer, escapeHtml, walkDir, isYamlFile };

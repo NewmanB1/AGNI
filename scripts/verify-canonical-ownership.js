@@ -11,6 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { walkDir } = require('@agni/utils/io');
 
 const ROOT = path.resolve(__dirname, '..');
 const PACKAGES_TO_CHECK = [
@@ -30,20 +31,6 @@ const SRC_REQUIRE_PATTERN = /require\s*\(\s*['"]([^'"]*\/src\/[^'"]+)['"]\s*\)/g
 
 const violations = [];
 
-function walkDir(dir, extensions, out) {
-  if (!fs.existsSync(dir)) return;
-  const entries = fs.readdirSync(dir);
-  for (const e of entries) {
-    const full = path.join(dir, e);
-    const stat = fs.statSync(full);
-    if (stat.isDirectory()) {
-      if (e !== 'node_modules') walkDir(full, extensions, out);
-    } else if (extensions.some(ext => e.endsWith(ext))) {
-      out.push(full);
-    }
-  }
-}
-
 function checkFile(filePath, relPath, pkg) {
   let content;
   try {
@@ -60,8 +47,7 @@ function checkFile(filePath, relPath, pkg) {
 
 for (const pkg of PACKAGES_TO_CHECK) {
   const absDir = path.join(ROOT, pkg.dir);
-  const files = [];
-  walkDir(absDir, ['.js'], files);
+  const files = walkDir(absDir, { extensions: ['.js'] });
   for (const f of files) {
     const rel = path.relative(ROOT, f).replace(/\\/g, '/');
     checkFile(f, rel, pkg);

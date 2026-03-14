@@ -320,6 +320,24 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 
 ---
 
+## DRY-REMEDIATION-PLAN
+
+| ID | Issue | Status |
+|----|-------|--------|
+| DRY-1 | intEnv/floatEnv consolidation (env-validate.js) | Open |
+| DRY-2 | HTTP put/post in contract tests | Open |
+| DRY-3 | Hub bootstrap module | Open |
+| DRY-4 | Setup wizard common | Open |
+| DRY-5 | YAML extension helper | Open |
+| DRY-6 | Scripts ROOT constant | Open |
+| DRY-7 | loadJSON adoption | Open |
+| DRY-8 | Ajv schema validator factory | **Done** |
+| DRY-9 | walkDir unification | **Done** |
+
+See [DRY-REMEDIATION-PLAN.md](DRY-REMEDIATION-PLAN.md).
+
+---
+
 ## Summary: Open issues by priority
 
 | Priority | Count | Examples |
@@ -336,6 +354,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 ## References
 
 - **Documented-to-fix policy:** [DOCUMENTED-TO-FIX-REMEDIATION-PLAN.md](DOCUMENTED-TO-FIX-REMEDIATION-PLAN.md)
+- **DRY remediation:** [DRY-REMEDIATION-PLAN.md](DRY-REMEDIATION-PLAN.md)
 - Mesh design (R9): `playbooks/mesh-lora.md`
 - LMS plugins (R8): `playbooks/lms-plugins.md`
 - Env validation: `ENV-VALIDATION-SPLIT.md`

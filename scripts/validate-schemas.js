@@ -11,12 +11,10 @@
 const fs = require('fs');
 const path = require('path');
 const { safeYamlLoad } = require('@ols/compiler/services/compiler');
+const { createSchemaValidator } = require('@agni/utils/schema-validator');
 
-let Ajv, addFormats;
-try {
-  Ajv = require('ajv');
-  addFormats = require('ajv-formats');
-} catch {
+const ajv = createSchemaValidator({ strict: false, allErrors: true, addFormats: true });
+if (!ajv) {
   console.error('Missing deps: npm install ajv ajv-formats');
   process.exit(1);
 }
@@ -27,24 +25,24 @@ const lessonsDir = path.join(root, 'lessons');
 const fixturesDir = path.join(root, 'fixtures');
 const dataDir = path.join(root, 'data');
 
-const ajv = new Ajv({ strict: false, allErrors: true });
-addFormats(ajv);
-
 let failed = false;
+const compiledCache = {};
 
-function loadSchema(name) {
-  const filePath = path.join(schemasDir, name);
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+function getCompiledValidator(schemaName) {
+  if (compiledCache[schemaName]) return compiledCache[schemaName];
+  const schema = JSON.parse(fs.readFileSync(path.join(schemasDir, schemaName), 'utf8'));
+  compiledCache[schemaName] = ajv.compile(schema);
+  return compiledCache[schemaName];
 }
 
 function validate(schemaName, data, label) {
-  const schema = loadSchema(schemaName);
-  const valid = ajv.validate(schema, data);
+  const validateFn = getCompiledValidator(schemaName);
+  const valid = validateFn(data);
   if (valid) {
     console.log('  OK  ' + label);
   } else {
     console.error('  FAIL ' + label);
-    for (const err of ajv.errors) {
+    for (const err of (validateFn.errors || [])) {
       console.error('       ' + (err.instancePath || '/') + ' ' + err.message);
     }
     failed = true;

@@ -11,14 +11,7 @@ const validateThresholdSyntax = require('./threshold-syntax').validateThresholdS
 
 const schemaPath = path.join(__dirname, '../../schemas', 'ols.schema.json');
 const utuConstantsPath = path.join(__dirname, '../../data', 'utu-constants.json');
-let Ajv;
-let ajvFormats;
-try {
-  Ajv = require('ajv');
-  ajvFormats = require('ajv-formats');
-} catch (e) {
-  Ajv = null;
-}
+const { createSchemaValidator } = require('@agni/utils/schema-validator');
 
 let _canonicalSpineIds = null;
 function getCanonicalSpineIds() {
@@ -33,14 +26,11 @@ function getCanonicalSpineIds() {
 }
 
 let validateSchema = null;
-if (Ajv && fs.existsSync(schemaPath)) {
+if (fs.existsSync(schemaPath)) {
   try {
     const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
-    // @ts-expect-error — Ajv CJS default export type does not match constructor usage
-    const ajv = new Ajv({ allErrors: true });
-    // @ts-expect-error — ajv-formats CJS export may be default or named
-    if (typeof ajvFormats === 'function') ajvFormats(ajv);
-    validateSchema = ajv.compile(schema);
+    const ajv = createSchemaValidator({ allErrors: true, addFormats: true });
+    if (ajv) validateSchema = ajv.compile(schema);
   } catch (err) {
     validateSchema = null;
   }

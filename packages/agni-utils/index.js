@@ -26,4 +26,5 @@ module.exports = {
   runtimeManifest:  require('./runtimeManifest'),
   katexCssBuilder:  require('./katex-css-builder'),
   skillDagValidate: require('./skill-dag-validate'),
+  schemaValidator: require('./schema-validator'),
 };

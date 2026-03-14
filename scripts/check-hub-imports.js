@@ -11,6 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { walkDir } = require('@agni/utils/io');
 
 const ROOT = path.resolve(__dirname, '..');
 const TESTS_DIR = path.join(ROOT, 'tests');
@@ -20,17 +21,7 @@ const BAD_PATTERNS = [
   /require\s*\(\s*['"].*hub-tools\/routes/
 ];
 
-function walkDir(dir, out) {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const e of entries) {
-    const full = path.join(dir, e.name);
-    if (e.isDirectory() && e.name !== 'node_modules') walkDir(full, out);
-    else if (e.name.endsWith('.js')) out.push(full);
-  }
-}
-
-const files = [];
-walkDir(TESTS_DIR, files);
+const files = walkDir(TESTS_DIR);
 const violations = [];
 for (const f of files) {
   const content = fs.readFileSync(f, 'utf8');

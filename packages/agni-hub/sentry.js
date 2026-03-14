@@ -349,14 +349,11 @@ let _graphWeightsValidator = null;
 function getGraphWeightsValidator() {
   if (_graphWeightsValidator) return _graphWeightsValidator;
   try {
-    const Ajv = require('ajv');
-    const addFormats = require('ajv-formats');
+    const { createSchemaValidator } = require('@agni/utils/schema-validator');
     const schemaPath = path.join(__dirname, '../../schemas/graph-weights.schema.json');
     const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
-    // @ts-expect-error — Ajv CJS default export type does not match constructor usage
-    const ajv = new Ajv({ allErrors: true });
-    // @ts-expect-error — ajv-formats CJS export type does not match callable usage
-    addFormats(ajv);
+    const ajv = createSchemaValidator({ allErrors: true, addFormats: true });
+    if (!ajv) return null;
     _graphWeightsValidator = ajv.compile(schema);
     return _graphWeightsValidator;
   } catch (e) {
