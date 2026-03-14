@@ -325,7 +325,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | Priority | Count | Examples |
 |----------|-------|----------|
 | **P0 (Critical)** | 0 | All Done (randn, cholesky NaN, federation symmetry) |
-| **P1 (High — fix first)** | 2 | P2-20 (disk GC); P2-24 (SW eviction) |
+| **P1 (High — fix first)** | 0 | P2-20, P2-24 Done |
 | **P2 (Medium)** | 2 | P2-17; svg-stage 3-10, 3-11 |
 | **P3 (Low)** | 12+ | LEN-001 #5, #8; svg-stage 3-1; E2.1–E2.3; audit items |
 | **Roadmap / Launch** | 8+ | R6, Y8, Y10 Done; R1–R4, L1, L4, L5 Ready (see LAUNCH-CHECKLIST); R5, R8, Y1–Y7 Open |

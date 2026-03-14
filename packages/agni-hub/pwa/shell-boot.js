@@ -1,4 +1,4 @@
- 
+
 // @ts-nocheck — PWA browser bootstrap; uses LESSON_DATA, AGNI_LOADER globals
 // shell-boot.js ΓÇö PWA shell bootstrap
 // Loaded as external script to satisfy CSP script-src 'self'.
@@ -11,6 +11,10 @@
     navigator.serviceWorker.register('/sw.js').catch(function (e) {
       console.warn('[SW] Registration failed (offline cache disabled):', e && e.message ? e.message : String(e));
     });
+    // P2-24: Request persistent storage so Chrome is less likely to evict caches under pressure.
+    if (navigator.storage && typeof navigator.storage.persist === 'function') {
+      navigator.storage.persist().catch(function () {});
+    }
   }
 
   function renderLesson(lesson) {

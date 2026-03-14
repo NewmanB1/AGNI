@@ -16,14 +16,14 @@
 
 **Fix (implementation options, in order of feasibility):**
 
-1. **Hub-issued device binding token**  
-   - On first session (verify-pin / claim), hub issues a short-lived `deviceBinding` value derived from `pseudoId + deviceFingerprint + nonce`, stored in HttpOnly cookie.  
-   - Integrity checks `OLS_INTENDED_OWNER` against the binding in cookie (or session), not URL.  
-   - URL `?pseudoId=` used only for routing; identity comes from session.  
+1. **Hub-issued device binding token**
+   - On first session (verify-pin / claim), hub issues a short-lived `deviceBinding` value derived from `pseudoId + deviceFingerprint + nonce`, stored in HttpOnly cookie.
+   - Integrity checks `OLS_INTENDED_OWNER` against the binding in cookie (or session), not URL.
+   - URL `?pseudoId=` used only for routing; identity comes from session.
    - **Location:** `packages/agni-services/accounts.js`, `packages/agni-hub/hub-transform/route-handlers.js`, `packages/agni-runtime/integrity/integrity.js`, portal/player launcher.
 
-2. **Hardware-backed identifier (longer-term)**  
-   - Use Web Authentication / credential storage, or platform-specific device attestation (Android SafetyNet/Play Integrity).  
+2. **Hardware-backed identifier (longer-term)**
+   - Use Web Authentication / credential storage, or platform-specific device attestation (Android SafetyNet/Play Integrity).
    - Requires broader platform integration.
 
 **Tasks:**
@@ -42,19 +42,19 @@
 
 **Fix:**
 
-1. **Device fingerprint binding**  
-   - Store a hash of User-Agent + viewport + stable client hints (or minimal fingerprint) at session creation.  
-   - Reject session if fingerprint changes beyond threshold.  
+1. **Device fingerprint binding**
+   - Store a hash of User-Agent + viewport + stable client hints (or minimal fingerprint) at session creation.
+   - Reject session if fingerprint changes beyond threshold.
    - **Location:** `packages/agni-services/accounts.js`, `packages/agni-hub/routes/accounts.js`.
 
-2. **Shorter TTL + refresh**  
-   - Reduce `STUDENT_SESSION_TTL_MS` from 24h to 4–6h.  
-   - Add refresh endpoint; extend TTL on activity.  
+2. **Shorter TTL + refresh**
+   - Reduce `STUDENT_SESSION_TTL_MS` from 24h to 4–6h.
+   - Add refresh endpoint; extend TTL on activity.
    - **Location:** `packages/agni-services/accounts.js`.
 
-3. **Single-session-per-student (strict)**  
-   - Invalidate previous session when new session created (verify-pin / claim).  
-   - Prevents token sharing across devices.  
+3. **Single-session-per-student (strict)**
+   - Invalidate previous session when new session created (verify-pin / claim).
+   - Prevents token sharing across devices.
    - **Location:** `packages/agni-services/accounts.js`.
 
 **Tasks:**
@@ -72,17 +72,17 @@
 
 **Fix:**
 
-1. **GC on YAML removal**  
-   - When YAML file is removed or slug no longer in catalog, prune `serveDir/lessons/{slug}/` (index.html, index-ir.json, index-ir-full.json).  
+1. **GC on YAML removal**
+   - When YAML file is removed or slug no longer in catalog, prune `serveDir/lessons/{slug}/` (index.html, index-ir.json, index-ir-full.json).
    - **Location:** `packages/agni-hub/hub-transform/cache.js`, `packages/agni-hub/theta.js` (rebuildLessonIndex), or new GC script/cron.
 
-2. **Version retention policy**  
-   - Add `AGNI_YAML_MAX_VERSIONS` (e.g. 3) and `AGNI_SERVE_MAX_BYTES` (optional).  
-   - Prune oldest YAML backups beyond limit.  
+2. **Version retention policy**
+   - Add `AGNI_YAML_MAX_VERSIONS` (e.g. 3) and `AGNI_SERVE_MAX_BYTES` (optional).
+   - Prune oldest YAML backups beyond limit.
    - **Location:** `packages/agni-utils/env-config.js`, GC logic.
 
-3. **Periodic GC job**  
-   - Hub startup or scheduled task: scan `serveDir/lessons`, compare to catalog + yamlDir, delete orphan compiled dirs.  
+3. **Periodic GC job**
+   - Hub startup or scheduled task: scan `serveDir/lessons`, compare to catalog + yamlDir, delete orphan compiled dirs.
    - **Location:** New `packages/agni-hub/gc-disk-lessons.js` or integrated into hub-transform.
 
 **Tasks:**
@@ -101,27 +101,27 @@
 
 **Fix:**
 
-1. **Request persistent storage**  
-   - Use `navigator.storage.persist()` when available so Chrome is less likely to evict.  
+1. **Request persistent storage**
+   - Use `navigator.storage.persist()` when available so Chrome is less likely to evict.
    - **Location:** `packages/agni-hub/pwa/` shell or factory-loader / shell-boot.
 
-2. **Explicit eviction strategy in SW**  
-   - Document and enforce: lesson cache LRU (already MAX_LESSON_CACHE_ENTRIES=20); factory cache versioned.  
-   - Add `cache.delete()` on eviction (already present per check-precache-regression).  
+2. **Explicit eviction strategy in SW**
+   - Document and enforce: lesson cache LRU (already MAX_LESSON_CACHE_ENTRIES=20); factory cache versioned.
+   - Add `cache.delete()` on eviction (already present per check-precache-regression).
    - Ensure eviction order is deterministic (oldest first).
 
-3. **Quota awareness**  
-   - Use `navigator.storage.estimate()` to log quota usage; optionally warn when near limit.  
+3. **Quota awareness**
+   - Use `navigator.storage.estimate()` to log quota usage; optionally warn when near limit.
    - **Location:** shell-boot or telemetry.
 
-4. **Graceful degradation**  
+4. **Graceful degradation**
    - Already implemented: `_offlineResponse` when cache miss. Ensure UI clearly guides user to reconnect.
 
 **Tasks:**
-- [ ] Call `navigator.storage.persist()` in PWA shell/shell-boot
-- [ ] Add quota logging (optional) for diagnostics
-- [ ] Document eviction strategy in sw.js header and RUN-ENVIRONMENTS.md
-- [ ] Verify LRU eviction uses `cache.delete()` (per check-precache-regression)
+- [x] Call `navigator.storage.persist()` in PWA shell/shell-boot
+- [x] Add quota logging (optional) for diagnostics
+- [x] Document eviction strategy in sw.js header and RUN-ENVIRONMENTS.md
+- [x] Verify LRU eviction uses `cache.delete()` (per check-precache-regression)
 
 ---
 
@@ -133,7 +133,7 @@
 | Gap 4 | Device UUID trust | **Done** (same as P2-12) |
 | P2-13 | Session token replay risk | **Done** — single-session + 6h TTL |
 | P2-20 | Pi serveDir/lessons disk exhaustion | **Done** — gc-disk-lessons.js, prune on startup + author delete |
-| P2-24 | Edge device SW cache eviction | Open — fix required |
+| P2-24 | Edge device SW cache eviction | **Done** — persist in SW + shell-boot; quota logging; eviction documented |
 
 ---
 
