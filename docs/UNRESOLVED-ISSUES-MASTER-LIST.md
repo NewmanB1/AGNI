@@ -257,7 +257,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 
 - Gate editor, fill_blank, matching, ordering added (Y5). Ontology editable.
 - Live HTML/Markdown preview pane — **Done** — Preview button shows rendered lesson in iframe
-- Move up/down buttons for step reorder; no native drag-and-drop
+- Move up/down buttons for step reorder — **Done** — plus native drag-and-drop via ⋮⋮ handle (portal/js/pages/author.js)
 
 ---
 

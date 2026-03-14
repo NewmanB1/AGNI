@@ -431,6 +431,73 @@ function populateFormFromLesson(main, lesson) {
   });
 }
 
+/** Refresh Step 1, Step 2, ... labels after reorder. */
+function refreshStepNumbers(container) {
+  if (!container) return;
+  container.querySelectorAll('.step-card').forEach(function (card, i) {
+    var span = card.querySelector('.step-number');
+    if (span) span.textContent = 'Step ' + (i + 1);
+    card.dataset.idx = String(i);
+  });
+}
+
+/** Allow dropping on container's empty area to move step to end. */
+function wireStepsContainerDragDrop(container) {
+  if (!container) return;
+  container.addEventListener('dragover', function (e) {
+    if (e.target.closest('.step-card')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  });
+  container.addEventListener('drop', function (e) {
+    if (e.target.closest('.step-card')) return;
+    e.preventDefault();
+    var fromIdx = parseInt(e.dataTransfer.getData('application/x-agni-step-index'), 10);
+    if (isNaN(fromIdx)) return;
+    var cards = container.querySelectorAll('.step-card');
+    var fromCard = cards[fromIdx];
+    if (!fromCard) return;
+    container.appendChild(fromCard);
+    refreshStepNumbers(container);
+  });
+}
+
+/** Wire native HTML5 drag-and-drop for step reorder (R7-future). */
+function wireStepDragDrop(container, card, idx) {
+  var handle = card.querySelector('.step-drag-handle');
+  if (!handle) return;
+  handle.addEventListener('dragstart', function (e) {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', idx);
+    e.dataTransfer.setData('application/x-agni-step-index', String(idx));
+    card.classList.add('step-dragging');
+  });
+  handle.addEventListener('dragend', function () {
+    card.classList.remove('step-dragging');
+    container.querySelectorAll('.step-card').forEach(function (c) { c.classList.remove('step-drag-over'); });
+  });
+  card.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (card.classList.contains('step-dragging')) return;
+    card.classList.add('step-drag-over');
+  });
+  card.addEventListener('dragleave', function () {
+    card.classList.remove('step-drag-over');
+  });
+  card.addEventListener('drop', function (e) {
+    e.preventDefault();
+    card.classList.remove('step-drag-over');
+    var fromIdx = parseInt(e.dataTransfer.getData('application/x-agni-step-index'), 10);
+    if (isNaN(fromIdx)) return;
+    var cards = Array.prototype.slice.call(container.querySelectorAll('.step-card'));
+    var fromCard = cards[fromIdx];
+    if (!fromCard || fromCard === card) return;
+    container.insertBefore(fromCard, card);
+    refreshStepNumbers(container);
+  });
+}
+
 function appendStepCard(container, step, idx) {
   step = step || { id: 'step' + (idx + 1), type: 'instruction', content: '' };
   var type = step.type || 'instruction';
@@ -475,7 +542,10 @@ function appendStepCard(container, step, idx) {
     optsHtml += '<button type="button" class="btn btn-add-ordering">+ Add item</button>';
   }
 
-  card.innerHTML = '<div class="step-header"><span>Step ' + (idx + 1) + '</span><div class="step-actions"><button type="button" class="btn btn-move-up">↑</button><button type="button" class="btn btn-move-down">↓</button><button type="button" class="btn btn-remove-step">Remove</button></div></div>' +
+  card.innerHTML = '<div class="step-header">' +
+    '<span class="step-drag-handle" draggable="true" title="Drag to reorder" aria-label="Drag to reorder">⋮⋮</span>' +
+    '<span class="step-number">Step ' + (idx + 1) + '</span>' +
+    '<div class="step-actions"><button type="button" class="btn btn-move-up">↑</button><button type="button" class="btn btn-move-down">↓</button><button type="button" class="btn btn-remove-step">Remove</button></div></div>' +
     '<div><label>ID</label><input type="text" class="input step-id" value="' + esc(step.id) + '" placeholder="step' + (idx + 1) + '" /></div>' +
     '<div><label>Type</label><select class="input step-type">' +
     '<option value="instruction"' + (type === 'instruction' ? ' selected' : '') + '>instruction</option>' +
@@ -491,13 +561,22 @@ function appendStepCard(container, step, idx) {
 
   card.querySelector('.btn-remove-step')?.addEventListener('click', function () {
     card.remove();
+    refreshStepNumbers(container);
   });
   card.querySelector('.btn-move-up')?.addEventListener('click', function () {
-    if (card.previousElementSibling) container.insertBefore(card, card.previousElementSibling);
+    if (card.previousElementSibling) {
+      container.insertBefore(card, card.previousElementSibling);
+      refreshStepNumbers(container);
+    }
   });
   card.querySelector('.btn-move-down')?.addEventListener('click', function () {
-    if (card.nextElementSibling) container.insertBefore(card.nextElementSibling, card);
+    if (card.nextElementSibling) {
+      container.insertBefore(card.nextElementSibling, card);
+      refreshStepNumbers(container);
+    }
   });
+
+  wireStepDragDrop(container, card, idx);
 
   card.querySelector('.step-type')?.addEventListener('change', function () {
     var newType = this.value;
@@ -702,6 +781,8 @@ export function renderAuthorNew(main, slug) {
     var count = container.querySelectorAll('.step-card').length;
     appendStepCard(container, { id: 'step' + (count + 1), type: 'instruction', content: '' }, count);
   });
+
+  wireStepsContainerDragDrop(container);
 
   main.querySelector('#btn-validate').addEventListener('click', function () {
     statusEl.style.display = 'block';

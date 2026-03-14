@@ -331,9 +331,14 @@ label.block { display: block; margin: 1rem 0 0.5rem; }
 #lesson-form section { margin-bottom: 1.5rem; }
 #lesson-form section h2 { margin-bottom: 1rem; font-size: 1.2rem; }
 #lesson-form section > div { margin-bottom: 1rem; }
+#steps-container { min-height: 2rem; }
 #lesson-form label { display: block; margin-bottom: 0.3rem; font-size: 0.9rem; opacity: 0.9; }
 .step-card { margin-bottom: 1rem; }
-.step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.step-card.step-dragging { opacity: 0.6; }
+.step-card.step-drag-over { outline: 2px dashed var(--primary, #2563eb); outline-offset: 4px; }
+.step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; gap: 0.5rem; }
+.step-drag-handle { cursor: grab; color: #888; padding: 0.2rem 0.4rem; user-select: none; font-size: 1rem; }
+.step-drag-handle:active { cursor: grabbing; }
 .step-actions { display: flex; gap: 0.5rem; }
 .step-actions .btn { padding: 0.3rem 0.6rem; font-size: 0.85rem; }
 .quiz-opt-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; }
