@@ -122,6 +122,16 @@ function extractBearerToken(req, _qs) {
 }
 
 /**
+ * Extract User-Agent from request. Used for device fingerprint binding (P2-13).
+ * @param {import('http').IncomingMessage} req
+ * @returns {string}
+ */
+function getClientUserAgent(req) {
+  const ua = req.headers['user-agent'];
+  return typeof ua === 'string' ? ua : '';
+}
+
+/**
  * Extract client IP from request (x-forwarded-for or socket).
  * Used for session binding to mitigate token theft.
  * @param {import('http').IncomingMessage} req
@@ -200,6 +210,7 @@ module.exports = {
   extractBearerToken,
   extractStudentSessionToken,
   getClientIp,
+  getClientUserAgent,
   safeErrorMessage,
   checkAuthRateLimit,
   generateRequestId

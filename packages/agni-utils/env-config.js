@@ -136,6 +136,12 @@ const config = {
   markovWeight:       floatVal('AGNI_MARKOV_WEIGHT', 0.15),
   pagerankWeight:     floatVal('AGNI_PAGERANK_WEIGHT', 0.10),
 
+  /** Student session TTL in ms. Default 6h. P2-13: shorter TTL mitigates token replay. */
+  studentSessionTtlMs: (function () {
+    var raw = intVal('AGNI_STUDENT_SESSION_TTL_MS', 6 * 60 * 60 * 1000);
+    return validRange(raw, R.STUDENT_SESSION_TTL_MS_MIN, R.STUDENT_SESSION_TTL_MS_MAX, 'AGNI_STUDENT_SESSION_TTL_MS');
+  })(),
+
   maxStudents:        intVal('AGNI_MAX_STUDENTS', 0),
   maxLessons:         intVal('AGNI_MAX_LESSONS', 0),
   topKCandidates:     validRange(intVal('AGNI_TOP_K_CANDIDATES', 500), 1, 2000, 'AGNI_TOP_K_CANDIDATES'),

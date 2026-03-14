@@ -41,7 +41,7 @@ Every individual issue, task, bug, and checklist item extracted from planning an
 | P2-10 | PWA race — factories vs. lesson execution | shell-boot, factory-loader | Done |
 | P2-11 | Signature placeholder fragility | crypto.js, integrity.js | Done |
 | P2-12 | Device ID trust boundary | Session API + integrity watermark | **Done** |
-| P2-13 | Session token replay risk | Bind to device fingerprint; shorter TTL; single-session | **Open** |
+| P2-13 | Session token replay risk | Single-session + 6h TTL | **Done** |
 | P2-14 | Theta rebuild hazard (partial file) | rebuildLessonIndex | Done |
 | P2-15 | Graph weight runaway | Sentry, theta merge | Done |
 | P2-16 | Skill cycle handling silently hides curriculum | Add governance event | Done |
@@ -326,7 +326,7 @@ See `docs/ENV-VALIDATION-SPLIT.md`.
 | Priority | Count | Examples |
 |----------|-------|----------|
 | **P0 (Critical)** | 0 | All Done (randn, cholesky NaN, federation symmetry) |
-| **P1 (High — fix first)** | 3 | P2-13 (session replay); P2-20 (disk GC); P2-24 (SW eviction) |
+| **P1 (High — fix first)** | 2 | P2-20 (disk GC); P2-24 (SW eviction) |
 | **P2 (Medium)** | 2 | P2-17; svg-stage 3-10, 3-11 |
 | **P3 (Low)** | 12+ | LEN-001 #5, #8; svg-stage 3-1; E2.1–E2.3; audit items |
 | **Roadmap / Launch** | 12+ | ROADMAP (R7, R9, R10 Done; R8 Design), YEAR2-PREP (Y9 Done), LAUNCH-AND-COMMUNITY unchecked |

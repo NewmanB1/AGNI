@@ -9,7 +9,7 @@ const fs   = require('fs');
 const path = require('path');
 const querystring = require('querystring');
 
-const { extractStudentSessionToken, getClientIp } = require('@agni/utils/http-helpers');
+const { extractStudentSessionToken, getClientIp, getClientUserAgent } = require('@agni/utils/http-helpers');
 const accountsService = require('@agni/services/accounts');
 
 const compile   = require('./compile');
@@ -42,7 +42,7 @@ function getRequestCompileOptions(req, baseOptions) {
   const base = baseOptions || {};
   const token = extractStudentSessionToken(req);
   if (!token) return Promise.resolve(base);
-  return accountsService.validateStudentSession(token, { clientIp: getClientIp(req) }).then(function (session) {
+  return accountsService.validateStudentSession(token, { clientIp: getClientIp(req), userAgent: getClientUserAgent(req) }).then(function (session) {
     if (!session || !session.pseudoId) return base;
     return Object.assign({}, base, { deviceId: session.pseudoId });
   }).catch(function () { return base; });

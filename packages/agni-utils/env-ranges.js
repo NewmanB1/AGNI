@@ -26,5 +26,9 @@ module.exports = {
   EMBEDDING_LR_MAX: 1,
 
   EMBEDDING_REG_MIN: 0,
-  EMBEDDING_REG_MAX: 1
+  EMBEDDING_REG_MAX: 1,
+
+  /** Student session TTL: min 1h, max 24h (ms). */
+  STUDENT_SESSION_TTL_MS_MIN: 60 * 60 * 1000,
+  STUDENT_SESSION_TTL_MS_MAX: 24 * 60 * 60 * 1000
 };

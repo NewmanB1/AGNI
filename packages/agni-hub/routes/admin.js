@@ -29,7 +29,7 @@ function register(router, ctx) {
   const ALLOWED_CONFIG_KEYS = new Set([
     'hubName', 'hubId', 'dataDir', 'serveDir', 'thetaPort', 'servePort', 'sentryPort',
     'corsOrigin', 'syncTransport', 'homeUrl', 'usbPath', 'maxStudents', 'maxLessons',
-    'memoryBudgetMb', 'enableTelemetry', 'enableLms', 'locale'
+    'memoryBudgetMb', 'enableTelemetry', 'enableLms', 'locale', 'studentSessionTtlMs'
   ]);
 
   router.put('/api/admin/config', adminOnly((req, res, { sendResponse }) => {

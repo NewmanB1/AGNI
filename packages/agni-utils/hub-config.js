@@ -42,7 +42,8 @@ const CONFIG_KEYS = [
   ['precacheHintCount', 'AGNI_PRECACHE_HINT_COUNT'],
   ['verifyYamlHash', 'AGNI_VERIFY_YAML_HASH'],
   ['logMaxBytes', 'AGNI_LOG_MAX_BYTES'],
-  ['privateKeyPath', 'AGNI_PRIVATE_KEY_PATH']
+  ['privateKeyPath', 'AGNI_PRIVATE_KEY_PATH'],
+  ['studentSessionTtlMs', 'AGNI_STUDENT_SESSION_TTL_MS']
 ];
 
 let _loaded = false;

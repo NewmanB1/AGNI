@@ -1,8 +1,8 @@
 'use strict';
 
 function register(router, ctx) {
-  const { accountsService, handleJsonBody, extractBearerToken, extractStudentSessionToken, getClientIp,
-          adminOnly, withRateLimit } = ctx;
+  const { accountsService, handleJsonBody, extractBearerToken, extractStudentSessionToken, getClientIp, getClientUserAgent,
+          adminOnly, withRateLimit, STUDENT_SESSION_TTL_MS } = ctx;
 
   // P2-12: Device ID trust — session identity for integrity watermark check.
   // Returns pseudoId when student session is valid. Used by integrity.js to verify
@@ -10,7 +10,7 @@ function register(router, ctx) {
   router.get('/api/session/identity', (req, res, { sendResponse }) => {
     const token = extractStudentSessionToken(req);
     if (!token) return sendResponse(401, { error: 'No session' });
-    return accountsService.validateStudentSession(token, { clientIp: getClientIp(req) })
+    return accountsService.validateStudentSession(token, { clientIp: getClientIp(req), userAgent: getClientUserAgent(req) })
       .then(function (session) {
         if (!session || !session.pseudoId) return sendResponse(401, { error: 'Invalid session' });
         return sendResponse(200, { pseudoId: session.pseudoId });
@@ -113,11 +113,12 @@ function register(router, ctx) {
   router.post('/api/accounts/student/claim', withRateLimit('claim', (req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       if (!payload.token) return sendResponse(400, { error: 'token required' });
-      const result = await accountsService.claimTransferToken(payload.token, { clientIp: getClientIp(req) });
+      const result = await accountsService.claimTransferToken(payload.token, { clientIp: getClientIp(req), userAgent: getClientUserAgent(req) });
       if (result.error) return sendResponse(400, result);
       if (result.sessionToken) {
         const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
-        res.setHeader('Set-Cookie', 'agni_student_session=' + result.sessionToken + '; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax' + secure);
+        const maxAge = Math.floor((STUDENT_SESSION_TTL_MS || 21600000) / 1000);
+        res.setHeader('Set-Cookie', 'agni_student_session=' + result.sessionToken + '; HttpOnly; Path=/; Max-Age=' + maxAge + '; SameSite=Lax' + secure);
       }
       return sendResponse(200, result);
     });
@@ -126,11 +127,12 @@ function register(router, ctx) {
   router.post('/api/accounts/student/verify-pin', withRateLimit('pin', (req, res, { sendResponse }) => {
     handleJsonBody(req, sendResponse, async (payload) => {
       if (!payload.pseudoId) return sendResponse(400, { error: 'pseudoId required' });
-      const result = await accountsService.verifyStudentPin(payload.pseudoId, payload.pin, { clientIp: getClientIp(req) });
+      const result = await accountsService.verifyStudentPin(payload.pseudoId, payload.pin, { clientIp: getClientIp(req), userAgent: getClientUserAgent(req) });
       if (result.error) return sendResponse(404, result);
       if (result.sessionToken) {
         const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
-        res.setHeader('Set-Cookie', 'agni_student_session=' + result.sessionToken + '; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax' + secure);
+        const maxAge = Math.floor((STUDENT_SESSION_TTL_MS || 21600000) / 1000);
+        res.setHeader('Set-Cookie', 'agni_student_session=' + result.sessionToken + '; HttpOnly; Path=/; Max-Age=' + maxAge + '; SameSite=Lax' + secure);
       }
       return sendResponse(200, result);
     });

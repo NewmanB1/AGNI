@@ -17,7 +17,6 @@ const envConfig = require('@agni/utils/env-config');
 const SCRYPT_KEYLEN = 64;
 const TOKEN_BYTES = 32;
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
-const STUDENT_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const TRANSFER_TTL_MS = 48 * 60 * 60 * 1000;
 
 const { loadJSONAsync: loadJson, saveJSONAsync: saveJson } = require('@agni/utils/json-store');
@@ -120,17 +119,22 @@ function createAccounts(config) {
   async function createStudentSession(pseudoId, opts) {
     opts = opts || {};
     const clientIp = typeof opts.clientIp === 'string' && opts.clientIp.trim() ? opts.clientIp.trim() : null;
+    const userAgent = typeof opts.userAgent === 'string' ? opts.userAgent : '';
+    const ttlMs = envConfig.studentSessionTtlMs || (6 * 60 * 60 * 1000);
     const token = randomHex(TOKEN_BYTES);
     await withLock(studentSessionsPath, async function() {
       const data = await loadJson(studentSessionsPath, { sessions: [] });
       purgeExpiredStudentSessions(data);
+      // P2-13: Single-session-per-student — invalidate previous sessions for this pseudoId.
+      data.sessions = data.sessions.filter(function(s) { return s.pseudoId !== pseudoId; });
       const entry = {
         tokenHash: hashToken(token),
         pseudoId: pseudoId,
         createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + STUDENT_SESSION_TTL_MS).toISOString()
+        expiresAt: new Date(Date.now() + ttlMs).toISOString()
       };
       if (clientIp) entry.clientIp = clientIp;
+      if (userAgent) entry.deviceFingerprint = hashToken(userAgent);
       data.sessions.push(entry);
       await saveJson(studentSessionsPath, data);
     });
@@ -141,6 +145,7 @@ function createAccounts(config) {
     if (!token || typeof token !== 'string' || !token.trim()) return null;
     opts = opts || {};
     const clientIp = typeof opts.clientIp === 'string' && opts.clientIp.trim() ? opts.clientIp.trim() : null;
+    const userAgent = typeof opts.userAgent === 'string' ? opts.userAgent : '';
     const data = await loadJson(studentSessionsPath, { sessions: [] });
     const now = Date.now();
     const incoming = hashToken(token.trim());
@@ -152,6 +157,12 @@ function createAccounts(config) {
     });
     if (!session) return null;
     if (session.clientIp && clientIp && session.clientIp !== clientIp) return null;
+    if (session.deviceFingerprint) {
+      if (!userAgent) return null;
+      const currentFp = hashToken(userAgent);
+      if (currentFp.length !== session.deviceFingerprint.length) return null;
+      if (!crypto.timingSafeEqual(Buffer.from(currentFp), Buffer.from(session.deviceFingerprint))) return null;
+    }
     const r = await findStudentWithData(session.pseudoId);
     if (!r.student || !r.student.active) return null;
     return { pseudoId: session.pseudoId };
@@ -478,7 +489,7 @@ async function claimTransferToken(token, opts) {
     student.transferTokenHash = null;
     student.transferExpiresAt = null;
     await saveStudents(data);
-    const sessionToken = await createStudentSession(student.pseudoId, { clientIp: opts.clientIp });
+    const sessionToken = await createStudentSession(student.pseudoId, { clientIp: opts.clientIp, userAgent: opts.userAgent });
     return { ok: true, pseudoId: student.pseudoId, displayName: student.displayName, sessionToken: sessionToken };
   });
 }
@@ -509,7 +520,7 @@ async function verifyStudentPin(pseudoId, pin, opts) {
       delete student.pin;
       await saveStudents(r.data);
     }
-    const sessionToken = await createStudentSession(pseudoId, { clientIp: opts.clientIp });
+    const sessionToken = await createStudentSession(pseudoId, { clientIp: opts.clientIp, userAgent: opts.userAgent });
     return { ok: true, verified: true, sessionToken: sessionToken };
   });
 }

@@ -6,7 +6,7 @@
 
 **Trust boundaries:**
 - **Device ID:** Resolved — integrity checks identity via `GET /api/session/identity` (hub-validated). URL used only as offline fallback.
-- **Session replay:** Student sessions are bound to client IP at creation (verify-pin, claim). Fix in progress for device fingerprint binding and single-session-per-student. See `docs/DOCUMENTED-TO-FIX-REMEDIATION-PLAN.md`.
+- **Session replay:** Single-session-per-student; 6h TTL; client IP binding; User-Agent device fingerprint (reject if token used from different browser/device).
 
 ---
 

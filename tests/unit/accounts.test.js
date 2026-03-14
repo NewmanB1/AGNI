@@ -306,4 +306,29 @@ describe('validateStudentSession', () => {
     const session = await accounts.validateStudentSession('invalid-token');
     assert.strictEqual(session, null);
   });
+
+  it('P2-13: rejects session when User-Agent does not match (device fingerprint)', async () => {
+    const s = await accounts.createStudent({ displayName: 'Fingerprint Test', pin: '1234' });
+    const r = await accounts.verifyStudentPin(s.student.pseudoId, '1234', { userAgent: 'DeviceA/1.0' });
+    assert.ok(r.sessionToken);
+    const sameDevice = await accounts.validateStudentSession(r.sessionToken, { userAgent: 'DeviceA/1.0' });
+    const diffDevice = await accounts.validateStudentSession(r.sessionToken, { userAgent: 'DeviceB/2.0' });
+    assert.ok(sameDevice);
+    assert.equal(sameDevice.pseudoId, s.student.pseudoId);
+    assert.strictEqual(diffDevice, null, 'different User-Agent must reject session');
+  });
+
+  it('P2-13: invalidates previous session when new session created (single-session-per-student)', async () => {
+    const s = await accounts.createStudent({ displayName: 'Single Session', pin: '1234' });
+    const r1 = await accounts.verifyStudentPin(s.student.pseudoId, '1234');
+    assert.ok(r1.sessionToken);
+    const r2 = await accounts.verifyStudentPin(s.student.pseudoId, '1234');
+    assert.ok(r2.sessionToken);
+    assert.notEqual(r1.sessionToken, r2.sessionToken, 'new token issued');
+    const oldSession = await accounts.validateStudentSession(r1.sessionToken);
+    const newSession = await accounts.validateStudentSession(r2.sessionToken);
+    assert.strictEqual(oldSession, null, 'old session must be invalidated');
+    assert.ok(newSession);
+    assert.equal(newSession.pseudoId, s.student.pseudoId);
+  });
 });

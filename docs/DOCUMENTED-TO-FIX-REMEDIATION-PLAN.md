@@ -58,9 +58,9 @@
    - **Location:** `packages/agni-services/accounts.js`.
 
 **Tasks:**
-- [ ] Implement single-session-per-student invalidation
-- [ ] Reduce TTL to 6h (configurable via env)
-- [ ] (Optional) Add device fingerprint binding
+- [x] Implement single-session-per-student invalidation
+- [x] Reduce TTL to 6h (configurable via AGNI_STUDENT_SESSION_TTL_MS)
+- [x] Add device fingerprint binding (User-Agent hash stored at session creation; validated on each request)
 
 ---
 
@@ -131,7 +131,7 @@
 |----|-------|--------|
 | P2-12 | Device ID trust boundary | **Done** — session API + integrity.js |
 | Gap 4 | Device UUID trust | **Done** (same as P2-12) |
-| P2-13 | Session token replay risk | Open — fix required |
+| P2-13 | Session token replay risk | **Done** — single-session + 6h TTL |
 | P2-20 | Pi serveDir/lessons disk exhaustion | Open — fix required |
 | P2-24 | Edge device SW cache eviction | Open — fix required |
 

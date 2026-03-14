@@ -41,7 +41,7 @@ export interface AccountsService {
   claimTransferToken(token: string): Promise<{ ok?: boolean; pseudoId?: string; displayName?: string; sessionToken?: string; error?: string }>;
   verifyStudentPin(pseudoId: string, pin: string): Promise<{ ok?: boolean; verified?: boolean; sessionToken?: string; error?: string }>;
   createStudentSession(pseudoId: string): Promise<string>;
-  validateStudentSession(token: string, opts?: { clientIp?: string }): Promise<{ pseudoId: string } | null>;
+  validateStudentSession(token: string, opts?: { clientIp?: string; userAgent?: string }): Promise<{ pseudoId: string } | null>;
   migrateLegacyPins(): Promise<{ migrated?: number; legacySha256?: number }>;
   generateCode(len: number): string;
 }

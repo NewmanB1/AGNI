@@ -141,7 +141,7 @@ This document extends the Phase 1 remediation (`ARCHITECTURAL-VULNERABILITIES-RE
 
 **Problem:** 24h session; token can be copied between devices.
 
-**Fix:** Bind session to device fingerprint; shorter TTL; single-session-per-student. **Open** — fix required. See `docs/DOCUMENTED-TO-FIX-REMEDIATION-PLAN.md`.
+**Fix:** Single-session-per-student (invalidate on new login); 6h TTL (AGNI_STUDENT_SESSION_TTL_MS). **Done**.
 
 ---
 

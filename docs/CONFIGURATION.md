@@ -71,6 +71,7 @@ These JSON keys in `hub-config.json` map to the env vars below (via `loadHubConf
 | `compileConcurrency` | `AGNI_COMPILE_CONCURRENCY` |
 | `syncTransport` | `AGNI_SYNC_TRANSPORT` |
 | `privateKeyPath` | `AGNI_PRIVATE_KEY_PATH` |
+| `studentSessionTtlMs` | `AGNI_STUDENT_SESSION_TTL_MS` |
 
 ---
 
@@ -108,6 +109,7 @@ These JSON keys in `hub-config.json` map to the env vars below (via `loadHubConf
 | `AGNI_CORS_ORIGIN` | `*` | CORS origin for API responses |
 | `AGNI_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
 | `AGNI_PRIVATE_KEY_PATH` | *(empty)* | Ed25519 private key for signing lessons; empty = no signing |
+| `AGNI_STUDENT_SESSION_TTL_MS` | `21600000` (6h) | Student session TTL in ms (1h–24h). Shorter TTL mitigates token replay (P2-13). |
 
 ### Compilation & Cache (hub-transform)
 
