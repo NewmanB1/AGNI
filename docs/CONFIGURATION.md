@@ -96,9 +96,11 @@ These JSON keys in `hub-config.json` map to the env vars below (via `loadHubConf
 
 | Variable | Default | Range | Description |
 |----------|---------|-------|-------------|
-| `AGNI_THETA_PORT` | `8082` | 1–65535 | Main hub API (theta) |
+| `AGNI_PATHFINDER_PORT` | `8082` | 1–65535 | Main hub API (pathfinder). Legacy: `AGNI_THETA_PORT`. |
 | `AGNI_SERVE_PORT` | `8080` | 1–65535 | Static files, PWA, lesson delivery |
-| `AGNI_SENTRY_PORT` | `8081` | 1–65535 | Telemetry receiver |
+| `AGNI_TELEMETRY_ENGINE_PORT` | `8081` | 1–65535 | Telemetry receiver. Legacy: `AGNI_SENTRY_PORT`. |
+| `AGNI_THETA_PORT` | *(legacy)* | — | Use `AGNI_PATHFINDER_PORT`. |
+| `AGNI_SENTRY_PORT` | *(legacy)* | — | Use `AGNI_TELEMETRY_ENGINE_PORT`. |
 
 ### Core
 

@@ -33,6 +33,19 @@ Status codes:
 Every non-2xx response uses this shape. Additional context fields (`code`, `details`)
 may appear alongside `error` but callers should always check `body.error` first.
 
+**Stable error codes (optional but recommended):** For machine-readable handling, responses may include a `code` field. Prefer these when returning errors so clients and tests can branch consistently:
+
+| Code | HTTP | Use when |
+|------|------|----------|
+| `AUTH_REQUIRED` | 401 | Missing or invalid auth (Bearer or Hub-Key) |
+| `FORBIDDEN` | 403 | Authenticated but insufficient permissions |
+| `NOT_FOUND` | 404 | Resource or route not found |
+| `VALIDATION_ERROR` | 400 | Invalid or missing parameters, body, or query |
+| `METHOD_NOT_ALLOWED` | 405 | Wrong HTTP method for this path |
+| `RATE_LIMITED` | 429 | Too many requests (see `retryAfterMs`) |
+| `SERVICE_UNAVAILABLE` | 503 | Engine not loaded or dependency down |
+| `INTERNAL_ERROR` | 500 | Unexpected server error |
+
 Status codes:
 - **400** — bad request (missing or invalid parameters)
 - **401** — authentication required or invalid token

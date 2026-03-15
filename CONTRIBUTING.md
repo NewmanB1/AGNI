@@ -148,13 +148,26 @@ On Windows (Git Bash): copy the script to `.git/hooks/pre-push` and ensure it is
 
 When cutting a release (e.g. for a tagged version):
 
-1. **CHANGELOG** — Update `docs/CHANGELOG.md` (or project CHANGELOG) with the new version and notable changes.
+1. **CHANGELOG** — Update `docs/CHANGELOG.md` (or project CHANGELOG) with the new version and notable changes. **Discipline:** PRs that change user- or integrator-visible behavior should add a CHANGELOG entry (or bullet) for the next release so release notes stay accurate and traceable.
 2. **Version** — Bump version in `package.json` (and any `packages/*/package.json` if published).
 3. **Schema changes** — If any `schemas/*.schema.json` changed since last release, ensure `npm run codegen:types` has been run and `verify:codegen-sync` passes; commit generated types.
 4. **Tag** — Create a git tag (e.g. `v0.2.0`) and push. CI may use the tag for artifacts or version stamps.
 5. **Verify** — Run `npm run verify:all` and fix any failures before tagging.
 
 See `docs/playbooks/schema-to-types.md` for the schema-first workflow when changing IR or sidecar schemas.
+
+---
+
+## Dependency upgrades
+
+When updating dependencies:
+
+1. **Audit** — Run `npm audit` and address critical/high where feasible.
+2. **Small steps** — Prefer updating one major (or a small set of related deps) per PR so regressions are easy to trace.
+3. **Verify after each change** — Run `npm run verify:all` and relevant tests (`npm run test`, `npm run test:integration`) after upgrading; fix any failures before merging.
+4. **Optional automation** — Dependabot or Renovate can be configured to open PRs for updates; review and run the same verification before merging.
+
+See `docs/CONFIGURATION.md` for runtime/config-related env and version expectations.
 
 ---
 

@@ -6,7 +6,7 @@ This document describes the structure of automated guards against regression. Ru
 
 | Group | Scope | Contents |
 |-------|--------|----------|
-| **verify:core** | Cross-cutting | dead-files, dts, innerhtml, factory-order, precache-regression, schema-sync, codegen-sync, canonical, canonical-imports, node-version-docs, engine-no-ts, package-headers, **module-headers**, skill-dag, run-environments, architectural-remediation, **lms-integrations** (R8 Phase 2), **es5** |
+| **verify:core** | Cross-cutting | dead-files, dts, innerhtml, factory-order, precache-regression, schema-sync, codegen-sync, canonical, canonical-imports, node-version-docs, **env-docs**, engine-no-ts, package-headers, **module-headers**, skill-dag, run-environments, architectural-remediation, **lms-integrations** (R8 Phase 2), **es5** |
 
 **Edge device (Android Nougat) guard:** `test:es5` runs `scripts/check-es5.js` and enforces ES5-only syntax and APIs in `packages/agni-runtime/`, `packages/agni-hub/sw.js`, and `packages/agni-hub/pwa/*.js`. These run in Chrome 51 WebView on student devices. See `docs/RUN-ENVIRONMENTS.md` and `.cursor/rules/edge-device-es5.md`.
 | **verify:runtime** | `packages/agni-runtime/` | svg-tools, runtime-manifest, runtime-headers, runtime-docs, runtime-lint, sensors |
@@ -15,6 +15,14 @@ This document describes the structure of automated guards against regression. Ru
 | **verify:governance** | `packages/agni-governance/` | governance-canonical, governance-docs, governance-paths, governance.test.js |
 
 **verify:all** = verify:core && verify:runtime && verify:hub && verify:services && verify:governance
+
+## Test file naming
+
+- **Unit tests:** `tests/unit/*.test.js` — Mocha; run with `npm run test` or `test:unit`.
+- **Integration tests:** `tests/integration/*.test.js` — Mocha with optional server; run with `npm run test:integration`.
+- **Verification tests:** Tests that encode a specific regression or guard (e.g. `architectural-remediation-verification.test.js`, `pathfinder-api.test.js`, `governance.test.js`) live under `tests/unit/` and are run as part of `verify:*` or `test:unit`. Naming: `*.test.js` for Mocha; `*.spec.ts` for Playwright E2E in `tests/e2e/`.
+
+Keep this convention so tooling and humans agree on what counts as unit vs integration vs verify.
 
 ## Tests vs. Verify Scripts
 
@@ -47,6 +55,8 @@ E2E runs in a separate job.
 
 ## Regression Test Coverage (key fixes)
 
+When you add a regression test for a fix, add a row to this table so the fix is discoverable. Optionally run `npm run verify:regression-table` to ensure each listed test file/suite still exists (see scripts/check-regression-table.js).
+
 | Fix | Test location | Fails if reverted |
 |-----|---------------|-------------------|
 | LEN-001 #1 randn PRNG fallback | regressions.test.js MATH-3 | ✓ |
@@ -76,3 +86,5 @@ When you add new behavior or fix a regression, add a guard so the fix is protect
 2. Create the script (e.g. `scripts/check-name.js`) or the test file. Scripts should exit 0 on pass, 1 on failure and print a clear message.
 3. Add an npm script in `package.json`: `"verify:name": "node scripts/check-name.js"` (or the mocha command for tests).
 4. Add it to the appropriate group: `verify:core`, `verify:runtime`, `verify:hub`, `verify:services`, or `verify:governance` in the `verify:*` chain. `verify:all` runs all groups, so no change is needed in `.github/workflows/validate.yml`.
+
+**Optional guards** (not in `verify:all`; run when updating docs or regression table): `verify:regression-table` (listed test files exist), `verify:doc-links` (internal markdown links in docs/ and CONVENTIONS/CONTRIBUTING point to existing files).

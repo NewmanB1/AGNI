@@ -109,11 +109,37 @@ These practices keep the codebase easy to change and safe to refactor:
 9. **Conventions for shared patterns** — Document when to use which pattern (e.g. `createSchemaStore` vs direct Ajv; service `{ error }` vs throw; hub middleware). See "Schema-backed JSON persistence" and "Centralized shared patterns" in this doc.
 10. **Guardrails in CI** — Lint, typecheck, tests, and `verify:all` (dead files, DTS, api-contract, module headers, ES5, etc.) run in CI so main stays consistent and regressions are caught early. See `docs/VERIFICATION-GUARDS.md`.
 
+## Deprecation policy
+
+When deprecating an API, env var, or path:
+
+1. **Log a warning** — Use `log.warn('deprecated: …')` (or equivalent) with a clear message: what is deprecated, replacement, and planned removal version (e.g. "will be removed in v0.3").
+2. **Document the replacement** — Point callers to the new API or config (e.g. "Use `AGNI_PATHFINDER_PORT` instead").
+3. **Document in a deprecation doc** — For large migrations (e.g. `src/` → `packages/`), add or update a doc (e.g. `docs/SRC-DEPRECATION.md`) with a summary table (old → new), what changed (CI, imports), and "if you see X, do Y."
+4. **Remove in a later release** — Remove the deprecated path/API in a planned version and note it in the CHANGELOG.
+
+See **`docs/SRC-DEPRECATION.md`** for the pattern used for the `src/` migration.
+
+## Test file naming
+
+- **Unit tests:** `tests/unit/*.test.js` (Mocha). **Integration:** `tests/integration/*.test.js`. **E2E:** `tests/e2e/*.spec.ts` (Playwright). **Verification** tests (regression/guard) live in `tests/unit/` with names like `*-verification.test.js` or `*-api.test.js` and are run via `verify:*`. See `docs/VERIFICATION-GUARDS.md` § Test file naming.
+
 ## Lint and type checks
 
 - **ESLint + Prettier** apply to `packages/`, `hub-tools/`, `server/`, `tests/`. Run `npm run lint` and `npm run format:check` before committing.
 - **TypeScript:** `npm run typecheck` runs `tsc --noEmit` for packages. Fix type errors so that refactors don't silently break callers.
 - New code in `packages/agni-services/` or `packages/agni-engine/` should satisfy lint and, if it's TypeScript, typecheck. Adding `.ts` under `packages/` will include it in typecheck as configured.
+
+## Package README checklist
+
+Each package under `packages/` should have a README that includes:
+
+- **What it is** — One or two sentences on the package’s role.
+- **Who uses it** — Callers (e.g. hub, CLI, other packages).
+- **Main entry points** — e.g. `index.js`, `pathfinder.js`, or the main exported API.
+- **How to run its tests** — e.g. `npm run test` from repo root (or which test path exercises this package).
+
+Existing guards: `verify:package-headers` and `verify:*-docs` (hub-docs, services-docs, governance-docs) enforce presence and some content; use this checklist when adding or updating a package README.
 
 ## Summary for LLMs
 
