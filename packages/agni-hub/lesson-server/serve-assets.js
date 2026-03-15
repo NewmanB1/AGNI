@@ -5,8 +5,7 @@
  * Response helpers (gzip, sendText, sendJson, sendFile) and asset path resolution.
  */
 
-const fs   = require('fs');
-const path = require('path');
+const fs = require('fs');
 const zlib = require('zlib');
 
 const envConfig = require('@agni/utils/env-config');

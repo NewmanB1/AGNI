@@ -4,7 +4,7 @@
 /**
  * Verifies that version strings in hub/server files match package.json.
  * Fails if hardcoded version strings (e.g. 1.9.0, agni-v1.9.0) are found.
- * sw.js must use __SW_VERSION__ placeholder; hub-transform stamps it at serve time.
+ * sw.js must use __SW_VERSION__ placeholder; lesson-server stamps it at serve time.
  * CI gate: prevents version drift.
  */
 
@@ -17,9 +17,9 @@ const PKG_VERSION = PKG.version || '0.0.0';
 
 const FILES = [
   'packages/agni-hub/sw.js',
-  'packages/agni-hub/hub-transform.js',
-  'packages/agni-hub/hub-transform/constants.js',
-  'packages/agni-hub/hub-transform/route-handlers.js'
+  'packages/agni-hub/lesson-server.js',
+  'packages/agni-hub/lesson-server/constants.js',
+  'packages/agni-hub/lesson-server/route-handlers.js'
 ];
 
 // Patterns that indicate hardcoded version (fail)

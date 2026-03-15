@@ -132,7 +132,7 @@ function computeEntryBytes(ir, sidecar) {
   if (!ir || !sidecar) return 0;
   try {
     return Buffer.byteLength(JSON.stringify(ir), 'utf8') + Buffer.byteLength(JSON.stringify(sidecar), 'utf8');
-  } catch (_e) {
+  } catch {
     return 0;
   }
 }

@@ -24,19 +24,19 @@
  * @returns {object} transport or null if HAL unavailable
  */
 function createSx1276Transport(opts) {
-  var SX127x;
+  let SX127x;
   try {
     // @ts-expect-error optional dep; sx127x-driver not installed by default
     SX127x = require('sx127x-driver');
-  } catch (e) {
+  } catch {
     return null;
   }
 
-  var log = (opts && opts.log) || function () {};
-  var sx127x = null;
-  var receiveCb = null;
+  const log = (opts && opts.log) || function () {};
+  let sx127x = null;
+  let receiveCb = null;
 
-  var driverOpts = {
+  const driverOpts = {
     spiBus: (opts && opts.spiBus) !== undefined ? opts.spiBus : 0,
     spiDevice: (opts && opts.spiDevice) !== undefined ? opts.spiDevice : 0,
     resetPin: (opts && opts.resetPin) !== undefined ? opts.resetPin : 24,
@@ -48,7 +48,7 @@ function createSx1276Transport(opts) {
 
   function send(payload) {
     if (!sx127x) return;
-    var buf = Buffer.isBuffer(payload) ? payload : Buffer.from(String(payload), 'utf8');
+    const buf = Buffer.isBuffer(payload) ? payload : Buffer.from(String(payload), 'utf8');
     sx127x.write(buf).then(function () {
       log.info('mesh:lora sent', { len: buf.length });
     }).catch(function (err) {
@@ -68,7 +68,7 @@ function createSx1276Transport(opts) {
         return sx127x.setContinuousReceiveMode();
       })
       .then(function () {
-        sx127x.on('data', function (data, rssi, snr) {
+        sx127x.on('data', function (data, _rssi, _snr) {
           if (receiveCb && data) receiveCb(Buffer.isBuffer(data) ? data : Buffer.from(data));
         });
         log.info('mesh:lora started', { frequency: driverOpts.frequency });
@@ -104,7 +104,7 @@ function isAvailable() {
   try {
     require.resolve('sx127x-driver');
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 }

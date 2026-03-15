@@ -13,7 +13,8 @@ Use this when adding routes, changing auth, or wiring hub services.
 
 | Goal | Files to touch |
 |------|----------------|
-| Add a new API endpoint | Create or edit a file in `packages/agni-hub/routes/`. Register in `packages/agni-hub/theta.js` (routes are auto-loaded). |
+| Add a new API endpoint | Create or edit a file in `packages/agni-hub/routes/`. Routes are loaded in `packages/agni-hub/pathfinder.js`. **Also add a row to `docs/api-contract.md`** — CI runs `verify:api-contract-routes` and fails if a route is undocumented. |
+| Change LTI (Moodle, Canvas, grade passback) | `packages/agni-hub/routes/lti.js` — launch, lessons, xml, lesson/:slug, submit-grade. Contract: `docs/api-contract.md` § LTI. |
 | Add auth to a route | Wrap the handler with `requireHubKey`, `authOnly`, or `adminOnly` from `ctx`. See auth rules below. |
 | Change auth middleware | `packages/agni-hub/context/auth.js` |
 | Change service layer | Business logic: `@agni/services` (`packages/agni-services/`). Wiring: `packages/agni-hub/context/services.js` — binds services into `ctx` for routes. |
@@ -36,9 +37,11 @@ Use this when adding routes, changing auth, or wiring hub services.
 - Add `router.post` or `router.put` or `router.delete` without wrapping in auth middleware (except allowlisted paths). CI runs `npm run verify:unauthed-routes`.
 - Put business logic in route handlers; keep it in services or packages.
 - Change `docs/api-contract.md` Auth column without updating routes (or vice versa). CI runs `npm run verify:api-contract-auth`.
+- Add a route without documenting it in `docs/api-contract.md`. CI runs `npm run verify:api-contract-routes`.
 
 ## Regression guards
 
 - `npm run verify:unauthed-routes` — fails if any mutating route lacks auth
 - `npm run verify:api-contract-auth` — fails if api-contract Auth column differs from route middleware
+- `npm run verify:api-contract-routes` — fails if any route in code is missing from api-contract.md
 - `tests/unit/hub-auth-regression.test.js` — proves chain routes reject unauthenticated requests

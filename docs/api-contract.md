@@ -74,7 +74,7 @@ Paginated responses include:
 }
 ```
 
-Paginated endpoints: `GET /api/lessons`, `GET /api/theta/all`, `GET /api/accounts/students`.
+Paginated endpoints: `GET /api/lessons`, `GET /api/pathfinder/all`, `GET /api/accounts/students`.
 
 ## Endpoints
 
@@ -98,11 +98,11 @@ Paginated endpoints: `GET /api/lessons`, `GET /api/theta/all`, `GET /api/account
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/theta?pseudoId=` | HubKey | Get sorted lessons for a student |
-| GET | `/api/theta/all` | Admin | All students' theta rankings (paginated) |
-| GET | `/api/theta/graph` | HubKey | Effective graph weights |
+| GET | `/api/pathfinder?pseudoId=` | HubKey | Get sorted lessons for a student (theta ordering) |
+| GET | `/api/pathfinder/all` | Admin | All students' theta rankings (paginated) |
+| GET | `/api/pathfinder/graph` | HubKey | Effective graph weights |
 | GET | `/api/lessons` | HubKey | Lesson index with filters (paginated) |
-| POST | `/api/theta/override` | Admin | Pin/clear a lesson override for a student |
+| POST | `/api/pathfinder/override` | Admin | Pin/clear a lesson override for a student |
 
 ### Telemetry
 
@@ -126,6 +126,7 @@ Paginated endpoints: `GET /api/lessons`, `GET /api/theta/all`, `GET /api/account
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
+| GET | `/api/session/identity` | No | Session identity (used by hub/portal for bootstrap) |
 | POST | `/api/auth/register` | No | Register a creator (201) |
 | POST | `/api/auth/login` | No | Log in |
 | GET | `/api/auth/me` | Bearer | Current session info |
@@ -151,6 +152,7 @@ Paginated endpoints: `GET /api/lessons`, `GET /api/theta/all`, `GET /api/account
 | POST | `/api/governance/catalog` | Admin | Update catalog |
 | POST | `/api/governance/catalog/import` | Admin | Import catalog from authority |
 | GET | `/api/governance/utu-constants` | Bearer | UTU classification constants |
+| GET | `/api/governance/archetypes` | Bearer | Archetype definitions for compliance/authoring |
 | POST | `/api/governance/compliance` | Bearer | Evaluate compliance for lessons |
 
 ### Author
@@ -195,6 +197,8 @@ Paginated endpoints: `GET /api/lessons`, `GET /api/theta/all`, `GET /api/account
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
+| GET | `/api/checkpoint?pseudoId=` | HubKey | Checkpoint/progress state for a student |
+| POST | `/api/checkpoint` | HubKey | Submit checkpoint update (body: pseudoId, lessonId, stepIndex, etc.) |
 | GET | `/api/step-analytics?lessonId=` | HubKey | Per-step analytics |
 | GET | `/api/mastery-history?pseudoId=` | HubKey | Mastery snapshots over time |
 | GET | `/api/skill-graph` | HubKey | Skill dependency graph |

@@ -6,14 +6,14 @@
  *
  * Part A — Polyfills Wiring (original checks):
  *   1. packages/agni-runtime/polyfills.js exists
- *   2. polyfills.js is in ALLOWED_FACTORY_FILES in packages/agni-hub/hub-transform.js
+ *   2. polyfills.js is in ALLOWED_FACTORY_FILES in packages/agni-hub/lesson-server/constants.js
  *   3. polyfills.js is pushed to factoryDeps in packages/ols-compiler/builders/html.js
  *   4. polyfills.js appears BEFORE shared-runtime.js in factoryDeps
  *
  * Part B — Cross-File Consistency:
- *   5. RUNTIME_VERSION in hub-transform.js references package.json (not hardcoded)
+ *   5. RUNTIME_VERSION in lesson-server/constants.js references package.json (not hardcoded)
  *   6. RUNTIME_VERSION in html.js references package.json (not hardcoded)
- *   7. hub-transform.js factoryDeps order: polyfills before shared-runtime
+ *   7. lesson-server/constants.js BASE_FACTORY_DEPS order: polyfills before shared-runtime
  *   8. Every file in sw.js PRECACHE_FACTORIES is in ALLOWED_FACTORY_FILES
  *   9. shell.html loads polyfills.js before shared.js and factory-loader.js
  *
@@ -56,15 +56,15 @@ if (fs.existsSync(polyfillPath)) {
   fail('packages/agni-runtime/polyfills.js does not exist');
 }
 
-// 2. polyfills.js in ALLOWED_FACTORY_FILES (hub-transform/constants.js)
-var constantsPath = path.join(root, 'packages', 'agni-hub', 'hub-transform', 'constants.js');
+// 2. polyfills.js in ALLOWED_FACTORY_FILES (lesson-server/constants.js)
+var constantsPath = path.join(root, 'packages', 'agni-hub', 'lesson-server', 'constants.js');
 var hubConstants = require(constantsPath);
 if (!hubConstants.ALLOWED_FACTORY_FILES || !hubConstants.ALLOWED_FACTORY_FILES.has) {
-  fail('hub-transform/constants.js does not export ALLOWED_FACTORY_FILES Set');
+  fail('lesson-server/constants.js does not export ALLOWED_FACTORY_FILES Set');
 } else if (hubConstants.ALLOWED_FACTORY_FILES.has('polyfills.js')) {
-  pass('polyfills.js is in ALLOWED_FACTORY_FILES (packages/agni-hub/hub-transform/constants.js)');
+  pass('polyfills.js is in ALLOWED_FACTORY_FILES (packages/agni-hub/lesson-server/constants.js)');
 } else {
-  fail('polyfills.js is NOT in ALLOWED_FACTORY_FILES (packages/agni-hub/hub-transform/constants.js)');
+  fail('polyfills.js is NOT in ALLOWED_FACTORY_FILES (packages/agni-hub/lesson-server/constants.js)');
 }
 
 // 3 & 4. polyfills.js is pushed to factoryDeps/factoryFilesToCopy in html.js, before shared-runtime.js
@@ -93,12 +93,12 @@ if (!polyfillPushMatch) {
 
 // ── Part B: Cross-File Consistency ───────────────────────────────────────
 
-// 5. hub-transform constants RUNTIME_VERSION references package.json
+// 5. lesson-server constants RUNTIME_VERSION references package.json
 var constantsSrc = fs.readFileSync(constantsPath, 'utf8');
 if (constantsSrc.indexOf('package.json') === -1) {
-  fail('hub-transform/constants.js RUNTIME_VERSION must use require(\'../../../package.json\')');
+  fail('lesson-server/constants.js RUNTIME_VERSION must use require(\'../../../package.json\')');
 } else {
-  pass('packages/agni-hub/hub-transform/constants.js RUNTIME_VERSION references package.json');
+  pass('packages/agni-hub/lesson-server/constants.js RUNTIME_VERSION references package.json');
 }
 
 // 6. html.js RUNTIME_VERSION must reference package.json, not a hardcoded literal
@@ -116,21 +116,21 @@ if (!htmlVersionLine) {
   }
 }
 
-// 7. hub-transform BASE_FACTORY_DEPS order: polyfills before shared-runtime
+// 7. lesson-server BASE_FACTORY_DEPS order: polyfills before shared-runtime
 var baseDeps = hubConstants.BASE_FACTORY_DEPS;
 if (!Array.isArray(baseDeps)) {
-  fail('hub-transform/constants.js BASE_FACTORY_DEPS must be an array');
+  fail('lesson-server/constants.js BASE_FACTORY_DEPS must be an array');
 } else {
   var htPolyIdx = baseDeps.findIndex(function (d) { return d.file === 'polyfills.js'; });
   var htSharedIdx = baseDeps.findIndex(function (d) { return d.file === 'shared-runtime.js'; });
   if (htPolyIdx === -1) {
-    fail('polyfills.js missing from hub-transform/constants.js BASE_FACTORY_DEPS');
+    fail('polyfills.js missing from lesson-server/constants.js BASE_FACTORY_DEPS');
   } else if (htSharedIdx === -1) {
-    fail('shared-runtime.js missing from hub-transform/constants.js BASE_FACTORY_DEPS');
+    fail('shared-runtime.js missing from lesson-server/constants.js BASE_FACTORY_DEPS');
   } else if (htPolyIdx < htSharedIdx) {
-    pass('packages/agni-hub/hub-transform/constants.js BASE_FACTORY_DEPS: polyfills.js before shared-runtime.js');
+    pass('packages/agni-hub/lesson-server/constants.js BASE_FACTORY_DEPS: polyfills.js before shared-runtime.js');
   } else {
-    fail('packages/agni-hub/hub-transform BASE_FACTORY_DEPS: polyfills.js must come before shared-runtime.js');
+    fail('packages/agni-hub/lesson-server BASE_FACTORY_DEPS: polyfills.js must come before shared-runtime.js');
   }
 }
 
@@ -184,24 +184,24 @@ if (fs.existsSync(shellPath)) {
   fail('packages/agni-hub/pwa/shell.html does not exist');
 }
 
-// 10. hub-transform route-handlers has /shell/ route that serves shell.html via cached template
-var routeHandlersPath = path.join(root, 'packages', 'agni-hub', 'hub-transform', 'route-handlers.js');
+// 10. lesson-server route-handlers has /shell/ route that serves shell.html via cached template
+var routeHandlersPath = path.join(root, 'packages', 'agni-hub', 'lesson-server', 'route-handlers.js');
 var routeHandlersSrc = fs.readFileSync(routeHandlersPath, 'utf8');
 var hasShellRouteRegex = /urlPath\.match\(.*shell/.test(routeHandlersSrc);
 var hasShellHtmlRef = /pwa.*shell\.html/.test(routeHandlersSrc);
 var hasShellTemplateCache = /_shellTemplate/.test(routeHandlersSrc);
 if (hasShellRouteRegex && hasShellHtmlRef) {
-  pass('packages/agni-hub/hub-transform.js has /shell/ route regex that references pwa/shell.html');
+  pass('packages/agni-hub/lesson-server has /shell/ route regex that references pwa/shell.html');
 } else if (!hasShellRouteRegex) {
-  fail('packages/agni-hub/hub-transform.js has no /shell/ URL match — shell.html is dead code (no route serves it)');
+  fail('packages/agni-hub/lesson-server has no /shell/ URL match — shell.html is dead code (no route serves it)');
 } else {
-  fail('packages/agni-hub/hub-transform.js /shell/ route does not reference pwa/shell.html');
+  fail('packages/agni-hub/lesson-server /shell/ route does not reference pwa/shell.html');
 }
 
 if (hasShellTemplateCache) {
-  pass('packages/agni-hub/hub-transform.js caches shell template in _shellTemplate (no per-request blocking I/O)');
+  pass('packages/agni-hub/lesson-server caches shell template in _shellTemplate (no per-request blocking I/O)');
 } else {
-  fail('packages/agni-hub/hub-transform.js missing _shellTemplate cache — shell.html would be re-read from disk on every request');
+  fail('packages/agni-hub/lesson-server missing _shellTemplate cache — shell.html would be re-read from disk on every request');
 }
 
 // 11. shell.html contains the lesson-data.js placeholder that the /shell/ route injects into
@@ -212,12 +212,12 @@ if (shellSrc.indexOf(shellPlaceholder) !== -1) {
   fail('shell.html missing placeholder \'' + shellPlaceholder + '\' — /shell/:slug route will fail to inject slug');
 }
 
-// 12. hub-transform route-handlers sets Cache-Control on shell route
+// 12. lesson-server route-handlers sets Cache-Control on shell route
 var shellCacheControl = /shellMatch[\s\S]{0,1500}Cache-Control/.test(routeHandlersSrc);
 if (shellCacheControl) {
-  pass('packages/agni-hub/hub-transform.js sets Cache-Control on /shell/ route');
+  pass('packages/agni-hub/lesson-server sets Cache-Control on /shell/ route');
 } else {
-  fail('packages/agni-hub/hub-transform.js missing Cache-Control on /shell/ route — browser may serve cached shell with wrong slug');
+  fail('packages/agni-hub/lesson-server missing Cache-Control on /shell/ route — browser may serve cached shell with wrong slug');
 }
 
 // ── Part C: Sanitizer Parity ──────────────────────────────────────────────

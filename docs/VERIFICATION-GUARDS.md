@@ -6,11 +6,11 @@ This document describes the structure of automated guards against regression. Ru
 
 | Group | Scope | Contents |
 |-------|--------|----------|
-| **verify:core** | Cross-cutting | dead-files, dts, innerhtml, factory-order, precache-regression, schema-sync, codegen-sync, canonical, canonical-imports, node-version-docs, engine-no-ts, package-headers, skill-dag, run-environments, architectural-remediation, **lms-integrations** (R8 Phase 2), **es5** |
+| **verify:core** | Cross-cutting | dead-files, dts, innerhtml, factory-order, precache-regression, schema-sync, codegen-sync, canonical, canonical-imports, node-version-docs, engine-no-ts, package-headers, **module-headers**, skill-dag, run-environments, architectural-remediation, **lms-integrations** (R8 Phase 2), **es5** |
 
 **Edge device (Android Nougat) guard:** `test:es5` runs `scripts/check-es5.js` and enforces ES5-only syntax and APIs in `packages/agni-runtime/`, `packages/agni-hub/sw.js`, and `packages/agni-hub/pwa/*.js`. These run in Chrome 51 WebView on student devices. See `docs/RUN-ENVIRONMENTS.md` and `.cursor/rules/edge-device-es5.md`.
 | **verify:runtime** | `packages/agni-runtime/` | svg-tools, runtime-manifest, runtime-headers, runtime-docs, runtime-lint, sensors |
-| **verify:hub** | Hub + auth | hub-config-pi, hub-config-bootstrap, unauthed-routes, version-sync, api-contract-auth, hub-imports, hub-no-scripts, hub-test-targets, hub-docs, hub-lint, config-injection, theta-api |
+| **verify:hub** | Hub + auth | hub-config-pi, hub-config-bootstrap, unauthed-routes, version-sync, api-contract-auth, **api-contract-routes**, hub-imports, hub-no-scripts, hub-test-targets, hub-docs, hub-lint, config-injection, theta-api |
 | **verify:services** | `packages/agni-services/` | services-no-scripts, services-test-targets, services-docs, services-lint |
 | **verify:governance** | `packages/agni-governance/` | governance-canonical, governance-docs, governance-paths, governance.test.js |
 
@@ -70,7 +70,9 @@ E2E runs in a separate job.
 
 ## Adding a New Guard
 
-1. Create a script in `scripts/check-*.js` or a regression test in `tests/unit/*.test.js`.
-2. Add an npm script: `"verify:name": "node scripts/check-name.js"`.
-3. Add it to the appropriate group in `package.json` (verify:core, verify:runtime, verify:hub, or verify:services).
-4. Wire into `.github/workflows/validate.yml` via `verify:all` (no change needed — verify:all covers all groups).
+When you add new behavior or fix a regression, add a guard so the fix is protected and the intended contract is encoded in CI.
+
+1. **Choose the right guard type:** For structural/mechanical rules (e.g. "every route documented", "no innerHTML"), create `scripts/check-*.js`. For regression tests that assert specific behavior, add or extend a test in `tests/unit/*.test.js` (or `tests/integration/`).
+2. Create the script (e.g. `scripts/check-name.js`) or the test file. Scripts should exit 0 on pass, 1 on failure and print a clear message.
+3. Add an npm script in `package.json`: `"verify:name": "node scripts/check-name.js"` (or the mocha command for tests).
+4. Add it to the appropriate group: `verify:core`, `verify:runtime`, `verify:hub`, `verify:services`, or `verify:governance` in the `verify:*` chain. `verify:all` runs all groups, so no change is needed in `.github/workflows/validate.yml`.

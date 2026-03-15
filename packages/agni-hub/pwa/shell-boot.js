@@ -9,6 +9,7 @@
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(function (e) {
+      /* eslint-disable-next-line no-console -- intentional: user-visible fallback when SW fails */
       console.warn('[SW] Registration failed (offline cache disabled):', e && e.message ? e.message : String(e));
     });
     // P2-24: Request persistent storage so Chrome is less likely to evict caches under pressure.

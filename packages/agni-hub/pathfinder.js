@@ -62,22 +62,22 @@ const sharedCache = {
 
 async function getEffectiveGraphWeights(pseudoId) {
   if (pseudoId) {
-    var assignments = await loadJSONAsync(COHORT_ASSIGNMENTS, { assignments: {} });
-    var cohortId = assignments.assignments && assignments.assignments[pseudoId];
+    const assignments = await loadJSONAsync(COHORT_ASSIGNMENTS, { assignments: {} });
+    const cohortId = assignments.assignments && assignments.assignments[pseudoId];
     if (cohortId) {
-      var cohortPath = path.join(DATA_DIR, 'graph-weights-' + cohortId + '.json');
-      var cohortGw = await loadJSONAsync(cohortPath, null);
+      const cohortPath = path.join(DATA_DIR, 'graph-weights-' + cohortId + '.json');
+      const cohortGw = await loadJSONAsync(cohortPath, null);
       if (cohortGw && Array.isArray(cohortGw.edges) && cohortGw.edges.length >= MIN_LOCAL_EDGE_COUNT) {
         return cohortGw;
       }
     }
   }
-  var local = await loadJSONAsync(GRAPH_WEIGHTS_LOCAL, { edges: [], sample_size: 0, default_weight: 1.0 });
-  var useLocal = local.sample_size >= MIN_LOCAL_SAMPLE_SIZE && local.edges.length >= MIN_LOCAL_EDGE_COUNT;
+  const local = await loadJSONAsync(GRAPH_WEIGHTS_LOCAL, { edges: [], sample_size: 0, default_weight: 1.0 });
+  const useLocal = local.sample_size >= MIN_LOCAL_SAMPLE_SIZE && local.edges.length >= MIN_LOCAL_EDGE_COUNT;
   if (useLocal) return local;
-  var regional = await loadJSONAsync(GRAPH_WEIGHTS_REGIONAL, null);
+  const regional = await loadJSONAsync(GRAPH_WEIGHTS_REGIONAL, null);
   if (regional && regional.edges && regional.edges.length > 0) return regional;
-  var mesh = await loadJSONAsync(GRAPH_WEIGHTS_MESH, null);
+  const mesh = await loadJSONAsync(GRAPH_WEIGHTS_MESH, null);
   if (mesh && mesh.edges && mesh.edges.length > 0) return mesh;
   return local;
 }
@@ -561,7 +561,7 @@ async function rebuildLessonIndex() {
         try { (/** @type {(entries: Array<{lessonId: string, difficulty: number, skill: string}>) => void} */ (lmsEngine.seedLessons))(seedEntries); }
         catch (err) { pathfinderLog.error('LMS engine seeding failed', { error: err.message }); }
       }
-    } catch (e) {
+    } catch {
       pathfinderLog.info('No catalog.json and no lessons dir; skipping index rebuild');
     }
     return;
@@ -624,7 +624,7 @@ async function rebuildLessonIndex() {
         irOnly.push(slug);
       } catch (e) { void e; }
     }
-  } catch (e) { /* lessons dir may not exist */ }
+  } catch { /* lessons dir may not exist */ }
   const yamlSlugs = (authorSvc && authorSvc.listSavedLessons)
     ? authorSvc.listSavedLessons(envConfig.yamlDir) : [];
   const yamlOnly = [];
@@ -633,7 +633,7 @@ async function rebuildLessonIndex() {
     if (!catalogSlugSet.has(ys)) {
       try {
         await fsp.access(path.join(lessonsRoot, ys, 'index-ir.json'));
-      } catch (e) { yamlOnly.push(ys); }
+      } catch { yamlOnly.push(ys); }
     }
   }
   if (catalogOrphans.length > 0 || irOnly.length > 0 || yamlOnly.length > 0) {

@@ -32,6 +32,8 @@ AGNI compiles human-readable YAML lessons (Open Lesson Standard) into single-fil
 
 **No src/ re-exports.** Tests and scripts use `@agni/*` and `@ols/*` directly. When inspecting or modifying behavior, work in the **package** (e.g. `packages/agni-engine/`, `packages/ols-compiler/`). `verify:canonical-imports` fails if tests/scripts require from `src/`.
 
+**Package boundaries (who calls whom):** Hub (pathfinder, route handlers) → `@agni/services` and hub context; CLI → compiler entry points and `@agni/utils`; portal → HTTP API only (docs/api-contract.md). Services layer does not require hub or CLI. Compiler and engine are pure where possible; I/O and persistence are at the edges. Documenting "who calls this" in module headers or playbooks keeps impact of changes clear.
+
 ---
 
 ## Where to Find Things

@@ -92,7 +92,7 @@ function register(router, ctx) {
         if (unforkable.indexOf(identifier) !== -1 || unforkable.indexOf(qs.slug) !== -1) {
           forkAllowed = false;
         }
-      } catch (e) { /* ignore */ }
+      } catch { /* ignore */ }
     }
     return sendResponse(200, {
       slug: qs.slug,
@@ -149,7 +149,7 @@ function register(router, ctx) {
           counts[forkedFromSlug] = (counts[forkedFromSlug] || 0) + 1;
           metrics.forkCountByLesson = counts;
           await saveLeaderboardMetricsAsync(metrics);
-        } catch (e) { /* ignore */ }
+        } catch { /* ignore */ }
       }
       const resp = { ok: true, slug: result.slug, path: result.path, warnings: result.warnings || [] };
       if (result.compiled != null) resp.compiled = result.compiled;
@@ -175,8 +175,8 @@ function register(router, ctx) {
       let html;
       try {
         html = assemble.assembleHtml(result.ir, { dev: true });
-      } catch (e) {
-        return sendResponse(400, { error: 'Assemble failed: ' + (e.message || 'Unknown') });
+      } catch (err) {
+        return sendResponse(400, { error: 'Assemble failed: ' + (err.message || 'Unknown') });
       }
       sendResponse(200, { ir: result.ir, sidecar: result.sidecar, html: html });
     });

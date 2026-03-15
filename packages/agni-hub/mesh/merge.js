@@ -21,7 +21,7 @@ function mergeEdgeDeltas(dataDir, edges, sourceHubId, log) {
   let existing = { edges: [], level: 'mesh', sample_size: 20 };
   try {
     existing = loadJSON(meshPath, existing);
-  } catch (_) { /* use default */ }
+  } catch { /* use default */ }
   if (!Array.isArray(existing.edges)) existing.edges = [];
 
   const byKey = new Map();

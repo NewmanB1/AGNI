@@ -61,7 +61,7 @@ function isSystemClockValid() {
 /** B1.1: Anonymize pseudoId for cross-village aggregation. Same (sourceHubId, pseudoId) -> same anon. */
 function anonymizeForAggregator(pseudoId, sourceHubId) {
   if (!pseudoId || !sourceHubId) return pseudoId;
-  var h = crypto.createHash('sha256').update(String(sourceHubId) + ':' + String(pseudoId)).digest('hex').slice(0, 12);
+  const h = crypto.createHash('sha256').update(String(sourceHubId) + ':' + String(pseudoId)).digest('hex').slice(0, 12);
   return 'anon-' + String(sourceHubId).replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 32) + '-' + h;
 }
 
@@ -262,15 +262,15 @@ function startReceiver() {
         res.writeHead(404); res.end();
         return;
       }
-      var secret = req.headers['x-aggregator-secret'];
+      const secret = req.headers['x-aggregator-secret'];
       if (secret !== AGGREGATOR_SECRET) {
         res.writeHead(401, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Unauthorized' }));
         return;
       }
-      var chunks = [];
-      var size = 0;
-      var tooBig = false;
+      const chunks = [];
+      let size = 0;
+      let tooBig = false;
       req.on('data', function (chunk) {
         if (tooBig) return;
         size += chunk.length;
@@ -280,13 +280,13 @@ function startReceiver() {
       req.on('end', function () {
         if (tooBig) { res.writeHead(413); res.end(); return; }
         try {
-          var body = Buffer.concat(chunks).toString('utf8');
-          var payload = JSON.parse(body);
-          var sourceHubId = (payload.sourceHubId || req.headers['x-source-hub'] || 'unknown').toString().slice(0, 64);
-          var raw = Array.isArray(payload.events) ? payload.events : [payload];
-          var valid = [];
-          for (var i = 0; i < raw.length; i++) {
-            var ev = validateEvent(raw[i]);
+          const body = Buffer.concat(chunks).toString('utf8');
+          const payload = JSON.parse(body);
+          const sourceHubId = (payload.sourceHubId || req.headers['x-source-hub'] || 'unknown').toString().slice(0, 64);
+          const raw = Array.isArray(payload.events) ? payload.events : [payload];
+          const valid = [];
+          for (let i = 0; i < raw.length; i++) {
+            const ev = validateEvent(raw[i]);
             if (ev) {
               ev.sourceHubId = sourceHubId;
               ev.pseudoId = anonymizeForAggregator(ev.pseudoId, sourceHubId);
@@ -309,7 +309,7 @@ function startReceiver() {
             lastAnalysisAttempt = Date.now();
             setImmediate(function () { runAnalysis().catch(function (e) { log.error('Analysis error', { error: e.message }); }); });
           }
-        } catch (e) { res.writeHead(400); res.end(); }
+        } catch { res.writeHead(400); res.end(); }
       });
       return;
     }
@@ -506,14 +506,14 @@ async function runAnalysis() {
     log.info('Analysis complete', { eventsProcessed, edges: edges.length });
   }
 
-  for (var ci = 0; ci < clustersWithIds.length; ci++) {
-    var cl = clustersWithIds[ci];
+  for (let ci = 0; ci < clustersWithIds.length; ci++) {
+    const cl = clustersWithIds[ci];
     if (cl.cohortId === cohortId) continue;
-    var cpairs = {};
+    const cpairs = {};
     cl.members.forEach(function (pid) {
-      var tables = contingencies[pid] || {};
+      const tables = contingencies[pid] || {};
       Object.keys(tables).forEach(function (pair) {
-        var counts = tables[pair];
+        const counts = tables[pair];
         if (!cpairs[pair]) cpairs[pair] = { a: 0, b: 0, c: 0, d: 0 };
         cpairs[pair].a += counts.a;
         cpairs[pair].b += counts.b;
@@ -521,8 +521,8 @@ async function runAnalysis() {
         cpairs[pair].d += counts.d;
       });
     });
-    var cedges = telemetryEngineAnalysis.computeEdgesFromGlobalPairs(cpairs, opts);
-    var cgw = {
+    const cedges = telemetryEngineAnalysis.computeEdgesFromGlobalPairs(cpairs, opts);
+    const cgw = {
       '$schema': 'https://github.com/NewmanB1/AGNI/schemas/graph-weights.schema.json',
       version: SCHEMA_VERSION,
       discovered_cohort: cl.cohortId,
@@ -536,7 +536,7 @@ async function runAnalysis() {
       edges: cedges,
       metadata: { computation_date: now, software_version: SW_VERSION }
     };
-    var cv = getGraphWeightsValidator();
+    const cv = getGraphWeightsValidator();
     if (!cv || cv(cgw)) {
       await saveJSONAsync(path.join(DATA_DIR, 'graph-weights-' + cl.cohortId + '.json'), cgw);
     }

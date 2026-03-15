@@ -3,7 +3,7 @@
 // Collab session state: seeks and matched sessions. Persisted to JSON.
 
 const crypto = require('crypto');
-const { withLock } = require('@agni/utils/file-lock');
+require('@agni/utils/file-lock');
 
 const SEEK_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -14,7 +14,7 @@ const SEEK_TTL_MS = 10 * 60 * 1000; // 10 minutes
  * @returns {Promise<{ seeks: Array<{pseudoId:string, lessonId:string, startedAt:number}>, sessions: Array<{id:string, lessonId:string, pseudoIds:string[], status:string, createdAt:number}> }>}
  */
 async function loadState(loadJSONAsync, path) {
-  var data = await loadJSONAsync(path, { seeks: [], sessions: [] });
+  const data = await loadJSONAsync(path, { seeks: [], sessions: [] });
   if (!Array.isArray(data.seeks)) data.seeks = [];
   if (!Array.isArray(data.sessions)) data.sessions = [];
   return data;
@@ -26,7 +26,7 @@ async function loadState(loadJSONAsync, path) {
  * @returns {Array}
  */
 function pruneStaleSeeks(seeks) {
-  var now = Date.now();
+  const now = Date.now();
   return seeks.filter(function (s) {
     return (now - (s.startedAt || 0)) < SEEK_TTL_MS;
   });
@@ -45,13 +45,13 @@ function addSeek(state, pseudoId, lessonId) {
   // Remove any existing seek for this student
   state.seeks = state.seeks.filter(function (s) { return s.pseudoId !== pseudoId; });
 
-  var now = Date.now();
+  const now = Date.now();
   state.seeks.push({ pseudoId: pseudoId, lessonId: lessonId, startedAt: now });
 
-  var sameLesson = state.seeks.filter(function (s) { return s.lessonId === lessonId; });
+  const sameLesson = state.seeks.filter(function (s) { return s.lessonId === lessonId; });
   if (sameLesson.length >= 2) {
-    var pseudoIds = sameLesson.map(function (s) { return s.pseudoId; });
-    var sessionId = 'collab-' + crypto.randomBytes(8).toString('hex');
+    const pseudoIds = sameLesson.map(function (s) { return s.pseudoId; });
+    const sessionId = 'collab-' + crypto.randomBytes(8).toString('hex');
     state.sessions.push({
       id: sessionId,
       lessonId: lessonId,
@@ -74,12 +74,12 @@ function addSeek(state, pseudoId, lessonId) {
 function getSeekStatus(state, pseudoId) {
   state.seeks = pruneStaleSeeks(state.seeks);
 
-  var seek = state.seeks.find(function (s) { return s.pseudoId === pseudoId; });
+  const seek = state.seeks.find(function (s) { return s.pseudoId === pseudoId; });
   if (seek) {
     return { seeking: true, lessonId: seek.lessonId };
   }
 
-  var session = state.sessions.find(function (s) {
+  const session = state.sessions.find(function (s) {
     return s.pseudoIds && s.pseudoIds.indexOf(pseudoId) !== -1 &&
            (s.status === 'matched' || s.status === 'active' || s.status === 'denied');
   });
@@ -111,7 +111,7 @@ function cancelSeek(state, pseudoId) {
  * @returns {boolean} true if found and denied
  */
 function denySession(state, sessionId) {
-  var session = state.sessions.find(function (s) { return s.id === sessionId; });
+  const session = state.sessions.find(function (s) { return s.id === sessionId; });
   if (!session) return false;
   if (session.status === 'denied' || session.status === 'completed') return false;
   session.status = 'denied';
@@ -124,7 +124,7 @@ function denySession(state, sessionId) {
  * @param {string} sessionId
  */
 function markSessionActive(state, sessionId) {
-  var session = state.sessions.find(function (s) { return s.id === sessionId; });
+  const session = state.sessions.find(function (s) { return s.id === sessionId; });
   if (session && session.status === 'matched') session.status = 'active';
 }
 

@@ -21,7 +21,6 @@ const { loadJSON, saveJSON } = require('@agni/utils/json-store');
 const DATA_DIR = envConfig.dataDir;
 const HUB_ID = envConfig.hubId;
 const GRAPH_WEIGHTS_PATH = path.join(DATA_DIR, 'graph-weights.json');
-const MESH_STATE_PATH = path.join(DATA_DIR, 'mesh-state.json');
 const MESH_LOG = path.join(DATA_DIR, 'mesh.log');
 
 const log = createLogger('mesh', { logFile: MESH_LOG });
@@ -30,7 +29,7 @@ const protocol = require('./protocol');
 const transports = require('./transports');
 const peerTable = require('./peer-table').createPeerTable({ log });
 const { mergeEdgeDeltas } = require('./merge');
-const { chunkGraphWeights, assembleChunks } = require('./chunked');
+require('./chunked');
 
 function parseArgs(argv) {
   const result = {};
@@ -106,7 +105,7 @@ function handleReceived(transport, buf) {
             saveJSON(meshPath, gw);
             log.info('mesh:chunked graph received', { hubId: chunk.hubId, edges: gw.edges.length });
           }
-        } catch (_) { /* ignore */ }
+        } catch { /* ignore */ }
       }
       chunkBuffers.delete(key);
     }

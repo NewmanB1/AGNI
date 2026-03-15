@@ -5,7 +5,7 @@
 const crypto = require('crypto');
 const CHUNK_SIZE = 200;
 
-function chunkGraphWeights(gw, hubId) {
+function chunkGraphWeights(gw, _hubId) {
   const json = JSON.stringify(gw);
   const buf = Buffer.from(json, 'utf8');
   const chunks = [];
@@ -25,7 +25,7 @@ function assembleChunks(chunkMap) {
     byTransfer.get(transferId)[parseInt(idx, 10)] = chunk;
   }
   const results = [];
-  for (const [transferId, chunks] of byTransfer) {
+  for (const [, chunks] of byTransfer) {
     const indices = Object.keys(chunks).map(Number).sort((a, b) => a - b);
     const total = Math.max(...indices) + 1;
     if (indices.length !== total) continue;
@@ -35,7 +35,7 @@ function assembleChunks(chunkMap) {
     }
     try {
       results.push(JSON.parse(buf));
-    } catch (_) { /* skip corrupted */ }
+    } catch { /* skip corrupted */ }
   }
   return results;
 }

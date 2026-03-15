@@ -52,17 +52,17 @@ for (const file of FACTORY_LOAD_ORDER) {
 if (!sectionFailed) pass('All FACTORY_LOAD_ORDER files are in FACTORY_PATH_MAP');
 
 // 3. Ensure FACTORY_LOAD_ORDER files are in hub ALLOWED_FACTORY_FILES
-const hubConstantsPath = path.join(ROOT, 'packages', 'agni-hub', 'hub-transform', 'constants.js');
+const hubConstantsPath = path.join(ROOT, 'packages', 'agni-hub', 'lesson-server', 'constants.js');
 let hubConstants;
 try {
   hubConstants = require(hubConstantsPath);
 } catch (e) {
-  fail('Could not load hub-transform/constants.js: ' + e.message);
+  fail('Could not load lesson-server/constants.js: ' + e.message);
 }
 if (hubConstants) {
   const allowedSet = hubConstants.ALLOWED_FACTORY_FILES;
   if (!allowedSet || typeof allowedSet.has !== 'function') {
-    fail('hub-transform/constants.js does not export ALLOWED_FACTORY_FILES Set');
+    fail('lesson-server/constants.js does not export ALLOWED_FACTORY_FILES Set');
   } else {
     sectionFailed = false;
     for (const file of FACTORY_LOAD_ORDER) {

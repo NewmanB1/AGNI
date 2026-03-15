@@ -224,7 +224,7 @@ function discoverCohort(mastery, opts) {
  */
 function cohortIdFromCentroid(centroid) {
   if (!centroid || !Array.isArray(centroid)) return 'c_default';
-  var str = centroid.map(function (v) { return Number(v).toFixed(4); }).join(',');
+  const str = centroid.map(function (v) { return Number(v).toFixed(4); }).join(',');
   return 'c_' + crypto.createHash('sha256').update(str).digest('hex').slice(0, 8);
 }
 
@@ -232,12 +232,12 @@ function cohortIdFromCentroid(centroid) {
  * Build pseudoId -> cohortId map from clusters. B1.1: theta uses this to select cohort-specific graph.
  */
 function buildCohortAssignments(clustersWithIds) {
-  var out = {};
-  for (var i = 0; i < clustersWithIds.length; i++) {
-    var c = clustersWithIds[i];
-    var id = c.cohortId;
-    var members = c.members;
-    for (var j = 0; j < members.length; j++) {
+  const out = {};
+  for (let i = 0; i < clustersWithIds.length; i++) {
+    const c = clustersWithIds[i];
+    const id = c.cohortId;
+    const members = c.members;
+    for (let j = 0; j < members.length; j++) {
       out[members[j]] = id;
     }
   }

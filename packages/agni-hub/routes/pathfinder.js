@@ -5,7 +5,7 @@ const envConfig = require('@agni/utils/env-config');
 function register(router, ctx) {
   const { loadMasterySummaryAsync, loadLessonIndexAsync, loadOverridesAsync, saveOverridesAsync,
           authorService, handleJsonBody, requireHubKey, adminOnly,
-          DATA_DIR, path, pathfinderCache } = ctx;
+          pathfinderCache } = ctx;
 
   router.get('/api/pathfinder', requireHubKey(async (req, res, { qs, sendResponse }) => {
     if (!qs.pseudoId) return sendResponse(400, { error: 'pseudoId required' });

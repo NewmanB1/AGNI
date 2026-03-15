@@ -33,7 +33,7 @@ var EDGE_MARKERS = ['ES5', 'Chrome 51', 'Android 7', 'Nougat', 'API 24', 'edge d
 // Files that must document Village Hub / Pi target
 var HUB_FILES = [
   'packages/agni-hub/theta.js',
-  'packages/agni-hub/hub-transform.js',
+  'packages/agni-hub/lesson-server.js',
   'packages/agni-engine/math.js',
   'packages/agni-engine/index.js'
 ];

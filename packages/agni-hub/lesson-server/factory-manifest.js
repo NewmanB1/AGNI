@@ -7,8 +7,7 @@
  * before loading any factory.
  */
 
-const fs   = require('fs');
-const path = require('path');
+const fs = require('fs');
 
 const { canonicalJSON, computeSRI, signManifestPayload } = require('@agni/utils/crypto');
 const envConfig = require('@agni/utils/env-config');
@@ -42,7 +41,7 @@ function buildFactoryManifest(opts) {
         version:   RUNTIME_VERSION,
         integrity: integrity
       });
-    } catch (e) {
+    } catch {
       // Skip files we can't read
     }
   }

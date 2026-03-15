@@ -148,7 +148,7 @@ function register(router, ctx) {
       const b = Buffer.from(expectedSig, 'utf8');
       if (a.length !== b.length) return false;
       return crypto.timingSafeEqual(a, b);
-    } catch (e) {
+    } catch {
       return false;
     }
   }
@@ -247,7 +247,7 @@ function register(router, ctx) {
       '.lesson:hover{background:#f5f5f5}.lesson strong{display:block}.lesson small{color:#666;font-size:0.9em}</style></head><body>' +
       '<h1>Choose a lesson</h1>' +
       catalog.map(function (l) {
-        var url = gradeToken
+        const url = gradeToken
           ? baseUrl + '/lti/lesson/' + encodeURIComponent(l.slug) + tokenParam
           : baseUrl + '/lessons/' + encodeURIComponent(l.slug);
         return '<a class="lesson" href="' + escapeHtml(url) + '"><strong>' + escapeHtml(l.title) + '</strong><small>' + escapeHtml(l.description || '') + '</small></a>';
@@ -308,7 +308,7 @@ function register(router, ctx) {
     let payload;
     try {
       payload = JSON.parse(raw);
-    } catch (e) {
+    } catch {
       return sendResponse(400, { ok: false, error: 'Invalid JSON' });
     }
     const token = payload.token;

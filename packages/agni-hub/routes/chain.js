@@ -40,7 +40,7 @@ function register(router, ctx) {
         if (unforkable.indexOf(identifier) !== -1 || unforkable.indexOf(qs.slug) !== -1) {
           forkAllowed = false;
         }
-      } catch (e) { /* ignore */ }
+      } catch { /* ignore */ }
     }
     return sendResponse(200, {
       slug: qs.slug,

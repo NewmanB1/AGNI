@@ -23,8 +23,8 @@ function register(router, ctx) {
       if (!lessonId) return sendResponse(400, { error: 'lessonId required' });
 
       const result = await withLock(COLLAB_SESSIONS_PATH, async () => {
-        var state = await collabSessions.loadState(loadJSONAsync, COLLAB_SESSIONS_PATH);
-        var out = collabSessions.addSeek(state, pseudoId, lessonId);
+        const state = await collabSessions.loadState(loadJSONAsync, COLLAB_SESSIONS_PATH);
+        const out = collabSessions.addSeek(state, pseudoId, lessonId);
         await saveJSONAsync(COLLAB_SESSIONS_PATH, state);
         return out;
       });
@@ -36,8 +36,8 @@ function register(router, ctx) {
     const pseudoId = requireParam(qs, 'pseudoId', sendResponse);
     if (!pseudoId) return;
 
-    var state = await collabSessions.loadState(loadJSONAsync, COLLAB_SESSIONS_PATH);
-    var status = collabSessions.getSeekStatus(state, pseudoId);
+    const state = await collabSessions.loadState(loadJSONAsync, COLLAB_SESSIONS_PATH);
+    const status = collabSessions.getSeekStatus(state, pseudoId);
     return sendResponse(200, status);
   }));
 
@@ -47,7 +47,7 @@ function register(router, ctx) {
       if (!pseudoId) return sendResponse(400, { error: 'pseudoId required' });
 
       await withLock(COLLAB_SESSIONS_PATH, async () => {
-        var state = await collabSessions.loadState(loadJSONAsync, COLLAB_SESSIONS_PATH);
+        const state = await collabSessions.loadState(loadJSONAsync, COLLAB_SESSIONS_PATH);
         collabSessions.cancelSeek(state, pseudoId);
         await saveJSONAsync(COLLAB_SESSIONS_PATH, state);
       });
@@ -56,11 +56,11 @@ function register(router, ctx) {
   }));
 
   router.get('/api/collab/sessions', authOnly(async (req, res, { sendResponse }) => {
-    var state = await collabSessions.loadState(loadJSONAsync, COLLAB_SESSIONS_PATH);
-    var sessions = collabSessions.listSessions(state);
-    var index = await loadLessonIndexAsync();
-    var enriched = sessions.map(function (s) {
-      var lesson = index.find(function (l) {
+    const state = await collabSessions.loadState(loadJSONAsync, COLLAB_SESSIONS_PATH);
+    const sessions = collabSessions.listSessions(state);
+    const index = await loadLessonIndexAsync();
+    const enriched = sessions.map(function (s) {
+      const lesson = index.find(function (l) {
         return (l.lessonId === s.lessonId || l.identifier === s.lessonId || l.slug === s.lessonId);
       });
       return {
@@ -79,9 +79,9 @@ function register(router, ctx) {
     const sessionId = params && params.id;
     if (!sessionId) return sendResponse(400, { error: 'session id required' });
 
-    var ok = false;
+    let ok = false;
     await withLock(COLLAB_SESSIONS_PATH, async () => {
-      var state = await collabSessions.loadState(loadJSONAsync, COLLAB_SESSIONS_PATH);
+      const state = await collabSessions.loadState(loadJSONAsync, COLLAB_SESSIONS_PATH);
       ok = collabSessions.denySession(state, sessionId);
       if (ok) await saveJSONAsync(COLLAB_SESSIONS_PATH, state);
     });

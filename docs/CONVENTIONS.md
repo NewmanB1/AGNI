@@ -5,7 +5,7 @@ These rules keep the codebase navigable and safe to change with tooling and LLM 
 ## Module layout
 
 - **One clear role per module.** If a file grows beyond a single responsibility, split it (e.g. player → player/state, player/navigation).
-- **Public API via index.** Each logical module (`packages/ols-compiler/`, `packages/agni-engine/`, `packages/agni-governance/`, `@agni/services`) exposes a small surface via an `index.js`. New public functions should be exported from that index so they're discoverable; hide helpers inside the module.
+- **Public API via index.** Each logical module (`packages/ols-compiler/`, `packages/agni-engine/`, `packages/agni-governance/`, `@agni/services`) exposes a small surface via an `index.js`. New public functions should be exported from that index so they're discoverable; hide helpers inside the module. Prefer `require('@agni/package')` or `require('@agni/package/index')` over requiring deep internal paths (e.g. `@agni/package/lib/foo.js`); `verify:canonical-imports` enforces this for tests and scripts.
 - **Top-down entry points.** Callers (CLI, hub, portal) use the **services layer** (`@agni/services`) or documented HTTP API; they do not require compiler/engine/governance internals directly.
 
 ## Functions and state
@@ -15,7 +15,7 @@ These rules keep the codebase navigable and safe to change with tooling and LLM 
 
 ## Error return conventions
 
-- **Service-layer functions** (called by route handlers or other services) return `{ error: string }` on failure and `{ data... }` on success. Callers check `.error` — no try/catch needed.
+- **Service-layer functions** (called by route handlers or other services) return `{ error: string }` on failure and `{ data... }` on success. Callers check `.error` — no try/catch needed. This applies to all functions exported from `@agni/services` and to any function invoked by hub route handlers; consistent return shape keeps the codebase predictable and avoids uncaught throws in the request path.
 - **Internal pipeline functions** (used within a single module) may throw. The calling service function catches and converts to `{ error }`.
 - **CLI entry points** may throw; the CLI wrapper prints the error and exits.
 - Example: `runCompilePipeline()` returns `{ ir, sidecar }` or `{ error }`. `compileLessonFromYamlFile()` throws because the CLI wraps it in try/catch.
@@ -64,6 +64,19 @@ When adding a new shared utility:
 
 Use these instead of ad-hoc mtime checks or inline escape functions.
 
+## Centralized shared patterns
+
+Avoid duplicating logic that already has a canonical home. Use these instead of ad-hoc implementations:
+
+| Need | Use | Avoid |
+|------|-----|--------|
+| File I/O, mtime, HTML escape | `@agni/utils/io` (ensureDir, readFileSafe, writeIfNewer, copyIfNewer, escapeHtml) | Inline fs + mtime checks, manual escape |
+| Schema-validated JSON load/save | `createSchemaStore()` in `packages/agni-governance/schema-store.js` | Manual Ajv + readFile + writeFile |
+| Route auth and guards | Hub middleware: `adminOnly`, `requireLms`, `withRateLimit`, `requireParam` in `packages/agni-hub/shared.js` and `context/` | Inline auth checks in handlers |
+| Binary/base64 helpers | `@agni/utils/binary`, runtime binary-utils | Ad-hoc Buffer/encoding logic |
+
+When adding new cross-cutting behavior, consider a shared module or middleware so it can be reused and tested once.
+
 ## Documentation
 
 - **Header comment on every module.** At the top of each file, add a short block: what the file does, who uses it, and any cross-cutting contract (e.g. "Binding hash must match crypto.js and player.js").
@@ -72,11 +85,12 @@ Use these instead of ad-hoc mtime checks or inline escape functions.
 ## Types and contracts
 
 - **Shared types in `packages/types/index.d.ts`.** IR, sidecar, LMS state, governance, and API payloads. IR and sidecar types are **schema-driven** — when you add a field to the IR or sidecar, update `schemas/lesson-ir.schema.json` or `schemas/lesson-sidecar.schema.json`, run `npm run codegen:types`, and update the compiler/governance code.
-- **API contract in `docs/api-contract.md`.** Any new or changed hub HTTP endpoint must be documented there and reflected in `portal/js/api.js` if the portal uses it.
+- **Schema-first workflow.** When adding or changing a field in IR, sidecar, or other schema-backed data: (1) update the JSON Schema in `schemas/` first, (2) run `npm run codegen:types` (and any codegen:validate-schemas), (3) then update compiler/engine/governance code. This keeps the reference implementation aligned with the spec and avoids drift. See `docs/playbooks/schema-to-types.md` for details.
+- **API contract in `docs/api-contract.md`.** Any new or changed hub HTTP endpoint must be documented there and reflected in `portal/js/api.js` if the portal uses it. `verify:api-contract-routes` fails if a route exists in code but not in the contract.
 
 ## Playbooks
 
-- **"How to modify X" playbooks** live in `docs/playbooks/`: `compiler.md`, `runtime.md`, `lms.md`, `governance.md`. Use them to find the right files and avoid breaking contracts when changing behaviour.
+- **"How to modify X" playbooks** live in `docs/playbooks/`: `compiler.md`, `runtime.md`, `lms.md`, `governance.md`, `hub.md`, `services.md`, `portal.md`, `schema-to-types.md`, `mesh-lora.md`. Use them to find the right files and avoid breaking contracts when changing behaviour.
 
 ## Lint and type checks
 

@@ -13,57 +13,57 @@ function register(router, ctx) {
     const limit = Math.min(Math.max(1, parseInt(qs.limit, 10) || 20), 100);
     const section = (qs.section || 'all').toLowerCase(); // all | lessons | creators
 
-    let index = [];
+    let index;
     let catalog = { lessonIds: [], unforkableLessonIds: [] };
     let metrics = { forkCountByLesson: {} };
     let telemetry = { events: [] };
 
     try {
       index = await loadLessonIndexAsync();
-    } catch (e) { index = []; }
+    } catch { index = []; }
     try {
       catalog = await loadApprovedCatalogAsync();
       if (!catalog) catalog = { lessonIds: [], unforkableLessonIds: [] };
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
     try {
       metrics = await loadLeaderboardMetricsAsync();
       if (!metrics.forkCountByLesson) metrics.forkCountByLesson = {};
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
     try {
       telemetry = await loadTelemetryEventsAsync();
       if (!telemetry.events) telemetry.events = [];
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
 
     const approvedSet = new Set((catalog.lessonIds || []).map(String).filter(Boolean));
     const forkCounts = metrics.forkCountByLesson || {};
 
-    var completionByLesson = {};
-    var masterySumByLesson = {};
-    var masteryCountByLesson = {};
+    const completionByLesson = {};
+    const masterySumByLesson = {};
+    const masteryCountByLesson = {};
     (telemetry.events || []).forEach(function (ev) {
-      var lid = ev.lessonId && String(ev.lessonId).trim();
+      const lid = ev.lessonId && String(ev.lessonId).trim();
       if (!lid) return;
       completionByLesson[lid] = (completionByLesson[lid] || 0) + 1;
-      var m = typeof ev.mastery === 'number' && isFinite(ev.mastery) ? Math.max(0, Math.min(1, ev.mastery)) : 0;
+      const m = typeof ev.mastery === 'number' && isFinite(ev.mastery) ? Math.max(0, Math.min(1, ev.mastery)) : 0;
       masterySumByLesson[lid] = (masterySumByLesson[lid] || 0) + m;
       masteryCountByLesson[lid] = (masteryCountByLesson[lid] || 0) + 1;
     });
 
     function avgMastery(lessonId) {
-      var sum = masterySumByLesson[lessonId];
-      var n = masteryCountByLesson[lessonId];
+      const sum = masterySumByLesson[lessonId];
+      const n = masteryCountByLesson[lessonId];
       if (n === 0 || sum == null) return null;
       return Math.round((sum / n) * 1000) / 1000;
     }
 
-    var lessonRows = index.map(function (ent) {
-      var lessonId = ent.lessonId || ent.slug || '';
-      var slug = ent.slug || lessonId;
-      var approved = approvedSet.has(lessonId) || approvedSet.has(slug);
-      var forkCount = forkCounts[slug] || forkCounts[lessonId] || 0;
-      var completionCount = completionByLesson[lessonId] || completionByLesson[slug] || 0;
-      var avgM = avgMastery(lessonId) || avgMastery(slug);
-      var ribbons = [];
+    const lessonRows = index.map(function (ent) {
+      const lessonId = ent.lessonId || ent.slug || '';
+      const slug = ent.slug || lessonId;
+      const approved = approvedSet.has(lessonId) || approvedSet.has(slug);
+      const forkCount = forkCounts[slug] || forkCounts[lessonId] || 0;
+      const completionCount = completionByLesson[lessonId] || completionByLesson[slug] || 0;
+      const avgM = avgMastery(lessonId) || avgMastery(slug);
+      const ribbons = [];
       if (approved) ribbons.push({ id: 'governance-approved', label: 'Governance approved', rank: 1 });
       if (forkCount > 0) ribbons.push({ id: 'forked', label: 'Forked', count: forkCount, rank: 2 });
       if (completionCount >= 10) ribbons.push({ id: 'high-impact', label: 'High impact', count: completionCount, rank: 3 });
@@ -82,23 +82,23 @@ function register(router, ctx) {
       };
     });
 
-    var creators = {};
+    const creators = {};
     lessonRows.forEach(function (row) {
-      var cid = row.creatorId || '_anonymous';
+      const cid = row.creatorId || '_anonymous';
       if (!creators[cid]) {
         creators[cid] = { creatorId: cid, lessonCount: 0, approvedCount: 0, totalForks: 0, totalCompletions: 0, masterySum: 0, masteryN: 0, ribbons: [] };
       }
-      var c = creators[cid];
+      const c = creators[cid];
       c.lessonCount += 1;
       if (row.approved) c.approvedCount += 1;
       c.totalForks += row.forkCount;
       c.totalCompletions += row.completionCount;
       if (row.avgMastery != null) { c.masterySum += row.avgMastery * (row.completionCount || 1); c.masteryN += (row.completionCount || 1); }
     });
-    var creatorRows = Object.keys(creators).map(function (cid) {
-      var c = creators[cid];
-      var avgMasteryCreator = c.masteryN > 0 ? Math.round((c.masterySum / c.masteryN) * 1000) / 1000 : null;
-      var ribbons = [];
+    const creatorRows = Object.keys(creators).map(function (cid) {
+      const c = creators[cid];
+      const avgMasteryCreator = c.masteryN > 0 ? Math.round((c.masterySum / c.masteryN) * 1000) / 1000 : null;
+      const ribbons = [];
       if (c.approvedCount > 0) ribbons.push({ id: 'governance-approved', label: 'Governance approved', count: c.approvedCount });
       if (c.totalForks >= 3) ribbons.push({ id: 'often-forked', label: 'Often forked', count: c.totalForks });
       if (c.totalCompletions >= 20) ribbons.push({ id: 'high-impact', label: 'High impact', count: c.totalCompletions });
@@ -117,22 +117,22 @@ function register(router, ctx) {
     function byForks(a, b) { return (b.forkCount || 0) - (a.forkCount || 0); }
     function byCompletions(a, b) { return (b.completionCount || 0) - (a.completionCount || 0); }
     function byCreatorImpact(a, b) {
-      var sa = (a.approvedCount || 0) * 2 + (a.totalForks || 0) + (a.totalCompletions || 0) / 10;
-      var sb = (b.approvedCount || 0) * 2 + (b.totalForks || 0) + (b.totalCompletions || 0) / 10;
+      const sa = (a.approvedCount || 0) * 2 + (a.totalForks || 0) + (a.totalCompletions || 0) / 10;
+      const sb = (b.approvedCount || 0) * 2 + (b.totalForks || 0) + (b.totalCompletions || 0) / 10;
       return sb - sa;
     }
 
-    var topLessons = lessonRows
+    const topLessons = lessonRows
       .filter(function (r) { return r.approved || r.forkCount > 0 || r.completionCount > 0 || (r.avgMastery != null && r.avgMastery >= 0.6); })
       .sort(function (a, b) { return byForks(a, b) || byCompletions(a, b); })
       .slice(0, limit);
 
-    var topCreators = creatorRows
+    const topCreators = creatorRows
       .filter(function (r) { return r.creatorId !== '_anonymous' && (r.approvedCount > 0 || r.totalForks > 0 || r.totalCompletions > 0); })
       .sort(byCreatorImpact)
       .slice(0, limit);
 
-    var out = {
+    const out = {
       topLessons: section === 'creators' ? [] : topLessons,
       topCreators: section === 'lessons' ? [] : topCreators,
       updatedAt: metrics.updatedAt || null

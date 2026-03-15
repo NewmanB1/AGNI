@@ -118,12 +118,13 @@ Open an issue at [github.com/NewmanB1/AGNI/issues](https://github.com/NewmanB1/A
    npm run format      # format with Prettier
    ```
 
-3. **Test your changes:**
+3. **Test your changes.** Before opening a PR, ensure the full verification suite passes:
    ```bash
    npm run build          # make sure it compiles
    npm run validate       # make sure lessons are valid
-   node test-inference.js # make sure inference runs clean
+   npm run verify:all     # required: lint, structure, api-contract, guards (see docs/VERIFICATION-GUARDS.md)
    ```
+   **No PR should merge with `verify:all` failing.** CI runs this; running it locally (or a pre-push hook) avoids last-minute fixes.
 
 4. **Commit with a clear message:**
    ```bash

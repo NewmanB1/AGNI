@@ -18,7 +18,7 @@ function createStubTransport(opts) {
     send: function (payload) {
       log.info('mesh:stub send', { len: (payload && payload.length) || 0 });
     },
-    onReceive: function (cb) {
+    onReceive: function (_cb) {
       log.info('mesh:stub onReceive registered (no packets will arrive)');
     },
     start: function () {
@@ -66,8 +66,8 @@ function createUdpTransport(opts) {
     sock.bind(port, function () {
       try {
         sock.setBroadcast(true);
-      } catch (e) {
-        log.warn('mesh:udp setBroadcast failed (some platforms)', { error: e.message });
+      } catch (err) {
+        log.warn('mesh:udp setBroadcast failed (some platforms)', { error: err.message });
       }
       log.info('mesh:udp listening', { port });
     });
@@ -94,15 +94,15 @@ function createUdpTransport(opts) {
  * Falls back to stub with log message if HAL unavailable.
  */
 function createLoraTransport(opts) {
-  var loraHal = null;
+  let loraHal = null;
   try {
     loraHal = require('./lora-hal');
-  } catch (e) {
+  } catch {
     /* lora-hal always exists; ignore */
   }
-  var log = (opts && opts.log) || (function () {});
+  const log = (opts && opts.log) || (function () {});
   if (loraHal && loraHal.isAvailable()) {
-    var t = loraHal.createSx1276Transport(opts);
+    const t = loraHal.createSx1276Transport(opts);
     if (t) return t;
   }
   log.warn('mesh:lora HAL unavailable (sx127x-driver not installed or platform unsupported). Install: npm install sx127x-driver. Falling back to stub.');

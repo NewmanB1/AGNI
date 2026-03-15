@@ -11,7 +11,7 @@
  *
  * Phase 4: Shell integration
  *   - shell.html loads precache.js
- *   - hub-transform.js serves /precache.js
+ *   - lesson-server serves /precache.js
  *
  * Exit 0 on pass, 1 on failure.
  */
@@ -61,13 +61,13 @@ if (!/precache\.js/.test(shellSrc)) {
   pass('shell.html loads precache.js');
 }
 
-const routeHandlersPath = path.join(ROOT, 'packages', 'agni-hub', 'hub-transform', 'route-handlers.js');
+const routeHandlersPath = path.join(ROOT, 'packages', 'agni-hub', 'lesson-server', 'route-handlers.js');
 const routeHandlersSrc = fs.readFileSync(routeHandlersPath, 'utf8');
 
 if (!/\/precache\.js/.test(routeHandlersSrc) || !/urlPath\s*===\s*['"]\/precache\.js['"]/.test(routeHandlersSrc)) {
-  fail('hub-transform route-handlers must serve GET /precache.js');
+  fail('lesson-server route-handlers must serve GET /precache.js');
 } else {
-  pass('hub-transform has /precache.js route');
+  pass('lesson-server has /precache.js route');
 }
 
 if (failed) {
