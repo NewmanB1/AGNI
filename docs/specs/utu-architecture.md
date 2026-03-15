@@ -2,6 +2,8 @@
 
 The UTU (Unit of Teaching and Learning) architecture defines an Atomic Skill as a unique triplet **(Spine, Band, Protocol)**. Lessons target coordinates in this space for governance, portability, and adaptive scheduling.
 
+**Full specification:** [UTU-ARCHITECTURE-FULL.md](UTU-ARCHITECTURE-FULL.md) — detailed architecture, schemas, governance, LMS integration, and implementation reference.
+
 **Data schema:** `UTU_Unit = { spineId, band, protocol }`
 
 - **spineId** (or `class`): Disciplinary Spine ID

@@ -136,6 +136,7 @@ AGNI is an **npm workspaces monorepo**. Each package has its own README with det
 - [specs/ols-v1.0-spec.md](specs/ols-v1.0-spec.md) — Open Lesson Standard v1.0 formal spec (frozen).
 - [specs/threshold_grammar.md](specs/threshold_grammar.md) — OLS Threshold Expression Syntax for sensor-based step advancement.
 - [specs/utu-architecture.md](specs/utu-architecture.md) — UTU 3D coordinate engine: Spine, Band, Protocol skill triplets.
+- [specs/UTU-ARCHITECTURE-FULL.md](specs/UTU-ARCHITECTURE-FULL.md) — Full UTU spec: schemas, governance, LMS, archetypes, implementation reference.
 
 ## Tutorials
 
