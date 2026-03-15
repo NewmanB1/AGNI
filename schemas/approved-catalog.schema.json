@@ -11,6 +11,11 @@
       "description": "List of approved lesson identifiers (must exist in lesson index).",
       "items": { "type": "string" }
     },
+    "unforkableLessonIds": {
+      "type": "array",
+      "description": "Lesson identifiers that governance has marked as not forkable. Fork-check returns forkAllowed: false for these even if license allows.",
+      "items": { "type": "string" }
+    },
     "utuBandOverrides": {
       "type": "object",
       "description": "Lesson IDs with explicit UTU band override. When enforceUtuTargets is true, these lessons remain eligible despite band mismatch. Keys: lessonId. Values: { at: ISO8601, reason?: string }.",

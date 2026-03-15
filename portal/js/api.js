@@ -124,6 +124,26 @@ export function createHubApi(baseUrl) {
       return authGet(`api/author/load/${encodeURIComponent(slug)}`);
     },
 
+    getBrowseLessons(filters = {}) {
+      const params = new URLSearchParams();
+      if (filters.q) params.set('q', filters.q);
+      if (filters.scope) params.set('scope', filters.scope);
+      if (filters.utu) params.set('utu', filters.utu);
+      if (filters.spine) params.set('spine', filters.spine);
+      if (filters.teaching_mode) params.set('teaching_mode', filters.teaching_mode);
+      if (filters.factory) params.set('factory', filters.factory);
+      if (filters.hasSensor != null) params.set('hasSensor', filters.hasSensor ? '1' : '0');
+      if (filters.hasVisuals != null) params.set('hasVisuals', filters.hasVisuals ? '1' : '0');
+      if (filters.limit != null) params.set('limit', String(filters.limit));
+      if (filters.offset != null) params.set('offset', String(filters.offset));
+      const qs = params.toString();
+      return authGet('api/author/browse-lessons' + (qs ? '?' + qs : ''));
+    },
+
+    getForkCheck(slug) {
+      return authGet('api/author/fork-check?slug=' + encodeURIComponent(slug));
+    },
+
     getAuthorSensors() {
       return authGet('api/author/sensors');
     },
@@ -138,6 +158,14 @@ export function createHubApi(baseUrl) {
       if (query.protocol != null) params.set('protocol', String(query.protocol));
       const qs = params.toString();
       return authGet('api/governance/archetypes' + (qs ? '?' + qs : ''));
+    },
+
+    getGovernanceCatalog() {
+      return authGet('api/governance/catalog');
+    },
+
+    updateGovernanceCatalog(payload) {
+      return authPost('api/governance/catalog', payload);
     },
 
     postAuthorValidate(lesson) {

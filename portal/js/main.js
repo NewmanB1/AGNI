@@ -7,7 +7,9 @@ import { restoreCreatorSession } from './auth.js';
 import { render as renderHome } from './pages/home.js';
 import { render as renderSettings } from './pages/settings.js';
 import { renderAuthorList, renderAuthorLogin, renderAuthorNew, renderLessonCreationWizard } from './pages/author.js';
+import { renderBrowse } from './pages/browse.js';
 import { renderGroups, renderGroupsAssign } from './pages/groups.js';
+import { renderGovernance } from './pages/governance.js';
 import { renderStub } from './pages/stub.js';
 import { renderCollab } from './pages/collab.js';
 
@@ -40,6 +42,7 @@ route('/settings', render(renderSettings));
 route('/author', render(renderAuthorList));
 route('/author/login', render(renderAuthorLogin));
 route('/author/wizard', render((m) => renderLessonCreationWizard(m)));
+route('/author/browse', render((m) => renderBrowse(m)));
 route('/author/new', render((m) => renderAuthorNew(m, null)));
 route('/author/:slug/edit', render((m, ctx) => renderAuthorNew(m, ctx.slug)));
 
@@ -50,7 +53,7 @@ route('/groups/:id/assign', render((m, ctx) => renderGroupsAssign(m, ctx)));
 route('/students', render((m) => renderStub(m, 'Students', 'Student roster.')));
 route('/learn', render((m) => renderStub(m, 'Learn', 'Student dashboard.')));
 route('/parent/dashboard', render((m) => renderStub(m, 'Parent Dashboard', 'Link children and view progress.')));
-route('/governance/setup', render((m) => renderStub(m, 'Governance', 'Policy and catalog.')));
+route('/governance/setup', render((m) => renderGovernance(m)));
 route('/admin/onboarding', render((m) => renderStub(m, 'Admin', 'First-run setup.')));
 route('/admin/hub', render((m) => renderStub(m, 'Admin Hub', 'Hub configuration.')));
 

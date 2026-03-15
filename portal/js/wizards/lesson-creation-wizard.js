@@ -55,7 +55,7 @@ export function renderLessonCreationWizard(main) {
   }
 
   const api = createHubApi(baseUrl);
-  let step = 1;
+  let step = 0;
   let state = {
     topic: '',
     protocol: null,
@@ -71,13 +71,32 @@ export function renderLessonCreationWizard(main) {
   function goBack() { step--; render(); }
 
   function render() {
-    if (step === 1) renderStep1();
+    if (step === 0) renderStep0();
+    else if (step === 1) renderStep1();
     else if (step === 2) renderStep2();
     else if (step === 3) renderStep3();
     else if (step === 4) renderStep4();
     else if (step === 5) renderStep5();
     else if (step === 6) renderStep6();
     else if (step === 7) renderStep7();
+  }
+
+  function renderStep0() {
+    main.innerHTML = '<div class="top-page">' +
+      '<h1>Create a lesson</h1>' +
+      '<p class="tagline">Start from scratch or fork an existing lesson.</p>' +
+      '<div class="wizard-factory-grid" style="grid-template-columns: 1fr 1fr;">' +
+      '<button type="button" class="lesson-wizard-card" id="wizard-start-scratch">' +
+      '<h3>Start from scratch</h3>' +
+      '<p>Pick an archetype and build your lesson step by step with the wizard.</p></button>' +
+      '<a href="#/author/browse?fork=1" class="lesson-wizard-card" style="text-align:left;text-decoration:none;color:inherit;">' +
+      '<h3>Fork a lesson</h3>' +
+      '<p>Browse lessons, SVGs, and sensor toys. Fork one to use as a starting point.</p></a>' +
+      '</div>' +
+      '<div class="wizard-actions" style="margin-top: 1rem;">' +
+      '<a href="#/author" class="btn">Cancel</a>' +
+      '</div></div>';
+    main.querySelector('#wizard-start-scratch').addEventListener('click', function () { step = 1; render(); });
   }
 
   function renderStep1() {
@@ -89,10 +108,13 @@ export function renderLessonCreationWizard(main) {
       '<p class="hint">e.g. "Introduction to fractions", "Newton\'s first law", "Writing a short paragraph"</p>' +
       '<input type="text" id="wizard-topic" class="input" placeholder="Topic or skill" value="' + escapeHtml(state.topic) + '" style="max-width: 400px;" />' +
       '<div class="wizard-actions" style="margin-top: 1rem;">' +
+      '<div class="wizard-actions" style="margin-top: 1rem;">' +
+      '<button type="button" class="btn" id="wizard-back-1">← Back</button>' +
       '<a href="#/author" class="btn">Cancel</a>' +
       '<button type="button" class="btn btn-primary" id="wizard-next-1">Next →</button>' +
       '</div></div></div>';
     main.querySelector('#wizard-topic').addEventListener('input', function () { state.topic = this.value.trim(); });
+    main.querySelector('#wizard-back-1').addEventListener('click', function () { step = 0; render(); });
     main.querySelector('#wizard-next-1').addEventListener('click', function () { state.topic = main.querySelector('#wizard-topic').value.trim(); goNext(); });
   }
 

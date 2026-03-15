@@ -66,6 +66,22 @@ function updateCatalog(opts) {
   }
   const catalog = { lessonIds: ids };
   if (current.provenance) catalog.provenance = current.provenance;
+  if (opts.unforkableLessonIds !== undefined && Array.isArray(opts.unforkableLessonIds)) {
+    catalog.unforkableLessonIds = [...new Set(opts.unforkableLessonIds)].filter(Boolean);
+  } else if (Array.isArray(opts.unforkableAdd) || Array.isArray(opts.unforkableRemove)) {
+    let unforkable = [...new Set(current.unforkableLessonIds || [])];
+    if (Array.isArray(opts.unforkableAdd)) {
+      opts.unforkableAdd.forEach(function (id) { if (typeof id === 'string' && id) unforkable.push(id); });
+      unforkable = [...new Set(unforkable)];
+    }
+    if (Array.isArray(opts.unforkableRemove)) {
+      const removeSet = new Set(opts.unforkableRemove.map(String));
+      unforkable = unforkable.filter(function (id) { return !removeSet.has(id); });
+    }
+    catalog.unforkableLessonIds = unforkable;
+  } else if (current.unforkableLessonIds) {
+    catalog.unforkableLessonIds = current.unforkableLessonIds;
+  }
   const saveResult = saveCatalog(catalog);
   return saveResult.ok
     ? { ok: true, catalog: catalog }
