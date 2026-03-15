@@ -1,7 +1,11 @@
-import { getHubUrl, setHubUrl, createHubApi } from '../api.js';
+import { getHubUrl, setHubUrl, createHubApi, getHubKey, setHubKey } from '../api.js';
+import { applyNavI18n } from '../i18n.js';
+import { showToast } from '../toast.js';
+import { getPath, navigateTo } from '../router.js';
 
 export function render(main) {
   const current = getHubUrl();
+  const hubKey = getHubKey();
   main.innerHTML = `
     <div class="top-page">
       <h1>Settings</h1>
@@ -18,8 +22,15 @@ export function render(main) {
       </div>
 
       <div class="card">
+        <h2>Hub key (device / parent)</h2>
+        <p style="margin-bottom: 0.75rem; opacity: 0.9;">Used for <strong>Learn</strong>, <strong>Parent</strong>, and lesson player sync (<code>X-Hub-Key</code>). Not your creator password.</p>
+        <input type="password" id="hub-key-input" class="input" placeholder="Hub device key" value="${escapeHtml(hubKey)}" autocomplete="off" style="max-width:420px;" />
+        <p style="margin-top:0.5rem;"><button type="button" class="btn btn-primary" id="hub-key-save">Save hub key</button></p>
+      </div>
+
+      <div class="card">
         <h2>Language preference</h2>
-        <p style="margin-bottom: 0.5rem; opacity: 0.9;">Stored for future portal translation. Lesson text still follows each lesson&rsquo;s <code>meta.language</code>.</p>
+        <p style="margin-bottom: 0.5rem; opacity: 0.9;">Portal navigation and home cards. Lesson text still follows each lesson&rsquo;s <code>meta.language</code>.</p>
         <select id="lang-select" style="max-width: 200px;">
           <option value="en">English</option>
           <option value="es">Español</option>
@@ -38,6 +49,10 @@ export function render(main) {
     langSelect.value = lang;
     langSelect.addEventListener('change', () => {
       localStorage.setItem('agni_lang', langSelect.value);
+      applyNavI18n();
+      const p = getPath();
+      if (p === '/' || p === '') navigateTo('#/', true);
+      else navigateTo('#' + (p.startsWith('/') ? p : '/' + p), true);
     });
   }
 
@@ -48,6 +63,12 @@ export function render(main) {
     const status = main.querySelector('#hub-status');
     status.textContent = 'Hub URL saved.';
     status.className = 'success-box';
+  });
+
+  main.querySelector('#hub-key-save').addEventListener('click', () => {
+    const v = (main.querySelector('#hub-key-input').value || '').trim();
+    setHubKey(v);
+    showToast('Hub key saved.', 'success');
   });
 
   main.querySelector('#hub-test-btn').addEventListener('click', async () => {
@@ -74,3 +95,4 @@ function escapeHtml(s) {
   d.textContent = s;
   return d.innerHTML;
 }
+

@@ -2,6 +2,23 @@
  * Hub API client - vanilla JS, no framework deps
  */
 const HUB_URL_KEY = 'agni_hub_url';
+const HUB_KEY_KEY = 'agni_hub_key';
+
+export function getHubKey() {
+  try {
+    return localStorage.getItem(HUB_KEY_KEY) || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+export function setHubKey(key) {
+  try {
+    if (key) localStorage.setItem(HUB_KEY_KEY, String(key).trim());
+    else localStorage.removeItem(HUB_KEY_KEY);
+  } catch (e) {}
+  return getHubKey();
+}
 
 export function getHubUrl() {
   if (typeof window === 'undefined') return '';
@@ -95,6 +112,32 @@ export function createHubApi(baseUrl) {
       headers: authHeaders()
     });
     return parseJson(res);
+  }
+
+  async function hubKeyJson(res) {
+    const text = await res.text();
+    if (!res.ok) {
+      let err = {};
+      try {
+        err = JSON.parse(text);
+      } catch (_) {}
+      throw new Error(err.error || text || `HTTP ${res.status}`);
+    }
+    try {
+      return JSON.parse(text);
+    } catch (_) {
+      throw new Error('Invalid JSON');
+    }
+  }
+
+  async function hubKeyGet(path) {
+    const key = getHubKey();
+    if (!key) throw new Error('Hub key not set (Settings)');
+    const res = await fetch(base + path.replace(/^\//, ''), {
+      method: 'GET',
+      headers: { Accept: 'application/json', 'X-Hub-Key': key }
+    });
+    return hubKeyJson(res);
   }
 
   return {
@@ -231,6 +274,16 @@ export function createHubApi(baseUrl) {
 
     denyCollabSession(sessionId) {
       return authPost(`api/collab/sessions/${encodeURIComponent(sessionId)}/deny`, {});
+    },
+
+    /** HubKey — student lesson order */
+    getPathfinderForPseudo(pseudoId) {
+      return hubKeyGet('api/pathfinder?pseudoId=' + encodeURIComponent(pseudoId));
+    },
+
+    /** HubKey — parent view */
+    getParentChildProgress(pseudoId) {
+      return hubKeyGet('api/parent/child/' + encodeURIComponent(pseudoId) + '/progress');
     }
   };
 }

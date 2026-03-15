@@ -56,8 +56,40 @@ function handleRoute() {
   }
 }
 
+function editorRoutePattern(path) {
+  if (!path || path === '/') return false;
+  if (path === 'author/new') return true;
+  return /^author\/[^/]+\/edit$/.test(path);
+}
+
 export function initRouter() {
   window.addEventListener('hashchange', handleRoute);
   window.addEventListener('popstate', handleRoute);
+  window.addEventListener(
+    'click',
+    function (e) {
+      if (!window.__AGNI_EDITOR_DIRTY || !editorRoutePattern(getPath())) return;
+      var t = e.target;
+      if (!t || !t.closest) return;
+      var a = t.closest('a[href^="#"]');
+      if (!a) return;
+      var href = (a.getAttribute('href') || '').replace(/^#/, '') || '/';
+      var cur = getPath();
+      if (href === cur) return;
+      if (
+        /^author\/[^/]+\/edit$/.test(href) &&
+        /^author\/[^/]+\/edit$/.test(cur) &&
+        href.split('/')[1] === cur.split('/')[1]
+      )
+        return;
+      if (!window.confirm('You have unsaved changes. Leave the editor without saving?')) {
+        e.preventDefault();
+        e.stopPropagation();
+      } else {
+        window.__AGNI_EDITOR_DIRTY = false;
+      }
+    },
+    true
+  );
   handleRoute();
 }

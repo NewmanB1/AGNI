@@ -1,41 +1,48 @@
+import { t } from '../i18n.js';
+
 export function render(main) {
   main.innerHTML = `
     <div class="top-page">
-      <h1>AGNI Portal</h1>
-      <p class="tagline">Open Lesson Standard — offline, sensor-rich education</p>
+      <h1>${esc(t('home_title'))}</h1>
+      <p class="tagline">${esc(t('home_tagline'))}</p>
 
       <div class="cards">
         <a href="#/hub" class="card card-link">
-          <h2>Teacher Hub</h2>
-          <p>Class overview, heterogeneity, recommendations, and overrides.</p>
+          <h2>${esc(t('card_hub'))}</h2>
+          <p>${esc(t('card_hub_desc'))}</p>
         </a>
         <a href="#/groups" class="card card-link">
-          <h2>Student Groups</h2>
-          <p>Create groups and assign students from the roster.</p>
+          <h2>${esc(t('card_groups'))}</h2>
+          <p>${esc(t('card_groups_desc'))}</p>
         </a>
         <a href="#/author/new" class="card card-link">
-          <h2>Lesson Author</h2>
-          <p>Create or edit lessons: set metadata, steps, and save as YAML.</p>
+          <h2>${esc(t('card_author'))}</h2>
+          <p>${esc(t('card_author_desc'))}</p>
         </a>
         <a href="#/parent/dashboard" class="card card-link">
-          <h2>Parent Dashboard</h2>
-          <p>Link to your child with an invite code and view their progress.</p>
+          <h2>${esc(t('card_parent'))}</h2>
+          <p>${esc(t('card_parent_desc'))}</p>
         </a>
         <a href="#/leaderboard" class="card card-link">
-          <h2>Leaderboard</h2>
-          <p>Top lessons and creators: governance approved, most forked, high impact, effective learning.</p>
+          <h2>${esc(t('card_leaderboard'))}</h2>
+          <p>${esc(t('card_leaderboard_desc'))}</p>
         </a>
         <a href="#/governance/setup" class="card card-link">
-          <h2>Governance</h2>
-          <p>Policy, approved catalog, import and export.</p>
+          <h2>${esc(t('card_governance'))}</h2>
+          <p>${esc(t('card_governance_desc'))}</p>
         </a>
         <a href="#/admin/onboarding" class="card card-link">
-          <h2>Admin</h2>
-          <p>First-run onboarding or hub setup.</p>
+          <h2>${esc(t('card_admin'))}</h2>
+          <p>${esc(t('card_admin_desc'))}</p>
         </a>
       </div>
 
-      <p class="footer">Configure hub URL in <a href="#/settings">Settings</a> to connect to a live hub.</p>
+      <p class="footer">${esc(t('home_footer_before'))}<a href="#/settings">${esc(t('nav_settings'))}</a>${esc(t('home_footer_after'))}</p>
     </div>
   `;
+}
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
 }

@@ -359,22 +359,58 @@
     var closeBtn = document.createElement('button');
     closeBtn.className = 'agni-settings-close';
     closeBtn.textContent = 'Done';
-    closeBtn.onclick = function () {
-      document.body.removeChild(overlay);
-    };
     panel.appendChild(closeBtn);
 
     overlay.appendChild(panel);
 
-    // Close on overlay click outside panel
+    var lastFocus = typeof document !== 'undefined' && document.activeElement ? document.activeElement : null;
+    function closePanel() {
+      try {
+        document.removeEventListener('keydown', onKey);
+      } catch (e0) {}
+      try {
+        if (overlay.parentNode) document.body.removeChild(overlay);
+      } catch (e1) {}
+      if (lastFocus && typeof lastFocus.focus === 'function') {
+        try {
+          lastFocus.focus();
+        } catch (e2) {}
+      }
+    }
+    function onKey(e) {
+      if (!e) return;
+      var code = e.keyCode || e.which;
+      if (code === 27) {
+        e.preventDefault();
+        closePanel();
+        return;
+      }
+      if (code === 9) {
+        var focusables = panel.querySelectorAll('button, input[type="range"], input[type="checkbox"]');
+        var list = [];
+        for (var fi = 0; fi < focusables.length; fi++) {
+          if (focusables[fi].offsetParent !== null || focusables[fi] === closeBtn) list.push(focusables[fi]);
+        }
+        if (list.length === 0) return;
+        var firstEl = list[0];
+        var lastEl = list[list.length - 1];
+        if (e.shiftKey && document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        } else if (!e.shiftKey && document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        }
+      }
+    }
+    closeBtn.onclick = closePanel;
     overlay.onclick = function (e) {
-      if (e.target === overlay) document.body.removeChild(overlay);
+      if (e.target === overlay) closePanel();
     };
 
     document.body.appendChild(overlay);
-
-    // Trap focus: move focus to close button
-    closeBtn.focus();
+    document.addEventListener('keydown', onKey);
+    fontSlider.focus();
   }
 
   /**

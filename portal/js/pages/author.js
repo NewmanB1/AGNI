@@ -33,13 +33,15 @@ export function renderAuthorList(main) {
         <h3 style="margin-bottom: 0.5rem;">Edit existing</h3>
         <p class="hint" style="margin-bottom: 0.5rem;">Select a lesson or enter slug to edit.</p>
         <p id="author-lessons-status" class="hint" style="margin-bottom: 0.5rem; display: none;"></p>
+        <div style="margin-bottom: 0.5rem;"><label>Filter list <input type="search" id="author-lesson-filter" class="input" placeholder="Type to filter…" style="max-width:220px;" disabled /></label></div>
         <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
-          <select id="edit-select" class="input" style="min-width: 200px;" disabled>
+          <select id="edit-select" class="input" style="min-width: 220px;" disabled>
             <option value="">Loading lessons…</option>
           </select>
           <span>or</span>
           <input type="text" id="edit-slug" class="input" placeholder="hello-world" style="max-width: 180px;" />
           <button type="button" id="btn-edit" class="btn">Edit</button>
+          <button type="button" class="btn" id="author-lessons-retry" style="display:none;">Retry load</button>
         </div>
       </div>
       <p style="margin-top: 1.5rem;"><a href="#/author/login">Account / Log out</a></p>
@@ -48,24 +50,40 @@ export function renderAuthorList(main) {
   var baseUrl = getHubUrl();
   var statusEl = main.querySelector('#author-lessons-status');
   var sel = main.querySelector('#edit-select');
-  if (baseUrl) {
-    var api = createHubApi(baseUrl);
-    api.getAuthorLessons().then(function (r) {
-      if (!sel) return;
-      sel.innerHTML = '<option value="">-- Select lesson --</option>';
+  var allSlugs = [];
+  var filterInp = main.querySelector('#author-lesson-filter');
+  var retryBtn = main.querySelector('#author-lessons-retry');
+  function applyFilter() {
+    var q = (filterInp && filterInp.value || '').toLowerCase().trim();
+    if (!sel) return;
+    sel.innerHTML = '<option value="">-- Select lesson --</option>';
+    allSlugs.filter(function (s) { return !q || s.toLowerCase().indexOf(q) >= 0; }).forEach(function (s) {
+      var opt = document.createElement('option');
+      opt.value = s;
+      opt.textContent = s;
+      sel.appendChild(opt);
+    });
+  }
+  function loadLessonList() {
+    if (!baseUrl || !sel) return;
+    sel.innerHTML = '<option value="">Loading…</option>';
+    sel.disabled = true;
+    if (filterInp) filterInp.disabled = true;
+    if (retryBtn) retryBtn.style.display = 'none';
+    if (statusEl) { statusEl.style.display = 'none'; }
+    createHubApi(baseUrl).getAuthorLessons().then(function (r) {
+      allSlugs = (r.slugs || []).sort();
       sel.disabled = false;
-      (r.slugs || []).sort().forEach(function (s) {
-        var opt = document.createElement('option');
-        opt.value = s;
-        opt.textContent = s;
-        sel.appendChild(opt);
-      });
-      if (statusEl) { statusEl.style.display = 'none'; statusEl.textContent = ''; }
+      if (filterInp) filterInp.disabled = false;
+      applyFilter();
+      if (retryBtn) retryBtn.style.display = 'none';
     }).catch(function (e) {
       if (sel) {
         sel.innerHTML = '<option value="">Could not load list</option>';
         sel.disabled = false;
       }
+      if (filterInp) filterInp.disabled = true;
+      if (retryBtn) retryBtn.style.display = 'inline-flex';
       var msg = (e && e.message) ? e.message : 'Could not load lesson list.';
       if (statusEl) {
         statusEl.style.display = 'block';
@@ -74,6 +92,11 @@ export function renderAuthorList(main) {
       }
       showToast(msg, 'error');
     });
+  }
+  if (baseUrl) {
+    loadLessonList();
+    if (filterInp) filterInp.addEventListener('input', applyFilter);
+    if (retryBtn) retryBtn.addEventListener('click', loadLessonList);
   } else if (sel) {
     sel.innerHTML = '<option value="">Set Hub URL in Settings</option>';
     if (statusEl) {
@@ -819,6 +842,7 @@ export function renderAuthorNew(main, slug) {
     '<span>Live Preview</span>' +
     '<button type="button" id="btn-hide-preview" class="btn" style="font-size:0.85rem;">Hide</button>' +
     '</h3>' +
+    '<p style="margin:0.5rem 0;"><button type="button" class="btn btn-sm" id="btn-preview-tab" style="display:none;">Open preview in new tab</button></p>' +
     '<iframe id="preview-iframe" title="Lesson preview" style="width:100%;min-height:400px;border:1px solid #ccc;border-radius:4px;background:#fff;"></iframe>' +
     '</section>' +
     '<p style="margin-top:1rem;"><a href="#/author">← Back to Author</a></p>' +
@@ -847,12 +871,24 @@ export function renderAuthorNew(main, slug) {
       populateFormFromLesson(main, lesson);
       return;
     }
+    statusEl.style.display = 'block';
+    setStatus('Loading lesson…', false);
     api.getAuthorLesson(slug).then(function (data) {
       lesson = data.lessonData || data.lesson || data;
+      statusEl.style.display = 'none';
       populateFormFromLesson(main, lesson);
     }).catch(function (err) {
-      setStatus('Load failed: ' + (err.message || 'Unknown error'), true);
+      statusEl.innerHTML = '';
+      statusEl.className = 'error-box';
       statusEl.style.display = 'block';
+      statusEl.appendChild(document.createTextNode('Load failed: ' + (err.message || 'Unknown')));
+      var retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'btn';
+      retry.textContent = 'Retry load';
+      retry.style.marginLeft = '0.75rem';
+      retry.onclick = function () { loadAndPopulate(); };
+      statusEl.appendChild(retry);
       populateFormFromLesson(main, defaultLesson());
     });
   }
@@ -922,24 +958,45 @@ export function renderAuthorNew(main, slug) {
 
   var previewPane = main.querySelector('#preview-pane');
   var previewIframe = main.querySelector('#preview-iframe');
+  var previewTabBtn = main.querySelector('#btn-preview-tab');
+  var lastPreviewHtml = null;
   main.querySelector('#btn-preview').addEventListener('click', function () {
+    var prevBtn = main.querySelector('#btn-preview');
     statusEl.style.display = 'block';
     setStatus('Building preview…', false);
+    prevBtn.disabled = true;
     var formData = collectLessonFromForm(main);
     var payload = slug && lesson ? mergeLessonForRoundTrip(lesson, formData) : formData;
     api.postAuthorPreview(payload).then(function (r) {
+      prevBtn.disabled = false;
       if (r.error) {
         setStatus('Preview failed: ' + r.error, true);
         if (previewPane) previewPane.style.display = 'none';
+        if (previewTabBtn) previewTabBtn.style.display = 'none';
       } else {
         var stepCount = (r.ir && r.ir.steps && r.ir.steps.length) || 0;
         setStatus('Preview OK. ' + stepCount + ' step(s).', false);
+        lastPreviewHtml = r.html || null;
         if (r.html && previewIframe && previewPane) {
           previewIframe.srcdoc = r.html;
           previewPane.style.display = 'block';
+          if (previewTabBtn) {
+            previewTabBtn.style.display = 'inline-flex';
+            previewTabBtn.onclick = function () {
+              try {
+                var blob = new Blob([r.html], { type: 'text/html' });
+                var u = URL.createObjectURL(blob);
+                window.open(u, '_blank', 'noopener');
+                setTimeout(function () { URL.revokeObjectURL(u); }, 60000);
+              } catch (e) {
+                showToast('Could not open tab', 'error');
+              }
+            };
+          }
         }
       }
     }).catch(function (err) {
+      prevBtn.disabled = false;
       setStatus('Preview error: ' + (err.message || 'Unknown'), true);
       if (previewPane) previewPane.style.display = 'none';
     });
@@ -949,7 +1006,10 @@ export function renderAuthorNew(main, slug) {
   });
 
   var editorDirty = false;
-  function markEditorDirty() { editorDirty = true; }
+  function markEditorDirty() {
+    editorDirty = true;
+    window.__AGNI_EDITOR_DIRTY = true;
+  }
   function doSave() {
     statusEl.style.display = 'block';
     setStatus('Validating…', false);
@@ -971,6 +1031,7 @@ export function renderAuthorNew(main, slug) {
           if (vr.warnings && vr.warnings.length) msg += ' (warnings: ' + vr.warnings.join('; ') + ')';
           setStatus(msg, false);
           editorDirty = false;
+          window.__AGNI_EDITOR_DIRTY = false;
           if (r.slug && !slug) {
             setTimeout(function () { navigateTo('#/author/' + r.slug + '/edit'); }, 1500);
           }
@@ -1007,6 +1068,8 @@ export function renderAuthorNew(main, slug) {
     cancelLink.addEventListener('click', function (e) {
       if (editorDirty && !window.confirm('You have unsaved changes. Leave without saving?')) {
         e.preventDefault();
+      } else {
+        window.__AGNI_EDITOR_DIRTY = false;
       }
     });
   }
@@ -1015,8 +1078,15 @@ export function renderAuthorNew(main, slug) {
     a.addEventListener('click', function (e) {
       if (!editorDirty) return;
       if (!window.confirm('You have unsaved changes. Leave without saving?')) e.preventDefault();
+      else window.__AGNI_EDITOR_DIRTY = false;
     });
   });
+  window.__AGNI_EDITOR_DIRTY = false;
+  return function () {
+    window.removeEventListener('beforeunload', onBeforeUnload);
+    window.__AGNI_EDITOR_DIRTY = false;
+  };
+}
 </think>
 Fixing the author.js save/dirty logic — the previous edit was incorrect.
 

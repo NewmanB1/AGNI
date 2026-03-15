@@ -1,9 +1,11 @@
 /**
  * AGNI Portal - vanilla HTML/CSS/JS
  */
-import { route, initRouter, getPath } from './router.js';
+import { route, initRouter } from './router.js';
 import { getHubUrl } from './api.js';
 import { restoreCreatorSession } from './auth.js';
+import { applyNavI18n } from './i18n.js';
+import { showRouteLoading, hideRouteLoading } from './route-loading.js';
 import { render as renderHome } from './pages/home.js';
 import { render as renderSettings } from './pages/settings.js';
 import { renderAuthorList, renderAuthorLogin, renderAuthorNew, renderLessonCreationWizard } from './pages/author.js';
@@ -13,12 +15,15 @@ import { renderGovernance } from './pages/governance.js';
 import { renderLeaderboard } from './pages/leaderboard.js';
 import { renderStub } from './pages/stub.js';
 import { renderCollab } from './pages/collab.js';
+import { renderLearn } from './pages/learn.js';
+import { renderStudentsRoster } from './pages/students-roster.js';
+import { renderParent } from './pages/parent.js';
 
 const main = document.getElementById('main-content');
 let prevCleanup = null;
 
 function setActiveNav(path) {
-  document.querySelectorAll('#main-nav a').forEach(a => {
+  document.querySelectorAll('#main-nav a').forEach((a) => {
     const href = a.getAttribute('href') || '';
     const targetPath = href.replace('#', '') || '/';
     a.classList.toggle('active', path === targetPath || (targetPath !== '/' && path.startsWith(targetPath)));
@@ -27,6 +32,7 @@ function setActiveNav(path) {
 
 function render(handler) {
   return (ctx) => {
+    showRouteLoading();
     if (typeof prevCleanup === 'function') {
       prevCleanup();
       prevCleanup = null;
@@ -34,10 +40,12 @@ function render(handler) {
     setActiveNav(ctx.path);
     const result = handler(main, ctx);
     prevCleanup = typeof result === 'function' ? result : null;
+    requestAnimationFrame(function () {
+      hideRouteLoading();
+    });
   };
 }
 
-// Routes
 route('/', render(renderHome));
 route('/settings', render(renderSettings));
 route('/author', render(renderAuthorList));
@@ -57,27 +65,9 @@ route('/hub', render((m) => renderStub(m, 'Teacher Hub', 'Class overview, hetero
 route('/hub/collab', render((m) => renderCollab(m)));
 route('/groups', render(renderGroups));
 route('/groups/:id/assign', render((m, ctx) => renderGroupsAssign(m, ctx)));
-route('/students', render((m) => renderStub(m, 'Students', 'Roster and accounts live on the hub.', {
-  detail: 'Use hub admin APIs or future portal screens to manage students. Groups shows learners from pathfinder data.',
-  ctaHref: '#/groups',
-  ctaLabel: 'Groups',
-  secondaryHref: '#/settings',
-  secondaryLabel: 'Settings'
-})));
-route('/learn', render((m) => renderStub(m, 'Learn', 'Student dashboard and lesson launch.', {
-  detail: 'Students typically open lessons from the hub or shared links. This dashboard will summarize progress.',
-  ctaHref: '#/hub',
-  ctaLabel: 'Teacher Hub',
-  secondaryHref: '#/',
-  secondaryLabel: 'Home'
-})));
-route('/parent/dashboard', render((m) => renderStub(m, 'Parent Dashboard', 'Link to a child and view progress.', {
-  detail: 'Parent APIs exist on the hub; this UI will surface invite codes and progress summaries.',
-  ctaHref: '#/settings',
-  ctaLabel: 'Settings',
-  secondaryHref: '#/',
-  secondaryLabel: 'Home'
-})));
+route('/students', render(renderStudentsRoster));
+route('/learn', render(renderLearn));
+route('/parent/dashboard', render(renderParent));
 route('/governance/setup', render((m) => renderGovernance(m)));
 route('/leaderboard', render((m) => renderLeaderboard(m)));
 route('/admin/onboarding', render((m) => renderStub(m, 'Admin', 'First-run hub onboarding.', {
@@ -95,20 +85,18 @@ route('/admin/hub', render((m) => renderStub(m, 'Admin Hub', 'Hub configuration 
   secondaryLabel: 'Home'
 })));
 
-// Hub URL from query param (e.g. ?hub=http://localhost:8082) or env
 const params = new URLSearchParams(window.location.search);
 const hubParam = params.get('hub');
 if (hubParam) {
   window.__AGNI_HUB_URL = hubParam;
 }
 
-// Init
 async function init() {
+  applyNavI18n();
   await restoreCreatorSession();
   initRouter();
 }
 
-// Mobile menu
 document.getElementById('mobile-menu-btn')?.addEventListener('click', () => {
   const btn = document.getElementById('mobile-menu-btn');
   const nav = document.getElementById('main-nav');
@@ -117,8 +105,7 @@ document.getElementById('mobile-menu-btn')?.addEventListener('click', () => {
   nav.classList.toggle('mobile-open', !expanded);
 });
 
-// Nav links - use hash, no default
-document.querySelectorAll('#main-nav a').forEach(a => {
+document.querySelectorAll('#main-nav a').forEach((a) => {
   a.addEventListener('click', (e) => {
     if (a.getAttribute('href').startsWith('#')) {
       document.getElementById('mobile-menu-btn')?.setAttribute('aria-expanded', 'false');

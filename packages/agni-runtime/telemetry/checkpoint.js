@@ -88,12 +88,36 @@
       xhr.open('POST', hubUrl.replace(/\/$/, '') + '/api/checkpoint', true);
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.onreadystatechange = function () {
-        if (xhr.readyState === 4 && devMode) {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            console.log('[CHECKPOINT] synced to hub');
-          } else {
-            console.warn('[CHECKPOINT] hub sync failed:', xhr.status);
-          }
+        if (xhr.readyState !== 4) return;
+        if (xhr.status >= 200 && xhr.status < 300) {
+          if (devMode) console.log('[CHECKPOINT] synced to hub');
+          try {
+            var last = 0;
+            try {
+              last = parseInt(localStorage.getItem('agni_ckpt_toast_last') || '0', 10) || 0;
+            } catch (e2) {}
+            if (Date.now() - last > 120000) {
+              localStorage.setItem('agni_ckpt_toast_last', String(Date.now()));
+              var toast = document.getElementById('agni-ckpt-toast');
+              if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'agni-ckpt-toast';
+                toast.setAttribute('role', 'status');
+                toast.style.cssText =
+                  'position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);z-index:9996;' +
+                  'background:#1B5E20;color:#fff;padding:0.5rem 1rem;border-radius:4px;font-size:0.9rem;' +
+                  'box-shadow:0 2px 8px rgba(0,0,0,.2);';
+                document.body.appendChild(toast);
+              }
+              toast.textContent = 'Progress saved to hub.';
+              toast.style.display = 'block';
+              setTimeout(function () {
+                if (toast) toast.style.display = 'none';
+              }, 2800);
+            }
+          } catch (e3) {}
+        } else if (devMode) {
+          console.warn('[CHECKPOINT] hub sync failed:', xhr.status);
         }
       };
       xhr.send(JSON.stringify(payload));

@@ -156,7 +156,7 @@ export function renderGroups(main) {
     }
 
     if (s.error) {
-      html += `<div class="card error-box">${escapeHtml(s.error)}</div>`;
+      html += `<div class="card error-box">${escapeHtml(s.error)} <button type="button" class="btn btn-primary" id="groups-retry-load">Retry</button></div>`;
     }
     if (s.success) {
       html += `<div class="card success-box">${escapeHtml(s.success)}</div>`;
@@ -250,6 +250,10 @@ export function renderGroups(main) {
     main.innerHTML = html;
 
     // Event bindings
+    main.querySelector('#groups-retry-load')?.addEventListener('click', () => {
+      state.error = '';
+      load();
+    });
     main.querySelector('#groups-create-btn')?.addEventListener('click', openCreateForm);
     main.querySelector('#groups-create-cancel')?.addEventListener('click', closeCreateForm);
     main.querySelector('#groups-create-submit')?.addEventListener('click', createGroup);

@@ -945,25 +945,46 @@
     app.innerHTML = '';
 
     var container = document.createElement('div');
-    container.className = 'resume-prompt';
+    container.className = 'resume_prompt';
+    container.setAttribute('role', 'dialog');
+    container.setAttribute('aria-labelledby', 'resume_prompt_title');
+    container.style.cssText = 'max-width:28rem;margin:2rem auto;padding:1.5rem;text-align:center;';
 
     var title = document.createElement('h2');
+    title.id = 'resume_prompt_title';
+    title.style.cssText = 'font-size:1.35rem;margin-bottom:0.75rem;';
     title.textContent = t('resume_title');
     container.appendChild(title);
 
     var msg = document.createElement('p');
+    msg.style.cssText = 'font-size:1.1rem;margin-bottom:0.5rem;font-weight:600;';
     msg.textContent = t('resume_msg', { step: ckptIdx + 1, total: steps.length });
     container.appendChild(msg);
 
+    var stepRef = steps[ckptIdx];
+    if (stepRef && (stepRef.title || stepRef.id)) {
+      var refEl = document.createElement('p');
+      refEl.style.cssText = 'opacity:0.85;margin-bottom:0.75rem;font-size:0.95rem;';
+      refEl.textContent = (stepRef.title || stepRef.id);
+      container.appendChild(refEl);
+    }
+
+    var sub = document.createElement('p');
+    sub.style.cssText = 'font-size:0.9rem;opacity:0.9;margin-bottom:1.25rem;line-height:1.45;';
+    sub.textContent = t('resume_subtitle') || '';
+    container.appendChild(sub);
+
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;';
     var resumeBtn = document.createElement('button');
     resumeBtn.className = 'btn btn-primary';
+    resumeBtn.style.cssText = 'min-height:48px;padding:0.65rem 1.25rem;font-size:1rem;';
     resumeBtn.textContent = t('resume_btn');
     resumeBtn.onclick = function () { routeStep(stepId); };
-    container.appendChild(resumeBtn);
-
+    row.appendChild(resumeBtn);
     var restartBtn = document.createElement('button');
     restartBtn.className = 'btn btn-secondary';
-    restartBtn.style.marginLeft = '0.75rem';
+    restartBtn.style.cssText = 'min-height:48px;padding:0.65rem 1.25rem;font-size:1rem;';
     restartBtn.textContent = t('restart_btn');
     restartBtn.onclick = function () {
       clearCheckpoint();
@@ -971,7 +992,8 @@
       probeResults = [];
       routeStep(steps[0].id);
     };
-    container.appendChild(restartBtn);
+    row.appendChild(restartBtn);
+    container.appendChild(row);
 
     app.appendChild(container);
   }

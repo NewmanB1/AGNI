@@ -122,7 +122,7 @@ export function renderBrowse(main, opts) {
       '</div></div>';
     let listHtml = '';
     if (result.error) {
-      listHtml = '<div class="card error-box">' + escapeHtml(result.error) + '</div>';
+      listHtml = '<div class="card error-box">' + escapeHtml(result.error) + ' <button type="button" class="btn btn-primary" id="browse-retry">Retry</button></div>';
     } else if (loading) {
       listHtml = '<div class="card"><p>Loading…</p></div>';
     } else if (list.length === 0) {
@@ -159,6 +159,10 @@ export function renderBrowse(main, opts) {
       listHtml +
       '</div>';
 
+    main.querySelector('#browse-retry')?.addEventListener('click', function () {
+      result.error = '';
+      load();
+    });
     main.querySelectorAll('.browse-tab').forEach(function (btn) {
       btn.addEventListener('click', function () {
         activeTab = btn.getAttribute('data-tab');
