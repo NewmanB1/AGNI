@@ -37,7 +37,7 @@
     "ajv": "^8.18.0",
     "ajv-formats": "^3.0.1",
     "js-yaml": "^4.1.0",
-    "katex": "^0.16.33",
+    "katex": "^0.16.38",
     "rehype-katex": "^7.0.0",
     "rehype-sanitize": "^6.0.0",
     "rehype-stringify": "^10.0.1",
