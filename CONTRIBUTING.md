@@ -196,6 +196,7 @@ AGNI/
 
 ## Technical debt and conventions
 
+- **Maintainability:** Ten practices (align tests with API, automate contract checks, single source of truth, release/schema checklists, playbooks, CI guardrails, etc.) are listed in **`docs/CONVENTIONS.md`** § Top 10 maintainability practices.
 - **Architecture:** The canonical architecture doc is **`docs/ARCHITECTURE.md`**. The root `ARCHITECTURE.md` redirects there.
 - **Types:** Central place is **`packages/types/index.d.ts`** (LessonIR, LessonSidecar, LMSState, etc.). Keep it aligned with `schemas/*.schema.json` and with compiler/engine usage. See **`docs/playbooks/typing-and-languages.md`** for TS vs JS and where types are enforced.
 - **Binary / base64:** **`src/utils/binary.js`** and **`src/runtime/binary-utils.js`** — use these for base64/bytes and UTF-8 helpers instead of ad-hoc logic in crypto or runtime.

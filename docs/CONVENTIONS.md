@@ -94,6 +94,21 @@ When adding new cross-cutting behavior, consider a shared module or middleware s
 
 - **"How to modify X" playbooks** live in `docs/playbooks/`: `compiler.md`, `runtime.md`, `lms.md`, `governance.md`, `hub.md`, `services.md`, `portal.md`, `schema-to-types.md`, `lti.md`, `mesh-lora.md`. Use them to find the right files and avoid breaking contracts when changing behaviour.
 
+## Top 10 maintainability practices
+
+These practices keep the codebase easy to change and safe to refactor:
+
+1. **Align tests and docs with the real API** — Contract tests, E2E, and portal should call the same routes and names as production. Avoid legacy aliases in tests.
+2. **Automate contract checks** — Scripts (e.g. `verify:api-contract-routes`, `verify:portal-api-contract`) and CI catch missing or wrong endpoints before merge.
+3. **Single source of truth for naming and API** — Canonical API paths and route names live in `docs/api-contract.md`; hub route table in `packages/agni-hub/README.md`. Other docs and playbooks reference these; fix naming in one place.
+4. **Shrink allowlists; add real headers** — Prefer adding module headers and fixing structure over adding paths to allowlists (e.g. `check-module-headers`).
+5. **Pre-push or pre-commit verification** — Run `verify:all` before push (see `scripts/pre-push-verify.sh` and CONTRIBUTING). Reduces last-minute fixes and broken main.
+6. **Prefer package index in tests and scripts** — Use `require('@agni/package')` where possible; `verify:canonical-imports` forbids `src/`. New tests should use package index unless they target an internal path.
+7. **Release and schema-change checklists** — CONTRIBUTING has a release checklist (CHANGELOG, version, codegen, tag, verify). Schema changes: edit schema → `codegen:types` → `verify:codegen-sync` → update callers (see `docs/playbooks/schema-to-types.md`).
+8. **Playbooks for "how do I change X?"** — Each major subsystem (compiler, runtime, hub, LTI, schema-to-types, etc.) has a playbook under `docs/playbooks/` so changes stay consistent and onboarding is faster.
+9. **Conventions for shared patterns** — Document when to use which pattern (e.g. `createSchemaStore` vs direct Ajv; service `{ error }` vs throw; hub middleware). See "Schema-backed JSON persistence" and "Centralized shared patterns" in this doc.
+10. **Guardrails in CI** — Lint, typecheck, tests, and `verify:all` (dead files, DTS, api-contract, module headers, ES5, etc.) run in CI so main stays consistent and regressions are caught early. See `docs/VERIFICATION-GUARDS.md`.
+
 ## Lint and type checks
 
 - **ESLint + Prettier** apply to `packages/`, `hub-tools/`, `server/`, `tests/`. Run `npm run lint` and `npm run format:check` before committing.

@@ -1,6 +1,8 @@
 # AGNI Hub API Contract
 
-All HTTP endpoints served by `@agni/hub` (packages/agni-hub/theta.js) follow this contract. Run via `node hub-tools/theta.js` (wrapper) or `node packages/agni-hub/theta.js`.
+**Canonical list of hub HTTP endpoints.** This document is the single source of truth for method, path, auth, and behaviour. Hub README, playbooks, and portal reference it; when adding or changing an endpoint, update this file and `portal/js/api.js` if the portal uses it.
+
+All HTTP endpoints served by `@agni/hub` (packages/agni-hub/pathfinder.js) follow this contract. Run via `node hub-tools/pathfinder.js` (wrapper) or `node packages/agni-hub/pathfinder.js`.
 
 ## Response Envelope
 
