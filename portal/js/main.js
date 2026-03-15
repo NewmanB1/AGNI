@@ -6,7 +6,7 @@ import { getHubUrl } from './api.js';
 import { restoreCreatorSession } from './auth.js';
 import { render as renderHome } from './pages/home.js';
 import { render as renderSettings } from './pages/settings.js';
-import { renderAuthorList, renderAuthorLogin, renderAuthorNew } from './pages/author.js';
+import { renderAuthorList, renderAuthorLogin, renderAuthorNew, renderLessonCreationWizard } from './pages/author.js';
 import { renderGroups, renderGroupsAssign } from './pages/groups.js';
 import { renderStub } from './pages/stub.js';
 import { renderCollab } from './pages/collab.js';
@@ -39,6 +39,7 @@ route('/', render(renderHome));
 route('/settings', render(renderSettings));
 route('/author', render(renderAuthorList));
 route('/author/login', render(renderAuthorLogin));
+route('/author/wizard', render((m) => renderLessonCreationWizard(m)));
 route('/author/new', render((m) => renderAuthorNew(m, null)));
 route('/author/:slug/edit', render((m, ctx) => renderAuthorNew(m, ctx.slug)));
 

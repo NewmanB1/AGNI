@@ -5,6 +5,9 @@
 import { getHubUrl, createHubApi } from '../api.js';
 import { restoreCreatorSession, setCreatorSession, clearCreatorSession, getStoredToken } from '../auth.js';
 import { navigateTo } from '../router.js';
+import { openSVGFactoryWizard } from '../wizards/svg-factory-wizard.js';
+import { openSensorToyWizard } from '../wizards/sensor-toy-wizard.js';
+import { consumeWizardDraft, renderLessonCreationWizard } from '../wizards/lesson-creation-wizard.js';
 
 export function renderAuthorList(main) {
   const token = getStoredToken();
@@ -23,7 +26,8 @@ export function renderAuthorList(main) {
     <div class="top-page">
       <h1>Lesson Author</h1>
       <p style="margin-bottom: 1rem;">Create or edit lessons.</p>
-      <a href="#/author/new" class="btn btn-primary">Create New Lesson</a>
+      <a href="#/author/wizard" class="btn btn-primary">Create with wizard</a>
+      <a href="#/author/new" class="btn">Create New Lesson (blank)</a>
       <div class="card" style="margin-top: 1rem;">
         <h3 style="margin-bottom: 0.5rem;">Edit existing</h3>
         <p class="hint" style="margin-bottom: 0.5rem;">Select a lesson or enter slug to edit.</p>
@@ -333,6 +337,16 @@ function collectLessonFromForm(main) {
       step.items = items.length >= 2 ? items : ['First', 'Second', 'Third'];
       step.correct_order = step.items.map(function (_, i) { return i; });
     }
+    if (type === 'svg') {
+      var svgSpecEl = card.querySelector('.step-svg-spec');
+      if (svgSpecEl && svgSpecEl.value) {
+        try {
+          step.svg_spec = JSON.parse(svgSpecEl.value);
+        } catch (e) { step.svg_spec = { factory: 'barGraph', opts: {} }; }
+      } else {
+        step.svg_spec = { factory: 'barGraph', opts: { w: 420, h: 280 } };
+      }
+    }
 
     steps.push(step);
   });
@@ -541,6 +555,15 @@ function appendStepCard(container, step, idx) {
     }).join('');
     optsHtml += '<button type="button" class="btn btn-add-ordering">+ Add item</button>';
   }
+  if (type === 'svg') {
+    var spec = step.svg_spec || { factory: 'barGraph', opts: {} };
+    var specJson = '';
+    try { specJson = JSON.stringify(spec); } catch (e) {}
+    var summary = spec.factory || 'No SVG';
+    if (spec.opts && (spec.opts.w || spec.opts.h)) summary += ' ' + (spec.opts.w || 420) + '×' + (spec.opts.h || 280);
+    optsHtml = '<div class="step-svg-config"><input type="hidden" class="input step-svg-spec" value="' + esc(specJson) + '"/>' +
+      '<span class="step-svg-summary">' + esc(summary) + '</span> <button type="button" class="btn btn-configure-svg">Configure SVG</button></div>';
+  }
 
   card.innerHTML = '<div class="step-header">' +
     '<span class="step-drag-handle" draggable="true" title="Drag to reorder" aria-label="Drag to reorder">⋮⋮</span>' +
@@ -554,6 +577,7 @@ function appendStepCard(container, step, idx) {
     '<option value="fill_blank"' + (type === 'fill_blank' ? ' selected' : '') + '>fill_blank</option>' +
     '<option value="matching"' + (type === 'matching' ? ' selected' : '') + '>matching</option>' +
     '<option value="ordering"' + (type === 'ordering' ? ' selected' : '') + '>ordering</option>' +
+    '<option value="svg"' + (type === 'svg' ? ' selected' : '') + '>svg</option>' +
     '<option value="completion"' + (type === 'completion' ? ' selected' : '') + '>completion</option></select></div>' +
     '<div><label>Content (Markdown)</label><textarea class="input step-content" rows="4">' + esc(step.content || '') + '</textarea></div>' +
     (optsHtml ? '<div class="step-extra">' + optsHtml + '</div>' : '');
@@ -577,6 +601,7 @@ function appendStepCard(container, step, idx) {
   });
 
   wireStepDragDrop(container, card, idx);
+  if (type === 'svg') wireSvgConfigureButton(card);
 
   card.querySelector('.step-type')?.addEventListener('change', function () {
     var newType = this.value;
@@ -594,12 +619,38 @@ function appendStepCard(container, step, idx) {
       div.innerHTML = '<div class="matching-pair-row"><input type="text" class="input pair-left" placeholder="Left" /><input type="text" class="input pair-right" placeholder="Right" /><button type="button" class="btn btn-remove-pair">−</button></div><div class="matching-pair-row"><input type="text" class="input pair-left" placeholder="Left" /><input type="text" class="input pair-right" placeholder="Right" /><button type="button" class="btn btn-remove-pair">−</button></div><button type="button" class="btn btn-add-pair">+ Add pair</button>';
     } else if (newType === 'ordering') {
       div.innerHTML = '<p class="hint">Items in correct order.</p><div class="ordering-row"><input type="text" class="input ordering-item" placeholder="Item 1" /><button type="button" class="btn btn-remove-ordering">−</button></div><div class="ordering-row"><input type="text" class="input ordering-item" placeholder="Item 2" /><button type="button" class="btn btn-remove-ordering">−</button></div><div class="ordering-row"><input type="text" class="input ordering-item" placeholder="Item 3" /><button type="button" class="btn btn-remove-ordering">−</button></div><button type="button" class="btn btn-add-ordering">+ Add item</button>';
+    } else if (newType === 'svg') {
+      div.innerHTML = '<div class="step-svg-config"><input type="hidden" class="input step-svg-spec" value=""/>' +
+        '<span class="step-svg-summary">No SVG selected</span> <button type="button" class="btn btn-configure-svg">Configure SVG</button></div>';
     }
     if (div.innerHTML) card.appendChild(div);
+    if (newType === 'svg') wireSvgConfigureButton(card);
     wireStepExtraButtons(card);
   });
 
   wireStepExtraButtons(card);
+}
+
+function wireSvgConfigureButton(card) {
+  var btn = card.querySelector('.btn-configure-svg');
+  if (!btn || btn._svgWired) return;
+  btn._svgWired = true;
+  btn.addEventListener('click', function () {
+    var specEl = card.querySelector('.step-svg-spec');
+    var summaryEl = card.querySelector('.step-svg-summary');
+    var initial = {};
+    if (specEl && specEl.value) {
+      try { initial = JSON.parse(specEl.value); } catch (e) {}
+    }
+    openSVGFactoryWizard(function (svgSpec) {
+      if (specEl) specEl.value = JSON.stringify(svgSpec);
+      if (summaryEl) {
+        var t = svgSpec.factory || 'SVG';
+        if (svgSpec.opts && (svgSpec.opts.w || svgSpec.opts.h)) t += ' ' + (svgSpec.opts.w || 420) + '×' + (svgSpec.opts.h || 280);
+        summaryEl.textContent = t;
+      }
+    });
+  });
 }
 
 function wireStepExtraButtons(card) {
@@ -657,6 +708,8 @@ function wireStepExtraButtons(card) {
   }
 }
 
+export { renderLessonCreationWizard };
+
 export function renderAuthorNew(main, slug) {
   const token = getStoredToken();
   if (!token) {
@@ -709,7 +762,7 @@ export function renderAuthorNew(main, slug) {
     '<div><label for="meta-utu-protocol">Protocol (1–5)</label><select id="meta-utu-protocol" class="input"><option value="">— None —</option><option value="1">P1 Transmission</option><option value="2">P2 Guided Construction</option><option value="3">P3 Apprenticeship</option><option value="4">P4 Dev. Sequencing</option><option value="5">P5 Meaning Activation</option></select></div>' +
     '</div></div>' +
     '</section>' +
-    '<section class="card"><h2>Steps</h2><div id="steps-container"></div><button type="button" id="btn-add-step" class="btn btn-primary">+ Add Step</button></section>' +
+    '<section class="card"><h2>Steps</h2><div id="steps-container"></div><div class="editor-actions" style="margin-top:0.5rem;"><button type="button" id="btn-add-step" class="btn btn-primary">+ Add Step</button> <button type="button" id="btn-add-sensor-toy" class="btn">Create sensor toy</button></div></section>' +
     '<section class="card"><h2>Ontology (optional)</h2>' +
     '<div><label for="ontology-requires">Requires (skill IDs, comma)</label><input type="text" id="ontology-requires" class="input" placeholder="skill:a, skill:b" /></div>' +
     '<div><label for="ontology-provides">Provides (skill IDs, comma)</label><input type="text" id="ontology-provides" class="input" placeholder="skill:x" /></div>' +
@@ -757,6 +810,12 @@ export function renderAuthorNew(main, slug) {
 
   function loadAndPopulate() {
     if (!slug) {
+      var draft = consumeWizardDraft();
+      if (draft) {
+        lesson = draft;
+        statusEl.style.display = 'block';
+        if (statusEl) { statusEl.textContent = 'Lesson created by wizard. Review and save.'; statusEl.className = 'success-box'; }
+      }
       populateFormFromLesson(main, lesson);
       return;
     }
@@ -780,6 +839,39 @@ export function renderAuthorNew(main, slug) {
   main.querySelector('#btn-add-step').addEventListener('click', function () {
     var count = container.querySelectorAll('.step-card').length;
     appendStepCard(container, { id: 'step' + (count + 1), type: 'instruction', content: '' }, count);
+  });
+
+  main.querySelector('#btn-add-sensor-toy')?.addEventListener('click', function () {
+    openSensorToyWizard(function (toy) {
+      var count = container.querySelectorAll('.step-card').length;
+      if (toy.threshold) {
+        appendStepCard(container, {
+          id: 'step' + (count + 1),
+          type: 'hardware_trigger',
+          content: toy.name ? 'Trigger: ' + toy.name : '',
+          sensor: toy.sensorId,
+          threshold: toy.threshold
+        }, count);
+        count++;
+      }
+      if (toy.svgSpec) {
+        appendStepCard(container, {
+          id: 'step' + (count + 1),
+          type: 'svg',
+          content: '',
+          svg_spec: toy.svgSpec
+        }, count);
+      }
+      if (!toy.threshold && !toy.svgSpec) {
+        appendStepCard(container, {
+          id: 'step' + (count + 1),
+          type: 'hardware_trigger',
+          content: toy.name ? toy.name : '',
+          sensor: toy.sensorId,
+          threshold: 'accel.total > 2'
+        }, count);
+      }
+    });
   });
 
   wireStepsContainerDragDrop(container);

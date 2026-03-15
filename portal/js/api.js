@@ -132,6 +132,14 @@ export function createHubApi(baseUrl) {
       return authGet('api/governance/utu-constants');
     },
 
+    getArchetypes(query = {}) {
+      const params = new URLSearchParams();
+      if (query.band != null) params.set('band', String(query.band));
+      if (query.protocol != null) params.set('protocol', String(query.protocol));
+      const qs = params.toString();
+      return authGet('api/governance/archetypes' + (qs ? '?' + qs : ''));
+    },
+
     postAuthorValidate(lesson) {
       return authPost('api/author/validate', lesson);
     },
