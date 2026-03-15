@@ -47,7 +47,9 @@
       back_dashboard:      'Back to dashboard',
       integrity_error:     'This lesson file could not be verified for your device. Please re-download from your learning hub.',
       loading_failed:      'Failed to load lesson. Please try again.',
-      verifying:           'Verifying\u2026'
+      verifying:           'Verifying\u2026',
+      offline_banner:      'You are offline. Progress stays on this device until you reconnect.',
+      checkpoint_saved_hub: 'Progress saved to hub.'
     },
     es: {
       lesson_complete:     '\u00a1Lecci\u00f3n completa!',
@@ -77,7 +79,9 @@
       back_dashboard:      'Volver al panel',
       integrity_error:     'No se pudo verificar este archivo de lecci\u00f3n para tu dispositivo. Vuelve a descargarlo desde tu hub.',
       loading_failed:      'Error al cargar la lecci\u00f3n. Int\u00e9ntalo de nuevo.',
-      verifying:           'Verificando\u2026'
+      verifying:           'Verificando\u2026',
+      offline_banner:      'Sin conexi\u00f3n. El progreso queda en este dispositivo.',
+      checkpoint_saved_hub: 'Progreso guardado en el hub.'
     },
     sw: {
       lesson_complete:     'Somo limekamilika!',
@@ -107,7 +111,9 @@
       back_dashboard:      'Rudi kwenye dashibodi',
       integrity_error:     'Faili hii ya somo haiwezi kuthibitishwa kwa kifaa chako. Tafadhali ipakue tena.',
       loading_failed:      'Imeshindwa kupakia somo. Tafadhali jaribu tena.',
-      verifying:           'Inathibitisha\u2026'
+      verifying:           'Inathibitisha\u2026',
+      offline_banner:      'Huna mtandao. Maendeleo yako yako kwenye kifaa.',
+      checkpoint_saved_hub: 'Maendeleo yamehifadhiwa kwenye hub.'
     },
     fr: {
       lesson_complete:     'Le\u00e7on termin\u00e9e !',
@@ -137,7 +143,9 @@
       back_dashboard:      'Retour au tableau de bord',
       integrity_error:     'Ce fichier de le\u00e7on n\'a pas pu \u00eatre v\u00e9rifi\u00e9 pour votre appareil.',
       loading_failed:      '\u00c9chec du chargement de la le\u00e7on. Veuillez r\u00e9essayer.',
-      verifying:           'V\u00e9rification\u2026'
+      verifying:           'V\u00e9rification\u2026',
+      offline_banner:      'Hors ligne. La progression reste sur cet appareil.',
+      checkpoint_saved_hub: 'Progression enregistr\u00e9e sur le hub.'
     }
   };
 

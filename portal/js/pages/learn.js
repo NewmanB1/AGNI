@@ -1,7 +1,8 @@
 /**
- * Learn — student pseudoId + pathfinder (HubKey)
+ * Learn — student pathfinder (HubKey)
  */
 import { getHubUrl, createHubApi, getHubKey } from '../api.js';
+import { t } from '../i18n.js';
 
 function esc(s) {
   if (s == null) return '';
@@ -15,21 +16,46 @@ export function renderLearn(main) {
   const hasKey = !!getHubKey();
   main.innerHTML =
     '<div class="top-page">' +
-    '<h1>Learn</h1>' +
-    '<p class="hint">Enter a student <strong>pseudoId</strong> to see their recommended lesson order (hub pathfinder). Requires Hub key in Settings.</p>' +
+    '<h1>' +
+    esc(t('learn_title')) +
+    '</h1>' +
+    '<p class="hint" style="line-height:1.5;">' +
+    esc(t('learn_help')) +
+    '</p>' +
     (!base
-      ? '<div class="card warning-box"><p>Set <a href="#/settings">Hub URL</a> first.</p></div>'
+      ? '<div class="card warning-box"><p><a href="#/settings">' + esc(t('nav_settings')) + '</a></p></div>'
       : !hasKey
-        ? '<div class="card warning-box"><p>Set <a href="#/settings">Hub key</a> (device/parent access) to load recommendations.</p></div>'
-        : '') +
+        ? '<div class="card warning-box"><p>' +
+          esc(t('settings_hub_key')) +
+          ' — <a href="#/settings">' +
+          esc(t('nav_settings')) +
+          '</a>. ' +
+          esc(t('learn_fail_auth')) +
+          '</p></div>'
+        : '<div class="card hint-box" style="border-style:dashed;"><p>' +
+          esc(t('students_title')) +
+          ': <a href="#/students">' +
+          esc(t('nav_students')) +
+          '</a> ' +
+          esc(t('students_help')) +
+          '</p></div>') +
     '<div class="card">' +
-    '<label>Pseudo ID <input type="text" id="learn-pseudo" class="input" placeholder="student-pseudo-id" /></label>' +
-    '<p style="margin-top:0.75rem;"><button type="button" class="btn btn-primary" id="learn-load">Load lessons</button>' +
-    ' <button type="button" class="btn" id="learn-retry" style="display:none;">Retry</button></p>' +
-    '<p id="learn-status" class="hint"></p>' +
+    '<label>' +
+    esc(t('learn_pseudo')) +
+    ' <input type="text" id="learn-pseudo" class="input" placeholder="pseudo-id" aria-required="true" /></label>' +
+    '<p style="margin-top:0.75rem;">' +
+    '<button type="button" class="btn btn-primary" id="learn-load">' +
+    esc(t('learn_load')) +
+    '</button> ' +
+    '<button type="button" class="btn" id="learn-retry" style="display:none;">' +
+    esc(t('common_retry')) +
+    '</button></p>' +
+    '<div id="learn-status" class="hint" role="status" aria-live="polite"></div>' +
     '<div id="learn-results"></div>' +
     '</div>' +
-    '<p><a href="#/">← Home</a></p>' +
+    '<p><a href="#/">' +
+    esc(t('common_back_home')) +
+    '</a></p>' +
     '</div>';
 
   const api = base ? createHubApi(base) : null;
@@ -47,7 +73,7 @@ export function renderLearn(main) {
   function load() {
     const pseudo = (main.querySelector('#learn-pseudo').value || '').trim();
     if (!pseudo || !api) return;
-    statusEl.textContent = 'Loading…';
+    statusEl.textContent = t('common_loading');
     resultsEl.innerHTML = '';
     retryBtn.style.display = 'none';
     api
@@ -55,14 +81,14 @@ export function renderLearn(main) {
       .then(function (r) {
         statusEl.textContent = '';
         retryBtn.style.display = 'inline-flex';
-        const lessons = r.lessons || r.orderedLessons || r.order || [];
+        const lessons = r.lessons || [];
         const list = Array.isArray(lessons) ? lessons : [];
         if (!list.length) {
-          resultsEl.innerHTML = '<p class="hint">No ordered lessons returned (empty path or new student).</p>';
+          resultsEl.innerHTML = '<p class="hint">' + esc(t('learn_empty')) + '</p>';
           return;
         }
         resultsEl.innerHTML =
-          '<h3 style="margin-top:1rem;">Recommended order</h3><ol class="learn-list">' +
+          '<ol class="learn-list">' +
           list
             .map(function (L) {
               const id = L.lessonId || L.slug || L.id || '?';
@@ -73,10 +99,12 @@ export function renderLearn(main) {
           '</ol>';
       })
       .catch(function (e) {
-        statusEl.textContent = e.message || 'Failed';
+        const m = (e && e.message) || '';
+        statusEl.textContent = m;
         statusEl.className = 'error-box';
         retryBtn.style.display = 'inline-flex';
-        resultsEl.innerHTML = '<p class="hint">Check Hub key and pseudoId. Teachers see roster under <a href="#/students">Students</a>.</p>';
+        resultsEl.innerHTML =
+          '<p class="hint">' + esc(t('learn_fail_auth')) + '</p>';
       });
   }
 

@@ -56,7 +56,7 @@ export function renderBrowse(main, opts) {
 
   const api = createHubApi(baseUrl);
   let activeTab = 'lessons';
-  let filters = { q: '', scope: '', utu: '', spine: '', limit: 50, offset: 0 };
+  let filters = { q: '', scope: '', utu: '', spine: '', sort: 'title', limit: 50, offset: 0 };
   let result = { lessons: [], total: 0, savedSlugs: [] };
   let loading = false;
   let forkMessage = '';
@@ -93,7 +93,7 @@ export function renderBrowse(main, opts) {
 
   function render() {
     const savedSet = new Set(result.savedSlugs || []);
-    const list = (result.lessons || []).map(function (l) {
+    let list = (result.lessons || []).map(function (l) {
       const isMine = savedSet.has(l.slug);
       const forkAllowed = mode === 'fork' ? null : true;
       return {
@@ -105,8 +105,13 @@ export function renderBrowse(main, opts) {
         hasSensor: (l.inferredFeatures && l.inferredFeatures.flags && l.inferredFeatures.flags.has_sensors) || (l.inferredFeatures && l.inferredFeatures.stepTypeCounts && l.inferredFeatures.stepTypeCounts.hardware_trigger > 0)
       };
     });
+    list.sort(function (a, b) {
+      if (filters.sort === 'slug') return a.slug.localeCompare(b.slug);
+      return (a.title || '').localeCompare(b.title || '');
+    });
 
     const scopeOptions = '<option value="">All</option><option value="mine"' + (filters.scope === 'mine' ? ' selected' : '') + '>My lessons</option><option value="others"' + (filters.scope === 'others' ? ' selected' : '') + '>Others</option>';
+    const sortOptions = '<option value="title"' + (filters.sort === 'title' ? ' selected' : '') + '>Sort: Title</option><option value="slug"' + (filters.sort === 'slug' ? ' selected' : '') + '>Sort: Slug</option>';
     const tabsHtml = '<div class="browse-tabs" role="tablist">' +
       '<button type="button" role="tab" class="browse-tab' + (activeTab === 'lessons' ? ' active' : '') + '" data-tab="lessons">Lessons</button>' +
       '<button type="button" role="tab" class="browse-tab' + (activeTab === 'svgs' ? ' active' : '') + '" data-tab="svgs">SVGs</button>' +
@@ -118,6 +123,7 @@ export function renderBrowse(main, opts) {
       '<div class="wizard-field"><label for="browse-scope">Creator</label><select id="browse-scope" class="input">' + scopeOptions + '</select></div>' +
       '<div class="wizard-field"><label for="browse-utu">UTU class</label><input type="text" id="browse-utu" class="input" placeholder="e.g. MAC-1" value="' + escapeHtml(filters.utu) + '" style="max-width:120px;" /></div>' +
       '<div class="wizard-field"><label for="browse-spine">Spine</label><input type="text" id="browse-spine" class="input" placeholder="e.g. MAC" value="' + escapeHtml(filters.spine) + '" style="max-width:100px;" /></div>' +
+      '<div class="wizard-field"><label for="browse-sort">Order</label><select id="browse-sort" class="input">' + sortOptions + '</select></div>' +
       '<div class="wizard-field"><button type="button" class="btn btn-primary" id="browse-search">Search</button></div>' +
       '</div></div>';
     let listHtml = '';
@@ -133,11 +139,12 @@ export function renderBrowse(main, opts) {
           let badge = '';
           if (activeTab === 'svgs' && item.factoryManifest.length) badge = ' <span class="svg-step-badge">' + escapeHtml(item.factoryManifest.slice(0, 3).join(', ')) + (item.factoryManifest.length > 3 ? '…' : '') + '</span>';
           if (activeTab === 'toys' && item.hasSensor) badge = ' <span class="svg-step-badge">sensor</span>';
-          return '<li class="browse-item">' +
-            '<div><strong>' + escapeHtml(item.title) + '</strong>' + (item.isMine ? ' <span class="hint">(mine)</span>' : '') + badge + '</div>' +
-            (item.description ? '<div class="hint" style="font-size:0.9rem;">' + escapeHtml(item.description.slice(0, 120)) + (item.description.length > 120 ? '…' : '') + '</div>' : '') +
-            '<div style="margin-top:0.5rem;">' +
-            '<a href="#/author/' + encodeURIComponent(item.slug) + '/edit" class="btn btn-sm">Edit</a> ' +
+          return '<li class="browse-item browse-item-compact">' +
+            '<div><strong>' + escapeHtml(item.title) + '</strong> <code class="hint">' + escapeHtml(item.slug) + '</code>' + (item.isMine ? ' <span class="hint">(mine)</span>' : '') + badge + '</div>' +
+            (item.description ? '<div class="hint" style="font-size:0.85rem;">' + escapeHtml(item.description.slice(0, 100)) + (item.description.length > 100 ? '…' : '') + '</div>' : '') +
+            '<div style="margin-top:0.5rem;display:flex;flex-wrap:wrap;gap:0.35rem;">' +
+            '<a href="#/author/' + encodeURIComponent(item.slug) + '/edit" class="btn btn-sm">Edit</a>' +
+            '<button type="button" class="btn btn-sm browse-preview-btn" data-slug="' + escapeHtml(item.slug) + '">Preview</button>' +
             (mode === 'fork' ? '<button type="button" class="btn btn-sm btn-primary browse-fork-btn" data-slug="' + escapeHtml(item.slug) + '">Fork</button>' : '') +
             '</div></li>';
         }).join('') +
@@ -159,6 +166,10 @@ export function renderBrowse(main, opts) {
       listHtml +
       '</div>';
 
+    main.querySelector('#browse-sort')?.addEventListener('change', function () {
+      filters.sort = this.value || 'title';
+      if (!loading && !result.error) render();
+    });
     main.querySelector('#browse-retry')?.addEventListener('click', function () {
       result.error = '';
       load();
@@ -174,7 +185,29 @@ export function renderBrowse(main, opts) {
       filters.scope = (main.querySelector('#browse-scope') && main.querySelector('#browse-scope').value) || '';
       filters.utu = (main.querySelector('#browse-utu') && main.querySelector('#browse-utu').value) || '';
       filters.spine = (main.querySelector('#browse-spine') && main.querySelector('#browse-spine').value) || '';
+      filters.sort = (main.querySelector('#browse-sort') && main.querySelector('#browse-sort').value) || 'title';
       load();
+    });
+    main.querySelectorAll('.browse-preview-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var slug = btn.getAttribute('data-slug');
+        if (!slug) return;
+        btn.disabled = true;
+        api.getAuthorLesson(slug).then(function (data) {
+          var lesson = data.lessonData || data.lesson || data;
+          return api.postAuthorPreview(lesson);
+        }).then(function (r) {
+          btn.disabled = false;
+          if (r.html) {
+            try {
+              var blob = new Blob([r.html], { type: 'text/html' });
+              var u = URL.createObjectURL(blob);
+              window.open(u, '_blank', 'noopener');
+              setTimeout(function () { URL.revokeObjectURL(u); }, 60000);
+            } catch (e) {}
+          }
+        }).catch(function () { btn.disabled = false; });
+      });
     });
     main.querySelectorAll('.browse-fork-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {

@@ -4,7 +4,7 @@
 import { route, initRouter } from './router.js';
 import { getHubUrl } from './api.js';
 import { restoreCreatorSession } from './auth.js';
-import { applyNavI18n } from './i18n.js';
+import { applyNavI18n, t } from './i18n.js';
 import { showRouteLoading, hideRouteLoading } from './route-loading.js';
 import { render as renderHome } from './pages/home.js';
 import { render as renderSettings } from './pages/settings.js';
@@ -70,19 +70,19 @@ route('/learn', render(renderLearn));
 route('/parent/dashboard', render(renderParent));
 route('/governance/setup', render((m) => renderGovernance(m)));
 route('/leaderboard', render((m) => renderLeaderboard(m)));
-route('/admin/onboarding', render((m) => renderStub(m, 'Admin', 'First-run hub onboarding.', {
-  detail: 'See docs/CONFIGURATION.md for env vars and bootstrap.',
+route('/admin/onboarding', render((m) => renderStub(m, t('stub_admin_title'), t('stub_admin_desc'), {
+  detail: t('stub_admin_detail'),
   ctaHref: '#/settings',
-  ctaLabel: 'Portal settings',
+  ctaLabel: t('stub_admin_cta_settings'),
   secondaryHref: '#/governance/setup',
-  secondaryLabel: 'Governance'
+  secondaryLabel: t('stub_admin_secondary_gov')
 })));
-route('/admin/hub', render((m) => renderStub(m, 'Admin Hub', 'Hub configuration and health.', {
-  detail: 'Run the Village Hub process with a valid environment; use Settings here to point the portal at it.',
+route('/admin/hub', render((m) => renderStub(m, t('stub_admin_hub_title'), t('stub_admin_hub_desc'), {
+  detail: t('stub_admin_hub_detail'),
   ctaHref: '#/settings',
-  ctaLabel: 'Set hub URL',
+  ctaLabel: t('stub_admin_hub_cta_url'),
   secondaryHref: '#/',
-  secondaryLabel: 'Home'
+  secondaryLabel: t('stub_admin_hub_secondary_home')
 })));
 
 const params = new URLSearchParams(window.location.search);

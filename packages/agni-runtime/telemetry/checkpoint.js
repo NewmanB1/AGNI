@@ -109,7 +109,8 @@
                   'box-shadow:0 2px 8px rgba(0,0,0,.2);';
                 document.body.appendChild(toast);
               }
-              toast.textContent = 'Progress saved to hub.';
+              var TI = global['AGNI_I18N'] && global['AGNI_I18N'].t ? global['AGNI_I18N'].t : function (k) { return k; };
+              toast.textContent = TI('checkpoint_saved_hub');
               toast.style.display = 'block';
               setTimeout(function () {
                 if (toast) toast.style.display = 'none';

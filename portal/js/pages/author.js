@@ -9,44 +9,42 @@ import { openSVGFactoryWizard } from '../wizards/svg-factory-wizard.js';
 import { openSensorToyWizard } from '../wizards/sensor-toy-wizard.js';
 import { consumeWizardDraft, renderLessonCreationWizard } from '../wizards/lesson-creation-wizard.js';
 import { showToast } from '../toast.js';
+import { t } from '../i18n.js';
 
 export function renderAuthorList(main) {
   const token = getStoredToken();
   if (!token) {
-    main.innerHTML = `
-      <div class="top-page">
-        <h1>Lesson Author</h1>
-        <p>You must be logged in to author lessons.</p>
-        <a href="#/author/login" class="btn btn-primary">Log In or Register</a>
-      </div>
-    `;
+    main.innerHTML =
+      '<div class="top-page">' +
+      '<h1>' + t('author_title') + '</h1>' +
+      '<p>' + t('author_login_needed') + '</p>' +
+      '<a href="#/author/login" class="btn btn-primary">' + t('author_log_in') + '</a>' +
+      '</div>';
     return;
   }
 
-  main.innerHTML = `
-    <div class="top-page">
-      <h1>Lesson Author</h1>
-      <p style="margin-bottom: 1rem;">Create or edit lessons.</p>
-      <a href="#/author/wizard" class="btn btn-primary">Create with wizard</a>
-      <a href="#/author/new" class="btn">Create New Lesson (blank)</a>
-        <div class="card" style="margin-top: 1rem;">
-        <h3 style="margin-bottom: 0.5rem;">Edit existing</h3>
-        <p class="hint" style="margin-bottom: 0.5rem;">Select a lesson or enter slug to edit.</p>
-        <p id="author-lessons-status" class="hint" style="margin-bottom: 0.5rem; display: none;"></p>
-        <div style="margin-bottom: 0.5rem;"><label>Filter list <input type="search" id="author-lesson-filter" class="input" placeholder="Type to filter…" style="max-width:220px;" disabled /></label></div>
-        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
-          <select id="edit-select" class="input" style="min-width: 220px;" disabled>
-            <option value="">Loading lessons…</option>
-          </select>
-          <span>or</span>
-          <input type="text" id="edit-slug" class="input" placeholder="hello-world" style="max-width: 180px;" />
-          <button type="button" id="btn-edit" class="btn">Edit</button>
-          <button type="button" class="btn" id="author-lessons-retry" style="display:none;">Retry load</button>
-        </div>
-      </div>
-      <p style="margin-top: 1.5rem;"><a href="#/author/login">Account / Log out</a></p>
-    </div>
-  `;
+  main.innerHTML =
+    '<div class="top-page">' +
+    '<h1>' + t('author_title') + '</h1>' +
+    '<p style="margin-bottom: 1rem;">' + t('author_subtitle') + '</p>' +
+    '<a href="#/author/wizard" class="btn btn-primary">' + t('author_create_wizard') + '</a> ' +
+    '<a href="#/author/new" class="btn">' + t('author_create_blank') + '</a>' +
+    '<div class="card" style="margin-top: 1rem;">' +
+    '<h3 style="margin-bottom: 0.5rem;">' + t('author_edit_existing') + '</h3>' +
+    '<p class="hint" style="margin-bottom: 0.5rem;">' + t('author_select_hint') + '</p>' +
+    '<p id="author-lessons-status" class="hint" style="margin-bottom: 0.5rem; display: none;"></p>' +
+    '<div style="margin-bottom: 0.5rem;"><label>' + t('author_filter_list') +
+    ' <input type="search" id="author-lesson-filter" class="input" placeholder="' +
+    String(t('author_filter_placeholder')).replace(/"/g, '&quot;') + '" style="max-width:220px;" disabled /></label></div>' +
+    '<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">' +
+    '<select id="edit-select" class="input" style="min-width: 220px;" disabled>' +
+    '<option value="">' + t('author_loading_lessons') + '</option></select>' +
+    '<span>' + t('author_or') + '</span>' +
+    '<input type="text" id="edit-slug" class="input" placeholder="hello-world" style="max-width: 180px;" />' +
+    '<button type="button" id="btn-edit" class="btn">' + t('common_edit') + '</button>' +
+    '<button type="button" class="btn" id="author-lessons-retry" style="display:none;">' + t('author_retry_load') + '</button>' +
+    '</div></div>' +
+    '<p style="margin-top: 1.5rem;"><a href="#/author/login">' + t('author_account') + '</a></p></div>';
   var baseUrl = getHubUrl();
   var statusEl = main.querySelector('#author-lessons-status');
   var sel = main.querySelector('#edit-select');
@@ -56,7 +54,7 @@ export function renderAuthorList(main) {
   function applyFilter() {
     var q = (filterInp && filterInp.value || '').toLowerCase().trim();
     if (!sel) return;
-    sel.innerHTML = '<option value="">-- Select lesson --</option>';
+    sel.innerHTML = '<option value="">' + t('author_select_lesson') + '</option>';
     allSlugs.filter(function (s) { return !q || s.toLowerCase().indexOf(q) >= 0; }).forEach(function (s) {
       var opt = document.createElement('option');
       opt.value = s;
@@ -66,7 +64,7 @@ export function renderAuthorList(main) {
   }
   function loadLessonList() {
     if (!baseUrl || !sel) return;
-    sel.innerHTML = '<option value="">Loading…</option>';
+    sel.innerHTML = '<option value="">' + t('common_loading') + '</option>';
     sel.disabled = true;
     if (filterInp) filterInp.disabled = true;
     if (retryBtn) retryBtn.style.display = 'none';
@@ -79,12 +77,12 @@ export function renderAuthorList(main) {
       if (retryBtn) retryBtn.style.display = 'none';
     }).catch(function (e) {
       if (sel) {
-        sel.innerHTML = '<option value="">Could not load list</option>';
+        sel.innerHTML = '<option value="">' + t('author_could_not_load_list') + '</option>';
         sel.disabled = false;
       }
       if (filterInp) filterInp.disabled = true;
       if (retryBtn) retryBtn.style.display = 'inline-flex';
-      var msg = (e && e.message) ? e.message : 'Could not load lesson list.';
+      var msg = (e && e.message) ? e.message : t('author_load_list_error');
       if (statusEl) {
         statusEl.style.display = 'block';
         statusEl.className = 'error-box';
@@ -491,6 +489,7 @@ function populateFormFromLesson(main, lesson) {
   (lesson.steps || []).forEach(function (step, i) {
     appendStepCard(container, step, i);
   });
+  refreshStepNumbers(container);
 }
 
 /** Refresh Step 1, Step 2, ... labels after reorder. */
@@ -501,6 +500,19 @@ function refreshStepNumbers(container) {
     if (span) span.textContent = 'Step ' + (i + 1);
     card.dataset.idx = String(i);
   });
+  var jump = document.getElementById('author-jump-step');
+  var mainEl = document.getElementById('main-content');
+  if (jump && mainEl) {
+    var opts = '<option value="">—</option>';
+    mainEl.querySelectorAll('#steps-container .step-card').forEach(function (card, i) {
+      var idInp = card.querySelector('.step-id');
+      var id = idInp ? idInp.value : 'step' + (i + 1);
+      opts += '<option value="' + i + '">Step ' + (i + 1) + ' (' + esc(String(id).slice(0, 24)) + ')</option>';
+    });
+    var v = jump.value;
+    jump.innerHTML = opts;
+    jump.value = v;
+  }
 }
 
 /** Allow dropping on container's empty area to move step to end. */
@@ -613,10 +625,12 @@ function appendStepCard(container, step, idx) {
       '<span class="step-svg-summary">' + esc(summary) + '</span> <button type="button" class="btn btn-configure-svg">Configure SVG</button></div>';
   }
 
-  card.innerHTML = '<div class="step-header">' +
+  card.innerHTML = '<div class="step-header step-card-header-row">' +
     '<span class="step-drag-handle" draggable="true" title="Drag to reorder" aria-label="Drag to reorder">⋮⋮</span>' +
     '<span class="step-number">Step ' + (idx + 1) + '</span>' +
-    '<div class="step-actions"><button type="button" class="btn btn-move-up">↑</button><button type="button" class="btn btn-move-down">↓</button><button type="button" class="btn btn-remove-step">Remove</button></div></div>' +
+    '<div class="step-actions"><button type="button" class="btn btn-sm step-toggle-collapse" aria-expanded="true">▼</button>' +
+    '<button type="button" class="btn btn-move-up">↑</button><button type="button" class="btn btn-move-down">↓</button><button type="button" class="btn btn-remove-step">Remove</button></div></div>' +
+    '<div class="step-body-collapsible">' +
     '<div><label>ID</label><input type="text" class="input step-id" value="' + esc(step.id) + '" placeholder="step' + (idx + 1) + '" /></div>' +
     '<div><label>Type</label><select class="input step-type">' +
     '<option value="instruction"' + (type === 'instruction' ? ' selected' : '') + '>instruction</option>' +
@@ -628,8 +642,17 @@ function appendStepCard(container, step, idx) {
     '<option value="svg"' + (type === 'svg' ? ' selected' : '') + '>svg</option>' +
     '<option value="completion"' + (type === 'completion' ? ' selected' : '') + '>completion</option></select></div>' +
     '<div><label>Content (Markdown)</label><textarea class="input step-content" rows="4">' + esc(step.content || '') + '</textarea></div>' +
-    (optsHtml ? '<div class="step-extra">' + optsHtml + '</div>' : '');
+    (optsHtml ? '<div class="step-extra">' + optsHtml + '</div>' : '') +
+    '</div>';
   container.appendChild(card);
+
+  card.querySelector('.step-toggle-collapse')?.addEventListener('click', function (ev) {
+    ev.preventDefault();
+    card.classList.toggle('step-card-collapsed');
+    var exp = !card.classList.contains('step-card-collapsed');
+    card.querySelector('.step-toggle-collapse').setAttribute('aria-expanded', exp ? 'true' : 'false');
+    card.querySelector('.step-toggle-collapse').textContent = exp ? '▼' : '▶';
+  });
 
   card.querySelector('.btn-remove-step')?.addEventListener('click', function () {
     card.remove();
@@ -786,7 +809,7 @@ export function renderAuthorNew(main, slug) {
   var crumb = '<nav class="breadcrumb" aria-label="Breadcrumb">' +
     '<a href="#/author">Author</a> → ' + (slug ? '<span>' + esc(slug) + '</span> → Edit' : 'New lesson') +
     '</nav>';
-  main.innerHTML = '<div class="top-page">' + crumb +
+  main.innerHTML = '<div class="top-page author-page-with-sticky">' + crumb +
     '<h1>' + (slug ? 'Edit Lesson' : 'New Lesson') + '</h1>' +
     '<div id="editor-status" class="card" style="margin-bottom:1rem;display:none;"></div>' +
     '<form id="lesson-form">' +
@@ -813,7 +836,11 @@ export function renderAuthorNew(main, slug) {
     '<div><label for="meta-utu-protocol">Protocol (1–5)</label><select id="meta-utu-protocol" class="input"><option value="">— None —</option><option value="1">P1 Transmission</option><option value="2">P2 Guided Construction</option><option value="3">P3 Apprenticeship</option><option value="4">P4 Dev. Sequencing</option><option value="5">P5 Meaning Activation</option></select></div>' +
     '</div></div>' +
     '</section>' +
-    '<section class="card"><h2>Steps</h2><div id="steps-container"></div><div class="editor-actions" style="margin-top:0.5rem;"><button type="button" id="btn-add-step" class="btn btn-primary">+ Add Step</button> <button type="button" id="btn-add-sensor-toy" class="btn">Create sensor toy</button></div></section>' +
+    '<section class="card"><h2>Steps</h2>' +
+    '<div style="margin-bottom:0.75rem;display:flex;flex-wrap:wrap;align-items:center;gap:0.5rem;">' +
+    '<label for="author-jump-step">' + esc(t('author_jump_step')) + '</label> ' +
+    '<select id="author-jump-step" class="input" style="max-width:220px;"><option value="">—</option></select></div>' +
+    '<div id="steps-container"></div><div class="editor-actions" style="margin-top:0.5rem;"><button type="button" id="btn-add-step" class="btn btn-primary">+ Add Step</button> <button type="button" id="btn-add-sensor-toy" class="btn">Create sensor toy</button></div></section>' +
     '<section class="card"><h2>Ontology (optional)</h2>' +
     '<div><label for="ontology-requires">Requires (skill IDs, comma)</label><input type="text" id="ontology-requires" class="input" placeholder="skill:a, skill:b" /></div>' +
     '<div><label for="ontology-provides">Provides (skill IDs, comma)</label><input type="text" id="ontology-provides" class="input" placeholder="skill:x" /></div>' +
@@ -845,7 +872,13 @@ export function renderAuthorNew(main, slug) {
     '<p style="margin:0.5rem 0;"><button type="button" class="btn btn-sm" id="btn-preview-tab" style="display:none;">Open preview in new tab</button></p>' +
     '<iframe id="preview-iframe" title="Lesson preview" style="width:100%;min-height:400px;border:1px solid #ccc;border-radius:4px;background:#fff;"></iframe>' +
     '</section>' +
-    '<p style="margin-top:1rem;"><a href="#/author">← Back to Author</a></p>' +
+    '<nav class="author-sticky-bar" aria-label="Editor actions">' +
+    '<button type="button" class="btn" id="sticky-validate">' + esc(t('author_sticky_validate')) + '</button>' +
+    '<button type="button" class="btn" id="sticky-preview">' + esc(t('author_sticky_preview')) + '</button>' +
+    '<button type="button" class="btn btn-primary" id="sticky-save">' + esc(t('author_sticky_save')) + '</button>' +
+    '<a href="#/author" class="btn">' + esc(t('common_cancel')) + '</a>' +
+    '</nav>' +
+    '<p style="margin-top:1rem;"><a href="#/author">' + esc(t('common_back')) + ' Author</a></p>' +
     '</div>';
 
   authorEditorContext = { main: main, api: api };
@@ -939,6 +972,25 @@ export function renderAuthorNew(main, slug) {
   });
 
   wireStepsContainerDragDrop(container);
+
+  function wireSticky() {
+    var sv = main.querySelector('#sticky-validate');
+    var sp = main.querySelector('#sticky-preview');
+    var ss = main.querySelector('#sticky-save');
+    var bv = main.querySelector('#btn-validate');
+    var bp = main.querySelector('#btn-preview');
+    var bs = main.querySelector('#btn-save');
+    if (sv && bv) sv.addEventListener('click', function () { bv.click(); });
+    if (sp && bp) sp.addEventListener('click', function () { bp.click(); });
+    if (ss && bs) ss.addEventListener('click', function () { bs.click(); });
+    main.querySelector('#author-jump-step')?.addEventListener('change', function () {
+      var i = parseInt(this.value, 10);
+      if (isNaN(i)) return;
+      var cards = container.querySelectorAll('.step-card');
+      if (cards[i]) cards[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+  wireSticky();
 
   main.querySelector('#btn-validate').addEventListener('click', function () {
     statusEl.style.display = 'block';

@@ -284,6 +284,11 @@ export function createHubApi(baseUrl) {
     /** HubKey — parent view */
     getParentChildProgress(pseudoId) {
       return hubKeyGet('api/parent/child/' + encodeURIComponent(pseudoId) + '/progress');
+    },
+
+    /** HubKey smoke test (lessons index) */
+    testHubKey() {
+      return hubKeyGet('api/lessons');
     }
   };
 }

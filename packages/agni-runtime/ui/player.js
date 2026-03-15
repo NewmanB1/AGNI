@@ -854,7 +854,7 @@
         bar.id = 'agni-offline-banner';
         bar.className = 'agni-offline-banner agni-offline-hidden';
         bar.setAttribute('role', 'status');
-        bar.textContent = 'You are offline. Progress is saved on this device until you reconnect.';
+        bar.textContent = t('offline_banner');
         document.body.insertBefore(bar, document.body.firstChild);
       }
       function sync() {

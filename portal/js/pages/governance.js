@@ -5,6 +5,8 @@
 
 import { getHubUrl, createHubApi } from '../api.js';
 import { getStoredToken } from '../auth.js';
+import { t, announcePortal } from '../i18n.js';
+import { showToast } from '../toast.js';
 
 function escapeHtml(s) {
   if (s == null) return '';
@@ -55,7 +57,9 @@ export function renderGovernance(main) {
       : catalog.unforkableLessonIds.concat(trimmed);
     api.updateGovernanceCatalog({ unforkableLessonIds: next }).then(function () {
       catalog.unforkableLessonIds = next;
-      saveStatus = 'Added.';
+      saveStatus = t('gov_saved');
+      showToast(t('gov_saved'), 'success');
+      announcePortal(t('gov_saved'));
       if (main.querySelector('#unforkable-add')) main.querySelector('#unforkable-add').value = '';
       render();
     }).catch(function (e) {
@@ -68,7 +72,8 @@ export function renderGovernance(main) {
     const next = catalog.unforkableLessonIds.filter(function (x) { return x !== id; });
     api.updateGovernanceCatalog({ unforkableLessonIds: next }).then(function () {
       catalog.unforkableLessonIds = next;
-      saveStatus = 'Removed.';
+      saveStatus = t('gov_removed');
+      showToast(t('gov_removed'), 'success');
       render();
     }).catch(function (e) {
       saveStatus = 'Error: ' + (e && e.message ? e.message : 'Save failed');
@@ -98,8 +103,8 @@ export function renderGovernance(main) {
         '</div>';
 
     main.innerHTML = '<div class="top-page">' +
-      '<h1>Governance</h1>' +
-      '<p class="tagline">Policy and catalog. Unforkable list is admin-only.</p>' +
+      '<h1>' + escapeHtml(t('gov_title')) + '</h1>' +
+      '<p class="tagline">' + escapeHtml(t('gov_help')) + '</p>' +
       (error ? '<div class="card error-box">' + escapeHtml(error) + '</div>' : '') +
       '<div class="card" style="margin-top:1rem;">' +
       '<h2>Unforkable lessons</h2>' +

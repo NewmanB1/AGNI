@@ -5,6 +5,7 @@
 
 import { getHubUrl, createHubApi } from '../api.js';
 import { getStoredToken } from '../auth.js';
+import { t } from '../i18n.js';
 
 function escapeHtml(s) {
   if (s == null) return '';
@@ -98,10 +99,12 @@ export function renderLeaderboard(main) {
     }
 
     main.innerHTML = '<div class="top-page">' +
-      '<h1>Leaderboard</h1>' +
-      '<p class="tagline">Lessons and creators recognized for governance approval, effective learning, and community forks.</p>' +
-      (error ? '<div class="card error-box">' + escapeHtml(error) + '</div>' : '') +
-      (data.updatedAt ? '<p class="hint">Metrics updated: ' + escapeHtml(data.updatedAt) + '</p>' : '') +
+      '<h1>' + escapeHtml(t('lb_title')) + '</h1>' +
+      '<p class="tagline">' + escapeHtml(t('lb_help')) + '</p>' +
+      (error ? '<div class="card error-box" role="alert">' + escapeHtml(error) + '</div>' : '') +
+      (data.updatedAt
+        ? '<p class="hint">' + escapeHtml(t('lb_updated')) + ': ' + escapeHtml(data.updatedAt) + '</p>'
+        : '') +
       '<div class="browse-tabs" role="tablist">' +
       '<button type="button" class="browse-tab' + (activeSection === 'all' ? ' active' : '') + '" data-section="all">All</button>' +
       '<button type="button" class="browse-tab' + (activeSection === 'lessons' ? ' active' : '') + '" data-section="lessons">Lessons</button>' +

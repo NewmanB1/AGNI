@@ -2,6 +2,7 @@
  * Parent — child progress (HubKey)
  */
 import { getHubUrl, createHubApi, getHubKey } from '../api.js';
+import { t } from '../i18n.js';
 
 function esc(s) {
   if (s == null) return '';
@@ -15,20 +16,21 @@ export function renderParent(main) {
   const hasKey = !!getHubKey();
   main.innerHTML =
     '<div class="top-page">' +
-    '<h1>Parent dashboard</h1>' +
-    '<p class="hint">Link codes are created by your school (admin). After linking on device, you can view progress here with the child&rsquo;s pseudoId and Hub key.</p>' +
+    '<h1>' + esc(t('parent_title')) + '</h1>' +
+    '<p class="hint">' + esc(t('parent_hint')) + '</p>' +
     (!base
-      ? '<div class="card warning-box"><p>Set <a href="#/settings">Hub URL</a>.</p></div>'
+      ? '<div class="card warning-box"><p>' + esc(t('parent_warn_hub')) + ' <a href="#/settings">' + esc(t('settings_title')) + '</a></p></div>'
       : !hasKey
-        ? '<div class="card warning-box"><p>Set <a href="#/settings">Hub key</a> (same as family tablet).</p></div>'
+        ? '<div class="card warning-box"><p>' + esc(t('parent_warn_key')) + ' <a href="#/settings">' + esc(t('settings_title')) + '</a></p></div>'
         : '') +
     '<div class="card">' +
-    '<label>Child pseudoId <input type="text" id="parent-pseudo" class="input" placeholder="linked-child-id" /></label>' +
-    '<p style="margin-top:0.75rem;"><button type="button" class="btn btn-primary" id="parent-load">Load progress</button>' +
-    ' <button type="button" class="btn" id="parent-retry" style="display:none;">Retry</button></p>' +
+    '<label>' + esc(t('parent_child_label')) + ' <input type="text" id="parent-pseudo" class="input" placeholder="' +
+    esc(t('parent_placeholder')) + '" /></label>' +
+    '<p style="margin-top:0.75rem;"><button type="button" class="btn btn-primary" id="parent-load">' + esc(t('parent_load')) + '</button>' +
+    ' <button type="button" class="btn" id="parent-retry" style="display:none;">' + esc(t('common_retry')) + '</button></p>' +
     '<pre id="parent-out" style="margin-top:1rem;white-space:pre-wrap;font-size:0.85rem;" class="card"></pre>' +
     '</div>' +
-    '<p><a href="#/">← Home</a></p>' +
+    '<p><a href="#/">' + esc(t('common_back_home')) + '</a></p>' +
     '</div>';
 
   const api = base ? createHubApi(base) : null;
@@ -38,7 +40,7 @@ export function renderParent(main) {
   function load() {
     const pseudo = (main.querySelector('#parent-pseudo').value || '').trim();
     if (!pseudo || !api) return;
-    out.textContent = 'Loading…';
+    out.textContent = t('common_loading');
     retryBtn.style.display = 'none';
     api
       .getParentChildProgress(pseudo)
@@ -47,7 +49,7 @@ export function renderParent(main) {
         retryBtn.style.display = 'inline-flex';
       })
       .catch(function (e) {
-        out.textContent = e.message || 'Failed';
+        out.textContent = e.message || t('parent_failed');
         retryBtn.style.display = 'inline-flex';
       });
   }
