@@ -13,32 +13,17 @@ const log = createLogger('env');
 function validateEnv() {
   const warnings = [];
 
-  function intEnv(key, fallback, min, max) {
-    const raw = process.env[key];
+  function numericEnv(key, fallback, min, max, parseFn, typeLabel) {
+    var raw = process.env[key];
     if (raw === undefined) return;
-    const val = parseInt(raw, 10);
+    var val = parseFn(raw);
     if (isNaN(val)) {
-      warnings.push(`${key}="${raw}" is not a valid integer — using default ${fallback}`);
+      warnings.push(key + '="' + raw + '" is not a valid ' + typeLabel + ' — using default ' + fallback);
       delete process.env[key];
       return;
     }
     if (val < min || val > max) {
-      warnings.push(`${key}=${val} is outside valid range [${min}, ${max}] — clamping`);
-      process.env[key] = String(Math.max(min, Math.min(max, val)));
-    }
-  }
-
-  function floatEnv(key, fallback, min, max) {
-    const raw = process.env[key];
-    if (raw === undefined) return;
-    const val = parseFloat(raw);
-    if (isNaN(val)) {
-      warnings.push(`${key}="${raw}" is not a valid number — using default ${fallback}`);
-      delete process.env[key];
-      return;
-    }
-    if (val < min || val > max) {
-      warnings.push(`${key}=${val} is outside valid range [${min}, ${max}] — clamping`);
+      warnings.push(key + '=' + val + ' is outside valid range [' + min + ', ' + max + '] — clamping');
       process.env[key] = String(Math.max(min, Math.min(max, val)));
     }
   }
@@ -52,15 +37,16 @@ function validateEnv() {
     }
   }
 
-  intEnv('AGNI_PATHFINDER_PORT', 8082, R.PORT_MIN, R.PORT_MAX);
-  intEnv('AGNI_SERVE_PORT', 8080, R.PORT_MIN, R.PORT_MAX);
-  intEnv('AGNI_TELEMETRY_ENGINE_PORT', 8081, R.PORT_MIN, R.PORT_MAX);
-  intEnv('AGNI_MIN_LOCAL_SAMPLE', 40, R.MIN_LOCAL_SAMPLE_MIN, R.MIN_LOCAL_SAMPLE_MAX);
-  intEnv('AGNI_MIN_LOCAL_EDGES', 5, R.MIN_LOCAL_EDGES_MIN, R.MIN_LOCAL_EDGES_MAX);
-  intEnv('AGNI_EMBEDDING_DIM', 16, R.EMBEDDING_DIM_MIN, R.EMBEDDING_DIM_MAX);
-  floatEnv('AGNI_FORGETTING', 0.98, R.FORGETTING_MIN, R.FORGETTING_MAX);
-  floatEnv('AGNI_EMBEDDING_LR', 0.01, R.EMBEDDING_LR_MIN, R.EMBEDDING_LR_MAX);
-  floatEnv('AGNI_EMBEDDING_REG', 0.001, R.EMBEDDING_REG_MIN, R.EMBEDDING_REG_MAX);
+  function parseInt10(r) { return parseInt(r, 10); }
+  numericEnv('AGNI_PATHFINDER_PORT', 8082, R.PORT_MIN, R.PORT_MAX, parseInt10, 'integer');
+  numericEnv('AGNI_SERVE_PORT', 8080, R.PORT_MIN, R.PORT_MAX, parseInt10, 'integer');
+  numericEnv('AGNI_TELEMETRY_ENGINE_PORT', 8081, R.PORT_MIN, R.PORT_MAX, parseInt10, 'integer');
+  numericEnv('AGNI_MIN_LOCAL_SAMPLE', 40, R.MIN_LOCAL_SAMPLE_MIN, R.MIN_LOCAL_SAMPLE_MAX, parseInt10, 'integer');
+  numericEnv('AGNI_MIN_LOCAL_EDGES', 5, R.MIN_LOCAL_EDGES_MIN, R.MIN_LOCAL_EDGES_MAX, parseInt10, 'integer');
+  numericEnv('AGNI_EMBEDDING_DIM', 16, R.EMBEDDING_DIM_MIN, R.EMBEDDING_DIM_MAX, parseInt10, 'integer');
+  numericEnv('AGNI_FORGETTING', 0.98, R.FORGETTING_MIN, R.FORGETTING_MAX, parseFloat, 'number');
+  numericEnv('AGNI_EMBEDDING_LR', 0.01, R.EMBEDDING_LR_MIN, R.EMBEDDING_LR_MAX, parseFloat, 'number');
+  numericEnv('AGNI_EMBEDDING_REG', 0.001, R.EMBEDDING_REG_MIN, R.EMBEDDING_REG_MAX, parseFloat, 'number');
   dirEnv('AGNI_DATA_DIR');
   dirEnv('AGNI_YAML_DIR');
   dirEnv('AGNI_SERVE_DIR');
