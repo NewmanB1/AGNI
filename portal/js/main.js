@@ -10,6 +10,7 @@ import { renderAuthorList, renderAuthorLogin, renderAuthorNew, renderLessonCreat
 import { renderBrowse } from './pages/browse.js';
 import { renderGroups, renderGroupsAssign } from './pages/groups.js';
 import { renderGovernance } from './pages/governance.js';
+import { renderLeaderboard } from './pages/leaderboard.js';
 import { renderStub } from './pages/stub.js';
 import { renderCollab } from './pages/collab.js';
 
@@ -54,6 +55,7 @@ route('/students', render((m) => renderStub(m, 'Students', 'Student roster.')));
 route('/learn', render((m) => renderStub(m, 'Learn', 'Student dashboard.')));
 route('/parent/dashboard', render((m) => renderStub(m, 'Parent Dashboard', 'Link children and view progress.')));
 route('/governance/setup', render((m) => renderGovernance(m)));
+route('/leaderboard', render((m) => renderLeaderboard(m)));
 route('/admin/onboarding', render((m) => renderStub(m, 'Admin', 'First-run setup.')));
 route('/admin/hub', render((m) => renderStub(m, 'Admin Hub', 'Hub configuration.')));
 

@@ -161,9 +161,17 @@ Paginated endpoints: `GET /api/lessons`, `GET /api/theta/all`, `GET /api/account
 | GET | `/api/author/load/:slug` | Bearer | Load a saved lesson |
 | GET | `/api/author/sensors` | Bearer | List known sensor IDs (from @agni/plugins) for hardware_trigger step editor |
 | POST | `/api/author/validate` | Bearer | Validate lesson YAML/JSON |
-| POST | `/api/author/save` | Bearer | Save a lesson |
+| POST | `/api/author/save` | Bearer | Save a lesson (body may include optional `forkedFromSlug` to record fork count for leaderboard) |
 | DELETE | `/api/author/delete/:slug` | Admin | Delete a lesson |
 | POST | `/api/author/preview` | Bearer | Preview-compile a lesson |
+| GET | `/api/author/browse-lessons` | Bearer | Browse lessons with filters (q, scope, utu, spine, hasSensor, hasVisuals, etc.) |
+| GET | `/api/author/fork-check?slug=` | Bearer | Fork eligibility (license + unforkable catalog) |
+
+### Leaderboard
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/leaderboard?limit=&section=` | Bearer | Ranked lessons and creators; ribbons (governance approved, most forked, high impact, effective). `section`: all \| lessons \| creators. |
 
 ### Groups
 

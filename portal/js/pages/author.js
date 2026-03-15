@@ -931,10 +931,12 @@ export function renderAuthorNew(main, slug) {
         return;
       }
       setStatus('Saving…', false);
-      api.postAuthorSave(payload, { compile: true }).then(function (r) {
+      var forkedFrom = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('author_forked_from_slug') : null;
+      api.postAuthorSave(payload, { compile: true, forkedFromSlug: forkedFrom || undefined }).then(function (r) {
         if (r.error) {
           setStatus('Save failed: ' + r.error, true);
         } else {
+          if (forkedFrom && typeof sessionStorage !== 'undefined') sessionStorage.removeItem('author_forked_from_slug');
           var msg = 'Saved as ' + (r.slug || 'lesson') + '. Path: ' + (r.path || '');
           if (vr.warnings && vr.warnings.length) msg += ' (warnings: ' + vr.warnings.join('; ') + ')';
           setStatus(msg, false);

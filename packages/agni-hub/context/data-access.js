@@ -46,6 +46,16 @@ async function loadTelemetryEventsAsync() {
   return loadJSONAsync(paths.TELEMETRY_PATH, { events: [] });
 }
 
+const LEADERBOARD_DEFAULTS = { schemaVersion: '1.0', forkCountByLesson: {}, updatedAt: null };
+async function loadLeaderboardMetricsAsync() {
+  return loadJSONAsync(paths.LEADERBOARD_METRICS_PATH, LEADERBOARD_DEFAULTS);
+}
+async function saveLeaderboardMetricsAsync(data) {
+  if (!data || typeof data !== 'object') return;
+  data.updatedAt = new Date().toISOString();
+  return saveJSONAsync(paths.LEADERBOARD_METRICS_PATH, data);
+}
+
 async function getStudentSkills(pseudoId) {
   const mastery = await loadJSONAsync(paths.MASTERY_SUMMARY, { students: {} });
   return (mastery.students && mastery.students[pseudoId]) || {};
@@ -58,5 +68,6 @@ module.exports = {
   loadOverridesAsync, saveOverridesAsync,
   loadGroupsAsync, saveGroupsAsync,
   loadParentLinksAsync, saveParentLinksAsync,
-  loadTelemetryEventsAsync, getStudentSkills
+  loadTelemetryEventsAsync, getStudentSkills,
+  loadLeaderboardMetricsAsync, saveLeaderboardMetricsAsync
 };

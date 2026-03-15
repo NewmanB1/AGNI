@@ -526,6 +526,7 @@ async function rebuildLessonIndex() {
               slug: sidecar.slug || slug,
               title: sidecar.title || '',
               description: sidecar.description || '',
+              creatorId: sidecar.creator_id || null,
               difficulty: sidecar.difficulty || 2,
               language: sidecar.language || 'en',
               compiledAt: sidecar.compiledAt || null,
@@ -587,6 +588,7 @@ async function rebuildLessonIndex() {
           slug: sidecar.slug || entry.slug,
           title: sidecar.title || entry.title || '',
           description: sidecar.description || entry.description || '',
+          creatorId: sidecar.creator_id || null,
           difficulty: sidecar.difficulty || entry.difficulty || 2,
           language: sidecar.language || entry.language || 'en',
           compiledAt: sidecar.compiledAt || null,
@@ -701,6 +703,7 @@ function startApi(port) {
   require('./routes/admin').register(router, ctx);
   require('./routes/chain').register(router, ctx);
   require('./routes/telemetry').register(router, ctx);
+  require('./routes/leaderboard').register(router, ctx);
   require('./routes/lti').register(router, ctx);
   require('@agni/utils/feature-flags').registerRoutes(router, ctx);
 

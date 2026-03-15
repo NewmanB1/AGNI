@@ -36,6 +36,7 @@ export function renderBrowse(main, opts) {
     forked.meta = meta;
     try {
       sessionStorage.setItem(WIZARD_DRAFT_KEY, JSON.stringify(forked));
+      if (slug) sessionStorage.setItem('author_forked_from_slug', slug);
       navigateTo('#/author/new');
     } catch (e) {
       alert('Could not save draft.');

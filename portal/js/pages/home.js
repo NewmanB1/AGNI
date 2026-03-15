@@ -21,6 +21,10 @@ export function render(main) {
           <h2>Parent Dashboard</h2>
           <p>Link to your child with an invite code and view their progress.</p>
         </a>
+        <a href="#/leaderboard" class="card card-link">
+          <h2>Leaderboard</h2>
+          <p>Top lessons and creators: governance approved, most forked, high impact, effective learning.</p>
+        </a>
         <a href="#/governance/setup" class="card card-link">
           <h2>Governance</h2>
           <p>Policy, approved catalog, import and export.</p>

@@ -160,6 +160,14 @@ export function createHubApi(baseUrl) {
       return authGet('api/governance/archetypes' + (qs ? '?' + qs : ''));
     },
 
+    getLeaderboard(opts = {}) {
+      const params = new URLSearchParams();
+      if (opts.limit != null) params.set('limit', String(opts.limit));
+      if (opts.section) params.set('section', opts.section);
+      const qs = params.toString();
+      return authGet('api/leaderboard' + (qs ? '?' + qs : ''));
+    },
+
     getGovernanceCatalog() {
       return authGet('api/governance/catalog');
     },
@@ -177,7 +185,7 @@ export function createHubApi(baseUrl) {
     },
 
     postAuthorSave(lesson, opts) {
-      const payload = opts?.compile ? { ...lesson, _compile: true } : lesson;
+      const payload = Object.assign({}, lesson, opts?.compile ? { _compile: true } : {}, opts?.forkedFromSlug ? { forkedFromSlug: opts.forkedFromSlug } : {});
       return authPost('api/author/save', payload);
     },
 

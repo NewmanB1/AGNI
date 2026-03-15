@@ -3,7 +3,7 @@
 function register(router, ctx) {
   const { authorService, accountsService, handleJsonBody,
           adminOnly, authOnly, loadLessonIndexAsync, loadApprovedCatalogAsync, paginate,
-          lessonChain } = ctx;
+          lessonChain, loadLeaderboardMetricsAsync, saveLeaderboardMetricsAsync } = ctx;
   const envConfig = require('@agni/utils/env-config');
   const yamlDir = envConfig.yamlDir;
 
@@ -140,6 +140,16 @@ function register(router, ctx) {
       const creatorId = parsed.lessonData?.meta?.creator_id;
       if (creatorId && result.slug) {
         await accountsService.recordLessonAuthored(creatorId, result.slug);
+      }
+      const forkedFromSlug = body.forkedFromSlug && String(body.forkedFromSlug).trim();
+      if (forkedFromSlug && loadLeaderboardMetricsAsync && saveLeaderboardMetricsAsync) {
+        try {
+          const metrics = await loadLeaderboardMetricsAsync();
+          const counts = metrics.forkCountByLesson || {};
+          counts[forkedFromSlug] = (counts[forkedFromSlug] || 0) + 1;
+          metrics.forkCountByLesson = counts;
+          await saveLeaderboardMetricsAsync(metrics);
+        } catch (e) { /* ignore */ }
       }
       const resp = { ok: true, slug: result.slug, path: result.path, warnings: result.warnings || [] };
       if (result.compiled != null) resp.compiled = result.compiled;

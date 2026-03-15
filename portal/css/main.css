@@ -389,3 +389,15 @@ label.block { display: block; margin: 1rem 0 0.5rem; }
 .browse-list { list-style: none; padding: 0; margin: 0; }
 .browse-item { padding: 1rem; border-bottom: 1px solid var(--border); }
 .browse-item:last-child { border-bottom: none; }
+
+/* Leaderboard */
+.leaderboard-item { display: flex; gap: 0.75rem; align-items: flex-start; }
+.leaderboard-rank { flex-shrink: 0; width: 1.75rem; height: 1.75rem; display: inline-flex; align-items: center; justify-content: center; background: var(--accent); color: #1a1a2e; border-radius: 50%; font-weight: 700; font-size: 0.85rem; }
+.leaderboard-content { flex: 1; min-width: 0; }
+.leaderboard-meta { font-size: 0.85rem; color: var(--muted); margin-top: 0.25rem; }
+.ribbon { display: inline-block; font-size: 0.75rem; padding: 0.15rem 0.4rem; border-radius: 4px; margin-right: 0.25rem; margin-bottom: 0.2rem; }
+.ribbon-governance-approved { background: #2e7d32; color: #fff; }
+.ribbon-forked { background: #1565c0; color: #fff; }
+.ribbon-high-impact { background: #c62828; color: #fff; }
+.ribbon-effective { background: #6a1b9a; color: #fff; }
+.ribbon-often-forked { background: #0277bd; color: #fff; }
