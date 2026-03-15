@@ -80,7 +80,17 @@
       '.score-breakdown { margin-top: 0.5rem; color: #333; }' +
       '.pace-summary { margin: 0.5rem 0; font-size: 0.9em; }' +
       '.next-lesson-actions { display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; }' +
-      '.step-progress { font-size: 0.8em; color: #555; margin-bottom: 0.5rem; }' +
+      '.step-progress { font-size: 0.8em; color: #555; margin-bottom: 0.35rem; }' +
+      '.agni-step-progress-wrap { margin-bottom: 0.75rem; }' +
+      '.agni-step-progress-track { height: 6px; background: #E0E0E0; border-radius: 3px; overflow: hidden; max-width: 100%; }' +
+      '.agni-high-contrast .agni-step-progress-track { background: #333; border: 1px solid #fff; }' +
+      '.agni-step-progress-fill { height: 100%; background: #0B5FFF; border-radius: 3px; transition: width 0.2s ease; }' +
+      '.agni-high-contrast .agni-step-progress-fill { background: #ffff00; }' +
+      '.agni-offline-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 10000; background: #B00020; color: #fff; text-align: center; padding: 0.5rem 0.75rem; font-size: 0.9rem; font-weight: bold; }' +
+      '.agni-offline-banner.agni-offline-hidden { display: none; }' +
+      '.agni-a11y-hint { position: fixed; bottom: 3.5rem; left: 0.5rem; right: 3.5rem; max-width: 320px; z-index: 9997; background: #FFF8E1; border: 2px solid #996600; border-radius: 4px; padding: 0.65rem 0.85rem; font-size: 0.85rem; box-shadow: 0 2px 8px rgba(0,0,0,.15); }' +
+      '.agni-high-contrast .agni-a11y-hint { background: #111; color: #fff; border-color: #fff; }' +
+      '.agni-a11y-hint button { margin-top: 0.5rem; padding: 0.4rem 0.75rem; font-size: 0.85rem; cursor: pointer; border: 2px solid #555; border-radius: 2px; background: #fff; }' +
       '.step-hint-nudge { margin-top: 1rem; padding: 0.75rem; background: #FFF8E1; border: 2px solid #996600; border-radius: 2px; font-size: 0.9em; }' +
       '.hint-tier-1 { border-color: #0B5FFF; background: #E3F2FD; }' +
       '.hint-tier-2 { border-color: #996600; background: #FFF8E1; }' +
@@ -383,13 +393,43 @@
     document.body.appendChild(btn);
   }
 
+  /**
+   * One-time hint so learners discover font size, contrast, and narration (gear).
+   */
+  function maybeShowFirstRunA11yHint() {
+    try {
+      if (localStorage.getItem('agni_a11y_hint_dismissed') === '1') return;
+    } catch (e) { return; }
+    if (document.getElementById('agni-a11y-hint')) return;
+    injectSettingsStyles();
+    var box = document.createElement('div');
+    box.id = 'agni-a11y-hint';
+    box.className = 'agni-a11y-hint';
+    box.setAttribute('role', 'region');
+    box.setAttribute('aria-label', 'Tip');
+    var p = document.createElement('p');
+    p.style.margin = '0';
+    p.textContent = 'Tap the gear (top right) to change text size, high contrast, motion, and read-aloud.';
+    box.appendChild(p);
+    var dismiss = document.createElement('button');
+    dismiss.type = 'button';
+    dismiss.textContent = 'OK';
+    dismiss.onclick = function () {
+      try { localStorage.setItem('agni_a11y_hint_dismissed', '1'); } catch (e2) {}
+      if (box.parentNode) box.parentNode.removeChild(box);
+    };
+    box.appendChild(dismiss);
+    document.body.appendChild(box);
+  }
+
   global.AGNI_A11Y = {
-    prefs:                prefs,
-    apply:                apply,
-    addAria:              addAria,
-    renderSettingsPanel:  renderSettingsPanel,
-    injectSettingsButton: injectSettingsButton,
-    savePrefs:            savePrefs
+    prefs:                    prefs,
+    apply:                    apply,
+    addAria:                  addAria,
+    renderSettingsPanel:      renderSettingsPanel,
+    injectSettingsButton:     injectSettingsButton,
+    maybeShowFirstRunA11yHint: maybeShowFirstRunA11yHint,
+    savePrefs:                savePrefs
   };
 
 })(typeof self !== 'undefined' ? self : this);

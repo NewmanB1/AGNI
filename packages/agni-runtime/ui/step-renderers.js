@@ -27,6 +27,7 @@
       if (sensorOptional) {
         var fallbackContainer = document.createElement('div');
         fallbackContainer.className = 'step step-hardware-trigger step-sensor-fallback';
+        if (ctx.appendStepProgressUI) ctx.appendStepProgressUI(fallbackContainer);
         if (step.htmlContent) {
           var fd = document.createElement('div');
           fd.className = 'step-content';
@@ -50,6 +51,7 @@
       }
       var msgContainer = document.createElement('div');
       msgContainer.className = 'step step-hardware-trigger step-sensor-fallback';
+      if (ctx.appendStepProgressUI) ctx.appendStepProgressUI(msgContainer);
       if (step.htmlContent) {
         var msgContent = document.createElement('div');
         msgContent.className = 'step-content';
@@ -76,6 +78,7 @@
 
     var container = document.createElement('div');
     container.className = 'step step-hardware-trigger';
+    if (ctx.appendStepProgressUI) ctx.appendStepProgressUI(container);
 
     if (step.htmlContent) {
       var contentDiv = document.createElement('div');
@@ -224,6 +227,7 @@
 
     var container = document.createElement('div');
     container.className = 'step step-quiz';
+    if (ctx.appendStepProgressUI) ctx.appendStepProgressUI(container);
 
     if (step.htmlContent) {
       var contentDiv = document.createElement('div');
@@ -352,6 +356,7 @@
 
     var container = document.createElement('div');
     container.className = 'step step-fill-blank';
+    if (ctx.appendStepProgressUI) ctx.appendStepProgressUI(container);
 
     if (step.htmlContent) {
       var contentDiv = document.createElement('div');
@@ -460,6 +465,7 @@
 
     var container = document.createElement('div');
     container.className = 'step step-matching';
+    if (ctx.appendStepProgressUI) ctx.appendStepProgressUI(container);
 
     if (step.htmlContent) {
       var contentDiv = document.createElement('div');
@@ -626,6 +632,7 @@
 
     var container = document.createElement('div');
     container.className = 'step step-ordering';
+    if (ctx.appendStepProgressUI) ctx.appendStepProgressUI(container);
 
     if (step.htmlContent) {
       var contentDiv = document.createElement('div');

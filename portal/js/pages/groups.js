@@ -370,7 +370,7 @@ export function renderGroupsAssign(main, ctx) {
     let html = `
       <div class="top-page">
         <nav class="breadcrumb">
-          <a href="#/groups">Groups</a> → Assign lesson
+          <a href="#/groups">Groups</a> → ${s.group ? escapeHtml(s.group.name) + ' → ' : ''}Assign lesson
         </nav>
         <h1>Assign lesson to group</h1>
     `;

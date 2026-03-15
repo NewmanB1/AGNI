@@ -8,6 +8,7 @@ import { navigateTo } from '../router.js';
 import { openSVGFactoryWizard } from '../wizards/svg-factory-wizard.js';
 import { openSensorToyWizard } from '../wizards/sensor-toy-wizard.js';
 import { consumeWizardDraft, renderLessonCreationWizard } from '../wizards/lesson-creation-wizard.js';
+import { showToast } from '../toast.js';
 
 export function renderAuthorList(main) {
   const token = getStoredToken();
@@ -28,12 +29,13 @@ export function renderAuthorList(main) {
       <p style="margin-bottom: 1rem;">Create or edit lessons.</p>
       <a href="#/author/wizard" class="btn btn-primary">Create with wizard</a>
       <a href="#/author/new" class="btn">Create New Lesson (blank)</a>
-      <div class="card" style="margin-top: 1rem;">
+        <div class="card" style="margin-top: 1rem;">
         <h3 style="margin-bottom: 0.5rem;">Edit existing</h3>
         <p class="hint" style="margin-bottom: 0.5rem;">Select a lesson or enter slug to edit.</p>
+        <p id="author-lessons-status" class="hint" style="margin-bottom: 0.5rem; display: none;"></p>
         <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
-          <select id="edit-select" class="input" style="min-width: 200px;">
-            <option value="">-- Select lesson --</option>
+          <select id="edit-select" class="input" style="min-width: 200px;" disabled>
+            <option value="">Loading lessons…</option>
           </select>
           <span>or</span>
           <input type="text" id="edit-slug" class="input" placeholder="hello-world" style="max-width: 180px;" />
@@ -44,18 +46,41 @@ export function renderAuthorList(main) {
     </div>
   `;
   var baseUrl = getHubUrl();
+  var statusEl = main.querySelector('#author-lessons-status');
+  var sel = main.querySelector('#edit-select');
   if (baseUrl) {
     var api = createHubApi(baseUrl);
     api.getAuthorLessons().then(function (r) {
-      var sel = main.querySelector('#edit-select');
-      if (!sel || !r.slugs) return;
+      if (!sel) return;
+      sel.innerHTML = '<option value="">-- Select lesson --</option>';
+      sel.disabled = false;
       (r.slugs || []).sort().forEach(function (s) {
         var opt = document.createElement('option');
         opt.value = s;
         opt.textContent = s;
         sel.appendChild(opt);
       });
-    }).catch(function () {});
+      if (statusEl) { statusEl.style.display = 'none'; statusEl.textContent = ''; }
+    }).catch(function (e) {
+      if (sel) {
+        sel.innerHTML = '<option value="">Could not load list</option>';
+        sel.disabled = false;
+      }
+      var msg = (e && e.message) ? e.message : 'Could not load lesson list.';
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.className = 'error-box';
+        statusEl.textContent = msg;
+      }
+      showToast(msg, 'error');
+    });
+  } else if (sel) {
+    sel.innerHTML = '<option value="">Set Hub URL in Settings</option>';
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.className = 'warning-box';
+      statusEl.textContent = 'Set the hub URL in Settings to load your lessons.';
+    }
   }
   function doEdit() {
     var sel = main.querySelector('#edit-select');
@@ -735,7 +760,10 @@ export function renderAuthorNew(main, slug) {
     }
   }
 
-  main.innerHTML = '<div class="top-page">' +
+  var crumb = '<nav class="breadcrumb" aria-label="Breadcrumb">' +
+    '<a href="#/author">Author</a> → ' + (slug ? '<span>' + esc(slug) + '</span> → Edit' : 'New lesson') +
+    '</nav>';
+  main.innerHTML = '<div class="top-page">' + crumb +
     '<h1>' + (slug ? 'Edit Lesson' : 'New Lesson') + '</h1>' +
     '<div id="editor-status" class="card" style="margin-bottom:1rem;display:none;"></div>' +
     '<form id="lesson-form">' +
@@ -920,6 +948,8 @@ export function renderAuthorNew(main, slug) {
     if (previewPane) previewPane.style.display = 'none';
   });
 
+  var editorDirty = false;
+  function markEditorDirty() { editorDirty = true; }
   function doSave() {
     statusEl.style.display = 'block';
     setStatus('Validating…', false);
@@ -940,6 +970,7 @@ export function renderAuthorNew(main, slug) {
           var msg = 'Saved as ' + (r.slug || 'lesson') + '. Path: ' + (r.path || '');
           if (vr.warnings && vr.warnings.length) msg += ' (warnings: ' + vr.warnings.join('; ') + ')';
           setStatus(msg, false);
+          editorDirty = false;
           if (r.slug && !slug) {
             setTimeout(function () { navigateTo('#/author/' + r.slug + '/edit'); }, 1500);
           }
@@ -956,6 +987,8 @@ export function renderAuthorNew(main, slug) {
 
   var formEl = main.querySelector('form');
   if (formEl) {
+    formEl.addEventListener('input', markEditorDirty);
+    formEl.addEventListener('change', markEditorDirty);
     formEl.addEventListener('keydown', function (e) {
       if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
@@ -963,4 +996,29 @@ export function renderAuthorNew(main, slug) {
       }
     });
   }
-}
+  function onBeforeUnload(e) {
+    if (!editorDirty) return;
+    e.preventDefault();
+    e.returnValue = '';
+  }
+  window.addEventListener('beforeunload', onBeforeUnload);
+  var cancelLink = main.querySelector('a[href="#/author"]');
+  if (cancelLink) {
+    cancelLink.addEventListener('click', function (e) {
+      if (editorDirty && !window.confirm('You have unsaved changes. Leave without saving?')) {
+        e.preventDefault();
+      }
+    });
+  }
+  main.querySelectorAll('.top-page a[href^="#"]').forEach(function (a) {
+    if (a.getAttribute('href') === '#/author') return;
+    a.addEventListener('click', function (e) {
+      if (!editorDirty) return;
+      if (!window.confirm('You have unsaved changes. Leave without saving?')) e.preventDefault();
+    });
+  });
+</think>
+Fixing the author.js save/dirty logic — the previous edit was incorrect.
+
+<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
+Read

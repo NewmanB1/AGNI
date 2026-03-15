@@ -18,8 +18,8 @@ export function render(main) {
       </div>
 
       <div class="card">
-        <h2>Language</h2>
-        <p style="margin-bottom: 0.5rem; opacity: 0.9;">Portal language (lesson content uses lesson meta).</p>
+        <h2>Language preference</h2>
+        <p style="margin-bottom: 0.5rem; opacity: 0.9;">Stored for future portal translation. Lesson text still follows each lesson&rsquo;s <code>meta.language</code>.</p>
         <select id="lang-select" style="max-width: 200px;">
           <option value="en">English</option>
           <option value="es">Español</option>
@@ -45,7 +45,9 @@ export function render(main) {
     const input = main.querySelector('#hub-url-input');
     const url = (input.value || '').trim().replace(/\/+$/, '');
     setHubUrl(url);
-    main.querySelector('#hub-status').textContent = 'Saved.';
+    const status = main.querySelector('#hub-status');
+    status.textContent = 'Hub URL saved.';
+    status.className = 'success-box';
   });
 
   main.querySelector('#hub-test-btn').addEventListener('click', async () => {
@@ -53,6 +55,7 @@ export function render(main) {
     const url = (input.value || '').trim();
     const status = main.querySelector('#hub-status');
     status.textContent = 'Testing…';
+    status.className = '';
     try {
       const api = createHubApi(url);
       const health = await api.getHealth();

@@ -306,6 +306,47 @@ main {
   justify-content: center;
   z-index: 1000;
 }
+/* Toast */
+.portal-toast {
+  display: none;
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(92vw, 420px);
+  padding: 0.85rem 1.25rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  font-weight: 600;
+  z-index: 10001;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+}
+.portal-toast-info {
+  background: var(--card);
+  color: var(--text);
+}
+.portal-toast-error {
+  background: rgba(198, 40, 40, 0.12);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.portal-toast-success {
+  background: rgba(46, 125, 50, 0.12);
+  color: var(--success);
+  border-color: var(--success);
+}
+
+/* Breadcrumbs */
+.breadcrumb {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  margin-bottom: 0.75rem;
+}
+.breadcrumb a {
+  color: var(--accent);
+}
+
 .modal-content {
   background: var(--card);
   border-radius: 12px;

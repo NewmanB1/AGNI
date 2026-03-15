@@ -59,6 +59,8 @@ export function renderBrowse(main, opts) {
   let filters = { q: '', scope: '', utu: '', spine: '', limit: 50, offset: 0 };
   let result = { lessons: [], total: 0, savedSlugs: [] };
   let loading = false;
+  let forkMessage = '';
+  let forkMessageIsError = false;
 
   function applyFiltersForTab() {
     const f = { limit: 50, offset: 0 };
@@ -143,10 +145,15 @@ export function renderBrowse(main, opts) {
     }
 
     const backLink = forkFromUrl ? '<p><a href="#/author/wizard">← Back to lesson wizard</a></p>' : '';
+    const forkBanner = forkMessage
+      ? '<div class="card ' + (forkMessageIsError ? 'error-box' : 'success-box') + '" id="browse-fork-msg">' + escapeHtml(forkMessage) + '</div>'
+      : '';
     main.innerHTML = '<div class="top-page">' +
+      '<nav class="breadcrumb"><a href="#/author/browse">Browse</a>' + (mode === 'fork' ? ' → Fork lesson' : '') + '</nav>' +
       '<h1>Browse</h1>' +
       '<p class="tagline">Search lessons, SVGs, and sensor toys. ' + (mode === 'fork' ? 'Pick one to fork into a new lesson.' : '') + '</p>' +
       backLink +
+      forkBanner +
       tabsHtml +
       filtersHtml +
       listHtml +
@@ -169,19 +176,27 @@ export function renderBrowse(main, opts) {
       btn.addEventListener('click', function () {
         const slug = btn.getAttribute('data-slug');
         if (!slug || !onForkSelect) return;
+        forkMessage = '';
+        forkMessageIsError = false;
         api.getForkCheck(slug).then(function (r) {
           if (r.forkAllowed) {
             api.getAuthorLesson(slug).then(function (data) {
               const lesson = data.lessonData || data.lesson || data;
               onForkSelect(lesson, slug);
             }).catch(function (e) {
-              alert('Could not load lesson: ' + (e && e.message ? e.message : 'Unknown error'));
+              forkMessage = 'Could not load lesson: ' + (e && e.message ? e.message : 'Unknown error');
+              forkMessageIsError = true;
+              render();
             });
           } else {
-            alert('This lesson cannot be forked. It may be marked unforkable by governance or the license does not allow forking.');
+            forkMessage = 'This lesson cannot be forked (governance or license).';
+            forkMessageIsError = true;
+            render();
           }
         }).catch(function (e) {
-          alert('Fork check failed: ' + (e && e.message ? e.message : 'Unknown error'));
+          forkMessage = 'Fork check failed: ' + (e && e.message ? e.message : 'Unknown error');
+          forkMessageIsError = true;
+          render();
         });
       });
     });

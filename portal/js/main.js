@@ -47,17 +47,53 @@ route('/author/browse', render((m) => renderBrowse(m)));
 route('/author/new', render((m) => renderAuthorNew(m, null)));
 route('/author/:slug/edit', render((m, ctx) => renderAuthorNew(m, ctx.slug)));
 
-route('/hub', render((m) => renderStub(m, 'Teacher Hub', 'Class overview and recommendations.')));
+route('/hub', render((m) => renderStub(m, 'Teacher Hub', 'Class overview, heterogeneity, and recommendations.', {
+  detail: 'Connect the portal to your hub in Settings, then use Groups and Author for day-to-day tasks.',
+  ctaHref: '#/groups',
+  ctaLabel: 'Student groups',
+  secondaryHref: '#/settings',
+  secondaryLabel: 'Hub settings'
+})));
 route('/hub/collab', render((m) => renderCollab(m)));
 route('/groups', render(renderGroups));
 route('/groups/:id/assign', render((m, ctx) => renderGroupsAssign(m, ctx)));
-route('/students', render((m) => renderStub(m, 'Students', 'Student roster.')));
-route('/learn', render((m) => renderStub(m, 'Learn', 'Student dashboard.')));
-route('/parent/dashboard', render((m) => renderStub(m, 'Parent Dashboard', 'Link children and view progress.')));
+route('/students', render((m) => renderStub(m, 'Students', 'Roster and accounts live on the hub.', {
+  detail: 'Use hub admin APIs or future portal screens to manage students. Groups shows learners from pathfinder data.',
+  ctaHref: '#/groups',
+  ctaLabel: 'Groups',
+  secondaryHref: '#/settings',
+  secondaryLabel: 'Settings'
+})));
+route('/learn', render((m) => renderStub(m, 'Learn', 'Student dashboard and lesson launch.', {
+  detail: 'Students typically open lessons from the hub or shared links. This dashboard will summarize progress.',
+  ctaHref: '#/hub',
+  ctaLabel: 'Teacher Hub',
+  secondaryHref: '#/',
+  secondaryLabel: 'Home'
+})));
+route('/parent/dashboard', render((m) => renderStub(m, 'Parent Dashboard', 'Link to a child and view progress.', {
+  detail: 'Parent APIs exist on the hub; this UI will surface invite codes and progress summaries.',
+  ctaHref: '#/settings',
+  ctaLabel: 'Settings',
+  secondaryHref: '#/',
+  secondaryLabel: 'Home'
+})));
 route('/governance/setup', render((m) => renderGovernance(m)));
 route('/leaderboard', render((m) => renderLeaderboard(m)));
-route('/admin/onboarding', render((m) => renderStub(m, 'Admin', 'First-run setup.')));
-route('/admin/hub', render((m) => renderStub(m, 'Admin Hub', 'Hub configuration.')));
+route('/admin/onboarding', render((m) => renderStub(m, 'Admin', 'First-run hub onboarding.', {
+  detail: 'See docs/CONFIGURATION.md for env vars and bootstrap.',
+  ctaHref: '#/settings',
+  ctaLabel: 'Portal settings',
+  secondaryHref: '#/governance/setup',
+  secondaryLabel: 'Governance'
+})));
+route('/admin/hub', render((m) => renderStub(m, 'Admin Hub', 'Hub configuration and health.', {
+  detail: 'Run the Village Hub process with a valid environment; use Settings here to point the portal at it.',
+  ctaHref: '#/settings',
+  ctaLabel: 'Set hub URL',
+  secondaryHref: '#/',
+  secondaryLabel: 'Home'
+})));
 
 // Hub URL from query param (e.g. ?hub=http://localhost:8082) or env
 const params = new URLSearchParams(window.location.search);

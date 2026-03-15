@@ -183,6 +183,7 @@ declare global {
     apply?: () => void;
     addAria?: (el: HTMLElement, role: string, label?: string) => void;
     injectSettingsButton?: (container?: HTMLElement, opts?: unknown) => void;
+    maybeShowFirstRunA11yHint?: () => void;
   }
 
   /** Minimal shape for SVG helpers (matches svg-helpers.js) */

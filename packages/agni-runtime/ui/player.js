@@ -224,6 +224,30 @@
   var a11y = _a11y.prefs;
 
   // ── Step renderers from AGNI_STEP_RENDERERS (step-renderers.js) ──
+  function appendStepProgressUI(parent) {
+    if (!parent || !steps.length) return;
+    var row = document.createElement('div');
+    row.className = 'agni-step-progress-wrap';
+    var label = document.createElement('div');
+    label.className = 'step-progress';
+    label.textContent = t('step_of', { current: stepIndex + 1, total: steps.length });
+    row.appendChild(label);
+    var track = document.createElement('div');
+    track.className = 'agni-step-progress-track';
+    track.setAttribute('role', 'progressbar');
+    track.setAttribute('aria-valuemin', '0');
+    track.setAttribute('aria-valuemax', String(steps.length));
+    track.setAttribute('aria-valuenow', String(stepIndex + 1));
+    track.setAttribute('aria-valuetext', label.textContent);
+    var fill = document.createElement('div');
+    fill.className = 'agni-step-progress-fill';
+    var pct = Math.round(((stepIndex + 1) / steps.length) * 100);
+    fill.style.width = pct + '%';
+    track.appendChild(fill);
+    row.appendChild(track);
+    parent.insertBefore(row, parent.firstChild);
+  }
+
   function buildRenderCtx() {
     return {
       recordStepOutcome: recordStepOutcome,
@@ -242,7 +266,8 @@
       stepIndex: stepIndex,
       DEV_MODE: DEV_MODE,
       a11y: a11y,
-      parseDurationMs: parseDurationMs
+      parseDurationMs: parseDurationMs,
+      appendStepProgressUI: appendStepProgressUI
     };
   }
   var EXT_RENDERERS = global.AGNI_STEP_RENDERERS || {};
@@ -321,10 +346,7 @@
     container.className = 'step step-' + (step.type || 'content');
     _a11y.addAria(container, 'region', step.title || step.id);
 
-    var progressEl = document.createElement('div');
-    progressEl.className = 'step-progress';
-    progressEl.textContent = t('step_of', { current: stepIndex + 1, total: steps.length });
-    container.appendChild(progressEl);
+    appendStepProgressUI(container);
 
     if (step.htmlContent) {
       var contentDiv = document.createElement('div');
@@ -824,6 +846,25 @@
   function initPlayer() {
     _a11y.apply();
     if (_a11y.injectSettingsButton) _a11y.injectSettingsButton();
+    if (_a11y.maybeShowFirstRunA11yHint) _a11y.maybeShowFirstRunA11yHint();
+    (function attachOfflineBanner() {
+      var bar = document.getElementById('agni-offline-banner');
+      if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'agni-offline-banner';
+        bar.className = 'agni-offline-banner agni-offline-hidden';
+        bar.setAttribute('role', 'status');
+        bar.textContent = 'You are offline. Progress is saved on this device until you reconnect.';
+        document.body.insertBefore(bar, document.body.firstChild);
+      }
+      function sync() {
+        var online = typeof navigator.onLine === 'boolean' ? navigator.onLine : true;
+        bar.className = online ? 'agni-offline-banner agni-offline-hidden' : 'agni-offline-banner';
+      }
+      sync();
+      global.addEventListener('online', sync);
+      global.addEventListener('offline', sync);
+    })();
     if (DEV_MODE) console.log('[PLAYER] initPlayer()', lesson.meta && lesson.meta.title);
 
     var loader = global.AGNI_LOADER;
