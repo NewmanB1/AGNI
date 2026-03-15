@@ -511,7 +511,7 @@ The edge server that runs on a Raspberry Pi. Compiles lessons on demand, serves 
   - MLC heuristic: θ = BaseCost − CohortDiscount
   - Lesson index from IR sidecars (`rebuildLessonIndex`)
   - Graph weights (local, regional, cohort-specific)
-- **API:** GET `/api/theta`, `/api/theta/all`, `/api/theta/graph`, POST `/api/theta/override`.
+- **API:** GET `/api/pathfinder`, `/api/pathfinder/all`, `/api/pathfinder/graph`, POST `/api/pathfinder/override`.
 - **Pure core:** `computeLessonOrder`, `applyRecommendationOverride`.
 
 #### 10.2.2 Hub-Transform (`hub-transform.js` + `hub-transform/`)

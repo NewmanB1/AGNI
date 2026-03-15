@@ -126,6 +126,13 @@ Open an issue at [github.com/NewmanB1/AGNI/issues](https://github.com/NewmanB1/A
    ```
    **No PR should merge with `verify:all` failing.** CI runs this; running it locally (or a pre-push hook) avoids last-minute fixes.
 
+**Optional pre-push hook:** To run `verify:all` automatically before each push, install the script as a Git hook:
+```bash
+cp scripts/pre-push-verify.sh .git/hooks/pre-push
+chmod +x .git/hooks/pre-push
+```
+On Windows (Git Bash): copy the script to `.git/hooks/pre-push` and ensure it is executable. You can also run `./scripts/pre-push-verify.sh` manually before pushing.
+
 4. **Commit with a clear message:**
    ```bash
    git commit -m "add: new lesson on buoyancy"
@@ -134,6 +141,20 @@ Open an issue at [github.com/NewmanB1/AGNI/issues](https://github.com/NewmanB1/A
    ```
 
 5. **Push and open a Pull Request** against `main`.
+
+---
+
+## Release checklist
+
+When cutting a release (e.g. for a tagged version):
+
+1. **CHANGELOG** — Update `docs/CHANGELOG.md` (or project CHANGELOG) with the new version and notable changes.
+2. **Version** — Bump version in `package.json` (and any `packages/*/package.json` if published).
+3. **Schema changes** — If any `schemas/*.schema.json` changed since last release, ensure `npm run codegen:types` has been run and `verify:codegen-sync` passes; commit generated types.
+4. **Tag** — Create a git tag (e.g. `v0.2.0`) and push. CI may use the tag for artifacts or version stamps.
+5. **Verify** — Run `npm run verify:all` and fix any failures before tagging.
+
+See `docs/playbooks/schema-to-types.md` for the schema-first workflow when changing IR or sidecar schemas.
 
 ---
 
@@ -165,8 +186,8 @@ AGNI/
 ├── src/              # Re-exports from packages (backward compatibility)
 ├── lessons/          # OLS lesson files
 ├── schemas/          # JSON Schema for lessons
-├── server/           # Hub-transform (on-demand PWA)
-├── hub-tools/        # Theta, LMS routes
+├── server/           # On-demand PWA / lesson serving
+├── hub-tools/        # Pathfinder, LMS, hub entry scripts
 ├── docs/             # Project documentation
 └── .github/          # CI, issue templates
 ```

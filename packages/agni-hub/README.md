@@ -12,7 +12,7 @@ This is the **top of the dependency tree**: it depends on all other packages and
 | `theta` | Adaptive lesson ordering: skill graph BFS + Marginal Learning Cost (MLC) |
 | `sentry` | Telemetry aggregation: event buffering, statistical analysis, graph weight computation |
 | `sync` | Hub-to-hub federation sync |
-| `hub-transform` | On-demand YAML → HTML compilation for lesson serving |
+| `lesson-server` | On-demand YAML → HTML compilation and lesson serving |
 
 ### Account & Content Management
 | Module | Purpose |
@@ -25,7 +25,7 @@ This is the **top of the dependency tree**: it depends on all other packages and
 ### HTTP Routes (`packages/agni-hub/routes/`)
 | Route | Endpoints |
 |-------|-----------|
-| `theta` | `GET /api/theta` — next lesson recommendations |
+| `pathfinder` | `GET /api/pathfinder` — theta ordering, next lesson recommendations |
 | `lms` | `POST /api/lms/observation`, `GET /api/lms/status` — learning engine |
 | `governance` | `GET /api/governance/report`, `GET /api/governance/policy`, `POST /api/governance/compliance` |
 | `accounts` | `POST /api/auth/register`, `POST /api/auth/login` |

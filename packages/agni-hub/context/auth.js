@@ -1,5 +1,10 @@
 'use strict';
 
+/**
+ * Hub auth middleware: requireHubKey, authOnly, adminOnly, roleOnly, validateSession.
+ * Used by packages/agni-hub/routes/* and pathfinder. Reads env AGNI_HUB_API_KEY; uses @agni/utils/http-helpers and context/services.
+ */
+
 const crypto = require('crypto');
 const envConfig = require('@agni/utils/env-config');
 const { extractBearerToken, checkAuthRateLimit } = require('@agni/utils/http-helpers');

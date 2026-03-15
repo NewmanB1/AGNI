@@ -56,7 +56,7 @@ Multi-sprint plan based on recent work. All six numbered sprints and all remedia
 | **A3** | **First-run onboarding** | **Done** | Portal `/admin/onboarding`; detects first-run, minimal config creation, redirects when complete. |
 | **F1** | **Deployment wizard** | **Done** | Portal `/admin/deploy`; hub ID, home URL, ports, sentry port, USB path. |
 | **F2** | **Sync wizard** | **Done** | Portal `/admin/sync`; Starlink vs USB transport, test connection, import/export path config. |
-| **T1** | **Recommendation override wizard** | **Done** | Student detail page `/students/[id]`; view theta list, set/clear override lesson. Calls `POST /api/theta/override`. |
+| **T1** | **Recommendation override wizard** | **Done** | Student detail page `/students/[id]`; view theta list, set/clear override lesson. Calls `POST /api/pathfinder/override`. |
 | **T4** | **Hub connection** | **Done** | Portal `/settings`; VITE_HUB_URL entry, test connection, save. Language picker. |
 
 ---

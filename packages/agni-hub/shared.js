@@ -4,6 +4,11 @@
 // Individual concerns live in packages/agni-hub/context/ â€” routes can gradually
 // migrate to importing directly from those modules.
 
+/**
+ * Hub shared context and middleware. Assembles ctx for route register(); exposes
+ * middleware: adminOnly, requireLms, withRateLimit, requireParam.
+ */
+
 const fs   = require('fs');
 const path = require('path');
 const crypto = require('crypto');

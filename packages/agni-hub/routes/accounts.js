@@ -1,5 +1,10 @@
 'use strict';
 
+/**
+ * Hub routes: auth (register, login, logout, me), accounts (creators, students, transfer-token, claim, verify-pin).
+ * Used by pathfinder.js. Requires ctx: accountsService, adminOnly, withRateLimit, handleJsonBody, extractBearerToken, etc.
+ */
+
 function register(router, ctx) {
   const { accountsService, handleJsonBody, extractBearerToken, extractStudentSessionToken, getClientIp, getClientUserAgent,
           adminOnly, withRateLimit, STUDENT_SESSION_TTL_MS } = ctx;

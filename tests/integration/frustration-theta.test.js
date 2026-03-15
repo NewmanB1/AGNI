@@ -78,7 +78,7 @@ describe('Frustration-Theta feedback loop integration', () => {
   });
 
   it('theta returns lessons for a student with no frustration history', async () => {
-    const { statusCode, data } = await get(baseUrl, `/api/theta?pseudoId=${PSEUDO_ID}`);
+    const { statusCode, data } = await get(baseUrl, `/api/pathfinder?pseudoId=${PSEUDO_ID}`);
     assert.equal(statusCode, 200);
     assert.ok(Array.isArray(data.lessons), 'lessons should be an array');
 
@@ -89,7 +89,7 @@ describe('Frustration-Theta feedback loop integration', () => {
   });
 
   it('injecting frustration telemetry affects theta scores', async () => {
-    const { statusCode: thetaCode, data: thetaData } = await get(baseUrl, `/api/theta?pseudoId=${PSEUDO_ID}`);
+    const { statusCode: thetaCode, data: thetaData } = await get(baseUrl, `/api/pathfinder?pseudoId=${PSEUDO_ID}`);
     assert.equal(thetaCode, 200);
     if (thetaData.lessons.length === 0) return;
 
@@ -121,7 +121,7 @@ describe('Frustration-Theta feedback loop integration', () => {
     }
     fs.writeFileSync(TEL_PATH, JSON.stringify(telData, null, 2));
 
-    const { statusCode: afterCode, data: afterData } = await get(baseUrl, `/api/theta?pseudoId=${PSEUDO_ID}`);
+    const { statusCode: afterCode, data: afterData } = await get(baseUrl, `/api/pathfinder?pseudoId=${PSEUDO_ID}`);
     assert.equal(afterCode, 200);
 
     const targetAfter = afterData.lessons.find(l => l.lessonId === targetLesson);
@@ -134,7 +134,7 @@ describe('Frustration-Theta feedback loop integration', () => {
   });
 
   it('frustrationPenalty does not appear on unaffected lessons', async () => {
-    const { data } = await get(baseUrl, `/api/theta?pseudoId=${PSEUDO_ID}`);
+    const { data } = await get(baseUrl, `/api/pathfinder?pseudoId=${PSEUDO_ID}`);
     const lessons = data.lessons || [];
     const targetLesson = lessons.length > 0 ? lessons[0].lessonId : null;
 

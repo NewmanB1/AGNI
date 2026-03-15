@@ -88,7 +88,7 @@ A single **LTI tool** serves OLS lessons to Moodle, Canvas, and any LTI-complian
 | Component | Role |
 |-----------|------|
 | **hub-transform** | On-demand lesson compilation; serve `/lesson/{slug}.html`. |
-| **theta** | Lesson index, graph weights. LTI server can call `GET /api/theta`, `GET /api/lessons`. |
+| **pathfinder** | Lesson index, graph weights. LTI server can call `GET /api/pathfinder`, `GET /api/lessons`. |
 | **dist/**.html | Pre-compiled lessons for static hosting. |
 | **demo/iframe-demo.html** | Reference for iframe embedding. |
 

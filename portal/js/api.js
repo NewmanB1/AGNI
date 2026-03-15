@@ -209,12 +209,12 @@ export function createHubApi(baseUrl) {
       return authPost(`api/groups/${encodeURIComponent(groupId)}/assign`, { lessonId });
     },
 
-    getThetaAll() {
-      return authGet('api/theta/all');
+    getPathfinderAll() {
+      return authGet('api/pathfinder/all');
     },
 
-    getTheta(pseudoId) {
-      return authGet(`api/theta?pseudoId=${encodeURIComponent(pseudoId)}`);
+    getPathfinder(pseudoId) {
+      return authGet(`api/pathfinder?pseudoId=${encodeURIComponent(pseudoId)}`);
     },
 
     getLessons(filters = {}) {

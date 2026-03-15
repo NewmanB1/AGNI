@@ -5,7 +5,7 @@ These rules keep the codebase navigable and safe to change with tooling and LLM 
 ## Module layout
 
 - **One clear role per module.** If a file grows beyond a single responsibility, split it (e.g. player → player/state, player/navigation).
-- **Public API via index.** Each logical module (`packages/ols-compiler/`, `packages/agni-engine/`, `packages/agni-governance/`, `@agni/services`) exposes a small surface via an `index.js`. New public functions should be exported from that index so they're discoverable; hide helpers inside the module. Prefer `require('@agni/package')` or `require('@agni/package/index')` over requiring deep internal paths (e.g. `@agni/package/lib/foo.js`); `verify:canonical-imports` enforces this for tests and scripts.
+- **Public API via index.** Each logical module (`packages/ols-compiler/`, `packages/agni-engine/`, `packages/agni-governance/`, `@agni/services`) exposes a small surface via an `index.js`. New public functions should be exported from that index so they're discoverable; hide helpers inside the module. Prefer `require('@agni/package')` or `require('@agni/package/index')` over requiring deep internal paths (e.g. `@agni/package/lib/foo.js`). **Tests and scripts:** use package index imports where possible; `verify:canonical-imports` enforces that tests and scripts do not require from `src/` and prefer `@agni/*` / `@ols/*`. When adding new tests, require from the package index unless the test explicitly targets an internal path.
 - **Top-down entry points.** Callers (CLI, hub, portal) use the **services layer** (`@agni/services`) or documented HTTP API; they do not require compiler/engine/governance internals directly.
 
 ## Functions and state
@@ -37,9 +37,11 @@ When introducing a new schema version (e.g. in `schemas/ols.schema.json`), updat
 
 ## Schema-backed JSON persistence (governance)
 
-Use `createSchemaStore(schemaPath, defaults, logger)` from `packages/agni-governance/schema-store.js` for any JSON file that has an associated JSON Schema. Returns `{ validate, load, save }` — encapsulates Ajv setup, validation on load/save, atomic writes, and fallback defaults.
+Use **`createSchemaStore`** from `packages/agni-governance/schema-store.js` when you need a **persistent JSON file** that is validated on load and save (e.g. policy.json, catalog.json). It gives you `{ validate, load, save }`, Ajv compilation, atomic writes, and fallback defaults. Used by `policy.js` and `catalog.js`.
 
-Used by `policy.js` and `catalog.js`. Prefer this over manual Ajv + fs.readFile + fs.writeFile patterns.
+Use **direct Ajv** (e.g. `createSchemaValidator()` from `@agni/utils/schema-validator` plus `ajv.compile(schema)`) when you only need **one-off validation** with no load/save (e.g. validating a request body, a lesson IR in memory, or graph_weights in the telemetry engine). No need for a “store” or file path.
+
+**Summary:** Persistent schema-validated JSON file → `createSchemaStore`. In-memory or request validation only → direct Ajv.
 
 ## Shared runtime registration (ES5 browser modules)
 
@@ -90,7 +92,7 @@ When adding new cross-cutting behavior, consider a shared module or middleware s
 
 ## Playbooks
 
-- **"How to modify X" playbooks** live in `docs/playbooks/`: `compiler.md`, `runtime.md`, `lms.md`, `governance.md`, `hub.md`, `services.md`, `portal.md`, `schema-to-types.md`, `mesh-lora.md`. Use them to find the right files and avoid breaking contracts when changing behaviour.
+- **"How to modify X" playbooks** live in `docs/playbooks/`: `compiler.md`, `runtime.md`, `lms.md`, `governance.md`, `hub.md`, `services.md`, `portal.md`, `schema-to-types.md`, `lti.md`, `mesh-lora.md`. Use them to find the right files and avoid breaking contracts when changing behaviour.
 
 ## Lint and type checks
 

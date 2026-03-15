@@ -126,7 +126,7 @@ sudo systemctl restart agni-hub agni-sentry
 Hub logs are structured JSON:
 
 ```json
-{"ts":"2026-03-01T10:15:00Z","level":"info","component":"theta","msg":"request","method":"GET","path":"/api/theta","status":200,"durationMs":12}
+{"ts":"2026-03-01T10:15:00Z","level":"info","component":"theta","msg":"request","method":"GET","path":"/api/pathfinder","status":200,"durationMs":12}
 ```
 
 Filter by component: `journalctl -u agni-hub | grep '"component":"theta"'`

@@ -110,24 +110,24 @@ async function run(baseUrl, bearer) {
   const auth = bearer ? { bearer } : {};
   const failures = [];
 
-  // GET /api/theta?pseudoId=test
+  // GET /api/pathfinder?pseudoId=test
   try {
-    const { statusCode, data } = await get(baseUrl, '/api/theta?pseudoId=test');
-    if (statusCode !== 200) failures.push(`/api/theta: expected 200, got ${statusCode}: ${data.error || ''}`);
-    if (typeof data.pseudoId !== 'string') failures.push(`/api/theta: missing or invalid pseudoId`);
-    if (!Array.isArray(data.lessons)) failures.push(`/api/theta: lessons must be array`);
-    if (data.override !== undefined && typeof data.override !== 'string') failures.push(`/api/theta: override must be string if present`);
+    const { statusCode, data } = await get(baseUrl, '/api/pathfinder?pseudoId=test');
+    if (statusCode !== 200) failures.push(`/api/pathfinder: expected 200, got ${statusCode}: ${data.error || ''}`);
+    if (typeof data.pseudoId !== 'string') failures.push(`/api/pathfinder: missing or invalid pseudoId`);
+    if (!Array.isArray(data.lessons)) failures.push(`/api/pathfinder: lessons must be array`);
+    if (data.override !== undefined && typeof data.override !== 'string') failures.push(`/api/pathfinder: override must be string if present`);
   } catch (e) {
-    failures.push(`/api/theta: ${e.message}`);
+    failures.push(`/api/pathfinder: ${e.message}`);
   }
 
-  // GET /api/theta/graph
+  // GET /api/pathfinder/graph
   try {
-    const { statusCode, data } = await get(baseUrl, '/api/theta/graph');
-    if (statusCode !== 200) failures.push(`/api/theta/graph: expected 200, got ${statusCode}: ${data.error || ''}`);
-    if (data && !Array.isArray(data.edges) && data.edges !== undefined) failures.push(`/api/theta/graph: edges must be array if present`);
+    const { statusCode, data } = await get(baseUrl, '/api/pathfinder/graph');
+    if (statusCode !== 200) failures.push(`/api/pathfinder/graph: expected 200, got ${statusCode}: ${data.error || ''}`);
+    if (data && !Array.isArray(data.edges) && data.edges !== undefined) failures.push(`/api/pathfinder/graph: edges must be array if present`);
   } catch (e) {
-    failures.push(`/api/theta/graph: ${e.message}`);
+    failures.push(`/api/pathfinder/graph: ${e.message}`);
   }
 
   // GET /api/governance/report (Bearer)
@@ -265,14 +265,14 @@ async function run(baseUrl, bearer) {
     failures.push(`/api/governance/policy PUT: ${e.message}`);
   }
 
-  // POST /api/theta/override (Admin)
+  // POST /api/pathfinder/override (Admin)
   try {
-    const { statusCode, data } = await post(baseUrl, '/api/theta/override', { pseudoId: 'test', lessonId: null }, auth);
-    if (statusCode !== 200) failures.push(`/api/theta/override: expected 200, got ${statusCode}: ${data.error || ''}`);
-    if (data && data.ok !== true) failures.push(`/api/theta/override: ok must be true`);
-    if (data && data.override !== undefined && data.override !== null) failures.push(`/api/theta/override: override should be null when clearing`);
+    const { statusCode, data } = await post(baseUrl, '/api/pathfinder/override', { pseudoId: 'test', lessonId: null }, auth);
+    if (statusCode !== 200) failures.push(`/api/pathfinder/override: expected 200, got ${statusCode}: ${data.error || ''}`);
+    if (data && data.ok !== true) failures.push(`/api/pathfinder/override: ok must be true`);
+    if (data && data.override !== undefined && data.override !== null) failures.push(`/api/pathfinder/override: override should be null when clearing`);
   } catch (e) {
-    failures.push(`/api/theta/override: ${e.message}`);
+    failures.push(`/api/pathfinder/override: ${e.message}`);
   }
 
   // GET /api/collab/opportunities?pseudoId=test (HubKey)

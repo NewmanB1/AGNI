@@ -46,6 +46,16 @@ This writes to `packages/types/generated/`:
 
 **You must run this and commit** when you change any of these schemas. CI runs `verify:codegen-sync` to ensure generated files stay in sync.
 
+**Schema-change checklist (when you change a schema):**
+
+1. Edit the JSON Schema in `schemas/` (e.g. `lesson-ir.schema.json`, `lesson-sidecar.schema.json`).
+2. Run `npm run codegen:types` to regenerate `packages/types/generated/*.d.ts`.
+3. Run `npm run verify:codegen-sync` (or `verify:all`) to ensure no drift.
+4. Update any code that uses the types or validated data (compiler, engine, governance, hub).
+5. Commit the schema, generated types, and code changes together.
+
+See **`docs/CONVENTIONS.md`** (§ Types and contracts, § Schema-backed JSON persistence) for when to use `createSchemaStore` vs direct Ajv.
+
 **Caveats:**
 - Complex schemas (oneOf, conditional, refs) may need hand-tuning. The OLS schema uses oneOf and $ref; current codegen handles them.
 - Generated files are **committed** so offline devs and Pi deploys do not need to run codegen.

@@ -66,7 +66,7 @@ gate:
 ## 4. Hub API Contract
 
 See `docs/api-contract.md`. Key endpoints:
-- `GET /api/theta?pseudoId=` — Lesson order by MLC
+- `GET /api/pathfinder?pseudoId=` — Lesson order by MLC
 - `POST /api/telemetry` — Completion events
 - `GET /api/lms/select` — Bandit lesson selection
 - `POST /api/author/validate`, `preview`, `save` — Authoring

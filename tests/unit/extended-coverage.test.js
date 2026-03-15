@@ -381,8 +381,8 @@ describe('Extended API tests', () => {
     assert.ok(Array.isArray(res.body.lessons));
   });
 
-  it('GET /api/theta/all supports pagination', async () => {
-    const res = await apiRequest(port, 'GET', '/api/theta/all?limit=2&offset=0', null, adminToken);
+  it('GET /api/pathfinder/all supports pagination', async () => {
+    const res = await apiRequest(port, 'GET', '/api/pathfinder/all?limit=2&offset=0', null, adminToken);
     assert.equal(res.status, 200);
     assert.equal(typeof res.body.total, 'number');
     assert.equal(typeof res.body.limit, 'number');

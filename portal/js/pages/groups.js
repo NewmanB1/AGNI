@@ -46,7 +46,7 @@ export function renderGroups(main) {
     try {
       const [groupsRes, thetaRes] = await Promise.all([
         api.getGroups(),
-        api.getThetaAll()
+        api.getPathfinderAll()
       ]);
       state.groups = groupsRes.groups || [];
       state.roster = Object.keys(thetaRes.students || {});
@@ -316,7 +316,7 @@ export function renderGroupsAssign(main, ctx) {
     main.innerHTML = '<div class="top-page"><p>Loading…</p></div>';
 
     try {
-      const [groupsRes, thetaRes] = await Promise.all([api.getGroups(), api.getThetaAll()]);
+      const [groupsRes, thetaRes] = await Promise.all([api.getGroups(), api.getPathfinderAll()]);
       const found = (groupsRes.groups || []).find(g => g.id === groupId);
       if (!found) {
         state.error = 'Group not found.';

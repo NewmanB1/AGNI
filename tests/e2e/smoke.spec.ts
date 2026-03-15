@@ -82,22 +82,22 @@ test.describe('Lesson & theta ranking', () => {
     expect(body.offset).toBe(0);
   });
 
-  test('GET /api/theta requires pseudoId', async ({ request }) => {
-    const res = await request.get('/api/theta');
+  test('GET /api/pathfinder requires pseudoId', async ({ request }) => {
+    const res = await request.get('/api/pathfinder');
     expect(res.status()).toBe(400);
   });
 
-  test('GET /api/theta returns ranking for a student', async ({ request }) => {
-    const res = await request.get('/api/theta?pseudoId=e2e-test-student');
+  test('GET /api/pathfinder returns ranking for a student', async ({ request }) => {
+    const res = await request.get('/api/pathfinder?pseudoId=e2e-test-student');
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
     expect(body.pseudoId).toBe('e2e-test-student');
     expect(Array.isArray(body.lessons)).toBeTruthy();
   });
 
-  test('GET /api/theta/all returns all students', async ({ request }) => {
+  test('GET /api/pathfinder/all returns all students', async ({ request }) => {
     const token = getAdminToken();
-    const res = await request.get('/api/theta/all', {
+    const res = await request.get('/api/pathfinder/all', {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
     expect(res.ok()).toBeTruthy();
@@ -105,8 +105,8 @@ test.describe('Lesson & theta ranking', () => {
     expect(typeof body.total).toBe('number');
   });
 
-  test('GET /api/theta/graph returns graph weights', async ({ request }) => {
-    const res = await request.get('/api/theta/graph');
+  test('GET /api/pathfinder/graph returns graph weights', async ({ request }) => {
+    const res = await request.get('/api/pathfinder/graph');
     expect(res.ok()).toBeTruthy();
   });
 });
