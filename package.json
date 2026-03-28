@@ -58,7 +58,7 @@
     "cross-env": "^7.0.3",
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",
-    "globals": "^17.3.0",
+    "globals": "^17.4.0",
     "json-schema-to-typescript": "^15.0.4",
     "mocha": "^10.8.2",
     "nodemon": "^3.1.14",
