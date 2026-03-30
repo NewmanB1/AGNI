@@ -45,7 +45,7 @@ jobs:
         # This runs: node packages/agni-cli/cli.js lessons/gravity.yaml --format=native --output-dir=dist/native-gravity
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ols-reference-bundles
           path: |
